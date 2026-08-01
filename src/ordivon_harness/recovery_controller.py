@@ -142,7 +142,7 @@ class NativeRunRecoveryController:
 
         workspace_id = committed.assignment.workspace_ref
         workspace_evidence: dict[str, JsonValue]
-        consequence = self.host._grant_recovery_consequence(committed)
+        consequence = self.host.grant_recovery_consequence(committed)
         if workspace_id is None:
             workspace_status = "not_applicable"
             workspace_evidence = {"workspaceId": None, "notApplicable": True}

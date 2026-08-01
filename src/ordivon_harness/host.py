@@ -129,7 +129,7 @@ T = TypeVar("T")
 
 
 class HarnessHost:
-    """Host-local experimental Harness assignment and completion boundary."""
+    """Low-level Host lifecycle boundary; applications should prefer HarnessRunner."""
 
     def __init__(
         self,
@@ -317,7 +317,7 @@ class HarnessHost:
                 disposition = derive_native_run_disposition(
                     NativeRunFacts(
                         NativeRunPhase.ABANDONED,
-                        self._grant_recovery_consequence(previous),
+                        self.grant_recovery_consequence(previous),
                     )
                 )
             elif previous_run is not None:
@@ -326,7 +326,7 @@ class HarnessHost:
                 disposition = derive_native_run_disposition(
                     NativeRunFacts(
                         NativeRunPhase.RECOVERY_RECORDED,
-                        self._grant_recovery_consequence(previous),
+                        self.grant_recovery_consequence(previous),
                         recovery_safe_to_abandon=(
                             previous_recovery.assessment.safe_to_abandon
                         ),
@@ -339,7 +339,7 @@ class HarnessHost:
                 disposition = derive_native_run_disposition(
                     NativeRunFacts(
                         NativeRunPhase.ASSIGNED_UNRECORDED,
-                        self._grant_recovery_consequence(previous),
+                        self.grant_recovery_consequence(previous),
                     )
                 )
             if disposition.replacement_scope is ReplacementScope.FORBIDDEN:
@@ -585,7 +585,7 @@ class HarnessHost:
                 raise ValueError("unknown Workspace evidence omitted errorType")
         previous = self._recovery_from_snapshot(snapshot)
         sequence = 1 if previous is None else previous.assessment.sequence + 1
-        consequence = self._grant_recovery_consequence(committed)
+        consequence = self.grant_recovery_consequence(committed)
         for value in additional_unknowns:
             if not value or value != value.strip():
                 raise ValueError("additional Run Recovery unknowns must be trimmed")
@@ -1921,9 +1921,10 @@ class HarnessHost:
         return decoded, stored
 
     @staticmethod
-    def _grant_recovery_consequence(
+    def grant_recovery_consequence(
         committed: CommittedHarnessAssignment,
     ) -> NativeToolRecoveryConsequence:
+        """Derive the current Tool Grant recovery consequence."""
         grant = committed.tool_grant
         if grant is None:
             return NativeToolRecoveryConsequence.OBSERVATION_ONLY
@@ -1948,7 +1949,7 @@ class HarnessHost:
         return derive_native_run_disposition(
             NativeRunFacts(
                 NativeRunPhase.RUN_RECORDED,
-                self._grant_recovery_consequence(committed),
+                self.grant_recovery_consequence(committed),
                 termination_code=termination_code,
                 has_tool_observations=bool(observation_values),
                 has_unknown_observation=has_unknown,

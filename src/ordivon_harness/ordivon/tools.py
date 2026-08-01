@@ -451,7 +451,6 @@ class RuntimeToolBridge:
             return
         mapping = {
             "needs_input": HarnessRunPauseReason.NEEDS_INPUT,
-            "approval_required": HarnessRunPauseReason.APPROVAL_REQUIRED,
         }
         try:
             pause_reason = mapping[reason]
@@ -607,9 +606,17 @@ class RuntimeToolBridge:
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]:
         if self.tool_grant is None:
-            return self.catalog.model_tools
+            if self.run_store is None:
+                return self.catalog.model_tools
+            return tuple(
+                tool
+                for tool in self.catalog.model_tools
+                if tool.name != "mutate_workspace"
+            )
         retained: list[AgentToolDefinition] = []
         for tool in self.catalog.model_tools:
+            if self.run_store is not None and tool.name == "mutate_workspace":
+                continue
             if not self.tool_grant.allows_tool(tool.name):
                 continue
             if tool.name == "run_check":

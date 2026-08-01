@@ -44,7 +44,53 @@ The retained evidence proves:
 
 The current DispatchFence is a Host revision/Assignment/Intent fence retained in CAS and Runtime correlation evidence, with validation immediately before and after dispatch. Runtime does not independently authenticate it with a Host-issued MAC; it is therefore a practical stale-dispatch fence, not a cryptographic cross-service capability token.
 
-Generic effectful continuation remains deliberately narrower than the visible Tool surface: durable `workspace.exec` is accepted, while durable `workspace.mutate` remains blocked until Runtime exposes a reconciliable mutation dispatch identity. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+Generic effectful continuation remains deliberately narrower than the Runtime catalog: durable `workspace.exec` is accepted, while durable `workspace.mutate` is not exposed to the model and `HarnessRunPlan` rejects mutation grants until Runtime exposes a reconciliable mutation dispatch identity. Approval pause/resume is also not advertised or accepted. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+
+## Recommended application surface
+
+`HarnessRunner` is the supported orchestration facade. It composes the existing Host lifecycle, Runtime Tool bridge and Agent loop; it does not own another Task state machine or database.
+
+```python
+from ordivon_harness import CompletionMode, HarnessRunPlan, HarnessRunner
+
+runner = HarnessRunner(host, runtime=runtime, adapter=adapter)
+result = runner.run(
+    HarnessRunPlan(
+        task_contract=task_contract,
+        context_blocks=context_blocks,
+        workspace_ref=workspace_id,
+        tool_grant=tool_grant,
+        completion_mode=CompletionMode.PROPOSE,
+    )
+)
+```
+
+The public lifecycle is deliberately small:
+
+```text
+prepare(plan)       compile Context and commit the native Assignment
+run(plan)           prepare, execute and record one Run
+run_current(task)   execute an already committed Assignment
+resume(task)        continue a durable needs-input/effect checkpoint
+status(task)        project current Host-backed Harness state
+cancel(task)        cancel this Runner's active call or reconcile a Runtime effect
+recover(task)       perform active-step-first lost-process recovery
+```
+
+`RunHandle` provides in-process start/result/cancel mechanics without introducing a daemon. A durable Snapshot forces callers onto `resume`; a recorded Run cannot be executed again and requires a replacement Assignment.
+
+The CLI operates on existing Host state:
+
+```bash
+ordivon-harness --state-root /path/to/host-state status task:example
+ordivon-harness --state-root /path/to/host-state run task:example
+ordivon-harness --state-root /path/to/host-state resume task:example --message 'operator input'
+ordivon-harness --state-root /path/to/host-state cancel task:example
+ordivon-harness --state-root /path/to/host-state recover task:example
+ordivon-harness --state-root /path/to/host-state doctor
+```
+
+CLI `run` executes the current committed Assignment; creation of Task Contracts, Context blocks, Tool Grants and new Assignments remains an explicit Python/Host integration operation. A separate CLI process cannot interrupt an in-memory Provider socket owned by another process, but it can reconcile or cancel a durable active Runtime Tool Step.
 
 ## Development
 
@@ -54,8 +100,9 @@ Python 3.12 is required.
 python3.12 -m venv .venv
 . .venv/bin/activate
 python -m pip install -e .
+python -m pytest -q tests
 python -m unittest discover -s tests
-ruff check src tests scripts
+ruff check <changed files>
 python -m compileall -q src tests scripts
 ```
 

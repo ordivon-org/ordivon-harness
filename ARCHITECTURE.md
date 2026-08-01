@@ -81,6 +81,34 @@ load active Tool Step
 
 This prevents Workspace cleanup or replacement decisions from racing ahead of an unresolved physical Tool Step.
 
+## Application surface
+
+`HarnessRunner` is a facade over the existing authorities:
+
+```text
+HarnessRunPlan
+  → TaskContract / Context compilation / ToolGrant admission
+  → HarnessHost Assignment
+  → HostHarnessRunStore + RuntimeToolBridge
+  → OrdivonAgentLoop
+  → durable Run receipt
+  → optional CompletionProposal / adjudication
+```
+
+It adds no durable object of its own. Every persisted transition still passes through `HarnessHost`, Host CAS and the Host Journal. Every physical Tool operation still passes through Runtime. `HarnessExecutionResult` only aggregates the already-authoritative Run, proposal and decision results for the caller.
+
+`RunHandle` is an in-process thread boundary for responsive Provider cancellation. The Runner registers the handle before starting its worker, uses a fresh HostStorage connection in that worker, and removes the handle after completion. It is not a scheduler, service or recoverable process registry. After process loss, continuity comes from the durable Snapshot and `recover()`/`resume()`, not from the handle.
+
+Execution entry guards are explicit:
+
+- a current durable Snapshot must be resumed rather than restarted;
+- an already recorded Run cannot be executed again;
+- adjudication configuration is validated before an Attempt or Assignment is created;
+- durable mutation is removed from model Tool definitions and rejected by `HarnessRunPlan`;
+- approval events remain unsupported rather than represented by an unreachable pause state.
+
+The CLI is a thin projection of the same facade: `status`, `run`, `resume`, `cancel`, `recover` and `doctor`. It creates no alternate lifecycle. CLI `run` consumes a current Assignment; Assignment construction remains with the integrating Host/application because it requires concrete Task Contract, Context and Tool authority.
+
 ## Extension surfaces
 
 Harness owns:

@@ -15,7 +15,7 @@ Ordivon Host 0.1.2
   Task / Journal / CAS / authority kernel
   generic HostExtensionPort
 
-Ordivon Harness 0.3.0
+Ordivon Harness 0.4.0
   Provider and Runtime call control
   Tool-step persistence and reconciliation
   full checkpoints + Run-state deltas
@@ -172,4 +172,46 @@ The release gate covers:
 - full Harness semantic-history replay;
 - Python 3.12 unit/pytest, changed-file Ruff, compile and distribution build gates.
 
-Final repository gate: 126 unittest cases, 126 pytest cases plus 29 subtests, 75% branch coverage, and successful wheel/sdist construction.
+The original P0–P1 repository gate was 126 unittest cases, 126 pytest cases plus 29 subtests, 75% branch coverage, and successful wheel/sdist construction. The R0–R1 application gate is recorded below.
+
+## R0–R1 practical application closure
+
+The post-P1 practical audit found that the durable core was stronger than its application surface. R0–R1 correct that imbalance without weakening the evidence model.
+
+### R0 — honest contracts
+
+The first-party manifest now uses protocol revision `p1` and separately declares public Run-state resume, effect checkpoints, Provider-call cancellation and Runtime-Job cancellation. It still declares Provider Session resume, approval events and compaction as unsupported.
+
+Durable Runs no longer expose `mutate_workspace` in model Tool definitions. The low-level Runtime catalog may contain mutation and historical/experimental Assignments may retain such a Grant, but the durable application plan rejects it and the bridge does not advertise it. The unreachable `approval_required` pause entry is likewise removed from the active execution surface.
+
+Recovery consequence derivation is now a public `HarnessHost` operation rather than a private method used across component boundaries.
+
+### R1 — thin Runner and CLI
+
+`HarnessRunner` centralizes the normal object choreography while preserving every existing authority boundary. It supports preparation, execution, durable resume, status projection, cancellation and recovery. Candidate completion may stop after recording, automatically create a proposal, or proceed to adjudication when explicit verifier callbacks are configured.
+
+`RunHandle` gives one Runner an in-process cancellation handle. It does not persist process identity and cannot replace Snapshot-based restart recovery. The handle is registered before its worker starts, avoiding a fast-completion registration race, and the worker uses an independent HostStorage connection.
+
+The CLI now exposes `status`, `run`, `resume`, `cancel`, `recover` and `doctor`. `run` consumes an existing current Assignment; it does not synthesize Task Contracts or Tool authority from command-line strings. A separate process can reconcile/cancel a durable Runtime Tool Step, but cannot close another process's in-memory Provider connection.
+
+Execution guards prevent accidental redispatch:
+
+```text
+current Snapshot exists  → use resume
+Run receipt exists        → create a replacement Assignment
+missing adjudicators      → fail before preparing the Attempt
+durable mutation grant    → reject the Run Plan
+```
+
+## Updated validation gate
+
+The `0.4.0` gate adds focused Runner tests for:
+
+- Plan → Assignment → model/Tool loop → Run receipt → CompletionProposal;
+- `needs-input` pause and public-state resume;
+- active Provider-call cancellation through `RunHandle`;
+- durable mutation hiding and approval-pause rejection;
+- pre-effect adjudication configuration failure;
+- Host-only CLI status projection.
+
+Final deterministic gate: 132 pytest cases plus 29 subtests, the matching unittest discovery suite, changed-file Ruff/format, Python 3.12 compile, wheel/sdist build and fresh wheel installation against exact Host `0.1.2` and Protocol `0.5.0` Git pins.
