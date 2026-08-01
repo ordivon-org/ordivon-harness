@@ -13,6 +13,7 @@ _STOP_CLASS = {
     RunStopCode.NEEDS_INPUT: "interrupted",
     RunStopCode.BUDGET_EXHAUSTED: "interrupted",
     RunStopCode.CANCELLED: "cancelled",
+    RunStopCode.CANCEL_UNKNOWN: "unknown",
     RunStopCode.PROVIDER_FAILED: "failed",
     RunStopCode.PROVIDER_TIMEOUT: "failed",
     RunStopCode.PROVIDER_TRANSPORT_FAILED: "failed",
@@ -21,6 +22,7 @@ _STOP_CLASS = {
     RunStopCode.INVALID_TOOL_CALL: "failed",
     RunStopCode.RUNTIME_UNKNOWN: "unknown",
     RunStopCode.INVALID_MODEL_OUTPUT: "failed",
+    RunStopCode.HARNESS_FAILED: "failed",
 }
 
 
@@ -89,9 +91,12 @@ def record_native_run_result(
     *,
     times: NativeRunTimes,
 ) -> RecordedHarnessRun:
-    receipt = build_native_run_receipt(committed, result, times=times)
+    current = host.load_current_assignment(committed.assignment.task_id)
+    if current.assignment != committed.assignment:
+        raise ValueError("native Harness Run result belongs to a superseded Assignment")
+    receipt = build_native_run_receipt(current, result, times=times)
     return host.record_run(
-        committed,
+        current,
         receipt,
         trace=result.trace.to_dict(),
         observations=tuple(item.to_dict() for item in result.observations),

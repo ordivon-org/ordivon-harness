@@ -15,6 +15,7 @@ from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from ordivon_host.effects import ArtifactRef
 from .host import CommittedHarnessAssignment
 from .models import HarnessCapabilityManifest, HarnessRunReceipt
+from .subprocess_lifecycle import close_owned_process
 
 
 class CodexAppServerError(RuntimeError):
@@ -364,6 +365,7 @@ class CodexAppServerDriver:
         self._notifications: list[dict[str, JsonValue]] = []
         self._next_request_id = 1
         self._initialize_response: dict[str, JsonValue] | None = None
+        self._reader_threads: tuple[threading.Thread, ...] = ()
         self._closed = False
 
     def __enter__(self) -> CodexAppServerDriver:
@@ -417,19 +419,24 @@ class CodexAppServerDriver:
             raise CodexAppServerExited("failed to start Codex App Server") from error
         assert self._process.stdout is not None
         assert self._process.stderr is not None
-        threading.Thread(
-            target=self._read_stdout,
-            args=(self._process.stdout,),
-            daemon=True,
-            name="ordivon-codex-app-stdout",
-        ).start()
-        threading.Thread(
-            target=self._read_stderr,
-            args=(self._process.stderr,),
-            daemon=True,
-            name="ordivon-codex-app-stderr",
-        ).start()
-        result = self._request(
+        self._reader_threads = (
+            threading.Thread(
+                target=self._read_stdout,
+                args=(self._process.stdout,),
+                daemon=True,
+                name="ordivon-codex-app-stdout",
+            ),
+            threading.Thread(
+                target=self._read_stderr,
+                args=(self._process.stderr,),
+                daemon=True,
+                name="ordivon-codex-app-stderr",
+            ),
+        )
+        for thread in self._reader_threads:
+            thread.start()
+        try:
+            result = self._request(
             "initialize",
             {
                 "clientInfo": {
@@ -445,11 +452,14 @@ class CodexAppServerDriver:
             },
             timeout_seconds=min(self.timeout_seconds, 30),
         )
-        _string(result.get("userAgent"), "initialize userAgent")
-        _string(result.get("codexHome"), "initialize codexHome")
-        self._send({"method": "initialized"})
-        self._initialize_response = dict(result)
-        return dict(result)
+            _string(result.get("userAgent"), "initialize userAgent")
+            _string(result.get("codexHome"), "initialize codexHome")
+            self._send({"method": "initialized"})
+            self._initialize_response = dict(result)
+            return dict(result)
+        except BaseException:
+            self.close()
+            raise
 
     def start_thread(self) -> CodexAppThread:
         self.start()
@@ -559,19 +569,11 @@ class CodexAppServerDriver:
         if self._closed:
             return
         self._closed = True
-        process = self._process
-        if process is None:
-            return
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=3)
-        for stream in (process.stdin, process.stdout, process.stderr):
-            if stream is not None:
-                stream.close()
+        close_owned_process(
+            self._process,
+            reader_threads=self._reader_threads,
+            graceful_timeout_seconds=3,
+        )
 
     def _request(
         self,

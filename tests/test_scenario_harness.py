@@ -102,6 +102,7 @@ class ScenarioHarnessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "token"
             path.write_text("file-token\n")
+            path.chmod(0o600)
             self.assertEqual(
                 load_scenario_token({"ORDIVON_BEARER_TOKEN_FILE": str(path)}),
                 "file-token",

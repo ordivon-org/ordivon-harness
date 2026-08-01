@@ -16,6 +16,7 @@ from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from ordivon_host.effects import ArtifactRef
 from .host import CommittedHarnessAssignment
 from .models import HarnessCapabilityManifest, HarnessRunReceipt
+from .subprocess_lifecycle import close_owned_process
 
 
 class HermesACPError(RuntimeError):
@@ -411,6 +412,7 @@ class HermesACPDriver:
         self._updates: list[dict[str, JsonValue]] = []
         self._next_request_id = 1
         self._initialize_response: dict[str, JsonValue] | None = None
+        self._reader_threads: tuple[threading.Thread, ...] = ()
         self._closed = False
 
     def __enter__(self) -> HermesACPDriver:
@@ -487,19 +489,24 @@ class HermesACPDriver:
             raise HermesACPExited("failed to start Hermes ACP") from error
         assert self._process.stdout is not None
         assert self._process.stderr is not None
-        threading.Thread(
-            target=self._read_stdout,
-            args=(self._process.stdout,),
-            daemon=True,
-            name="ordivon-hermes-acp-stdout",
-        ).start()
-        threading.Thread(
-            target=self._read_stderr,
-            args=(self._process.stderr,),
-            daemon=True,
-            name="ordivon-hermes-acp-stderr",
-        ).start()
-        result = self._request(
+        self._reader_threads = (
+            threading.Thread(
+                target=self._read_stdout,
+                args=(self._process.stdout,),
+                daemon=True,
+                name="ordivon-hermes-acp-stdout",
+            ),
+            threading.Thread(
+                target=self._read_stderr,
+                args=(self._process.stderr,),
+                daemon=True,
+                name="ordivon-hermes-acp-stderr",
+            ),
+        )
+        for thread in self._reader_threads:
+            thread.start()
+        try:
+            result = self._request(
             "initialize",
             {
                 "protocolVersion": int(self.protocol_revision),
@@ -516,15 +523,18 @@ class HermesACPDriver:
             },
             timeout_seconds=min(self.timeout_seconds, 60),
         )
-        if _integer(result.get("protocolVersion"), "ACP protocol version") != int(
-            self.protocol_revision
-        ):
-            raise HermesACPProtocolError("Hermes ACP protocol revision differs")
-        agent_info = _object(result.get("agentInfo"), "Hermes ACP agentInfo")
-        _string(agent_info.get("name"), "Hermes ACP agent name")
-        _string(agent_info.get("version"), "Hermes ACP agent version")
-        self._initialize_response = dict(result)
-        return dict(result)
+            if _integer(result.get("protocolVersion"), "ACP protocol version") != int(
+                self.protocol_revision
+            ):
+                raise HermesACPProtocolError("Hermes ACP protocol revision differs")
+            agent_info = _object(result.get("agentInfo"), "Hermes ACP agentInfo")
+            _string(agent_info.get("name"), "Hermes ACP agent name")
+            _string(agent_info.get("version"), "Hermes ACP agent version")
+            self._initialize_response = dict(result)
+            return dict(result)
+        except BaseException:
+            self.close()
+            raise
 
     def start_session(self) -> HermesACPSession:
         initialize = self.start()
@@ -648,19 +658,11 @@ class HermesACPDriver:
         if self._closed:
             return
         self._closed = True
-        process = self._process
-        if process is None:
-            return
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-        for stream in (process.stdin, process.stdout, process.stderr):
-            if stream is not None:
-                stream.close()
+        close_owned_process(
+            self._process,
+            reader_threads=self._reader_threads,
+            graceful_timeout_seconds=5,
+        )
 
     def _request(
         self,

@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import time
 from typing import Protocol
 
-from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from anc_canonical import (
+    JsonValue,
+    canonical_bytes,
+    canonical_digest,
+    validate_json_value,
+)
 
 from ordivon_host.effects import ArtifactRef
+from ordivon_protocol import (
+    HarnessRecoveryConsequence,
+    HarnessRunPauseReason,
+    HarnessToolStepIntent,
+    HarnessToolStepReceipt,
+    HarnessToolStepStatus,
+)
 from ordivon_host.runtime import (
     RuntimeClient,
     RuntimeClientError,
@@ -19,7 +32,9 @@ from ..tool_semantics import (
     NativeToolCatalogSnapshot,
     build_native_tool_catalog_snapshot,
 )
+from .control import ExecutionControl
 from .model import AgentToolCall, AgentToolDefinition
+from .run_store import HarnessRunState, HostHarnessRunStore
 
 
 class ToolBridgeError(RuntimeError):
@@ -41,7 +56,13 @@ class ToolObservation:
             raise ValueError("Tool Observation Call identity must be trimmed")
         if not self.tool_name or self.tool_name != self.tool_name.strip():
             raise ValueError("Tool Observation name must be trimmed")
-        if self.status not in {"observed", "rejected", "unknown"}:
+        if self.status not in {
+            "observed",
+            "rejected",
+            "unknown",
+            "cancel-requested",
+            "cancelled",
+        }:
             raise ValueError(f"unsupported Tool Observation status: {self.status}")
         validate_json_value(self.structured_content)
         if self.runtime_job_ref is not None and (
@@ -72,6 +93,52 @@ class ToolObservation:
             "reconciled": self.reconciled,
         }
 
+    @classmethod
+    def from_dict(cls, value: dict[str, JsonValue]) -> ToolObservation:
+        expected = {
+            "schemaVersion",
+            "kind",
+            "toolCallId",
+            "toolName",
+            "status",
+            "structuredContent",
+            "runtimeJobRef",
+            "artifactRefs",
+            "reconciled",
+        }
+        if set(value) != expected:
+            raise ValueError("Tool Observation fields differ")
+        if value["schemaVersion"] != 1 or value["kind"] != "ordivon.tool-observation":
+            raise ValueError("Tool Observation version or kind is invalid")
+        artifacts = value["artifactRefs"]
+        content = value["structuredContent"]
+        if not isinstance(artifacts, list) or any(
+            not isinstance(item, dict) for item in artifacts
+        ):
+            raise ValueError("Tool Observation Artifact refs are invalid")
+        if not isinstance(content, dict):
+            raise ValueError("Tool Observation structured content must be an object")
+        if (
+            not isinstance(value["toolCallId"], str)
+            or not isinstance(value["toolName"], str)
+            or not isinstance(value["status"], str)
+            or (
+                value["runtimeJobRef"] is not None
+                and not isinstance(value["runtimeJobRef"], str)
+            )
+            or type(value["reconciled"]) is not bool
+        ):
+            raise ValueError("Tool Observation scalar fields are invalid")
+        return cls(
+            tool_call_id=value["toolCallId"],
+            tool_name=value["toolName"],
+            status=value["status"],
+            structured_content=dict(content),
+            runtime_job_ref=value["runtimeJobRef"],
+            artifact_refs=tuple(ArtifactRef.from_dict(item) for item in artifacts),
+            reconciled=value["reconciled"],
+        )
+
     def to_model_message(self) -> dict[str, JsonValue]:
         return {
             "role": "tool",
@@ -85,6 +152,29 @@ class ToolObservation:
                 "reconciled": self.reconciled,
             },
         }
+
+    def bounded(self, max_bytes: int) -> ToolObservation:
+        if max_bytes < 1:
+            return self
+        if len(canonical_bytes(self.to_dict())) <= max_bytes:
+            return self
+        original_content = dict(self.structured_content)
+        bounded_content: dict[str, JsonValue] = {
+            "truncated": True,
+            "originalContentDigest": canonical_digest(original_content),
+            "originalContentBytes": len(canonical_bytes(original_content)),
+            "runtimeJobRef": self.runtime_job_ref,
+            "artifactRefs": [item.to_dict() for item in self.artifact_refs],
+        }
+        return ToolObservation(
+            tool_call_id=self.tool_call_id,
+            tool_name=self.tool_name,
+            status=self.status,
+            structured_content=bounded_content,
+            runtime_job_ref=self.runtime_job_ref,
+            artifact_refs=self.artifact_refs,
+            reconciled=self.reconciled,
+        )
 
 
 class ToolBridge(Protocol):
@@ -257,6 +347,7 @@ class RuntimeToolBridge:
         *,
         harness_run_id: str,
         runtime: RuntimeClient,
+        run_store: HostHarnessRunStore | None = None,
     ) -> None:
         if not harness_run_id.startswith("harness-run:"):
             raise ValueError("Harness Run identity must start with harness-run:")
@@ -265,6 +356,17 @@ class RuntimeToolBridge:
         self.committed = committed
         self.harness_run_id = harness_run_id
         self.runtime = runtime
+        self.run_store = run_store
+        if run_store is not None and (
+            run_store.harness_run_id != harness_run_id
+            or run_store.committed.assignment != committed.assignment
+        ):
+            raise ValueError("Harness Run Store differs from the Runtime bridge")
+        self.clock_ms = (
+            run_store.host.kernel.clock_ms
+            if run_store is not None
+            else lambda: time.time_ns() // 1_000_000
+        )
         self.tool_grant = committed.tool_grant
         if committed.native_run_contract is not None:
             native = committed.native_run_contract
@@ -307,6 +409,133 @@ class RuntimeToolBridge:
             )
         self.catalog_digest = self.catalog.digest
         self._seen_tool_calls: set[str] = set()
+        self._tool_step_intents: dict[str, HarnessToolStepIntent] = {}
+
+    def bind_run_state(
+        self,
+        *,
+        messages: tuple[dict[str, JsonValue], ...],
+        observations: tuple[ToolObservation, ...],
+        remaining_budget: dict[str, JsonValue],
+        requested_model_id: str,
+        effective_model_id: str | None,
+    ) -> None:
+        if self.run_store is None:
+            return
+        self.run_store.bind_state(
+            HarnessRunState(
+                messages=messages,
+                observations=tuple(item.to_dict() for item in observations),
+                remaining_budget=remaining_budget,
+                requested_model_id=requested_model_id,
+                effective_model_id=effective_model_id,
+            )
+        )
+
+    def record_pause(self, reason: str) -> None:
+        if self.run_store is None:
+            return
+        mapping = {
+            "needs_input": HarnessRunPauseReason.NEEDS_INPUT,
+            "approval_required": HarnessRunPauseReason.APPROVAL_REQUIRED,
+        }
+        try:
+            pause_reason = mapping[reason]
+        except KeyError as error:
+            raise ToolBridgeError(f"unsupported Harness pause reason: {reason}") from error
+        self.run_store.record_pause(pause_reason)
+        self.committed = self.run_store.committed
+
+    def reconcile_current_tool_step(self) -> ToolObservation:
+        if self.run_store is None:
+            raise ToolBridgeError("Tool Step reconciliation requires a Harness Run Store")
+        step = self.run_store.load_current_tool_step()
+        if step.receipt is not None:
+            if step.observation is None:
+                raise ToolBridgeError("stored Tool Step Receipt omitted its Observation")
+            return ToolObservation.from_dict(step.observation)
+        intent = step.intent
+        if intent.runtime_operation != "workspace.exec":
+            raise ToolBridgeError(
+                "only Runtime workspace.exec Tool Steps are currently reconciliable"
+            )
+        call = AgentToolCall(intent.tool_call_id, intent.tool_name, {})
+        try:
+            jobs = find_jobs_by_client_request(
+                self.runtime, intent.client_request_id
+            )
+        except RuntimeClientError as error:
+            observation = ToolObservation(
+                intent.tool_call_id,
+                intent.tool_name,
+                "unknown",
+                {
+                    "error": {
+                        "type": type(error).__name__,
+                        "message": str(error)[:2_048],
+                        "clientRequestId": intent.client_request_id,
+                    }
+                },
+            )
+        else:
+            job_ids = {job.get("jobId") for job in jobs}
+            if len(job_ids) == 1 and None not in job_ids:
+                job_id = next(iter(job_ids))
+                assert isinstance(job_id, str)
+                try:
+                    payload = self.runtime.call_tool(
+                        "task.observe",
+                        {
+                            "schemaVersion": 1,
+                            "jobId": job_id,
+                            "waitMs": 0,
+                            "stdoutTailBytes": 8_192,
+                            "stderrTailBytes": 8_192,
+                        },
+                    )
+                except RuntimeClientError as error:
+                    observation = ToolObservation(
+                        intent.tool_call_id,
+                        intent.tool_name,
+                        "unknown",
+                        {
+                            "error": {
+                                "type": type(error).__name__,
+                                "message": str(error)[:2_048],
+                                "clientRequestId": intent.client_request_id,
+                                "jobId": job_id,
+                            }
+                        },
+                        runtime_job_ref=job_id,
+                    )
+                else:
+                    observation = self._observed(call, payload, reconciled=True)
+            else:
+                observation = ToolObservation(
+                    intent.tool_call_id,
+                    intent.tool_name,
+                    "unknown",
+                    {
+                        "error": {
+                            "type": (
+                                "runtime_dispatch_not_found"
+                                if not job_ids
+                                else "conflicting_runtime_jobs"
+                            ),
+                            "message": (
+                                "no Runtime Job matches the durable Tool Step Intent"
+                                if not job_ids
+                                else "multiple Runtime Jobs match one durable Tool Step Intent"
+                            ),
+                            "clientRequestId": intent.client_request_id,
+                            "jobIds": sorted(
+                                item for item in job_ids if isinstance(item, str)
+                            ),
+                        }
+                    },
+                )
+        self._record_tool_step_receipt(intent, observation)
+        return observation
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]:
         if self.tool_grant is None:
@@ -333,6 +562,30 @@ class RuntimeToolBridge:
         return tuple(retained)
 
     def execute(self, call: AgentToolCall, *, step_id: str) -> ToolObservation:
+        return self._execute(call, step_id=step_id, turn_id=None, control=None)
+
+    def execute_with_control(
+        self,
+        call: AgentToolCall,
+        *,
+        step_id: str,
+        turn_id: str,
+        control: ExecutionControl,
+    ) -> ToolObservation:
+        if control.stop_requested:
+            raise ToolBridgeError("Run control stopped before Runtime dispatch")
+        return self._execute(
+            call, step_id=step_id, turn_id=turn_id, control=control
+        )
+
+    def _execute(
+        self,
+        call: AgentToolCall,
+        *,
+        step_id: str,
+        turn_id: str | None,
+        control: ExecutionControl | None,
+    ) -> ToolObservation:
         if self.tool_grant is not None and not self.tool_grant.allows_tool(call.name):
             raise ToolBridgeError(
                 f"Tool is not granted for this Assignment: {call.name}"
@@ -341,20 +594,212 @@ class RuntimeToolBridge:
             raise ToolBridgeError(f"duplicate Tool Call identity: {call.tool_call_id}")
         self._seen_tool_calls.add(call.tool_call_id)
         operation, arguments, client_request_id = self._lower(call, step_id=step_id)
+        if control is not None and operation == "workspace.exec":
+            arguments = dict(arguments)
+            configured_timeout = arguments.get("timeoutMs")
+            if type(configured_timeout) is int:
+                arguments["timeoutMs"] = max(1, min(configured_timeout, control.remaining_ms))
+            configured_wait = arguments.get("waitMs")
+            if type(configured_wait) is int:
+                arguments["waitMs"] = max(0, min(configured_wait, control.remaining_ms))
+        intent: HarnessToolStepIntent | None = None
+        if self.run_store is not None:
+            if operation == "workspace.mutate":
+                raise ToolBridgeError(
+                    "durable native Harness mode does not dispatch workspace.mutate "
+                    "without a reconciliable Runtime dispatch identity"
+                )
+            if operation == "workspace.exec":
+                if client_request_id is None or turn_id is None:
+                    raise ToolBridgeError(
+                        "durable Runtime execution requires turn and client request identities"
+                    )
+                intent = self._prepare_tool_step_intent(
+                    call,
+                    step_id=step_id,
+                    turn_id=turn_id,
+                    operation=operation,
+                    arguments=arguments,
+                    client_request_id=client_request_id,
+                )
         try:
             payload = self.runtime.call_tool(operation, arguments)
         except RuntimeToolRejected as error:
             if error.detail.commit_state == "not_committed":
-                return ToolObservation(
+                observation = ToolObservation(
                     tool_call_id=call.tool_call_id,
                     tool_name=call.name,
                     status="rejected",
                     structured_content={"error": _runtime_error_value(error)},
                 )
-            return self._unknown(call, error, client_request_id=client_request_id)
+            else:
+                observation = self._unknown(
+                    call, error, client_request_id=client_request_id
+                )
+            self._record_tool_step_receipt(intent, observation)
+            return observation
         except RuntimeClientError as error:
-            return self._unknown(call, error, client_request_id=client_request_id)
-        return self._observed(call, payload, reconciled=False)
+            observation = self._unknown(
+                call, error, client_request_id=client_request_id
+            )
+            self._record_tool_step_receipt(intent, observation)
+            return observation
+        observation = self._observed(call, payload, reconciled=False)
+        if (
+            control is not None
+            and control.cancellation.cancelled
+            and observation.runtime_job_ref is not None
+        ):
+            observation = self.cancel_observation(
+                call,
+                observation,
+                step_id=step_id,
+                control=control,
+                record_receipt=False,
+            )
+        self._record_tool_step_receipt(intent, observation)
+        return observation
+
+    def _prepare_tool_step_intent(
+        self,
+        call: AgentToolCall,
+        *,
+        step_id: str,
+        turn_id: str,
+        operation: str,
+        arguments: dict[str, JsonValue],
+        client_request_id: str,
+    ) -> HarnessToolStepIntent:
+        assert self.run_store is not None
+        token = canonical_digest(
+            {
+                "harnessRunId": self.harness_run_id,
+                "stepId": step_id,
+                "toolCallDigest": call.digest,
+            }
+        )[7:31]
+        assignment = self.committed.assignment
+        consequence = HarnessRecoveryConsequence(
+            self.catalog.tool(call.name).recovery_consequence.value
+        )
+        intent = HarnessToolStepIntent(
+            intent_id=(
+                f"harness-tool-step-intent:"
+                f"{self.harness_run_id.removeprefix('harness-run:')}:{token}"
+            ),
+            harness_run_id=self.harness_run_id,
+            assignment_id=assignment.assignment_id,
+            assignment_generation=assignment.generation,
+            assignment_digest=assignment.digest,
+            turn_id=turn_id,
+            tool_call_id=call.tool_call_id,
+            tool_name=call.name,
+            tool_call_digest=call.digest,
+            runtime_operation=operation,
+            runtime_arguments_digest=canonical_digest(arguments),
+            client_request_id=client_request_id,
+            recovery_consequence=consequence,
+            created_at_ms=self.clock_ms(),
+        )
+        self.run_store.prepare_tool_step(intent)
+        self.committed = self.run_store.committed
+        self._tool_step_intents[call.tool_call_id] = intent
+        return intent
+
+    def _record_tool_step_receipt(
+        self,
+        intent: HarnessToolStepIntent | None,
+        observation: ToolObservation,
+    ) -> None:
+        if self.run_store is None or intent is None:
+            return
+        token = canonical_digest(
+            {
+                "intentDigest": intent.digest,
+                "observationDigest": observation.digest,
+            }
+        )[7:31]
+        receipt = HarnessToolStepReceipt(
+            receipt_id=(
+                f"harness-tool-step-receipt:"
+                f"{self.harness_run_id.removeprefix('harness-run:')}:{token}"
+            ),
+            intent_digest=intent.digest,
+            harness_run_id=self.harness_run_id,
+            tool_call_id=intent.tool_call_id,
+            status=HarnessToolStepStatus(observation.status),
+            runtime_job_ref=observation.runtime_job_ref,
+            observation_digest=observation.digest,
+            reconciled=observation.reconciled,
+            created_at_ms=self.clock_ms(),
+        )
+        self.run_store.record_tool_step_receipt(receipt, observation.to_dict())
+        self.committed = self.run_store.committed
+
+    def cancel_observation(
+        self,
+        call: AgentToolCall,
+        observation: ToolObservation,
+        *,
+        step_id: str,
+        control: ExecutionControl,
+        record_receipt: bool = True,
+    ) -> ToolObservation:
+        del step_id, control
+        job_id = observation.runtime_job_ref
+        if job_id is None:
+            return observation
+        try:
+            payload = self.runtime.call_tool(
+                "task.cancel",
+                {"schemaVersion": 1, "jobId": job_id},
+            )
+        except RuntimeClientError as error:
+            result = ToolObservation(
+                tool_call_id=call.tool_call_id,
+                tool_name=call.name,
+                status="cancel-requested",
+                structured_content={
+                    "jobId": job_id,
+                    "cancellation": {
+                        "confirmed": False,
+                        "errorType": type(error).__name__,
+                        "message": str(error)[:2_048],
+                    },
+                },
+                runtime_job_ref=job_id,
+                artifact_refs=observation.artifact_refs,
+            )
+        else:
+            status = payload.get("status")
+            if status == "cancelled":
+                cancelled = self._observed(call, payload, reconciled=True)
+                result = ToolObservation(
+                    tool_call_id=cancelled.tool_call_id,
+                    tool_name=cancelled.tool_name,
+                    status="cancelled",
+                    structured_content=cancelled.structured_content,
+                    runtime_job_ref=cancelled.runtime_job_ref,
+                    artifact_refs=cancelled.artifact_refs,
+                    reconciled=True,
+                )
+            elif status in {"succeeded", "failed", "timed_out"}:
+                result = self._observed(call, payload, reconciled=True)
+            else:
+                result = ToolObservation(
+                    tool_call_id=call.tool_call_id,
+                    tool_name=call.name,
+                    status="cancel-requested",
+                    structured_content=dict(payload),
+                    runtime_job_ref=job_id,
+                    artifact_refs=_extract_artifacts(payload),
+                    reconciled=True,
+                )
+        if record_receipt:
+            self._record_tool_step_receipt(
+                self._tool_step_intents.get(call.tool_call_id), result
+            )
+        return result
 
     def _lower(
         self,

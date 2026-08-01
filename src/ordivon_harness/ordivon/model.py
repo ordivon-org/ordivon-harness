@@ -165,6 +165,7 @@ class AgentTurnResult:
     usage: dict[str, JsonValue]
     finish_reason: str
     raw_response_digest: str
+    effective_model_id: str | None = None
 
     def __post_init__(self) -> None:
         _text(self.model_call_id, "Model Call identity", max_bytes=300)
@@ -181,13 +182,19 @@ class AgentTurnResult:
         validate_json_value(self.usage)
         _text(self.finish_reason, "model finish reason", max_bytes=300)
         _digest(self.raw_response_digest, "raw model response digest")
+        if self.effective_model_id is not None:
+            _text(self.effective_model_id, "effective model identity", max_bytes=300)
+
+    @property
+    def effective_model(self) -> str:
+        return self.effective_model_id or self.model_id
 
     @property
     def digest(self) -> str:
         return canonical_digest(self.to_dict())
 
     def to_dict(self) -> dict[str, JsonValue]:
-        return {
+        value: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.agent-turn-result",
             "modelCallId": self.model_call_id,
@@ -199,6 +206,9 @@ class AgentTurnResult:
             "finishReason": self.finish_reason,
             "rawResponseDigest": self.raw_response_digest,
         }
+        if self.effective_model_id is not None:
+            value["effectiveModelId"] = self.effective_model_id
+        return value
 
 
 class AgentTurnFailureCode(str, Enum):

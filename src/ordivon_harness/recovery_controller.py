@@ -72,10 +72,11 @@ class NativeRunRecoveryController:
 
         workspace_id = committed.assignment.workspace_ref
         workspace_evidence: dict[str, JsonValue]
+        consequence = self.host._grant_recovery_consequence(committed)
         if workspace_id is None:
             workspace_status = "not_applicable"
             workspace_evidence = {"workspaceId": None, "notApplicable": True}
-        else:
+        elif consequence.value == "observation-only":
             try:
                 workspace_evidence = ensure_workspace_closed(
                     self.runtime,
@@ -95,6 +96,43 @@ class NativeRunRecoveryController:
                     if workspace_evidence.get("alreadyAbsent") is True
                     else "closed"
                 )
+        else:
+            try:
+                workspace_snapshot = self.runtime.call_tool(
+                    "workspace.get",
+                    {"schemaVersion": 1, "workspaceId": workspace_id},
+                )
+            except RuntimeClientError as error:
+                workspace_status = "unknown"
+                workspace_evidence = {
+                    "workspaceId": workspace_id,
+                    "retained": True,
+                    "errorType": type(error).__name__,
+                    "message": str(error)[:2_048],
+                }
+            else:
+                try:
+                    diff_evidence = self.runtime.call_tool(
+                        "workspace.diff",
+                        {
+                            "schemaVersion": 1,
+                            "workspaceId": workspace_id,
+                            "maxBytes": 1_048_576,
+                        },
+                    )
+                except RuntimeClientError as error:
+                    diff_evidence = {
+                        "available": False,
+                        "errorType": type(error).__name__,
+                        "message": str(error)[:2_048],
+                    }
+                workspace_status = "retained"
+                workspace_evidence = {
+                    "workspaceId": workspace_id,
+                    "retained": True,
+                    "workspace": workspace_snapshot,
+                    "diff": diff_evidence,
+                }
 
         recovery = self.host.record_native_run_recovery(
             committed,

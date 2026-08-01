@@ -23,7 +23,13 @@ _GRANT_EFFECT_CLASSES = {
     "unknown",
 }
 _CATALOG_STATUSES = {"matched", "drifted", "unavailable"}
-_WORKSPACE_STATUSES = {"closed", "already_absent", "not_applicable", "unknown"}
+_WORKSPACE_STATUSES = {
+    "closed",
+    "already_absent",
+    "not_applicable",
+    "retained",
+    "unknown",
+}
 _ABANDONMENT_REASONS = {
     "host_restart",
     "process_lost",

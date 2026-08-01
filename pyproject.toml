@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ordivon-harness"
-version = "0.1.0"
+version = "0.2.0"
 description = "Replaceable Agent Harness execution and Host continuity extension for Ordivon."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }
 dependencies = [
-  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@98852d0a39b6d4c489396bda2fd0c99cc3870e34",
-  "ordivon-protocol @ git+https://github.com/zycxfyh/ordivon-computing.git@ca5af401eda77d1081487c2df07ce9d94003719e#subdirectory=packages/ordivon-protocol",
+  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@f1eb6453dc6fe963cdb39c7adbd8588846c60861",
+  "ordivon-protocol @ git+https://github.com/zycxfyh/ordivon-computing.git@b86e94c889188ece477e6af44fb3b04caa9bc10f#subdirectory=packages/ordivon-protocol",
 ]
 
 [project.scripts]

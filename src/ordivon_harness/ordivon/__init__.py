@@ -7,6 +7,7 @@ from .deepseek import (
     DeepSeekTurnAdapter,
     UrllibDeepSeekTransport,
 )
+from .control import ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .input import (
     CompiledHarnessInput,
@@ -26,6 +27,12 @@ from .result import (
     NativeRunTimes,
     build_native_run_receipt,
     record_native_run_result,
+)
+from .run_store import (
+    HarnessRunState,
+    HostHarnessRunStore,
+    StoredHarnessRunSnapshot,
+    StoredHarnessToolStep,
 )
 from .manifest import (
     ORDIVON_HARNESS_ID,
@@ -71,10 +78,13 @@ __all__ = [
     "DeepSeekSettings",
     "DeepSeekTransport",
     "DeepSeekTurnAdapter",
+    "ExecutionControl",
     "HarnessContextCompiler",
     "HarnessContextRequest",
     "HarnessRunEvent",
     "HarnessRuntimeCatalog",
+    "HarnessRunState",
+    "HostHarnessRunStore",
     "HarnessTrace",
     "NativeRunTimes",
     "ORDIVON_HARNESS_ID",
@@ -83,12 +93,15 @@ __all__ = [
     "OrdivonAgentLoop",
     "OrdivonInputCompiler",
     "RunBudget",
+    "RunDeadline",
     "RunStopCode",
     "RuntimeToolBridge",
     "SUPPORTED_DEEPSEEK_MODELS",
     "ScriptedTurnAdapter",
     "ToolBridge",
     "ToolBridgeError",
+    "StoredHarnessRunSnapshot",
+    "StoredHarnessToolStep",
     "ToolObservation",
     "TraceRecorder",
     "UrllibDeepSeekTransport",

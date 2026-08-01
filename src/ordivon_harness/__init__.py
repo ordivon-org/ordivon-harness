@@ -35,6 +35,9 @@ from .event_kinds import (
     HARNESS_RUN_ABANDONED,
     HARNESS_RUN_RECORDED,
     HARNESS_RUN_RECOVERY_RECORDED,
+    HARNESS_RUN_SNAPSHOT_RECORDED,
+    HARNESS_TOOL_STEP_PREPARED,
+    HARNESS_TOOL_STEP_RECORDED,
 )
 from .handoff import OperatorHandoffCapsule, operator_handoff
 from .history import HistoryValidation, validate_history
@@ -95,6 +98,9 @@ __all__ = [
     "HARNESS_RUN_ABANDONED",
     "HARNESS_RUN_RECORDED",
     "HARNESS_RUN_RECOVERY_RECORDED",
+    "HARNESS_RUN_SNAPSHOT_RECORDED",
+    "HARNESS_TOOL_STEP_PREPARED",
+    "HARNESS_TOOL_STEP_RECORDED",
     "HistoryValidation",
     "OperatorHandoffCapsule",
     "operator_handoff",

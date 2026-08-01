@@ -573,6 +573,11 @@ class HarnessHost:
                 and workspace_evidence.get("alreadyAbsent") is not True
             ):
                 raise ValueError("already_absent Workspace evidence differs")
+            if (
+                workspace_status == "retained"
+                and workspace_evidence.get("retained") is not True
+            ):
+                raise ValueError("retained Workspace evidence differs")
             if workspace_status == "unknown" and not isinstance(
                 workspace_evidence.get("errorType"), str
             ):
@@ -2164,6 +2169,15 @@ class HarnessHost:
             "harnessTraceObjectDigest",
             "toolObservationObjectDigests",
             "runConclusionObjectDigest",
+            "harnessToolStepIntentDigest",
+            "harnessToolStepIntentObjectDigest",
+            "activeHarnessToolStepIntentDigest",
+            "harnessToolStepReceiptDigest",
+            "harnessToolStepReceiptObjectDigest",
+            "harnessToolStepObservationObjectDigest",
+            "harnessRunSnapshotDigest",
+            "harnessRunSnapshotObjectDigest",
+            "harnessRunStateObjectDigest",
             "harnessRunRecoveryAssessmentId",
             "harnessRunRecoveryAssessmentDigest",
             "harnessRunRecoveryAssessmentObjectDigest",
@@ -2208,6 +2222,11 @@ class HarnessHost:
             "harnessRunObjectDigest",
             "harnessTraceObjectDigest",
             "runConclusionObjectDigest",
+            "harnessToolStepIntentObjectDigest",
+            "harnessToolStepReceiptObjectDigest",
+            "harnessToolStepObservationObjectDigest",
+            "harnessRunSnapshotObjectDigest",
+            "harnessRunStateObjectDigest",
             "harnessRunRecoveryAssessmentObjectDigest",
             "harnessRunAbandonmentObjectDigest",
             "completionVerificationObjectDigest",

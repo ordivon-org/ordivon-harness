@@ -10,6 +10,7 @@ import urllib.request
 
 from anc_canonical import JsonValue, canonical_bytes, loads_strict, validate_json_value
 
+from .control import ExecutionControl
 from .model import (
     AgentRunConclusion,
     AgentToolCall,
@@ -321,6 +322,29 @@ class DeepSeekTurnAdapter:
         self.transport = transport or UrllibDeepSeekTransport()
 
     def invoke(self, request: AgentTurnRequest) -> AgentTurnResult:
+        return self._invoke(request, timeout_seconds=self.settings.timeout_seconds)
+
+    def invoke_with_control(
+        self, request: AgentTurnRequest, control: ExecutionControl
+    ) -> AgentTurnResult:
+        if control.stop_requested:
+            raise AgentTurnAdapterError(
+                "DeepSeek invocation deadline expired before dispatch",
+                failure_code=AgentTurnFailureCode.TIMEOUT,
+            )
+        return self._invoke(
+            request,
+            timeout_seconds=control.clamp_timeout_seconds(
+                self.settings.timeout_seconds
+            ),
+        )
+
+    def accepts_effective_model_id(self, model_id: str) -> bool:
+        return model_id == self.settings.model
+
+    def _invoke(
+        self, request: AgentTurnRequest, *, timeout_seconds: float
+    ) -> AgentTurnResult:
         allowed_tool_names = {tool.name for tool in request.tools}
         if _CONCLUSION_TOOL_NAME in allowed_tool_names:
             raise ValueError("Runtime Tool catalog collides with the Harness conclusion Tool")
@@ -342,10 +366,10 @@ class DeepSeekTurnAdapter:
             headers={
                 "Authorization": f"Bearer {self.settings.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "ordivon-harness-oh5/1",
+                "User-Agent": "ordivon-harness-p0/1",
             },
             body=body,
-            timeout_seconds=self.settings.timeout_seconds,
+            timeout_seconds=timeout_seconds,
             max_response_bytes=self.settings.max_response_bytes,
         )
         try:
@@ -452,4 +476,5 @@ class DeepSeekTurnAdapter:
             usage=usage,
             finish_reason=finish_reason,
             raw_response_digest=raw_digest,
+            effective_model_id=response_model,
         )

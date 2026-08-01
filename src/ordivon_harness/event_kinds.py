@@ -6,6 +6,9 @@ HARNESS_ASSIGNMENT_COMMITTED = EventKind("harness.assignment-committed")
 HARNESS_RUN_RECOVERY_RECORDED = EventKind("harness.run-recovery-recorded")
 HARNESS_RUN_ABANDONED = EventKind("harness.run-abandoned")
 HARNESS_RUN_RECORDED = EventKind("harness.run-recorded")
+HARNESS_TOOL_STEP_PREPARED = EventKind("harness.tool-step-prepared")
+HARNESS_TOOL_STEP_RECORDED = EventKind("harness.tool-step-recorded")
+HARNESS_RUN_SNAPSHOT_RECORDED = EventKind("harness.run-snapshot-recorded")
 COMPLETION_PROPOSED = EventKind("completion.proposed")
 COMPLETION_DECIDED = EventKind("completion.decided")
 
@@ -15,6 +18,9 @@ HARNESS_EVENT_KINDS = frozenset(
         HARNESS_RUN_RECOVERY_RECORDED,
         HARNESS_RUN_ABANDONED,
         HARNESS_RUN_RECORDED,
+        HARNESS_TOOL_STEP_PREPARED,
+        HARNESS_TOOL_STEP_RECORDED,
+        HARNESS_RUN_SNAPSHOT_RECORDED,
         COMPLETION_PROPOSED,
         COMPLETION_DECIDED,
     }
@@ -28,4 +34,7 @@ __all__ = [
     "HARNESS_RUN_ABANDONED",
     "HARNESS_RUN_RECORDED",
     "HARNESS_RUN_RECOVERY_RECORDED",
+    "HARNESS_RUN_SNAPSHOT_RECORDED",
+    "HARNESS_TOOL_STEP_PREPARED",
+    "HARNESS_TOOL_STEP_RECORDED",
 ]

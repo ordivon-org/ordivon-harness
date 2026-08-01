@@ -607,7 +607,7 @@ class OH5AbandonmentTests(unittest.TestCase):
                     result.recovery.assessment.trigger,
                 )
 
-    def test_effectful_unrecorded_run_is_blocked_even_after_workspace_close(self) -> None:
+    def test_effectful_unrecorded_run_is_blocked_while_workspace_is_retained(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             clock = itertools.count(2_000).__next__
             runtime = _RecoveryRuntime()
@@ -625,6 +625,13 @@ class OH5AbandonmentTests(unittest.TestCase):
                 self.assertEqual(
                     result.recovery.assessment.grant_effect_class,
                     "workspace-change-possible",
+                )
+                self.assertEqual(
+                    result.recovery.assessment.workspace_status, "retained"
+                )
+                self.assertIn("workspace:oh5:g1", runtime.workspaces)
+                self.assertFalse(
+                    any(name == "workspace.close" for name, _ in runtime.calls)
                 )
                 self.assertEqual(
                     storage.journal.get_task(TASK_ID).state,

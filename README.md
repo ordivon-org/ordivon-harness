@@ -32,10 +32,13 @@ The retained evidence proves:
 - one first-party bare-model sequential loop;
 - Assignment-scoped Tool authority and Runtime correlation;
 - durable Trace, Tool Observation, Run receipt and completion verification;
-- conservative UNKNOWN handling and safe read-only lost-process abandonment;
-- Assignment-bound native Tool semantics and one pure Run disposition derivation.
+- conservative UNKNOWN handling, safe read-only abandonment and retained effectful recovery evidence;
+- Assignment-bound native Tool semantics and one pure Run disposition derivation;
+- monotonic Run deadlines, cancellation propagation and requested/effective model provenance;
+- durable native `workspace.exec` Intent → Receipt → Observation with restart reconciliation by `clientRequestId`;
+- bounded pause snapshots for input, approval and prepared effect dispatch.
 
-Effectful native Tool-step continuation, parallel Tools, subagents, routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+Generic effectful continuation remains deliberately narrower than the visible Tool surface: durable `workspace.exec` is accepted, while durable `workspace.mutate` remains blocked until Runtime exposes a reconciliable mutation dispatch identity. Parallel Tools, subagents, routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
 
 ## Development
 
@@ -52,4 +55,4 @@ Harness semantic history can be checked separately from the Host core doctor:
 ordivon-harness --state-root /path/to/host-state doctor
 ```
 
-See `ARCHITECTURE.md` and `docs/ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md`.
+See `ARCHITECTURE.md`, `docs/ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md` and `docs/ORDIVON_HARNESS_P0_P1_CLOSEOUT.md`.
