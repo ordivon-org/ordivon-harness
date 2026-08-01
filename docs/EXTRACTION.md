@@ -6,6 +6,8 @@ Source Host revision: `3f50c676802f1c3653767b200db445d15f2f7930`
 
 Host extraction implementation commit: `8275a81b3a56834561d2555f276c10e6c62e2735`
 
+Host merge commit: `98852d0a39b6d4c489396bda2fd0c99cc3870e34`
+
 Extracted source-history head: `fbfeff54163e78ca86060b053cb854a94703968c`
 
 ## Why the repository exists
