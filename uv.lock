@@ -1,0 +1,31 @@
+version = 1
+revision = 3
+requires-python = "==3.12.*"
+
+[[package]]
+name = "ordivon-harness"
+version = "0.3.0"
+source = { editable = "." }
+dependencies = [
+    { name = "ordivon-host" },
+    { name = "ordivon-protocol" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ordivon-host", git = "https://github.com/zycxfyh/ordivon-host.git?rev=2b17b0683128f995831fef54544f87d0166bab2d" },
+    { name = "ordivon-protocol", git = "https://github.com/zycxfyh/ordivon-computing.git?subdirectory=packages%2Fordivon-protocol&rev=37760a58d482c61748ed90ea5f46546cfd2e2344" },
+]
+
+[[package]]
+name = "ordivon-host"
+version = "0.1.2"
+source = { git = "https://github.com/zycxfyh/ordivon-host.git?rev=2b17b0683128f995831fef54544f87d0166bab2d#2b17b0683128f995831fef54544f87d0166bab2d" }
+dependencies = [
+    { name = "ordivon-protocol" },
+]
+
+[[package]]
+name = "ordivon-protocol"
+version = "0.5.0"
+source = { git = "https://github.com/zycxfyh/ordivon-computing.git?subdirectory=packages%2Fordivon-protocol&rev=37760a58d482c61748ed90ea5f46546cfd2e2344#37760a58d482c61748ed90ea5f46546cfd2e2344" }

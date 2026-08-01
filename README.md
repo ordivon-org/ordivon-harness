@@ -21,7 +21,7 @@ The dependency is one-way:
 ordivon-harness → ordivon-host → ordivon-protocol
 ```
 
-`ordivon-host` does not import this package. Host owns generic Task, Journal, CAS, Kernel and Runtime client mechanics; Harness owns its event vocabulary, semantic history validation, handoff projection and Agent execution behavior.
+`ordivon-host` does not import this package. Host owns generic Task, Journal, CAS, Kernel, the public `HostExtensionPort`, and Runtime client mechanics; Harness owns its event vocabulary, semantic history validation, handoff projection, durable Run state and Agent execution behavior.
 
 ## Verified boundary
 
@@ -34,15 +34,25 @@ The retained evidence proves:
 - durable Trace, Tool Observation, Run receipt and completion verification;
 - conservative UNKNOWN handling, safe read-only abandonment and retained effectful recovery evidence;
 - Assignment-bound native Tool semantics and one pure Run disposition derivation;
-- monotonic Run deadlines, cancellation propagation and requested/effective model provenance;
-- durable native `workspace.exec` Intent → Receipt → Observation with restart reconciliation by `clientRequestId`;
-- bounded pause snapshots for input, approval and prepared effect dispatch.
+- monotonic Run deadlines, cancellable Provider call handles and requested/effective model provenance;
+- active socket cancellation for the default DeepSeek HTTP transport;
+- durable native `workspace.exec` Intent → DispatchFence → Receipt → Observation with restart reconciliation by `clientRequestId`;
+- nonterminal `cancel-requested` Receipts that can be superseded by one final reconciled Receipt;
+- active-Tool-Step-first Run recovery before Workspace assessment;
+- executable `needs-input` and prepared-effect Run resume;
+- append-only Run-state deltas between bounded full checkpoints.
 
-Generic effectful continuation remains deliberately narrower than the visible Tool surface: durable `workspace.exec` is accepted, while durable `workspace.mutate` remains blocked until Runtime exposes a reconciliable mutation dispatch identity. Parallel Tools, subagents, routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+The current DispatchFence is a Host revision/Assignment/Intent fence retained in CAS and Runtime correlation evidence, with validation immediately before and after dispatch. Runtime does not independently authenticate it with a Host-issued MAC; it is therefore a practical stale-dispatch fence, not a cryptographic cross-service capability token.
+
+Generic effectful continuation remains deliberately narrower than the visible Tool surface: durable `workspace.exec` is accepted, while durable `workspace.mutate` remains blocked until Runtime exposes a reconciliable mutation dispatch identity. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
 
 ## Development
 
+Python 3.12 is required.
+
 ```bash
+python3.12 -m venv .venv
+. .venv/bin/activate
 python -m pip install -e .
 python -m unittest discover -s tests
 ruff check src tests scripts

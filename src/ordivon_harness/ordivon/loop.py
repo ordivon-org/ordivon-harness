@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-import time
-from typing import Callable
 
 from anc_canonical import JsonValue, canonical_bytes
 
@@ -13,9 +13,11 @@ from .model import (
     AgentRunConclusion,
     AgentTurnAdapter,
     AgentTurnAdapterError,
+    AgentTurnCallHandle,
     AgentTurnFailureCode,
     AgentTurnRequest,
 )
+from .run_store import StoredHarnessRunSnapshot
 from .tools import ToolBridge, ToolBridgeError, ToolObservation
 
 
@@ -44,12 +46,15 @@ class RunBudget:
     max_wall_time_ms: int
 
     def __post_init__(self) -> None:
-        if min(
-            self.max_model_calls,
-            self.max_tool_calls,
-            self.max_observation_bytes,
-            self.max_wall_time_ms,
-        ) < 1:
+        if (
+            min(
+                self.max_model_calls,
+                self.max_tool_calls,
+                self.max_observation_bytes,
+                self.max_wall_time_ms,
+            )
+            < 1
+        ):
             raise ValueError("Ordivon Harness budgets must be positive")
 
     def remaining(
@@ -103,7 +108,9 @@ class OrdivonAgentLoop:
         self.budget = budget
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
-            clock_ms if clock_ms is not None else lambda: time.monotonic_ns() // 1_000_000
+            clock_ms
+            if clock_ms is not None
+            else lambda: time.monotonic_ns() // 1_000_000
         )
 
     def run(
@@ -115,24 +122,121 @@ class OrdivonAgentLoop:
         initial_messages: tuple[dict[str, JsonValue], ...],
         cancellation: CancellationToken | None = None,
     ) -> AgentLoopResult:
+        return self._run(
+            harness_run_id=harness_run_id,
+            assignment_id=assignment_id,
+            context_digest=context_digest,
+            initial_messages=initial_messages,
+            cancellation=cancellation,
+            retained=None,
+        )
+
+    def resume(
+        self,
+        *,
+        retained: StoredHarnessRunSnapshot,
+        assignment_id: str,
+        context_digest: str,
+        additional_messages: tuple[dict[str, JsonValue], ...] = (),
+        cancellation: CancellationToken | None = None,
+    ) -> AgentLoopResult:
+        return self._run(
+            harness_run_id=retained.snapshot.harness_run_id,
+            assignment_id=assignment_id,
+            context_digest=context_digest,
+            initial_messages=additional_messages,
+            cancellation=cancellation,
+            retained=retained,
+        )
+
+    @staticmethod
+    def _cancel_and_drain_model_call(handle: AgentTurnCallHandle) -> None:
+        handle.cancel()
+        try:
+            handle.poll(0.5)
+        except Exception:  # noqa: BLE001 - cancellation drain is best effort.
+            return
+
+    def _run(
+        self,
+        *,
+        harness_run_id: str,
+        assignment_id: str,
+        context_digest: str,
+        initial_messages: tuple[dict[str, JsonValue], ...],
+        cancellation: CancellationToken | None,
+        retained: StoredHarnessRunSnapshot | None,
+    ) -> AgentLoopResult:
         cancellation = cancellation or CancellationToken(monotonic_ms=self.monotonic_ms)
+        prior_elapsed_ms = 0
+        if retained is None:
+            remaining_wall_time_ms = self.budget.max_wall_time_ms
+            messages = [dict(message) for message in initial_messages]
+            observations: list[ToolObservation] = []
+            provider_usage: list[dict[str, JsonValue]] = []
+            effective_models: list[str] = []
+            seen_model_call_ids: set[str] = set()
+            seen_tool_call_ids: set[str] = set()
+            model_calls = 0
+            tool_calls = 0
+            observation_bytes = 0
+        else:
+            snapshot = retained.snapshot
+            state = retained.state
+            if (
+                snapshot.harness_run_id != harness_run_id
+                or snapshot.assignment_id != assignment_id
+                or snapshot.tool_catalog_digest != self.tool_bridge.catalog_digest
+                or state.requested_model_id != self.adapter.model_id
+            ):
+                raise ValueError("Harness Run resume identities differ")
+            remaining = state.remaining_budget
+            expected_budget_fields = {
+                "modelCalls",
+                "toolCalls",
+                "observationBytes",
+                "wallTimeMs",
+            }
+            if set(remaining) != expected_budget_fields or any(
+                type(remaining[field]) is not int or remaining[field] < 0
+                for field in expected_budget_fields
+            ):
+                raise ValueError("Harness Run resume budget is invalid")
+            model_calls = self.budget.max_model_calls - int(remaining["modelCalls"])
+            tool_calls = self.budget.max_tool_calls - int(remaining["toolCalls"])
+            observation_bytes = self.budget.max_observation_bytes - int(
+                remaining["observationBytes"]
+            )
+            prior_elapsed_ms = self.budget.max_wall_time_ms - int(
+                remaining["wallTimeMs"]
+            )
+            if min(model_calls, tool_calls, observation_bytes, prior_elapsed_ms) < 0:
+                raise ValueError("Harness Run resume budget exceeds configured limits")
+            remaining_wall_time_ms = int(remaining["wallTimeMs"])
+            messages = [dict(message) for message in state.messages]
+            messages.extend(dict(message) for message in initial_messages)
+            observations = [
+                ToolObservation.from_dict(item) for item in state.observations
+            ]
+            provider_usage = [dict(item) for item in state.provider_usage]
+            effective_models = list(state.effective_model_ids)
+            if not effective_models and state.effective_model_id is not None:
+                effective_models.append(state.effective_model_id)
+            seen_model_call_ids = set(state.seen_model_call_ids)
+            seen_tool_call_ids = set(state.seen_tool_call_ids)
+            restorer = getattr(self.tool_bridge, "restore_seen_tool_calls", None)
+            if callable(restorer):
+                restorer(tuple(sorted(seen_tool_call_ids)))
+
         deadline = RunDeadline.after(
-            self.budget.max_wall_time_ms,
+            remaining_wall_time_ms,
             monotonic_ms=self.monotonic_ms,
         )
         control = ExecutionControl(cancellation, deadline)
         recorder = TraceRecorder(harness_run_id, clock_ms=self.clock_ms)
         started_at_ms = self.monotonic_ms()
-        messages = [dict(message) for message in initial_messages]
-        observations: list[ToolObservation] = []
-        provider_usage: list[dict[str, JsonValue]] = []
-        effective_models: list[str] = []
-        seen_model_call_ids: set[str] = set()
-        model_calls = 0
-        tool_calls = 0
-        observation_bytes = 0
         recorder.record(
-            "run_started",
+            "run_resumed" if retained is not None else "run_started",
             {
                 "assignmentId": assignment_id,
                 "contextDigest": context_digest,
@@ -140,11 +244,15 @@ class OrdivonAgentLoop:
                 "adapterId": self.adapter.adapter_id,
                 "requestedModelId": self.adapter.model_id,
                 "deadlineMonotonicMs": deadline.expires_at_ms,
+                "priorElapsedMs": prior_elapsed_ms,
+                "snapshotDigest": (
+                    None if retained is None else retained.snapshot.digest
+                ),
             },
         )
 
         def elapsed_ms() -> int:
-            return max(0, self.monotonic_ms() - started_at_ms)
+            return prior_elapsed_ms + max(0, self.monotonic_ms() - started_at_ms)
 
         def bind_run_state() -> None:
             binder = getattr(self.tool_bridge, "bind_run_state", None)
@@ -160,9 +268,11 @@ class OrdivonAgentLoop:
                     elapsed_ms=elapsed_ms(),
                 ),
                 requested_model_id=self.adapter.model_id,
-                effective_model_id=(
-                    effective_models[-1] if effective_models else None
-                ),
+                effective_model_id=(effective_models[-1] if effective_models else None),
+                seen_model_call_ids=tuple(sorted(seen_model_call_ids)),
+                seen_tool_call_ids=tuple(sorted(seen_tool_call_ids)),
+                provider_usage=tuple(provider_usage),
+                effective_model_ids=tuple(dict.fromkeys(effective_models)),
             )
 
         def stop(
@@ -178,9 +288,7 @@ class OrdivonAgentLoop:
                 "toolCalls": tool_calls,
                 "observationBytes": observation_bytes,
                 "elapsedMs": elapsed,
-                "deadlineOverrunMs": max(
-                    0, elapsed - self.budget.max_wall_time_ms
-                ),
+                "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
             }
             if detail is not None:
                 payload["detail"] = detail[:2_048]
@@ -200,14 +308,69 @@ class OrdivonAgentLoop:
                     "toolCalls": tool_calls,
                     "observationBytes": observation_bytes,
                     "wallTimeMs": elapsed,
-                    "deadlineOverrunMs": max(
-                        0, elapsed - self.budget.max_wall_time_ms
-                    ),
+                    "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
                     "requestedModelId": self.adapter.model_id,
                     "effectiveModelIds": list(dict.fromkeys(effective_models)),
                     "providerUsage": provider_usage,
                 },
             )
+
+        if retained is not None and retained.snapshot.active_tool_step_intent_digests:
+            reconciler = getattr(self.tool_bridge, "reconcile_current_tool_step", None)
+            if not callable(reconciler):
+                return stop(
+                    RunStopCode.RUNTIME_UNKNOWN,
+                    detail="resumed Harness Run has an active Tool Step without reconciliation",
+                )
+            try:
+                observation = reconciler()
+            except ToolBridgeError as error:
+                return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
+            except Exception as error:  # noqa: BLE001 - Run boundary converts component failure to a receipt.
+                return stop(
+                    RunStopCode.HARNESS_FAILED,
+                    detail=f"{type(error).__name__}: {error}",
+                )
+            tool_calls += 1
+            seen_tool_call_ids.add(observation.tool_call_id)
+            remaining_observation_bytes = (
+                self.budget.max_observation_bytes - observation_bytes
+            )
+            bounded = getattr(observation, "bounded", None)
+            if callable(bounded):
+                observation = bounded(remaining_observation_bytes)
+            encoded_size = len(canonical_bytes(observation.to_dict()))
+            if encoded_size > remaining_observation_bytes:
+                return stop(
+                    RunStopCode.BUDGET_EXHAUSTED,
+                    detail="reconciled Tool Observation exceeds the remaining Run budget",
+                )
+            observations.append(observation)
+            observation_bytes += encoded_size
+            messages.append(observation.to_model_message())
+            recorder.record(
+                "tool_call_reconciled",
+                {
+                    "toolCallId": observation.tool_call_id,
+                    "toolName": observation.tool_name,
+                    "observationDigest": observation.digest,
+                    "runtimeJobRef": observation.runtime_job_ref,
+                    "status": observation.status,
+                    "encodedBytes": encoded_size,
+                },
+            )
+            if observation.status == "unknown":
+                return stop(
+                    RunStopCode.RUNTIME_UNKNOWN,
+                    detail="resumed Tool Step remains unknown",
+                )
+            if observation.status == "cancel-requested":
+                return stop(
+                    RunStopCode.CANCEL_UNKNOWN,
+                    detail="resumed Tool Step cancellation remains unconfirmed",
+                )
+            if observation.status == "cancelled":
+                return stop(RunStopCode.CANCELLED)
 
         while True:
             if cancellation.cancelled:
@@ -241,12 +404,44 @@ class OrdivonAgentLoop:
                 },
             )
             try:
-                controlled_invoke = getattr(self.adapter, "invoke_with_control", None)
-                result = (
-                    controlled_invoke(request, control)
-                    if callable(controlled_invoke)
-                    else self.adapter.invoke(request)
-                )
+                start_invoke = getattr(self.adapter, "start_invoke", None)
+                supports_handle = getattr(self.adapter, "supports_call_handle", True)
+                if callable(start_invoke) and supports_handle:
+                    handle = start_invoke(request, control)
+                    while True:
+                        if cancellation.cancelled:
+                            self._cancel_and_drain_model_call(handle)
+                            return stop(
+                                RunStopCode.CANCELLED,
+                                detail=(
+                                    "cancellation interrupted the active Provider call"
+                                ),
+                            )
+                        if deadline.expired:
+                            self._cancel_and_drain_model_call(handle)
+                            return stop(
+                                RunStopCode.BUDGET_EXHAUSTED,
+                                detail=(
+                                    "wall-time deadline interrupted the active Provider call"
+                                ),
+                            )
+                        result = handle.poll(
+                            min(
+                                0.05,
+                                max(0.001, control.remaining_ms / 1_000),
+                            )
+                        )
+                        if result is not None:
+                            break
+                else:
+                    controlled_invoke = getattr(
+                        self.adapter, "invoke_with_control", None
+                    )
+                    result = (
+                        controlled_invoke(request, control)
+                        if callable(controlled_invoke)
+                        else self.adapter.invoke(request)
+                    )
             except AgentTurnAdapterError as error:
                 if cancellation.cancelled:
                     return stop(RunStopCode.CANCELLED, detail=str(error))
@@ -264,7 +459,7 @@ class OrdivonAgentLoop:
                 return stop(stop_code, detail=str(error))
             except (TypeError, ValueError) as error:
                 return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
-            except Exception as error:  # Run boundary must still emit a terminal receipt.
+            except Exception as error:  # noqa: BLE001 - Run boundary must emit a terminal receipt.
                 return stop(
                     RunStopCode.HARNESS_FAILED,
                     detail=f"{type(error).__name__}: {error}",
@@ -340,7 +535,7 @@ class OrdivonAgentLoop:
                         pause_recorder("needs_input")
                 except ToolBridgeError as error:
                     return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 - pause persistence failure terminates the Run.
                     return stop(
                         RunStopCode.HARNESS_FAILED,
                         detail=f"{type(error).__name__}: {error}",
@@ -357,6 +552,12 @@ class OrdivonAgentLoop:
                 }
             )
             for call in result.tool_calls:
+                if call.tool_call_id in seen_tool_call_ids:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=f"duplicate Tool Call identity: {call.tool_call_id}",
+                    )
+                seen_tool_call_ids.add(call.tool_call_id)
                 if cancellation.cancelled:
                     return stop(RunStopCode.CANCELLED)
                 if deadline.expired:
@@ -387,7 +588,7 @@ class OrdivonAgentLoop:
                     )
                 except ToolBridgeError as error:
                     return stop(RunStopCode.INVALID_TOOL_CALL, detail=str(error))
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 - Tool implementation failure terminates the Run.
                     return stop(
                         RunStopCode.HARNESS_FAILED,
                         detail=f"{type(error).__name__}: {error}",

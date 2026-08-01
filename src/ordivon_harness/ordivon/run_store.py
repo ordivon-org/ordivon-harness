@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from ordivon_host import HostExtensionPort, HostKernelError
+from ordivon_host.objects import StoredObject
 from ordivon_protocol import (
+    HarnessDispatchFence,
     HarnessRunPauseReason,
     HarnessRunSnapshot,
     HarnessToolStepIntent,
     HarnessToolStepReceipt,
 )
-from ordivon_host.objects import StoredObject
 
 from ..event_kinds import (
     HARNESS_RUN_SNAPSHOT_RECORDED,
@@ -18,42 +19,19 @@ from ..event_kinds import (
     HARNESS_TOOL_STEP_RECORDED,
 )
 from ..host import CommittedHarnessAssignment, HarnessHost, HarnessSuperseded
+from ..run_state import (
+    HarnessRunState,
+    build_state_delta,
+    load_state_object,
+)
 
-
-@dataclass(frozen=True, slots=True)
-class HarnessRunState:
-    messages: tuple[dict[str, JsonValue], ...]
-    observations: tuple[dict[str, JsonValue], ...]
-    remaining_budget: dict[str, JsonValue]
-    requested_model_id: str
-    effective_model_id: str | None
-
-    def __post_init__(self) -> None:
-        validate_json_value(list(self.messages))
-        validate_json_value(list(self.observations))
-        validate_json_value(self.remaining_budget)
-        if not self.requested_model_id or self.requested_model_id != self.requested_model_id.strip():
-            raise ValueError("requested model identity must be non-empty and trimmed")
-
-    @property
-    def messages_digest(self) -> str:
-        return canonical_digest(list(self.messages))
-
-    @property
-    def observation_digests(self) -> tuple[str, ...]:
-        return tuple(canonical_digest(item) for item in self.observations)
-
-    def to_dict(self, harness_run_id: str) -> dict[str, JsonValue]:
-        return {
-            "schemaVersion": 1,
-            "kind": "ordivon.harness-run-state",
-            "harnessRunId": harness_run_id,
-            "messages": list(self.messages),
-            "observations": list(self.observations),
-            "remainingBudget": self.remaining_budget,
-            "requestedModelId": self.requested_model_id,
-            "effectiveModelId": self.effective_model_id,
-        }
+_DISPATCH_FENCE_TTL_MS = 30_000
+_RECEIPT_FIELDS = (
+    "harnessToolStepReceiptDigest",
+    "harnessToolStepReceiptObjectDigest",
+    "harnessToolStepObservationObjectDigest",
+    "harnessToolStepPreviousReceiptObjectDigest",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,14 +46,18 @@ class StoredHarnessRunSnapshot:
 class StoredHarnessToolStep:
     intent: HarnessToolStepIntent
     intent_object: StoredObject
+    fence: HarnessDispatchFence | None
+    fence_object: StoredObject | None
     receipt: HarnessToolStepReceipt | None
     receipt_object: StoredObject | None
+    previous_receipt: HarnessToolStepReceipt | None
+    previous_receipt_object: StoredObject | None
     observation: dict[str, JsonValue] | None
     observation_object: StoredObject | None
 
 
 class HostHarnessRunStore:
-    """Thin Host-Journal adapter for native Harness continuity objects."""
+    """Thin Host extension over native Harness continuity objects."""
 
     def __init__(
         self,
@@ -86,6 +68,7 @@ class HostHarnessRunStore:
         if native is None:
             raise ValueError("Harness Run Store requires a native Run Contract")
         self.host = host
+        self.extension = HostExtensionPort(host.storage, host.kernel)
         self.committed = committed
         self.harness_run_id = native.harness_run_id
         self._bound_state: HarnessRunState | None = None
@@ -94,30 +77,57 @@ class HostHarnessRunStore:
     def bind_state(self, state: HarnessRunState) -> None:
         self._bound_state = state
 
-    def prepare_tool_step(self, intent: HarnessToolStepIntent) -> StoredHarnessRunSnapshot:
+    def prepare_tool_step(
+        self, intent: HarnessToolStepIntent
+    ) -> StoredHarnessRunSnapshot:
         self._require_intent(intent)
         snapshot = self._build_snapshot(
             HarnessRunPauseReason.EFFECT_DISPATCH_PENDING,
             active_intent_digests=(intent.digest,),
         )
         state = self._require_state()
-        intent_object = self.host.storage.put_object(
+        intent_object = self.extension.put_object(
             intent.to_dict(), kind="harness-tool-step-intent"
         )
         retained = self._store_snapshot(snapshot, state)
-        payload = {
-            "harnessToolStepIntentDigest": intent.digest,
-            "harnessToolStepIntentObjectDigest": intent_object.digest,
-            "activeHarnessToolStepIntentDigest": intent.digest,
-            "harnessRunSnapshotDigest": snapshot.digest,
-            "harnessRunSnapshotObjectDigest": retained.snapshot_object.digest,
-            "harnessRunStateObjectDigest": retained.state_object.digest,
-        }
+        issued_at_ms = self.host.kernel.clock_ms()
+        fence = HarnessDispatchFence(
+            fence_id=(
+                "harness-dispatch-fence:"
+                f"{self.harness_run_id.removeprefix('harness-run:')}:"
+                f"{intent.digest[7:31]}"
+            ),
+            task_id=self.committed.assignment.task_id,
+            task_revision=self.committed.task_revision + 1,
+            harness_run_id=self.harness_run_id,
+            assignment_id=self.committed.assignment.assignment_id,
+            assignment_generation=self.committed.assignment.generation,
+            assignment_digest=self.committed.assignment.digest,
+            intent_digest=intent.digest,
+            runtime_operation=intent.runtime_operation,
+            client_request_id=intent.client_request_id,
+            issued_at_ms=issued_at_ms,
+            expires_at_ms=issued_at_ms + _DISPATCH_FENCE_TTL_MS,
+        )
+        fence_object = self.extension.put_object(
+            fence.to_dict(), kind="harness-dispatch-fence"
+        )
         self._commit(
             kind=HARNESS_TOOL_STEP_PREPARED,
-            payload=payload,
+            updates={
+                "harnessToolStepIntentDigest": intent.digest,
+                "harnessToolStepIntentObjectDigest": intent_object.digest,
+                "activeHarnessToolStepIntentDigest": intent.digest,
+                "harnessDispatchFenceDigest": fence.digest,
+                "harnessDispatchFenceObjectDigest": fence_object.digest,
+                "harnessRunSnapshotDigest": snapshot.digest,
+                "harnessRunSnapshotObjectDigest": retained.snapshot_object.digest,
+                "harnessRunStateObjectDigest": retained.state_object.digest,
+            },
+            remove_fields=_RECEIPT_FIELDS,
             referenced_objects=(
                 intent_object,
+                fence_object,
                 retained.snapshot_object,
                 retained.state_object,
             ),
@@ -125,6 +135,34 @@ class HostHarnessRunStore:
             event_suffix=f"tool-step-prepared:{intent.digest[7:23]}",
         )
         return retained
+
+    def assert_dispatch_fence_current(
+        self,
+        fence: HarnessDispatchFence,
+        *,
+        require_unexpired: bool = True,
+    ) -> None:
+        step = self.load_current_tool_step()
+        current = self.extension.load(self.committed.assignment.task_id)
+        current_assignment = self.host.load_current_assignment(
+            self.committed.assignment.task_id
+        )
+        if current_assignment.assignment != self.committed.assignment:
+            raise HarnessSuperseded("Harness Assignment is no longer current")
+        if step.fence != fence or step.intent.digest != fence.intent_digest:
+            raise HarnessSuperseded("Harness Dispatch Fence is no longer current")
+        if (
+            current.projection.revision != fence.task_revision
+            or current.data.get("activeHarnessToolStepIntentDigest")
+            != fence.intent_digest
+        ):
+            raise HarnessSuperseded(
+                "Harness Dispatch Fence revision is no longer current"
+            )
+        if require_unexpired and self.host.kernel.clock_ms() > fence.expires_at_ms:
+            raise HarnessSuperseded(
+                "Harness Dispatch Fence expired before Runtime admission"
+            )
 
     def record_tool_step_receipt(
         self,
@@ -136,118 +174,219 @@ class HostHarnessRunStore:
         validate_json_value(observation)
         if canonical_digest(observation) != receipt.observation_digest:
             raise ValueError("Tool Step Receipt differs from its Observation")
-        receipt_object = self.host.storage.put_object(
+        current = self.load_current_tool_step()
+        if current.intent.digest != receipt.intent_digest:
+            raise ValueError("Tool Step Receipt belongs to another Intent")
+        previous = current.receipt
+        expected_previous = None if previous is None else previous.digest
+        if receipt.previous_receipt_digest != expected_previous:
+            raise ValueError(
+                "Tool Step Receipt predecessor differs from current history"
+            )
+        if previous is not None and previous.terminal:
+            raise ValueError("terminal Tool Step Receipt cannot be superseded")
+
+        receipt_object = self.extension.put_object(
             receipt.to_dict(), kind="harness-tool-step-receipt"
         )
-        observation_object = self.host.storage.put_object(
+        observation_object = self.extension.put_object(
             observation, kind="harness-tool-observation"
         )
+        updates: dict[str, JsonValue] = {
+            "harnessToolStepReceiptDigest": receipt.digest,
+            "harnessToolStepReceiptObjectDigest": receipt_object.digest,
+            "harnessToolStepObservationObjectDigest": observation_object.digest,
+        }
+        referenced_objects: tuple[StoredObject, ...] = (
+            receipt_object,
+            observation_object,
+        )
+        remove_fields: tuple[str, ...] = ()
+        if current.receipt_object is None:
+            remove_fields += ("harnessToolStepPreviousReceiptObjectDigest",)
+        else:
+            updates["harnessToolStepPreviousReceiptObjectDigest"] = (
+                current.receipt_object.digest
+            )
+            referenced_objects += (current.receipt_object,)
+        if receipt.terminal:
+            remove_fields += ("activeHarnessToolStepIntentDigest",)
         self._commit(
             kind=HARNESS_TOOL_STEP_RECORDED,
-            payload={
-                "harnessToolStepReceiptDigest": receipt.digest,
-                "harnessToolStepReceiptObjectDigest": receipt_object.digest,
-                "harnessToolStepObservationObjectDigest": observation_object.digest,
-            },
-            referenced_objects=(receipt_object, observation_object),
+            updates=updates,
+            remove_fields=remove_fields,
+            referenced_objects=referenced_objects,
             label="Harness Tool Step Receipt",
             event_suffix=f"tool-step-recorded:{receipt.digest[7:23]}",
-            clear_active_intent=True,
         )
 
     def load_current_tool_step(self) -> StoredHarnessToolStep:
-        current = self.host.storage.read_task_event(self.committed.assignment.task_id)
-        data = self.host._data(current)
+        current = self.extension.load(self.committed.assignment.task_id)
+        data = current.data
         intent_object_digest = data.get("harnessToolStepIntentObjectDigest")
         if not isinstance(intent_object_digest, str):
             raise KeyError("Task has no current Harness Tool Step Intent")
-        raw_intent = self.host.storage.objects.get(
+        raw_intent = self.extension.get_object(
             intent_object_digest, expected_kind="harness-tool-step-intent"
         )
         if not isinstance(raw_intent, dict):
-            raise ValueError("Harness Tool Step Intent object is invalid")
+            raise TypeError("Harness Tool Step Intent object is invalid")
         intent = HarnessToolStepIntent.from_dict(raw_intent)
         self._require_intent(intent)
-        intent_object = self.host.storage.objects.inspect(intent_object_digest)
-        receipt_digest = data.get("harnessToolStepReceiptObjectDigest")
-        observation_digest = data.get("harnessToolStepObservationObjectDigest")
-        if receipt_digest is None and observation_digest is None:
-            return StoredHarnessToolStep(
-                intent, intent_object, None, None, None, None
+        intent_object = self.extension.inspect_object(intent_object_digest)
+
+        fence: HarnessDispatchFence | None = None
+        fence_object: StoredObject | None = None
+        fence_object_digest = data.get("harnessDispatchFenceObjectDigest")
+        if fence_object_digest is not None:
+            if not isinstance(fence_object_digest, str):
+                raise ValueError("Harness Dispatch Fence object reference is invalid")
+            raw_fence = self.extension.get_object(
+                fence_object_digest, expected_kind="harness-dispatch-fence"
             )
-        if not isinstance(receipt_digest, str) or not isinstance(
-            observation_digest, str
+            if not isinstance(raw_fence, dict):
+                raise ValueError("Harness Dispatch Fence object is invalid")
+            fence = HarnessDispatchFence.from_dict(raw_fence)
+            fence_object = self.extension.inspect_object(fence_object_digest)
+            if (
+                data.get("harnessDispatchFenceDigest") != fence.digest
+                or fence.intent_digest != intent.digest
+                or fence.harness_run_id != self.harness_run_id
+                or fence.assignment_id != intent.assignment_id
+                or fence.assignment_generation != intent.assignment_generation
+                or fence.assignment_digest != intent.assignment_digest
+                or fence.runtime_operation != intent.runtime_operation
+                or fence.client_request_id != intent.client_request_id
+            ):
+                raise ValueError("Harness Dispatch Fence differs from its Intent")
+
+        receipt_object_digest = data.get("harnessToolStepReceiptObjectDigest")
+        observation_object_digest = data.get("harnessToolStepObservationObjectDigest")
+        if receipt_object_digest is None and observation_object_digest is None:
+            return StoredHarnessToolStep(
+                intent,
+                intent_object,
+                fence,
+                fence_object,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        if not isinstance(receipt_object_digest, str) or not isinstance(
+            observation_object_digest, str
         ):
-            raise ValueError("Harness Tool Step result references are incomplete")
-        raw_receipt = self.host.storage.objects.get(
-            receipt_digest, expected_kind="harness-tool-step-receipt"
+            raise TypeError("Harness Tool Step result references are incomplete")
+        raw_receipt = self.extension.get_object(
+            receipt_object_digest, expected_kind="harness-tool-step-receipt"
         )
-        raw_observation = self.host.storage.objects.get(
-            observation_digest, expected_kind="harness-tool-observation"
+        raw_observation = self.extension.get_object(
+            observation_object_digest, expected_kind="harness-tool-observation"
         )
-        if not isinstance(raw_receipt, dict) or not isinstance(
-            raw_observation, dict
-        ):
-            raise ValueError("Harness Tool Step result objects are invalid")
+        if not isinstance(raw_receipt, dict) or not isinstance(raw_observation, dict):
+            raise TypeError("Harness Tool Step result objects are invalid")
         receipt = HarnessToolStepReceipt.from_dict(raw_receipt)
         validate_json_value(raw_observation)
         if (
-            receipt.intent_digest != intent.digest
+            data.get("harnessToolStepReceiptDigest") != receipt.digest
+            or receipt.intent_digest != intent.digest
             or receipt.tool_call_id != intent.tool_call_id
             or canonical_digest(raw_observation) != receipt.observation_digest
         ):
             raise ValueError("Harness Tool Step result differs from its Intent")
+
+        previous_receipt: HarnessToolStepReceipt | None = None
+        previous_receipt_object: StoredObject | None = None
+        previous_object_digest = data.get("harnessToolStepPreviousReceiptObjectDigest")
+        if receipt.previous_receipt_digest is None:
+            if previous_object_digest is not None:
+                raise ValueError(
+                    "initial Tool Step Receipt unexpectedly references a predecessor"
+                )
+        else:
+            if not isinstance(previous_object_digest, str):
+                raise ValueError("Tool Step Receipt predecessor object is missing")
+            raw_previous = self.extension.get_object(
+                previous_object_digest, expected_kind="harness-tool-step-receipt"
+            )
+            if not isinstance(raw_previous, dict):
+                raise ValueError("Tool Step Receipt predecessor is invalid")
+            previous_receipt = HarnessToolStepReceipt.from_dict(raw_previous)
+            previous_receipt_object = self.extension.inspect_object(
+                previous_object_digest
+            )
+            if (
+                previous_receipt.digest != receipt.previous_receipt_digest
+                or previous_receipt.intent_digest != intent.digest
+                or previous_receipt.terminal
+            ):
+                raise ValueError("Tool Step Receipt predecessor chain is invalid")
+
+        active = data.get("activeHarnessToolStepIntentDigest")
+        if receipt.terminal:
+            if active is not None:
+                raise ValueError("terminal Tool Step Receipt retained an active Intent")
+        elif active != intent.digest:
+            raise ValueError("non-terminal Tool Step Receipt lost its active Intent")
         return StoredHarnessToolStep(
             intent,
             intent_object,
+            fence,
+            fence_object,
             receipt,
-            self.host.storage.objects.inspect(receipt_digest),
+            self.extension.inspect_object(receipt_object_digest),
+            previous_receipt,
+            previous_receipt_object,
             dict(raw_observation),
-            self.host.storage.objects.inspect(observation_digest),
+            self.extension.inspect_object(observation_object_digest),
         )
 
     def record_pause(
         self, pause_reason: HarnessRunPauseReason
     ) -> StoredHarnessRunSnapshot:
         snapshot = self._build_snapshot(pause_reason, active_intent_digests=())
-        retained = self._store_snapshot(snapshot, self._require_state())
+        retained = self._store_snapshot(
+            snapshot, self._require_state(), allow_delta=False
+        )
         self._commit(
             kind=HARNESS_RUN_SNAPSHOT_RECORDED,
-            payload={
+            updates={
                 "harnessRunSnapshotDigest": snapshot.digest,
                 "harnessRunSnapshotObjectDigest": retained.snapshot_object.digest,
                 "harnessRunStateObjectDigest": retained.state_object.digest,
             },
+            remove_fields=("activeHarnessToolStepIntentDigest",),
             referenced_objects=(retained.snapshot_object, retained.state_object),
             label="Harness Run Snapshot",
             event_suffix=f"run-snapshot:{snapshot.sequence}",
-            clear_active_intent=True,
         )
         return retained
 
     def load_current_snapshot(self) -> StoredHarnessRunSnapshot:
-        current = self.host.storage.read_task_event(self.committed.assignment.task_id)
-        data = self.host._data(current)
-        snapshot_digest = data.get("harnessRunSnapshotObjectDigest")
-        state_digest = data.get("harnessRunStateObjectDigest")
+        current = self.extension.load(self.committed.assignment.task_id)
+        snapshot_digest = current.data.get("harnessRunSnapshotObjectDigest")
+        state_digest = current.data.get("harnessRunStateObjectDigest")
         if not isinstance(snapshot_digest, str) or not isinstance(state_digest, str):
             raise KeyError("Task has no current Harness Run Snapshot")
-        raw_snapshot = self.host.storage.objects.get(
+        raw_snapshot = self.extension.get_object(
             snapshot_digest, expected_kind="harness-run-snapshot"
         )
-        raw_state = self.host.storage.objects.get(
-            state_digest, expected_kind="harness-run-state"
-        )
-        if not isinstance(raw_snapshot, dict) or not isinstance(raw_state, dict):
-            raise ValueError("Harness Run Snapshot objects are invalid")
+        if not isinstance(raw_snapshot, dict):
+            raise TypeError("Harness Run Snapshot object is invalid")
         snapshot = HarnessRunSnapshot.from_dict(raw_snapshot)
-        state = self._state_from_dict(raw_state)
+        state = load_state_object(
+            self.host.storage.objects,
+            state_digest,
+            harness_run_id=self.harness_run_id,
+        )
         self._validate_snapshot_state(snapshot, state)
         return StoredHarnessRunSnapshot(
             snapshot,
-            self.host.storage.objects.inspect(snapshot_digest),
+            self.extension.inspect_object(snapshot_digest),
             state,
-            self.host.storage.objects.inspect(state_digest),
+            self.extension.inspect_object(state_digest),
         )
 
     def _build_snapshot(
@@ -281,76 +420,92 @@ class HostHarnessRunStore:
         )
 
     def _store_snapshot(
-        self, snapshot: HarnessRunSnapshot, state: HarnessRunState
+        self,
+        snapshot: HarnessRunSnapshot,
+        state: HarnessRunState,
+        *,
+        allow_delta: bool = True,
     ) -> StoredHarnessRunSnapshot:
         self._validate_snapshot_state(snapshot, state)
-        snapshot_object = self.host.storage.put_object(
+        snapshot_object = self.extension.put_object(
             snapshot.to_dict(), kind="harness-run-snapshot"
         )
-        state_object = self.host.storage.put_object(
-            state.to_dict(self.harness_run_id), kind="harness-run-state"
-        )
+        state_value = state.to_dict(self.harness_run_id)
+        state_kind = "harness-run-state"
+        if allow_delta:
+            current = self.extension.load(self.committed.assignment.task_id)
+            previous_digest = current.data.get("harnessRunStateObjectDigest")
+            if isinstance(previous_digest, str):
+                try:
+                    previous = load_state_object(
+                        self.host.storage.objects,
+                        previous_digest,
+                        harness_run_id=self.harness_run_id,
+                    )
+                except (KeyError, ValueError):
+                    previous = None
+                if previous is not None:
+                    delta = build_state_delta(
+                        harness_run_id=self.harness_run_id,
+                        previous_state_object_digest=previous_digest,
+                        previous=previous,
+                        current=state,
+                    )
+                    if delta is not None:
+                        state_value = delta
+                        state_kind = "harness-run-state-delta"
+        state_object = self.extension.put_object(state_value, kind=state_kind)
         return StoredHarnessRunSnapshot(snapshot, snapshot_object, state, state_object)
 
     def _commit(
         self,
         *,
         kind,
-        payload: dict[str, JsonValue],
+        updates: dict[str, JsonValue],
+        remove_fields: tuple[str, ...],
         referenced_objects: tuple[StoredObject, ...],
         label: str,
         event_suffix: str,
-        clear_active_intent: bool = False,
     ) -> None:
         task_id = self.committed.assignment.task_id
-        current = self.host.storage.read_task_event(task_id)
-        if current.projection.revision != self.committed.task_revision:
-            raise HarnessSuperseded(
-                f"Task revision is {current.projection.revision}, expected {self.committed.task_revision}"
-            )
-        current_assignment = self.host._assignment_from_snapshot(current)
-        if current_assignment is None or current_assignment.assignment != self.committed.assignment:
+        current_assignment = self.host.load_current_assignment(task_id)
+        if (
+            current_assignment.task_revision != self.committed.task_revision
+            or current_assignment.assignment != self.committed.assignment
+        ):
             raise HarnessSuperseded("Harness Assignment is no longer current")
-        state_fields = self.host._current_state_fields(self.host._data(current))
-        if clear_active_intent:
-            state_fields.pop("activeHarnessToolStepIntentDigest", None)
-        data = {
-            **state_fields,
-            **self.host._assignment_fields(self.committed),
-            **payload,
-        }
-        references = self.host._dedupe_objects(
-            self.host._state_objects(state_fields)
-            + self.host._assignment_objects(self.committed)
-            + referenced_objects
-        )
-        with self.host.kernel.locked_task(
-            task_id,
-            expected_revision=self.committed.task_revision,
-            expected_state=current.projection.state,
-            expected_frontier=current.projection.ready_frontier,
-            label=label,
-            error_factory=self.host._kernel_error,
-        ) as locked:
-            projection = locked.commit(
-                event_id=f"event:{self.host._token(task_id)}:{event_suffix}",
+        event_token = canonical_digest(
+            {
+                "taskId": task_id,
+                "harnessRunId": self.harness_run_id,
+                "eventSuffix": event_suffix,
+            }
+        )[7:31]
+        try:
+            committed = self.extension.append_preserving(
+                task_id=task_id,
+                expected_revision=self.committed.task_revision,
+                event_id=f"event:harness-extension:{event_token}",
                 kind=kind,
-                payload=data,
-                state=locked.projection.state,
-                frontier=locked.projection.ready_frontier,
-                referenced_objects=references,
-            ).projection
-        self.committed = replace(self.committed, task_revision=projection.revision)
+                updates=updates,
+                remove_fields=remove_fields,
+                referenced_objects=referenced_objects,
+                label=label,
+            )
+        except HostKernelError as error:
+            raise HarnessSuperseded(str(error)) from error
+        self.committed = replace(
+            self.committed, task_revision=committed.projection.revision
+        )
 
     def _current_snapshot_sequence(self) -> int:
-        current = self.host.storage.read_task_event(self.committed.assignment.task_id)
-        data = self.host._data(current)
-        digest = data.get("harnessRunSnapshotObjectDigest")
+        current = self.extension.load(self.committed.assignment.task_id)
+        digest = current.data.get("harnessRunSnapshotObjectDigest")
         if not isinstance(digest, str):
             return 0
-        raw = self.host.storage.objects.get(digest, expected_kind="harness-run-snapshot")
+        raw = self.extension.get_object(digest, expected_kind="harness-run-snapshot")
         if not isinstance(raw, dict):
-            raise ValueError("current Harness Run Snapshot is not an object")
+            raise TypeError("current Harness Run Snapshot is not an object")
         return HarnessRunSnapshot.from_dict(raw).sequence
 
     def _require_intent(self, intent: HarnessToolStepIntent) -> None:
@@ -380,39 +535,3 @@ class HostHarnessRunStore:
             or snapshot.effective_model_id != state.effective_model_id
         ):
             raise ValueError("Harness Run Snapshot differs from its bounded state")
-
-    def _state_from_dict(self, value: dict[str, Any]) -> HarnessRunState:
-        if set(value) != {
-            "schemaVersion",
-            "kind",
-            "harnessRunId",
-            "messages",
-            "observations",
-            "remainingBudget",
-            "requestedModelId",
-            "effectiveModelId",
-        }:
-            raise ValueError("Harness Run state fields differ")
-        if (
-            value["schemaVersion"] != 1
-            or value["kind"] != "ordivon.harness-run-state"
-            or value["harnessRunId"] != self.harness_run_id
-            or not isinstance(value["messages"], list)
-            or not isinstance(value["observations"], list)
-            or not isinstance(value["remainingBudget"], dict)
-            or not isinstance(value["requestedModelId"], str)
-            or value["effectiveModelId"] is not None
-            and not isinstance(value["effectiveModelId"], str)
-        ):
-            raise ValueError("Harness Run state is invalid")
-        if any(not isinstance(item, dict) for item in value["messages"]):
-            raise ValueError("Harness Run messages are invalid")
-        if any(not isinstance(item, dict) for item in value["observations"]):
-            raise ValueError("Harness Run observations are invalid")
-        return HarnessRunState(
-            messages=tuple(dict(item) for item in value["messages"]),
-            observations=tuple(dict(item) for item in value["observations"]),
-            remaining_budget=dict(value["remainingBudget"]),
-            requested_model_id=value["requestedModelId"],
-            effective_model_id=value["effectiveModelId"],
-        )

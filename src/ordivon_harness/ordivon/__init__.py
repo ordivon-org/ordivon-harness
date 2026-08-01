@@ -1,13 +1,15 @@
+from .control import ExecutionControl, RunDeadline
 from .deepseek import (
     DEFAULT_DEEPSEEK_BASE_URL,
     DEFAULT_DEEPSEEK_SECRET_PATH,
     SUPPORTED_DEEPSEEK_MODELS,
+    DeepSeekPostHandle,
     DeepSeekSettings,
     DeepSeekTransport,
     DeepSeekTurnAdapter,
+    HttpClientDeepSeekTransport,
     UrllibDeepSeekTransport,
 )
-from .control import ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .input import (
     CompiledHarnessInput,
@@ -23,17 +25,6 @@ from .loop import (
     RunBudget,
     RunStopCode,
 )
-from .result import (
-    NativeRunTimes,
-    build_native_run_receipt,
-    record_native_run_result,
-)
-from .run_store import (
-    HarnessRunState,
-    HostHarnessRunStore,
-    StoredHarnessRunSnapshot,
-    StoredHarnessToolStep,
-)
 from .manifest import (
     ORDIVON_HARNESS_ID,
     ORDIVON_HARNESS_PROTOCOL,
@@ -46,10 +37,22 @@ from .model import (
     AgentToolDefinition,
     AgentTurnAdapter,
     AgentTurnAdapterError,
+    AgentTurnCallHandle,
     AgentTurnFailureCode,
     AgentTurnRequest,
     AgentTurnResult,
     ScriptedTurnAdapter,
+)
+from .result import (
+    NativeRunTimes,
+    build_native_run_receipt,
+    record_native_run_result,
+)
+from .run_store import (
+    HarnessRunState,
+    HostHarnessRunStore,
+    StoredHarnessRunSnapshot,
+    StoredHarnessToolStep,
 )
 from .tools import (
     HarnessRuntimeCatalog,
@@ -62,19 +65,25 @@ from .tools import (
 )
 
 __all__ = [
+    "DEFAULT_DEEPSEEK_BASE_URL",
+    "DEFAULT_DEEPSEEK_SECRET_PATH",
+    "ORDIVON_HARNESS_ID",
+    "ORDIVON_HARNESS_PROTOCOL",
+    "ORDIVON_HARNESS_PROTOCOL_REVISION",
+    "SUPPORTED_DEEPSEEK_MODELS",
     "AgentLoopResult",
     "AgentRunConclusion",
     "AgentToolCall",
     "AgentToolDefinition",
     "AgentTurnAdapter",
     "AgentTurnAdapterError",
+    "AgentTurnCallHandle",
     "AgentTurnFailureCode",
     "AgentTurnRequest",
     "AgentTurnResult",
     "CancellationToken",
     "CompiledHarnessInput",
-    "DEFAULT_DEEPSEEK_BASE_URL",
-    "DEFAULT_DEEPSEEK_SECRET_PATH",
+    "DeepSeekPostHandle",
     "DeepSeekSettings",
     "DeepSeekTransport",
     "DeepSeekTurnAdapter",
@@ -82,26 +91,23 @@ __all__ = [
     "HarnessContextCompiler",
     "HarnessContextRequest",
     "HarnessRunEvent",
-    "HarnessRuntimeCatalog",
     "HarnessRunState",
-    "HostHarnessRunStore",
+    "HarnessRuntimeCatalog",
     "HarnessTrace",
+    "HostHarnessRunStore",
+    "HttpClientDeepSeekTransport",
     "NativeRunTimes",
-    "ORDIVON_HARNESS_ID",
-    "ORDIVON_HARNESS_PROTOCOL",
-    "ORDIVON_HARNESS_PROTOCOL_REVISION",
     "OrdivonAgentLoop",
     "OrdivonInputCompiler",
     "RunBudget",
     "RunDeadline",
     "RunStopCode",
     "RuntimeToolBridge",
-    "SUPPORTED_DEEPSEEK_MODELS",
     "ScriptedTurnAdapter",
-    "ToolBridge",
-    "ToolBridgeError",
     "StoredHarnessRunSnapshot",
     "StoredHarnessToolStep",
+    "ToolBridge",
+    "ToolBridgeError",
     "ToolObservation",
     "TraceRecorder",
     "UrllibDeepSeekTransport",

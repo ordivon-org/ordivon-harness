@@ -5,35 +5,18 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
-
 from ordivon_host.domain import TaskState
 from ordivon_host.effects import ArtifactRef, TaskOutcome
 from ordivon_host.journal import JournalCorruption
 from ordivon_host.kernel import HostKernel, worker_owner_id
 from ordivon_host.objects import ObjectCorrupt, ObjectMissing, StoredObject
 from ordivon_host.storage import HostStorage, TaskEventSnapshot
-from .event_kinds import (
-    COMPLETION_DECIDED,
-    COMPLETION_PROPOSED,
-    HARNESS_ASSIGNMENT_COMMITTED,
-    HARNESS_RUN_ABANDONED,
-    HARNESS_RUN_RECORDED,
-    HARNESS_RUN_RECOVERY_RECORDED,
-)
+
 from .contracts import (
     CompletionVerification,
     NativeHarnessRunContract,
     TaskContract,
     ToolGrant,
-)
-from .models import (
-    CompletionDecision,
-    CompletionDecisionReceipt,
-    CompletionProposal,
-    HarnessAssignment,
-    HarnessCapabilityManifest,
-    HarnessRunReceipt,
-    TaskAttemptDescriptor,
 )
 from .disposition import (
     CompletionRoute,
@@ -43,6 +26,23 @@ from .disposition import (
     ReplacementScope,
     derive_native_run_disposition,
     recovery_unknowns,
+)
+from .event_kinds import (
+    COMPLETION_DECIDED,
+    COMPLETION_PROPOSED,
+    HARNESS_ASSIGNMENT_COMMITTED,
+    HARNESS_RUN_ABANDONED,
+    HARNESS_RUN_RECORDED,
+    HARNESS_RUN_RECOVERY_RECORDED,
+)
+from .models import (
+    CompletionDecision,
+    CompletionDecisionReceipt,
+    CompletionProposal,
+    HarnessAssignment,
+    HarnessCapabilityManifest,
+    HarnessRunReceipt,
+    TaskAttemptDescriptor,
 )
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
 from .tool_semantics import (
@@ -519,6 +519,7 @@ class HarnessHost:
         catalog_status: str,
         workspace_status: str,
         workspace_evidence: dict[str, JsonValue],
+        additional_unknowns: tuple[str, ...] = (),
     ) -> RecordedNativeRunRecovery:
         native = committed.native_run_contract
         grant = committed.tool_grant
@@ -585,7 +586,22 @@ class HarnessHost:
         previous = self._recovery_from_snapshot(snapshot)
         sequence = 1 if previous is None else previous.assessment.sequence + 1
         consequence = self._grant_recovery_consequence(committed)
-        unknowns = recovery_unknowns(consequence, workspace_status=workspace_status)
+        for value in additional_unknowns:
+            if not value or value != value.strip():
+                raise ValueError("additional Run Recovery unknowns must be trimmed")
+        if len(additional_unknowns) != len(set(additional_unknowns)):
+            raise ValueError("additional Run Recovery unknowns must be unique")
+        evidence_unknowns = workspace_evidence.get("toolStepUnresolvedUnknowns", [])
+        if evidence_unknowns != list(additional_unknowns):
+            raise ValueError("Run Recovery Tool Step unknown evidence differs")
+        unknowns = tuple(
+            dict.fromkeys(
+                (
+                    *recovery_unknowns(consequence, workspace_status=workspace_status),
+                    *additional_unknowns,
+                )
+            )
+        )
         assessment = NativeRunRecoveryAssessment(
             assessment_id=(
                 f"harness-run-recovery:{self._run_token(native.harness_run_id)}:r{sequence}"
@@ -615,6 +631,7 @@ class HarnessHost:
             assessment.to_dict(), kind="native-run-recovery-assessment"
         )
         payload: dict[str, JsonValue] = {
+            **self._current_state_fields(self._data(snapshot)),
             **self._assignment_fields(committed),
             "harnessRunRecoveryAssessmentId": assessment.assessment_id,
             "harnessRunRecoveryAssessmentDigest": assessment.digest,
@@ -2175,6 +2192,9 @@ class HarnessHost:
             "harnessToolStepReceiptDigest",
             "harnessToolStepReceiptObjectDigest",
             "harnessToolStepObservationObjectDigest",
+            "harnessToolStepPreviousReceiptObjectDigest",
+            "harnessDispatchFenceDigest",
+            "harnessDispatchFenceObjectDigest",
             "harnessRunSnapshotDigest",
             "harnessRunSnapshotObjectDigest",
             "harnessRunStateObjectDigest",
@@ -2225,6 +2245,8 @@ class HarnessHost:
             "harnessToolStepIntentObjectDigest",
             "harnessToolStepReceiptObjectDigest",
             "harnessToolStepObservationObjectDigest",
+            "harnessToolStepPreviousReceiptObjectDigest",
+            "harnessDispatchFenceObjectDigest",
             "harnessRunSnapshotObjectDigest",
             "harnessRunStateObjectDigest",
             "harnessRunRecoveryAssessmentObjectDigest",

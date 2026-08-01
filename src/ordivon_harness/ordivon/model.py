@@ -176,7 +176,9 @@ class AgentTurnResult:
         if len(call_ids) != len(set(call_ids)):
             raise ValueError("Agent turn Tool Call identities must be unique")
         if self.conclusion is not None and self.tool_calls:
-            raise ValueError("Agent turn cannot request Tools and conclude simultaneously")
+            raise ValueError(
+                "Agent turn cannot request Tools and conclude simultaneously"
+            )
         if not self.tool_calls and self.conclusion is None:
             raise ValueError("Agent turn must request a Tool or provide a conclusion")
         validate_json_value(self.usage)
@@ -201,7 +203,9 @@ class AgentTurnResult:
             "modelId": self.model_id,
             "content": self.content,
             "toolCalls": [call.to_dict() for call in self.tool_calls],
-            "conclusion": None if self.conclusion is None else self.conclusion.to_dict(),
+            "conclusion": None
+            if self.conclusion is None
+            else self.conclusion.to_dict(),
             "usage": self.usage,
             "finishReason": self.finish_reason,
             "rawResponseDigest": self.raw_response_digest,
@@ -228,6 +232,12 @@ class AgentTurnAdapterError(RuntimeError):
     ) -> None:
         super().__init__(message)
         self.failure_code = failure_code
+
+
+class AgentTurnCallHandle(Protocol):
+    def poll(self, timeout_seconds: float) -> AgentTurnResult | None: ...
+
+    def cancel(self) -> None: ...
 
 
 class AgentTurnAdapter(Protocol):

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-
 _EVENT_KINDS = {
     "run_started",
+    "run_resumed",
     "model_call_started",
     "model_call_completed",
     "tool_call_proposed",
@@ -15,6 +15,9 @@ _EVENT_KINDS = {
     "tool_call_observed",
     "tool_call_rejected",
     "tool_call_unknown",
+    "tool_call_cancel_requested",
+    "tool_call_cancelled",
+    "tool_call_reconciled",
     "run_stopped",
 }
 
@@ -50,7 +53,10 @@ class HarnessTrace:
     events: tuple[HarnessRunEvent, ...]
 
     def __post_init__(self) -> None:
-        if not self.harness_run_id or self.harness_run_id != self.harness_run_id.strip():
+        if (
+            not self.harness_run_id
+            or self.harness_run_id != self.harness_run_id.strip()
+        ):
             raise ValueError("Harness Run identity must be non-empty and trimmed")
         if tuple(event.sequence for event in self.events) != tuple(
             range(1, len(self.events) + 1)

@@ -3,15 +3,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from anc_canonical import JsonValue
+from ordivon_host.runtime import (
+    RuntimeClient,
+    RuntimeClientError,
+    ensure_workspace_closed,
+)
 
-from ordivon_host.runtime import RuntimeClient, RuntimeClientError, ensure_workspace_closed
 from .host import (
     HarnessHost,
     HarnessLifecycleError,
     RecordedNativeRunAbandonment,
     RecordedNativeRunRecovery,
 )
-from .ordivon.tools import discover_harness_runtime_catalog
+from .ordivon.run_store import HostHarnessRunStore
+from .ordivon.tools import RuntimeToolBridge, discover_harness_runtime_catalog
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +62,9 @@ class NativeRunRecoveryController:
             )
         committed = self.host.load_current_assignment(task_id)
         if committed.native_run_contract is None or committed.tool_grant is None:
-            raise HarnessLifecycleError("current Harness Assignment is not a native Run")
+            raise HarnessLifecycleError(
+                "current Harness Assignment is not a native Run"
+            )
 
         try:
             catalog = discover_harness_runtime_catalog(self.runtime)
@@ -69,6 +76,69 @@ class NativeRunRecoveryController:
                 if catalog.digest == committed.assignment.tool_catalog_digest
                 else "drifted"
             )
+
+        tool_step_unknowns: list[str] = []
+        tool_step_evidence: dict[str, JsonValue] = {"status": "not-present"}
+        run_store = HostHarnessRunStore(self.host, committed)
+        try:
+            retained_step = run_store.load_current_tool_step()
+        except KeyError:
+            retained_step = None
+        except Exception as error:  # noqa: BLE001 - corrupt extension state becomes recovery evidence.
+            retained_step = None
+            tool_step_evidence = {
+                "status": "unreadable",
+                "errorType": type(error).__name__,
+                "message": str(error)[:2_048],
+            }
+            tool_step_unknowns.append("active Tool Step state is unreadable")
+        if retained_step is not None:
+            receipt = retained_step.receipt
+            tool_step_evidence = {
+                "status": ("prepared" if receipt is None else receipt.status.value),
+                "toolCallId": retained_step.intent.tool_call_id,
+                "clientRequestId": retained_step.intent.client_request_id,
+                "runtimeJobRef": (None if receipt is None else receipt.runtime_job_ref),
+            }
+            if receipt is None or not receipt.terminal:
+                if catalog_status != "matched":
+                    tool_step_unknowns.append(
+                        "active Tool Step cannot reconcile without the committed Runtime catalog"
+                    )
+                else:
+                    bridge = RuntimeToolBridge(
+                        committed,
+                        harness_run_id=run_store.harness_run_id,
+                        runtime=self.runtime,
+                        run_store=run_store,
+                    )
+                    try:
+                        observation = bridge.reconcile_current_tool_step()
+                    except Exception as error:  # noqa: BLE001 - reconciliation failure must remain UNKNOWN evidence.
+                        tool_step_evidence = {
+                            **tool_step_evidence,
+                            "reconciliation": "failed",
+                            "errorType": type(error).__name__,
+                            "message": str(error)[:2_048],
+                        }
+                        tool_step_unknowns.append(
+                            "active Tool Step reconciliation failed"
+                        )
+                    else:
+                        committed = bridge.committed
+                        run_store = bridge.run_store or run_store
+                        tool_step_evidence = {
+                            **tool_step_evidence,
+                            "reconciliation": "recorded",
+                            "resultStatus": observation.status,
+                            "runtimeJobRef": observation.runtime_job_ref,
+                            "observationDigest": observation.digest,
+                        }
+                        if observation.status in {"unknown", "cancel-requested"}:
+                            tool_step_unknowns.append(
+                                f"active Tool Step remains {observation.status}: "
+                                f"{retained_step.intent.tool_call_id}"
+                            )
 
         workspace_id = committed.assignment.workspace_ref
         workspace_evidence: dict[str, JsonValue]
@@ -134,12 +204,18 @@ class NativeRunRecoveryController:
                     "diff": diff_evidence,
                 }
 
+        workspace_evidence = {
+            **workspace_evidence,
+            "toolStepReconciliation": tool_step_evidence,
+            "toolStepUnresolvedUnknowns": list(tool_step_unknowns),
+        }
         recovery = self.host.record_native_run_recovery(
             committed,
             trigger=trigger,
             catalog_status=catalog_status,
             workspace_status=workspace_status,
             workspace_evidence=workspace_evidence,
+            additional_unknowns=tuple(tool_step_unknowns),
         )
         if recovery.assessment.safe_to_abandon and auto_abandon:
             abandonment = self.host.abandon_native_run(

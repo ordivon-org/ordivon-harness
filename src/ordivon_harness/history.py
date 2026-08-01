@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from anc_effect_binding import EffectBinding
 from anc_effect_ir import EffectEnvelope, effect_digest
+from ordivon_host.domain import EventKind, TaskProjection
+from ordivon_host.journal import JournalCorruption
+from ordivon_host.objects import ObjectCorrupt
+from ordivon_host.storage import HostStorage
 from ordivon_protocol import (
+    HarnessDispatchFence,
     HarnessRunSnapshot,
     HarnessToolStepIntent,
     HarnessToolStepReceipt,
 )
 
-from ordivon_host.domain import EventKind, TaskProjection
 from .contracts import NativeHarnessRunContract, ToolGrant
 from .disposition import (
     CompletionRoute,
@@ -21,14 +26,12 @@ from .disposition import (
 )
 from .models import HarnessAssignment, HarnessRunReceipt
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
+from .run_state import load_state_object
 from .tool_semantics import (
     NativeToolCatalogSnapshot,
     legacy_grant_recovery_consequence,
     recovery_consequence_from_persisted,
 )
-from ordivon_host.journal import JournalCorruption
-from ordivon_host.objects import ObjectCorrupt
-from ordivon_host.storage import HostStorage
 
 _EVENT_FIELDS = {
     "schemaVersion",
@@ -369,6 +372,48 @@ def _validate_semantic_links(
             )
         checks += 1
 
+    dispatch_fence_object_key = data.get("harnessDispatchFenceObjectDigest")
+    dispatch_fence_digest = data.get("harnessDispatchFenceDigest")
+    if dispatch_fence_object_key is not None or dispatch_fence_digest is not None:
+        if (
+            not isinstance(dispatch_fence_object_key, str)
+            or not isinstance(dispatch_fence_digest, str)
+            or tool_step_intent is None
+            or assignment is None
+            or native_contract is None
+        ):
+            raise JournalCorruption(
+                f"historical Harness Dispatch Fence references are incomplete: {event_id}"
+            )
+        raw_fence = storage.objects.get(
+            dispatch_fence_object_key, expected_kind="harness-dispatch-fence"
+        )
+        if not isinstance(raw_fence, dict):
+            raise ObjectCorrupt(
+                f"historical Harness Dispatch Fence is not an object: {event_id}"
+            )
+        try:
+            dispatch_fence = HarnessDispatchFence.from_dict(raw_fence)
+        except ValueError as error:
+            raise ObjectCorrupt(
+                f"historical Harness Dispatch Fence is invalid: {event_id}"
+            ) from error
+        if (
+            dispatch_fence_digest != dispatch_fence.digest
+            or dispatch_fence.task_id != assignment.task_id
+            or dispatch_fence.harness_run_id != native_contract.harness_run_id
+            or dispatch_fence.assignment_id != assignment.assignment_id
+            or dispatch_fence.assignment_generation != assignment.generation
+            or dispatch_fence.assignment_digest != assignment.digest
+            or dispatch_fence.intent_digest != tool_step_intent.digest
+            or dispatch_fence.runtime_operation != tool_step_intent.runtime_operation
+            or dispatch_fence.client_request_id != tool_step_intent.client_request_id
+        ):
+            raise JournalCorruption(
+                f"historical Harness Dispatch Fence identities differ: {event_id}"
+            )
+        checks += 1
+
     tool_step_receipt_object_key = data.get("harnessToolStepReceiptObjectDigest")
     if isinstance(tool_step_receipt_object_key, str):
         raw_receipt = storage.objects.get(
@@ -412,6 +457,56 @@ def _validate_semantic_links(
             raise JournalCorruption(
                 f"historical Harness Tool Step Observation digest differs: {event_id}"
             )
+        current_receipt_schema = "previousReceiptDigest" in raw_receipt
+        previous_receipt_object_key = data.get(
+            "harnessToolStepPreviousReceiptObjectDigest"
+        )
+        if current_receipt_schema:
+            if tool_step_receipt.previous_receipt_digest is None:
+                if previous_receipt_object_key is not None:
+                    raise JournalCorruption(
+                        f"historical initial Tool Step Receipt has a predecessor: {event_id}"
+                    )
+            else:
+                if not isinstance(previous_receipt_object_key, str):
+                    raise JournalCorruption(
+                        f"historical Tool Step Receipt predecessor is missing: {event_id}"
+                    )
+                raw_previous_receipt = storage.objects.get(
+                    previous_receipt_object_key,
+                    expected_kind="harness-tool-step-receipt",
+                )
+                if not isinstance(raw_previous_receipt, dict):
+                    raise ObjectCorrupt(
+                        f"historical Tool Step Receipt predecessor is invalid: {event_id}"
+                    )
+                try:
+                    previous_receipt = HarnessToolStepReceipt.from_dict(
+                        raw_previous_receipt
+                    )
+                except ValueError as error:
+                    raise ObjectCorrupt(
+                        f"historical Tool Step Receipt predecessor is invalid: {event_id}"
+                    ) from error
+                if (
+                    previous_receipt.digest != tool_step_receipt.previous_receipt_digest
+                    or previous_receipt.intent_digest != tool_step_intent.digest
+                    or previous_receipt.terminal
+                ):
+                    raise JournalCorruption(
+                        f"historical Tool Step Receipt predecessor chain differs: {event_id}"
+                    )
+                checks += 1
+            active_intent = data.get("activeHarnessToolStepIntentDigest")
+            if tool_step_receipt.terminal:
+                if active_intent is not None:
+                    raise JournalCorruption(
+                        f"historical terminal Tool Step retained an active Intent: {event_id}"
+                    )
+            elif active_intent != tool_step_intent.digest:
+                raise JournalCorruption(
+                    f"historical non-terminal Tool Step lost its active Intent: {event_id}"
+                )
         checks += 2
 
     snapshot_object_key = data.get("harnessRunSnapshotObjectDigest")
@@ -429,12 +524,9 @@ def _validate_semantic_links(
         raw_snapshot = storage.objects.get(
             snapshot_object_key, expected_kind="harness-run-snapshot"
         )
-        raw_state = storage.objects.get(
-            state_object_key, expected_kind="harness-run-state"
-        )
-        if not isinstance(raw_snapshot, dict) or not isinstance(raw_state, dict):
+        if not isinstance(raw_snapshot, dict):
             raise ObjectCorrupt(
-                f"historical Harness Run Snapshot state is not an object: {event_id}"
+                f"historical Harness Run Snapshot is not an object: {event_id}"
             )
         try:
             snapshot = HarnessRunSnapshot.from_dict(raw_snapshot)
@@ -442,42 +534,16 @@ def _validate_semantic_links(
             raise ObjectCorrupt(
                 f"historical Harness Run Snapshot is invalid: {event_id}"
             ) from error
-        expected_state_fields = {
-            "schemaVersion",
-            "kind",
-            "harnessRunId",
-            "messages",
-            "observations",
-            "remainingBudget",
-            "requestedModelId",
-            "effectiveModelId",
-        }
-        if set(raw_state) != expected_state_fields:
-            raise ObjectCorrupt(
-                f"historical Harness Run state fields differ: {event_id}"
+        try:
+            state = load_state_object(
+                storage.objects,
+                state_object_key,
+                harness_run_id=snapshot.harness_run_id,
             )
-        messages = raw_state.get("messages")
-        observations = raw_state.get("observations")
-        remaining_budget = raw_state.get("remainingBudget")
-        requested_model_id = raw_state.get("requestedModelId")
-        effective_model_id = raw_state.get("effectiveModelId")
-        if (
-            raw_state.get("schemaVersion") != 1
-            or raw_state.get("kind") != "ordivon.harness-run-state"
-            or raw_state.get("harnessRunId") != snapshot.harness_run_id
-            or not isinstance(messages, list)
-            or any(not isinstance(item, dict) for item in messages)
-            or not isinstance(observations, list)
-            or any(not isinstance(item, dict) for item in observations)
-            or not isinstance(remaining_budget, dict)
-            or not isinstance(requested_model_id, str)
-            or (effective_model_id is not None and not isinstance(effective_model_id, str))
-        ):
+        except ValueError as error:
             raise ObjectCorrupt(
-                f"historical Harness Run state is invalid: {event_id}"
-            )
-        validate_json_value(raw_state)
-        observation_digests = tuple(canonical_digest(item) for item in observations)
+                f"historical Harness Run state chain is invalid: {event_id}"
+            ) from error
         if (
             data.get("harnessRunSnapshotDigest") != snapshot.digest
             or snapshot.harness_run_id != native_contract.harness_run_id
@@ -485,11 +551,11 @@ def _validate_semantic_links(
             or snapshot.assignment_generation != assignment.generation
             or snapshot.assignment_digest != assignment.digest
             or snapshot.tool_catalog_digest != assignment.tool_catalog_digest
-            or snapshot.messages_digest != canonical_digest(messages)
-            or snapshot.observation_digests != observation_digests
-            or snapshot.remaining_budget != remaining_budget
-            or snapshot.requested_model_id != requested_model_id
-            or snapshot.effective_model_id != effective_model_id
+            or snapshot.messages_digest != state.messages_digest
+            or snapshot.observation_digests != state.observation_digests
+            or snapshot.remaining_budget != state.remaining_budget
+            or snapshot.requested_model_id != state.requested_model_id
+            or snapshot.effective_model_id != state.effective_model_id
         ):
             raise JournalCorruption(
                 f"historical Harness Run Snapshot identities differ: {event_id}"
@@ -564,13 +630,21 @@ def _validate_semantic_links(
             if tool_catalog is not None
             else legacy_grant_recovery_consequence(tool_grant.allowed_tools)
         )
-        if (
-            recovery_consequence_from_persisted(recovery.grant_effect_class)
-            is not expected_consequence
-            or recovery.unresolved_unknowns
-            != recovery_unknowns(
-                expected_consequence,
-                workspace_status=recovery.workspace_status,
+        if recovery_consequence_from_persisted(
+            recovery.grant_effect_class
+        ) is not expected_consequence or recovery.unresolved_unknowns != tuple(
+            dict.fromkeys(
+                (
+                    *recovery_unknowns(
+                        expected_consequence,
+                        workspace_status=recovery.workspace_status,
+                    ),
+                    *tuple(
+                        recovery.workspace_evidence.get(
+                            "toolStepUnresolvedUnknowns", []
+                        )
+                    ),
+                )
             )
         ):
             raise JournalCorruption(

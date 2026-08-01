@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import hashlib
-from pathlib import Path
+import http.client
+import socket
 import stat
-from typing import Protocol
+import threading
 import urllib.error
+import urllib.parse
 import urllib.request
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Protocol
 
 from anc_canonical import JsonValue, canonical_bytes, loads_strict, validate_json_value
 
@@ -16,6 +20,7 @@ from .model import (
     AgentToolCall,
     AgentToolDefinition,
     AgentTurnAdapterError,
+    AgentTurnCallHandle,
     AgentTurnFailureCode,
     AgentTurnRequest,
     AgentTurnResult,
@@ -158,7 +163,235 @@ class UrllibDeepSeekTransport:
                 failure_code=AgentTurnFailureCode.TIMEOUT,
             ) from error
         if len(raw) > max_response_bytes:
-            raise AgentTurnAdapterError("DeepSeek response exceeds the configured byte bound")
+            raise AgentTurnAdapterError(
+                "DeepSeek response exceeds the configured byte bound"
+            )
+        return raw
+
+
+class DeepSeekPostHandle(Protocol):
+    def poll(self, timeout_seconds: float) -> bytes | None: ...
+
+    def cancel(self) -> None: ...
+
+
+class CancellableDeepSeekTransport(Protocol):
+    def start_post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> DeepSeekPostHandle: ...
+
+
+class _HttpClientPostHandle:
+    def __init__(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> None:
+        self._url = url
+        self._headers = dict(headers)
+        self._body = body
+        self._timeout_seconds = timeout_seconds
+        self._max_response_bytes = max_response_bytes
+        self._done = threading.Event()
+        self._cancelled = threading.Event()
+        self._lock = threading.Lock()
+        self._connection: http.client.HTTPConnection | None = None
+        self._response: http.client.HTTPResponse | None = None
+        self._result: bytes | None = None
+        self._error: Exception | None = None
+        self._thread = threading.Thread(
+            target=self._run,
+            name="ordivon-deepseek-http",
+            daemon=True,
+        )
+        self._thread.start()
+
+    def poll(self, timeout_seconds: float) -> bytes | None:
+        if timeout_seconds < 0:
+            raise ValueError("DeepSeek poll timeout must be non-negative")
+        if not self._done.wait(timeout_seconds):
+            return None
+        if self._error is not None:
+            raise self._error
+        assert self._result is not None
+        return self._result
+
+    def cancel(self) -> None:
+        self._cancelled.set()
+        with self._lock:
+            response = self._response
+            connection = self._connection
+        if response is not None:
+            try:
+                response.close()
+            except OSError:
+                pass
+        if connection is not None:
+            sock = connection.sock
+            if sock is not None:
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+            try:
+                connection.close()
+            except OSError:
+                pass
+
+    def _run(self) -> None:
+        connection: http.client.HTTPConnection | None = None
+        response: http.client.HTTPResponse | None = None
+        try:
+            parsed = urllib.parse.urlsplit(self._url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+                raise ValueError("DeepSeek URL must be absolute HTTP(S)")
+            connection_type = (
+                http.client.HTTPSConnection
+                if parsed.scheme == "https"
+                else http.client.HTTPConnection
+            )
+            connection = connection_type(
+                parsed.hostname,
+                port=parsed.port,
+                timeout=self._timeout_seconds,
+            )
+            with self._lock:
+                if self._cancelled.is_set():
+                    raise AgentTurnAdapterError(
+                        "DeepSeek request was cancelled before connection",
+                        failure_code=AgentTurnFailureCode.FAILED,
+                    )
+                self._connection = connection
+            path = parsed.path or "/"
+            if parsed.query:
+                path += "?" + parsed.query
+            connection.request("POST", path, body=self._body, headers=self._headers)
+            response = connection.getresponse()
+            with self._lock:
+                self._response = response
+            raw = response.read(self._max_response_bytes + 1)
+            if self._cancelled.is_set():
+                raise AgentTurnAdapterError(
+                    "DeepSeek request was cancelled in flight",
+                    failure_code=AgentTurnFailureCode.FAILED,
+                )
+            if not 200 <= response.status < 300:
+                detail = raw[:8_192].decode("utf-8", errors="replace")
+                if response.status in {408, 504}:
+                    failure_code = AgentTurnFailureCode.TIMEOUT
+                elif response.status == 429 or response.status >= 500:
+                    failure_code = AgentTurnFailureCode.UNAVAILABLE
+                else:
+                    failure_code = AgentTurnFailureCode.REJECTED
+                raise AgentTurnAdapterError(
+                    f"DeepSeek returned HTTP {response.status}: {detail}",
+                    failure_code=failure_code,
+                )
+            if len(raw) > self._max_response_bytes:
+                raise AgentTurnAdapterError(
+                    "DeepSeek response exceeds the configured byte bound"
+                )
+            self._result = raw
+        except AgentTurnAdapterError as error:
+            self._error = error
+        except TimeoutError as error:
+            self._error = AgentTurnAdapterError(
+                "DeepSeek request timed out",
+                failure_code=AgentTurnFailureCode.TIMEOUT,
+            )
+            self._error.__cause__ = error
+        except (OSError, http.client.HTTPException) as error:
+            message = (
+                "DeepSeek request was cancelled in flight"
+                if self._cancelled.is_set()
+                else f"DeepSeek connection failed: {error}"
+            )
+            self._error = AgentTurnAdapterError(
+                message,
+                failure_code=(
+                    AgentTurnFailureCode.FAILED
+                    if self._cancelled.is_set()
+                    else AgentTurnFailureCode.TRANSPORT_FAILED
+                ),
+            )
+            self._error.__cause__ = error
+        except Exception as error:  # noqa: BLE001 - preserve unexpected worker failure for poll().
+            self._error = error
+        finally:
+            if response is not None:
+                try:
+                    response.close()
+                except OSError:
+                    pass
+            if connection is not None:
+                try:
+                    connection.close()
+                except OSError:
+                    pass
+            with self._lock:
+                self._response = None
+                self._connection = None
+            self._done.set()
+
+
+class HttpClientDeepSeekTransport:
+    """One-request-per-handle transport with active socket cancellation."""
+
+    def start_post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> DeepSeekPostHandle:
+        return _HttpClientPostHandle(
+            url,
+            headers=headers,
+            body=body,
+            timeout_seconds=timeout_seconds,
+            max_response_bytes=max_response_bytes,
+        )
+
+    def post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        body: bytes,
+        timeout_seconds: float,
+        max_response_bytes: int,
+    ) -> bytes:
+        handle = self.start_post(
+            url,
+            headers=headers,
+            body=body,
+            timeout_seconds=timeout_seconds,
+            max_response_bytes=max_response_bytes,
+        )
+        raw = handle.poll(timeout_seconds + 0.25)
+        if raw is None:
+            handle.cancel()
+            handle.poll(0.5)
+            raise AgentTurnAdapterError(
+                "DeepSeek request timed out",
+                failure_code=AgentTurnFailureCode.TIMEOUT,
+            )
         return raw
 
 
@@ -240,7 +473,9 @@ def _provider_messages(
                 name = raw_call["name"]
                 arguments = raw_call["arguments"]
                 if not isinstance(call_id, str) or not isinstance(name, str):
-                    raise ValueError("DeepSeek assistant Tool Call identities are invalid")
+                    raise TypeError(
+                        "DeepSeek assistant Tool Call identities are invalid"
+                    )
                 validate_json_value(arguments)
                 calls.append(
                     {
@@ -296,7 +531,7 @@ def _parse_conclusion(arguments: dict[str, JsonValue]) -> AgentRunConclusion:
     status = arguments["status"]
     summary = arguments["summary"]
     if not isinstance(status, str) or not isinstance(summary, str):
-        raise ValueError("DeepSeek conclusion status and summary must be strings")
+        raise TypeError("DeepSeek conclusion status and summary must be strings")
     return AgentRunConclusion(
         status=status,
         summary=summary,
@@ -306,6 +541,34 @@ def _parse_conclusion(arguments: dict[str, JsonValue]) -> AgentRunConclusion:
             arguments["unresolved_unknowns"], "unresolved unknowns"
         ),
     )
+
+
+class _DeepSeekTurnCallHandle:
+    def __init__(
+        self,
+        adapter: DeepSeekTurnAdapter,
+        post_handle: DeepSeekPostHandle,
+        *,
+        allowed_tool_names: set[str],
+    ) -> None:
+        self._adapter = adapter
+        self._post_handle = post_handle
+        self._allowed_tool_names = allowed_tool_names
+        self._result: AgentTurnResult | None = None
+
+    def poll(self, timeout_seconds: float) -> AgentTurnResult | None:
+        if self._result is not None:
+            return self._result
+        raw = self._post_handle.poll(timeout_seconds)
+        if raw is None:
+            return None
+        self._result = self._adapter._decode_response(
+            raw, allowed_tool_names=self._allowed_tool_names
+        )
+        return self._result
+
+    def cancel(self) -> None:
+        self._post_handle.cancel()
 
 
 class DeepSeekTurnAdapter:
@@ -319,7 +582,39 @@ class DeepSeekTurnAdapter:
     ) -> None:
         self.settings = settings
         self.model_id = settings.model
-        self.transport = transport or UrllibDeepSeekTransport()
+        self.transport = transport or HttpClientDeepSeekTransport()
+
+    @property
+    def supports_call_handle(self) -> bool:
+        return callable(getattr(self.transport, "start_post", None))
+
+    def start_invoke(
+        self, request: AgentTurnRequest, control: ExecutionControl
+    ) -> AgentTurnCallHandle:
+        if control.stop_requested:
+            raise AgentTurnAdapterError(
+                "DeepSeek invocation stopped before dispatch",
+                failure_code=AgentTurnFailureCode.TIMEOUT,
+            )
+        start_post = getattr(self.transport, "start_post", None)
+        if not callable(start_post):
+            raise AgentTurnAdapterError(
+                "DeepSeek transport does not expose a cancellable call handle",
+                failure_code=AgentTurnFailureCode.FAILED,
+            )
+        allowed_tool_names, url, headers, body = self._prepare_request(request)
+        post_handle = start_post(
+            url,
+            headers=headers,
+            body=body,
+            timeout_seconds=control.clamp_timeout_seconds(
+                self.settings.timeout_seconds
+            ),
+            max_response_bytes=self.settings.max_response_bytes,
+        )
+        return _DeepSeekTurnCallHandle(
+            self, post_handle, allowed_tool_names=allowed_tool_names
+        )
 
     def invoke(self, request: AgentTurnRequest) -> AgentTurnResult:
         return self._invoke(request, timeout_seconds=self.settings.timeout_seconds)
@@ -327,17 +622,35 @@ class DeepSeekTurnAdapter:
     def invoke_with_control(
         self, request: AgentTurnRequest, control: ExecutionControl
     ) -> AgentTurnResult:
-        if control.stop_requested:
-            raise AgentTurnAdapterError(
-                "DeepSeek invocation deadline expired before dispatch",
-                failure_code=AgentTurnFailureCode.TIMEOUT,
+        if not self.supports_call_handle:
+            if control.stop_requested:
+                raise AgentTurnAdapterError(
+                    "DeepSeek invocation stopped before dispatch",
+                    failure_code=AgentTurnFailureCode.TIMEOUT,
+                )
+            return self._invoke(
+                request,
+                timeout_seconds=control.clamp_timeout_seconds(
+                    self.settings.timeout_seconds
+                ),
             )
-        return self._invoke(
-            request,
-            timeout_seconds=control.clamp_timeout_seconds(
-                self.settings.timeout_seconds
-            ),
-        )
+        handle = self.start_invoke(request, control)
+        while True:
+            if control.cancellation.cancelled:
+                self._cancel_and_drain(handle)
+                raise AgentTurnAdapterError(
+                    "DeepSeek request was cancelled in flight",
+                    failure_code=AgentTurnFailureCode.FAILED,
+                )
+            if control.deadline.expired:
+                self._cancel_and_drain(handle)
+                raise AgentTurnAdapterError(
+                    "DeepSeek request deadline expired in flight",
+                    failure_code=AgentTurnFailureCode.TIMEOUT,
+                )
+            result = handle.poll(min(0.05, max(0.001, control.remaining_ms / 1_000)))
+            if result is not None:
+                return result
 
     def accepts_effective_model_id(self, model_id: str) -> bool:
         return model_id == self.settings.model
@@ -345,9 +658,24 @@ class DeepSeekTurnAdapter:
     def _invoke(
         self, request: AgentTurnRequest, *, timeout_seconds: float
     ) -> AgentTurnResult:
+        allowed_tool_names, url, headers, body = self._prepare_request(request)
+        raw = self.transport.post(
+            url,
+            headers=headers,
+            body=body,
+            timeout_seconds=timeout_seconds,
+            max_response_bytes=self.settings.max_response_bytes,
+        )
+        return self._decode_response(raw, allowed_tool_names=allowed_tool_names)
+
+    def _prepare_request(
+        self, request: AgentTurnRequest
+    ) -> tuple[set[str], str, dict[str, str], bytes]:
         allowed_tool_names = {tool.name for tool in request.tools}
         if _CONCLUSION_TOOL_NAME in allowed_tool_names:
-            raise ValueError("Runtime Tool catalog collides with the Harness conclusion Tool")
+            raise ValueError(
+                "Runtime Tool catalog collides with the Harness conclusion Tool"
+            )
         tools = [_provider_tool(tool) for tool in request.tools]
         tools.append(_conclusion_tool())
         body_value: dict[str, JsonValue] = {
@@ -360,26 +688,36 @@ class DeepSeekTurnAdapter:
             "stream": False,
         }
         validate_json_value(body_value)
-        body = canonical_bytes(body_value)
-        raw = self.transport.post(
+        return (
+            allowed_tool_names,
             f"{self.settings.base_url}/chat/completions",
-            headers={
+            {
                 "Authorization": f"Bearer {self.settings.api_key}",
                 "Content-Type": "application/json",
-                "User-Agent": "ordivon-harness-p0/1",
+                "User-Agent": "ordivon-harness-p0/2",
             },
-            body=body,
-            timeout_seconds=timeout_seconds,
-            max_response_bytes=self.settings.max_response_bytes,
+            canonical_bytes(body_value),
         )
+
+    def _decode_response(
+        self, raw: bytes, *, allowed_tool_names: set[str]
+    ) -> AgentTurnResult:
         try:
             value = loads_strict(raw)
         except ValueError as error:
             raise ValueError("DeepSeek returned invalid JSON") from error
         if not isinstance(value, dict):
-            raise ValueError("DeepSeek response must be an object")
+            raise TypeError("DeepSeek response must be an object")
         validate_json_value(value)
         return self._parse_response(value, raw, allowed_tool_names=allowed_tool_names)
+
+    @staticmethod
+    def _cancel_and_drain(handle: AgentTurnCallHandle | DeepSeekPostHandle) -> None:
+        handle.cancel()
+        try:
+            handle.poll(0.5)
+        except Exception:  # noqa: BLE001 - cancellation drain must not mask stop.
+            return
 
     def _parse_response(
         self,
@@ -410,7 +748,7 @@ class DeepSeekTurnAdapter:
                 failure_code=AgentTurnFailureCode.UNAVAILABLE,
             )
         if not isinstance(finish_reason, str) or not isinstance(message, dict):
-            raise ValueError("DeepSeek choice fields are invalid")
+            raise TypeError("DeepSeek choice fields are invalid")
         if message.get("role") != "assistant":
             raise ValueError("DeepSeek response role is not assistant")
         content = message.get("content")
@@ -418,7 +756,9 @@ class DeepSeekTurnAdapter:
             raise ValueError("DeepSeek assistant content must be a string or null")
         raw_calls = message.get("tool_calls")
         if not isinstance(raw_calls, list) or not raw_calls:
-            raise ValueError("DeepSeek Turn must call a Runtime Tool or submit a conclusion")
+            raise ValueError(
+                "DeepSeek Turn must call a Runtime Tool or submit a conclusion"
+            )
 
         runtime_calls: list[AgentToolCall] = []
         conclusion: AgentRunConclusion | None = None
@@ -428,11 +768,11 @@ class DeepSeekTurnAdapter:
             call_id = raw_call.get("id")
             function = raw_call.get("function")
             if not isinstance(call_id, str) or not isinstance(function, dict):
-                raise ValueError("DeepSeek Tool Call identity or function is invalid")
+                raise TypeError("DeepSeek Tool Call identity or function is invalid")
             name = function.get("name")
             raw_arguments = function.get("arguments")
             if not isinstance(name, str) or not isinstance(raw_arguments, str):
-                raise ValueError("DeepSeek Tool Call name or arguments are invalid")
+                raise TypeError("DeepSeek Tool Call name or arguments are invalid")
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
             except ValueError as error:
@@ -440,7 +780,9 @@ class DeepSeekTurnAdapter:
                     f"DeepSeek Tool Call {name} arguments are invalid JSON"
                 ) from error
             if not isinstance(arguments, dict):
-                raise ValueError(f"DeepSeek Tool Call {name} arguments must be an object")
+                raise TypeError(
+                    f"DeepSeek Tool Call {name} arguments must be an object"
+                )
             validate_json_value(arguments)
             if name == _CONCLUSION_TOOL_NAME:
                 if conclusion is not None:

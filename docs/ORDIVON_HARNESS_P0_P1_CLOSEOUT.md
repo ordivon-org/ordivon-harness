@@ -2,87 +2,174 @@
 
 ## Accepted boundary
 
-P0–P1 closes the minimum execution-control and durable Tool-step path without turning Host or Runtime into Harness implementations.
+P0–P1 closes the minimum execution-control, durable Tool-step and public Run-resume path without turning Host or Runtime into Harness implementations.
 
 ```text
-Ordivon Computer / ordivon-protocol
-  HarnessToolStepIntent / HarnessToolStepReceipt / HarnessRunSnapshot
+Ordivon Computer / ordivon-protocol 0.5.0
+  HarnessToolStepIntent
+  HarnessToolStepReceipt + predecessor chain
+  HarnessRunSnapshot
+  HarnessDispatchFence
 
-Ordivon Harness
-  Run deadline and cancellation scope
-  Provider provenance and subprocess ownership
-  Tool-step preparation, observation, cancellation and reconciliation
-  effect-aware recovery and Harness semantic history validation
+Ordivon Host 0.1.2
+  Task / Journal / CAS / authority kernel
+  generic HostExtensionPort
 
-Ordivon Host
-  unchanged Task / Journal / CAS / authority kernel
+Ordivon Harness 0.3.0
+  Provider and Runtime call control
+  Tool-step persistence and reconciliation
+  full checkpoints + Run-state deltas
+  Run resume and effect-aware recovery
 
 Ordivon Runtime
   unchanged Workspace / Job / Attempt / Artifact / task.cancel mechanics
 ```
 
-The Host and Runtime repositories do not import `ordivon-harness` and receive no Harness-specific scheduler, database, daemon, process registry or alternate Task state machine.
+Host and Runtime do not import `ordivon-harness`. Neither receives a Harness-specific scheduler, database, daemon, process registry or alternate Task state machine.
 
 ## P0 execution-control closure
 
-The first-party Loop now:
+### Provider calls
 
-- uses a monotonic absolute deadline rather than a wall-clock boundary check;
-- clamps supported Provider and Runtime timeouts to remaining Run time;
-- rejects a Provider result returned after cancellation or deadline expiry;
-- records requested and effective Provider model identities and rejects unadmitted routing;
-- maps unexpected execution exceptions to a terminal Harness result rather than losing the Run boundary;
-- bounds Tool Observations before they enter subsequent model context;
-- calls native Runtime `task.cancel` for active Jobs and distinguishes confirmed cancellation from `cancel-requested` uncertainty;
-- cleans up Codex and Hermes subprocesses on initialization failure and performs bounded terminate → kill → stream/thread cleanup.
+The first-party Loop admits an optional `AgentTurnCallHandle` with:
 
-Effect-aware recovery now force-closes only observation-only Workspaces. A Workspace with possible mutations or process effects is retained and inspected through `workspace.get` and `workspace.diff`; the recovery record remains blocking until evidence resolves the unknown.
+```text
+poll(timeout)
+cancel()
+```
+
+The Loop concurrently respects Provider completion, cancellation and the monotonic Run deadline. A cancellation or deadline closes the active handle and drains it for a bounded period before emitting the terminal Run result.
+
+The default DeepSeek path now owns one `http.client` connection per call. Cancellation closes the response, shuts down the socket and closes the connection. The former `urllib` transport remains available for compatibility and deterministic fault tests, but is no longer the default.
+
+Codex and Hermes retain provider-faithful lifecycle implementations and bounded subprocess cleanup. Requested and effective Provider model identities remain separately recorded and unadmitted routing fails closed.
+
+### Runtime calls
+
+Durable `workspace.exec` is dispatched with `waitMs=0` to obtain the Runtime Job identity promptly. Harness then performs bounded `task.observe` polling while checking cancellation and deadline state. A model-supplied `waitMs=0` does not turn the durable Tool Step into a background completion: Harness keeps the Intent active until Runtime reaches a terminal state or cancellation is requested. Physical cancellation is requested through Runtime `task.cancel`; a local cancellation token alone never proves that the Job stopped.
+
+### Nonterminal cancellation
+
+`cancel-requested` is explicitly nonterminal. Its Receipt retains the active Tool Step Intent and may be superseded by a later Receipt for the same Intent:
+
+```text
+cancel-requested
+  → cancelled
+  → observed succeeded / failed / timed_out
+  → unknown
+```
+
+Each superseding Receipt binds the digest of its predecessor. Only a terminal Receipt clears the active Intent. Historical replay validates the predecessor chain and rejects a terminal Receipt that still claims an active Intent.
+
+## DispatchFence
+
+Before physical `workspace.exec`, Harness persists a `HarnessDispatchFence` bound to:
+
+- Task revision;
+- Harness Run identity;
+- Assignment identity, generation and digest;
+- Tool Step Intent digest;
+- Runtime operation and stable `clientRequestId`;
+- issue and expiry times.
+
+Harness validates the fence against current Host state immediately before dispatch and again after Runtime returns. The fence is also carried in Runtime `foreignReferences`, so the Job retains immutable correlation evidence.
+
+This is a practical stale-dispatch and provenance fence. Runtime does not independently verify a Host-issued MAC and does not call Host during admission; P0–P1 therefore does not claim cryptographic cross-service authorization.
+
+## Active-step-first recovery
+
+Native Run recovery now orders evidence collection as:
+
+1. load the current Tool Step Intent and latest Receipt;
+2. reconcile the original Runtime Job by `clientRequestId` or `runtimeJobRef`;
+3. persist a missing or superseding Receipt and Observation;
+4. inspect the Workspace and structured diff;
+5. derive remaining UNKNOWNs;
+6. abandon, retain or replace only when the evidence permits it.
+
+A failed reconciliation is retained as explicit Tool Step UNKNOWN evidence. Recovery events preserve the current Tool Step and Snapshot references rather than erasing their projection path.
 
 ## P1 durable Tool step
 
-For native `workspace.exec`, the ordering is:
+For native `workspace.exec`, the accepted ordering is:
 
 ```text
 bind bounded Run state
-→ write HarnessToolStepIntent + RunSnapshot to Host CAS/Journal
-→ dispatch Runtime workspace.exec with stable clientRequestId
-→ observe/reject/retain UNKNOWN
-→ write ToolStepReceipt + immutable ToolObservation
+→ write Intent + Snapshot + DispatchFence to Host CAS/Journal
+→ verify current Host fence
+→ dispatch Runtime with stable clientRequestId
+→ poll / cancel / reconcile
+→ write terminal or nonterminal Receipt + immutable Observation
 ```
 
-If the Harness process dies after Intent persistence but before Receipt persistence, a fresh Harness instance:
+If the Harness process dies after Intent persistence but before Receipt persistence, a fresh Harness instance queries Runtime by the original `clientRequestId`, observes exactly one matching Job and writes the missing Receipt without redispatching the command. Zero or multiple matches remain explicit UNKNOWN.
 
-1. loads the current Intent from Host Journal/CAS;
-2. queries Runtime Jobs by the original `clientRequestId`;
-3. observes exactly one matching Job;
-4. writes the missing Receipt and Observation;
-5. never redispatches the command.
+`workspace.mutate` remains rejected when the durable Run Store is active. Runtime mutation does not yet expose a separately observable dispatch identity that can prove whether response loss occurred before or after commitment.
 
-Zero or multiple matching Jobs remain explicit UNKNOWN.
+## Executable Run resume
 
-`workspace.mutate` is intentionally rejected when the durable Run Store is active. Runtime mutation currently lacks a separately observable dispatch identity that can prove whether response loss occurred before or after commitment. This is a truthful capability reduction, not a permanent architectural prohibition.
+`OrdivonAgentLoop.resume()` upgrades the Snapshot from audit evidence to an executable public-state boundary.
 
-## Pause snapshots
+For `needs-input`, the caller supplies additional messages and the Loop continues with cumulative budget accounting. For `effect-dispatch-pending`, the Loop first reconciles the active Tool Step, appends its Observation to model history and only then invokes the model again.
 
-A bounded `HarnessRunSnapshot` is retained for:
+Resume restores:
 
-- `needs-input`;
-- approval-required extension points;
-- effect dispatch prepared but not yet resolved.
+- messages and Tool Observations;
+- Model and Tool Call counts;
+- observation-byte and wall-time use;
+- seen Model/Tool Call identities;
+- requested/effective model provenance;
+- Provider usage history.
 
-Snapshots bind Assignment generation/digest, Tool Catalog digest, requested/effective model identity, bounded messages, prior Observation digests and remaining budget. They do not own Task truth, Runtime Job state or Provider hidden state.
+Provider hidden state, transport sessions and subprocess identity are not restored.
 
-## Validation
+## Incremental Run-state persistence
 
-The release gate includes:
+The first durable checkpoint and explicit pause boundaries retain a complete `harness-run-state` object. Consecutive effect preparations may retain a `harness-run-state-delta` containing only appended messages, observations, call identities and usage plus the new remaining budget.
 
-- strict Computer protocol round trips and schema validation;
-- late deadline and mid-Provider cancellation fault injection;
-- effective Provider model mismatch rejection;
-- Tool Observation truncation before model history;
-- Provider subprocess termination;
-- Intent-before-dispatch ordering;
-- restart loading of Snapshot, Intent, Receipt and Observation;
-- `clientRequestId` reconciliation without a second `workspace.exec`;
-- effectful recovery retaining the Workspace;
-- full Harness semantic-history replay.
+Each Delta binds the previous state object digest and previous reconstructed state digest. Reconstruction is bounded to 64 links and validates prefix monotonicity. A Delta is used only when it is smaller than the complete state; otherwise Harness writes a full checkpoint.
+
+This avoids repeatedly copying a growing transcript at every durable Tool Step while preserving CAS auditability and restart reconstruction.
+
+## Host extension boundary
+
+`HostHarnessRunStore` now uses the public generic `HostExtensionPort` instead of Host private storage helpers. The port provides:
+
+- CAS put/get/inspect;
+- revision/state/frontier-fenced preserving appends;
+- retention of top-level extension object references.
+
+It does not know Harness schemas, events, transitions or recovery policy.
+
+## Deliberate non-goals
+
+P0–P1 does not add:
+
+- durable `workspace.mutate`;
+- parallel Tool execution;
+- subagents or a graph scheduler;
+- automatic model routing;
+- persistent Provider sessions;
+- a Harness daemon or separate database;
+- Runtime-side cryptographic DispatchFence verification.
+
+These remain evidence-gated future work, not incomplete hidden promises.
+
+## Validation scope
+
+The release gate covers:
+
+- strict protocol round trips and legacy Receipt decoding;
+- late deadline and in-flight Provider cancellation;
+- active socket closure against a stalled local HTTP response;
+- Runtime Job cancellation and nonterminal Receipt evolution across restart;
+- Intent-before-dispatch and DispatchFence correlation;
+- active-step-first recovery;
+- `clientRequestId` reconciliation without redispatch;
+- `needs-input` and prepared-effect Run resume;
+- cumulative budget and duplicate-call fencing after resume;
+- Run-state Delta size reduction and reconstruction;
+- full Harness semantic-history replay;
+- Python 3.12 unit/pytest, changed-file Ruff, compile and distribution build gates.
+
+Final repository gate: 126 unittest cases, 126 pytest cases plus 29 subtests, 75% branch coverage, and successful wheel/sdist construction.
