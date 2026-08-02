@@ -9,6 +9,9 @@ _EVENT_KINDS = {
     "run_started",
     "run_resumed",
     "model_call_started",
+    "model_call_attempt_started",
+    "model_call_attempt_failed",
+    "model_call_retry_scheduled",
     "model_call_completed",
     "tool_call_proposed",
     "tool_call_dispatched",
@@ -77,11 +80,20 @@ class HarnessTrace:
 
 
 class TraceRecorder:
-    def __init__(self, harness_run_id: str, *, clock_ms: Callable[[], int]) -> None:
+    """Canonical in-memory Trace with a best-effort live projection."""
+
+    def __init__(
+        self,
+        harness_run_id: str,
+        *,
+        clock_ms: Callable[[], int],
+        event_sink: Callable[[HarnessRunEvent], None] | None = None,
+    ) -> None:
         if not harness_run_id or harness_run_id != harness_run_id.strip():
             raise ValueError("Harness Run identity must be non-empty and trimmed")
         self.harness_run_id = harness_run_id
         self.clock_ms = clock_ms
+        self.event_sink = event_sink
         self._events: list[HarnessRunEvent] = []
         self._last_time = -1
 
@@ -98,6 +110,11 @@ class TraceRecorder:
         )
         self._events.append(event)
         self._last_time = occurred_at_ms
+        if self.event_sink is not None:
+            try:
+                self.event_sink(event)
+            except Exception:  # noqa: BLE001 - live projection cannot invalidate evidence.
+                pass
         return event
 
     def freeze(self) -> HarnessTrace:

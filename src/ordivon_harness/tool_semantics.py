@@ -377,6 +377,19 @@ _TOOL_SEMANTICS: dict[str, _ToolSemantics] = {
         "workspace-source-change",
         NativeToolRecoveryConsequence.WORKSPACE_CHANGE_POSSIBLE,
     ),
+    "patch_workspace": _ToolSemantics(
+        ("workspace.patch", "workspace.patch.get"),
+        "anc.source.change.v1",
+        ExecutionKind.SYNCHRONOUS,
+        CompletionKind.ACCEPTED_VERIFICATION,
+        EffectClass.CHANGE,
+        IdempotencySupport.KEYED,
+        CorrelationKind.STABLE_KEY,
+        CancellationKind.UNSUPPORTED,
+        ("observation", "diff", "version", "receipt"),
+        "workspace-source-patch",
+        NativeToolRecoveryConsequence.WORKSPACE_CHANGE_POSSIBLE,
+    ),
     "diff_workspace": _ToolSemantics(
         ("workspace.diff",),
         "anc.object.read.v1",
@@ -450,9 +463,10 @@ def build_native_tool_catalog_snapshot(
     model_tools: tuple[AgentToolDefinition, ...],
 ) -> NativeToolCatalogSnapshot:
     names = tuple(tool.name for tool in model_tools)
-    if set(names) != set(_TOOL_SEMANTICS) or len(names) != len(_TOOL_SEMANTICS):
+    unknown = sorted(set(names) - set(_TOOL_SEMANTICS))
+    if unknown or len(names) != len(set(names)):
         raise ValueError(
-            "native model Tool surface differs from the complete semantic catalog"
+            f"native model Tool surface has unknown or duplicate Tools: {unknown}"
         )
     runtime = {str(item["name"]): item for item in runtime_descriptors}
     runtime_revision = canonical_digest(list(runtime_descriptors))

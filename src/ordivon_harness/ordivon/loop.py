@@ -8,7 +8,7 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes
 
 from .control import CancellationToken, ExecutionControl, RunDeadline
-from .events import HarnessTrace, TraceRecorder
+from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
     AgentRunConclusion,
     AgentTurnAdapter,
@@ -44,6 +44,9 @@ class RunBudget:
     max_tool_calls: int
     max_observation_bytes: int
     max_wall_time_ms: int
+    max_total_tokens: int = 131_072
+    max_model_retries: int = 2
+    max_tool_corrections: int = 3
 
     def __post_init__(self) -> None:
         if (
@@ -52,10 +55,13 @@ class RunBudget:
                 self.max_tool_calls,
                 self.max_observation_bytes,
                 self.max_wall_time_ms,
+                self.max_total_tokens,
             )
             < 1
         ):
-            raise ValueError("Ordivon Harness budgets must be positive")
+            raise ValueError("Ordivon Harness primary budgets must be positive")
+        if self.max_model_retries < 0 or self.max_tool_corrections < 0:
+            raise ValueError("Ordivon Harness retry budgets must be non-negative")
 
     def remaining(
         self,
@@ -64,12 +70,18 @@ class RunBudget:
         tool_calls: int,
         observation_bytes: int,
         elapsed_ms: int,
+        total_tokens: int = 0,
+        model_retries: int = 0,
+        tool_corrections: int = 0,
     ) -> dict[str, JsonValue]:
         return {
             "modelCalls": max(0, self.max_model_calls - model_calls),
             "toolCalls": max(0, self.max_tool_calls - tool_calls),
             "observationBytes": max(0, self.max_observation_bytes - observation_bytes),
             "wallTimeMs": max(0, self.max_wall_time_ms - elapsed_ms),
+            "totalTokens": max(0, self.max_total_tokens - total_tokens),
+            "modelRetries": max(0, self.max_model_retries - model_retries),
+            "toolCorrections": max(0, self.max_tool_corrections - tool_corrections),
         }
 
 
@@ -102,6 +114,7 @@ class OrdivonAgentLoop:
         budget: RunBudget,
         clock_ms: Callable[[], int] | None = None,
         monotonic_ms: Callable[[], int] | None = None,
+        event_sink: Callable[[HarnessRunEvent], None] | None = None,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
@@ -112,6 +125,7 @@ class OrdivonAgentLoop:
             if clock_ms is not None
             else lambda: time.monotonic_ns() // 1_000_000
         )
+        self.event_sink = event_sink
 
     def run(
         self,
@@ -180,6 +194,10 @@ class OrdivonAgentLoop:
             model_calls = 0
             tool_calls = 0
             observation_bytes = 0
+            total_tokens = 0
+            model_retries = 0
+            tool_corrections = 0
+            provider_attempts = 0
         else:
             snapshot = retained.snapshot
             state = retained.state
@@ -191,15 +209,26 @@ class OrdivonAgentLoop:
             ):
                 raise ValueError("Harness Run resume identities differ")
             remaining = state.remaining_budget
-            expected_budget_fields = {
+            required_budget_fields = {
                 "modelCalls",
                 "toolCalls",
                 "observationBytes",
                 "wallTimeMs",
             }
-            if set(remaining) != expected_budget_fields or any(
-                type(remaining[field]) is not int or remaining[field] < 0
-                for field in expected_budget_fields
+            optional_budget_fields = {
+                "totalTokens",
+                "modelRetries",
+                "toolCorrections",
+            }
+            if (
+                not required_budget_fields.issubset(remaining)
+                or not set(remaining).issubset(
+                    required_budget_fields | optional_budget_fields
+                )
+                or any(
+                    type(remaining[field]) is not int or remaining[field] < 0
+                    for field in remaining
+                )
             ):
                 raise ValueError("Harness Run resume budget is invalid")
             model_calls = self.budget.max_model_calls - int(remaining["modelCalls"])
@@ -210,7 +239,28 @@ class OrdivonAgentLoop:
             prior_elapsed_ms = self.budget.max_wall_time_ms - int(
                 remaining["wallTimeMs"]
             )
-            if min(model_calls, tool_calls, observation_bytes, prior_elapsed_ms) < 0:
+            total_tokens = self.budget.max_total_tokens - int(
+                remaining.get("totalTokens", self.budget.max_total_tokens)
+            )
+            model_retries = self.budget.max_model_retries - int(
+                remaining.get("modelRetries", self.budget.max_model_retries)
+            )
+            tool_corrections = self.budget.max_tool_corrections - int(
+                remaining.get("toolCorrections", self.budget.max_tool_corrections)
+            )
+            provider_attempts = model_calls + model_retries
+            if (
+                min(
+                    model_calls,
+                    tool_calls,
+                    observation_bytes,
+                    prior_elapsed_ms,
+                    total_tokens,
+                    model_retries,
+                    tool_corrections,
+                )
+                < 0
+            ):
                 raise ValueError("Harness Run resume budget exceeds configured limits")
             remaining_wall_time_ms = int(remaining["wallTimeMs"])
             messages = [dict(message) for message in state.messages]
@@ -233,7 +283,9 @@ class OrdivonAgentLoop:
             monotonic_ms=self.monotonic_ms,
         )
         control = ExecutionControl(cancellation, deadline)
-        recorder = TraceRecorder(harness_run_id, clock_ms=self.clock_ms)
+        recorder = TraceRecorder(
+            harness_run_id, clock_ms=self.clock_ms, event_sink=self.event_sink
+        )
         started_at_ms = self.monotonic_ms()
         recorder.record(
             "run_resumed" if retained is not None else "run_started",
@@ -266,6 +318,9 @@ class OrdivonAgentLoop:
                     tool_calls=tool_calls,
                     observation_bytes=observation_bytes,
                     elapsed_ms=elapsed_ms(),
+                    total_tokens=total_tokens,
+                    model_retries=model_retries,
+                    tool_corrections=tool_corrections,
                 ),
                 requested_model_id=self.adapter.model_id,
                 effective_model_id=(effective_models[-1] if effective_models else None),
@@ -287,6 +342,10 @@ class OrdivonAgentLoop:
                 "modelCalls": model_calls,
                 "toolCalls": tool_calls,
                 "observationBytes": observation_bytes,
+                "totalTokens": total_tokens,
+                "modelRetries": model_retries,
+                "toolCorrections": tool_corrections,
+                "providerAttempts": provider_attempts,
                 "elapsedMs": elapsed,
                 "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
             }
@@ -307,6 +366,11 @@ class OrdivonAgentLoop:
                     "modelCalls": model_calls,
                     "toolCalls": tool_calls,
                     "observationBytes": observation_bytes,
+                    "totalTokens": total_tokens,
+                    "tokenLimit": self.budget.max_total_tokens,
+                    "modelRetries": model_retries,
+                    "toolCorrections": tool_corrections,
+                    "providerAttempts": provider_attempts,
                     "wallTimeMs": elapsed,
                     "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
                     "requestedModelId": self.adapter.model_id,
@@ -375,7 +439,11 @@ class OrdivonAgentLoop:
         while True:
             if cancellation.cancelled:
                 return stop(RunStopCode.CANCELLED)
-            if model_calls >= self.budget.max_model_calls or deadline.expired:
+            if (
+                model_calls >= self.budget.max_model_calls
+                or total_tokens >= self.budget.max_total_tokens
+                or deadline.expired
+            ):
                 return stop(RunStopCode.BUDGET_EXHAUSTED)
             sequence = model_calls + 1
             turn_id = f"turn:{harness_run_id.removeprefix('harness-run:')}:{sequence}"
@@ -393,6 +461,9 @@ class OrdivonAgentLoop:
                     tool_calls=tool_calls,
                     observation_bytes=observation_bytes,
                     elapsed_ms=elapsed_ms(),
+                    total_tokens=total_tokens,
+                    model_retries=model_retries,
+                    tool_corrections=tool_corrections,
                 ),
             )
             recorder.record(
@@ -403,67 +474,130 @@ class OrdivonAgentLoop:
                     "remainingWallTimeMs": control.remaining_ms,
                 },
             )
-            try:
-                start_invoke = getattr(self.adapter, "start_invoke", None)
-                supports_handle = getattr(self.adapter, "supports_call_handle", True)
-                if callable(start_invoke) and supports_handle:
-                    handle = start_invoke(request, control)
-                    while True:
-                        if cancellation.cancelled:
-                            self._cancel_and_drain_model_call(handle)
-                            return stop(
-                                RunStopCode.CANCELLED,
-                                detail=(
-                                    "cancellation interrupted the active Provider call"
-                                ),
-                            )
-                        if deadline.expired:
-                            self._cancel_and_drain_model_call(handle)
-                            return stop(
-                                RunStopCode.BUDGET_EXHAUSTED,
-                                detail=(
-                                    "wall-time deadline interrupted the active Provider call"
-                                ),
-                            )
-                        result = handle.poll(
-                            min(
-                                0.05,
-                                max(0.001, control.remaining_ms / 1_000),
-                            )
-                        )
-                        if result is not None:
-                            break
-                else:
-                    controlled_invoke = getattr(
-                        self.adapter, "invoke_with_control", None
-                    )
-                    result = (
-                        controlled_invoke(request, control)
-                        if callable(controlled_invoke)
-                        else self.adapter.invoke(request)
-                    )
-            except AgentTurnAdapterError as error:
-                if cancellation.cancelled:
-                    return stop(RunStopCode.CANCELLED, detail=str(error))
-                if deadline.expired:
-                    return stop(RunStopCode.BUDGET_EXHAUSTED, detail=str(error))
-                stop_code = {
-                    AgentTurnFailureCode.FAILED: RunStopCode.PROVIDER_FAILED,
-                    AgentTurnFailureCode.TIMEOUT: RunStopCode.PROVIDER_TIMEOUT,
-                    AgentTurnFailureCode.TRANSPORT_FAILED: (
-                        RunStopCode.PROVIDER_TRANSPORT_FAILED
-                    ),
-                    AgentTurnFailureCode.REJECTED: RunStopCode.PROVIDER_REJECTED,
-                    AgentTurnFailureCode.UNAVAILABLE: RunStopCode.PROVIDER_UNAVAILABLE,
-                }[error.failure_code]
-                return stop(stop_code, detail=str(error))
-            except (TypeError, ValueError) as error:
-                return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
-            except Exception as error:  # noqa: BLE001 - Run boundary must emit a terminal receipt.
-                return stop(
-                    RunStopCode.HARNESS_FAILED,
-                    detail=f"{type(error).__name__}: {error}",
+            provider_attempt = 0
+            while True:
+                provider_attempt += 1
+                provider_attempts += 1
+                recorder.record(
+                    "model_call_attempt_started",
+                    {
+                        "turnId": turn_id,
+                        "attempt": provider_attempt,
+                        "requestDigest": request.digest,
+                    },
                 )
+                try:
+                    start_invoke = getattr(self.adapter, "start_invoke", None)
+                    supports_handle = getattr(
+                        self.adapter, "supports_call_handle", True
+                    )
+                    if callable(start_invoke) and supports_handle:
+                        handle = start_invoke(request, control)
+                        while True:
+                            if cancellation.cancelled:
+                                self._cancel_and_drain_model_call(handle)
+                                return stop(
+                                    RunStopCode.CANCELLED,
+                                    detail=(
+                                        "cancellation interrupted the active Provider call"
+                                    ),
+                                )
+                            if deadline.expired:
+                                self._cancel_and_drain_model_call(handle)
+                                return stop(
+                                    RunStopCode.BUDGET_EXHAUSTED,
+                                    detail=(
+                                        "wall-time deadline interrupted the active Provider call"
+                                    ),
+                                )
+                            result = handle.poll(
+                                min(
+                                    0.05,
+                                    max(0.001, control.remaining_ms / 1_000),
+                                )
+                            )
+                            if result is not None:
+                                break
+                    else:
+                        controlled_invoke = getattr(
+                            self.adapter, "invoke_with_control", None
+                        )
+                        result = (
+                            controlled_invoke(request, control)
+                            if callable(controlled_invoke)
+                            else self.adapter.invoke(request)
+                        )
+                    break
+                except AgentTurnAdapterError as error:
+                    recorder.record(
+                        "model_call_attempt_failed",
+                        {
+                            "turnId": turn_id,
+                            "attempt": provider_attempt,
+                            "failureCode": error.failure_code.value,
+                            "detail": str(error)[:2_048],
+                        },
+                    )
+                    retryable = error.failure_code in {
+                        AgentTurnFailureCode.TRANSPORT_FAILED,
+                        AgentTurnFailureCode.UNAVAILABLE,
+                    }
+                    if (
+                        retryable
+                        and model_retries < self.budget.max_model_retries
+                        and not cancellation.cancelled
+                        and control.remaining_ms > 1
+                    ):
+                        model_retries += 1
+                        delay_ms = min(
+                            2_000,
+                            250 * (2 ** min(model_retries - 1, 3)),
+                            max(0, control.remaining_ms - 1),
+                        )
+                        recorder.record(
+                            "model_call_retry_scheduled",
+                            {
+                                "turnId": turn_id,
+                                "attempt": provider_attempt,
+                                "retry": model_retries,
+                                "delayMs": delay_ms,
+                                "failureCode": error.failure_code.value,
+                            },
+                        )
+                        slept_ms = 0
+                        while slept_ms < delay_ms:
+                            if cancellation.cancelled:
+                                return stop(RunStopCode.CANCELLED, detail=str(error))
+                            if deadline.expired:
+                                return stop(
+                                    RunStopCode.BUDGET_EXHAUSTED,
+                                    detail=str(error),
+                                )
+                            slice_ms = min(50, delay_ms - slept_ms)
+                            time.sleep(slice_ms / 1_000)
+                            slept_ms += slice_ms
+                        continue
+                    if cancellation.cancelled:
+                        return stop(RunStopCode.CANCELLED, detail=str(error))
+                    if deadline.expired:
+                        return stop(RunStopCode.BUDGET_EXHAUSTED, detail=str(error))
+                    stop_code = {
+                        AgentTurnFailureCode.FAILED: RunStopCode.PROVIDER_FAILED,
+                        AgentTurnFailureCode.TIMEOUT: RunStopCode.PROVIDER_TIMEOUT,
+                        AgentTurnFailureCode.TRANSPORT_FAILED: (
+                            RunStopCode.PROVIDER_TRANSPORT_FAILED
+                        ),
+                        AgentTurnFailureCode.REJECTED: RunStopCode.PROVIDER_REJECTED,
+                        AgentTurnFailureCode.UNAVAILABLE: RunStopCode.PROVIDER_UNAVAILABLE,
+                    }[error.failure_code]
+                    return stop(stop_code, detail=str(error))
+                except (TypeError, ValueError) as error:
+                    return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
+                except Exception as error:  # noqa: BLE001 - Run boundary must emit a terminal receipt.
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=f"{type(error).__name__}: {error}",
+                    )
             if cancellation.cancelled:
                 return stop(
                     RunStopCode.CANCELLED,
@@ -481,6 +615,9 @@ class OrdivonAgentLoop:
             usage["requestedModelId"] = result.model_id
             usage["effectiveModelId"] = effective_model
             provider_usage.append(usage)
+            turn_tokens = _usage_total_tokens(result.usage)
+            if turn_tokens is not None:
+                total_tokens += turn_tokens
             recorder.record(
                 "model_call_completed",
                 {
@@ -491,8 +628,18 @@ class OrdivonAgentLoop:
                     "resultDigest": result.digest,
                     "rawResponseDigest": result.raw_response_digest,
                     "finishReason": result.finish_reason,
+                    "totalTokens": turn_tokens,
+                    "cumulativeTotalTokens": total_tokens,
                 },
             )
+            if total_tokens > self.budget.max_total_tokens:
+                return stop(
+                    RunStopCode.BUDGET_EXHAUSTED,
+                    detail=(
+                        "Provider token usage exceeded the configured hard limit: "
+                        f"{total_tokens}>{self.budget.max_total_tokens}"
+                    ),
+                )
             if result.model_id != self.adapter.model_id:
                 return stop(
                     RunStopCode.INVALID_MODEL_OUTPUT,
@@ -587,7 +734,31 @@ class OrdivonAgentLoop:
                         else self.tool_bridge.execute(call, step_id=step_id)
                     )
                 except ToolBridgeError as error:
-                    return stop(RunStopCode.INVALID_TOOL_CALL, detail=str(error))
+                    if not error.recoverable_by_model:
+                        return stop(RunStopCode.INVALID_TOOL_CALL, detail=str(error))
+                    if tool_corrections >= self.budget.max_tool_corrections:
+                        return stop(
+                            RunStopCode.INVALID_TOOL_CALL,
+                            detail=(
+                                "Tool correction budget exhausted after local rejection: "
+                                f"{error}"
+                            ),
+                        )
+                    tool_corrections += 1
+                    observation = ToolObservation(
+                        call.tool_call_id,
+                        call.name,
+                        "rejected",
+                        {
+                            "error": {
+                                "type": "ToolBridgeError",
+                                "kind": error.kind.value,
+                                "message": str(error)[:2_048],
+                                "safeToCorrect": True,
+                                "correction": tool_corrections,
+                            }
+                        },
+                    )
                 except Exception as error:  # noqa: BLE001 - Tool implementation failure terminates the Run.
                     return stop(
                         RunStopCode.HARNESS_FAILED,
@@ -661,6 +832,18 @@ class OrdivonAgentLoop:
                     },
                 )
                 messages.append(observation.to_model_message())
+                if observation.status == "rejected" and not (
+                    observation.structured_content.get("error", {}).get("safeToCorrect")
+                    is True
+                    if isinstance(observation.structured_content.get("error"), dict)
+                    else False
+                ):
+                    if tool_corrections >= self.budget.max_tool_corrections:
+                        return stop(
+                            RunStopCode.INVALID_TOOL_CALL,
+                            detail="Tool correction budget exhausted after Runtime rejection",
+                        )
+                    tool_corrections += 1
                 if observation.status == "unknown":
                     return stop(
                         RunStopCode.RUNTIME_UNKNOWN,
@@ -677,3 +860,20 @@ class OrdivonAgentLoop:
                     return stop(RunStopCode.CANCELLED)
                 if deadline.expired:
                     return stop(RunStopCode.BUDGET_EXHAUSTED)
+
+
+def _usage_total_tokens(usage: dict[str, JsonValue]) -> int | None:
+    for key in ("total_tokens", "totalTokens"):
+        value = usage.get(key)
+        if type(value) is int and value >= 0:
+            return value
+    prompt = usage.get("prompt_tokens", usage.get("promptTokens"))
+    completion = usage.get("completion_tokens", usage.get("completionTokens"))
+    if (
+        type(prompt) is int
+        and prompt >= 0
+        and type(completion) is int
+        and completion >= 0
+    ):
+        return prompt + completion
+    return None

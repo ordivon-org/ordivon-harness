@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Protocol
 
 from anc_canonical import (
@@ -38,8 +39,30 @@ from .model import AgentToolCall, AgentToolDefinition
 from .run_store import HarnessRunState, HostHarnessRunStore
 
 
+class ToolBridgeErrorKind(StrEnum):
+    MODEL_CORRECTABLE = "model_correctable"
+    AUTHORITY_DENIED = "authority_denied"
+    PROTOCOL_INVALID = "protocol_invalid"
+    CONTROL_STOPPED = "control_stopped"
+    INTERNAL = "internal"
+
+
 class ToolBridgeError(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        kind: ToolBridgeErrorKind = ToolBridgeErrorKind.INTERNAL,
+    ) -> None:
+        super().__init__(message)
+        self.kind = kind
+
+    @property
+    def recoverable_by_model(self) -> bool:
+        return self.kind in {
+            ToolBridgeErrorKind.MODEL_CORRECTABLE,
+            ToolBridgeErrorKind.AUTHORITY_DENIED,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,7 +212,7 @@ class ToolBridge(Protocol):
 HarnessRuntimeCatalog = NativeToolCatalogSnapshot
 
 
-_RUNTIME_OPERATIONS = (
+_REQUIRED_RUNTIME_OPERATIONS = (
     "artifact.read",
     "task.list",
     "task.observe",
@@ -198,6 +221,7 @@ _RUNTIME_OPERATIONS = (
     "workspace.mutate",
     "workspace.read",
 )
+_OPTIONAL_PATCH_OPERATIONS = ("workspace.patch", "workspace.patch.get")
 
 
 def _object_schema(
@@ -234,6 +258,65 @@ def model_tool_definitions() -> tuple[AgentToolDefinition, ...]:
             _object_schema(
                 {"mutations": {"type": "array", "minItems": 1, "maxItems": 32}},
                 ("mutations",),
+            ),
+        ),
+        AgentToolDefinition(
+            "patch_workspace",
+            "Apply one digest-guarded text patch under a durable Runtime request identity.",
+            _object_schema(
+                {
+                    "files": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "items": _object_schema(
+                            {
+                                "relativePath": string,
+                                "expectedDigest": {"type": ["string", "null"]},
+                                "edits": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "maxItems": 128,
+                                    "items": _object_schema(
+                                        {
+                                            "range": _object_schema(
+                                                {
+                                                    "start": _object_schema(
+                                                        {
+                                                            "line": {
+                                                                "type": "integer",
+                                                                "minimum": 1,
+                                                            },
+                                                            "column": integer,
+                                                        },
+                                                        ("line", "column"),
+                                                    ),
+                                                    "end": _object_schema(
+                                                        {
+                                                            "line": {
+                                                                "type": "integer",
+                                                                "minimum": 1,
+                                                            },
+                                                            "column": integer,
+                                                        },
+                                                        ("line", "column"),
+                                                    ),
+                                                },
+                                                ("start", "end"),
+                                            ),
+                                            "expectedText": {"type": "string"},
+                                            "replacement": {"type": "string"},
+                                        },
+                                        ("range", "expectedText", "replacement"),
+                                    ),
+                                },
+                            },
+                            ("relativePath", "edits"),
+                        ),
+                    },
+                    "maxDiffBytes": {"type": "integer", "minimum": 1},
+                },
+                ("files",),
             ),
         ),
         AgentToolDefinition(
@@ -328,14 +411,30 @@ def discover_harness_runtime_catalog(runtime: RuntimeClient) -> HarnessRuntimeCa
         validate_json_value(selected)
         raw_catalog[name] = selected
     missing = [
-        operation for operation in _RUNTIME_OPERATIONS if operation not in raw_catalog
+        operation
+        for operation in _REQUIRED_RUNTIME_OPERATIONS
+        if operation not in raw_catalog
     ]
     if missing:
         raise RuntimeProtocolError(
             f"Runtime Harness catalog is missing operations: {missing}"
         )
+    patch_presence = tuple(
+        operation in raw_catalog for operation in _OPTIONAL_PATCH_OPERATIONS
+    )
+    if any(patch_presence) and not all(patch_presence):
+        raise RuntimeProtocolError(
+            "Runtime must expose workspace.patch and workspace.patch.get together"
+        )
+    operations = _REQUIRED_RUNTIME_OPERATIONS + (
+        _OPTIONAL_PATCH_OPERATIONS if all(patch_presence) else ()
+    )
     model_tools = model_tool_definitions()
-    descriptors = tuple(raw_catalog[name] for name in _RUNTIME_OPERATIONS)
+    if not all(patch_presence):
+        model_tools = tuple(
+            tool for tool in model_tools if tool.name != "patch_workspace"
+        )
+    descriptors = tuple(raw_catalog[name] for name in operations)
     return build_native_tool_catalog_snapshot(descriptors, model_tools)
 
 
@@ -443,7 +542,10 @@ class RuntimeToolBridge:
 
     def restore_seen_tool_calls(self, tool_call_ids: tuple[str, ...]) -> None:
         if len(tool_call_ids) != len(set(tool_call_ids)):
-            raise ToolBridgeError("restored Tool Call identities must be unique")
+            raise ToolBridgeError(
+                "restored Tool Call identities must be unique",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
         self._seen_tool_calls.update(tool_call_ids)
 
     def record_pause(self, reason: str) -> None:
@@ -474,22 +576,101 @@ class RuntimeToolBridge:
                 )
             return ToolObservation.from_dict(step.observation)
         intent = step.intent
-        if intent.runtime_operation != "workspace.exec":
-            raise ToolBridgeError(
-                "only Runtime workspace.exec Tool Steps are currently reconciliable"
-            )
         call = AgentToolCall(intent.tool_call_id, intent.tool_name, {})
-        if step.receipt is not None:
-            job_id = step.receipt.runtime_job_ref
-            if job_id is None:
-                raise ToolBridgeError(
-                    "non-terminal Tool Step Receipt omitted its Runtime Job"
-                )
-            observation = self._reconcile_cancel_requested(call, job_id)
+        if intent.runtime_operation == "workspace.patch":
+            observation = self._reconcile_workspace_patch(call, intent)
+        elif intent.runtime_operation == "workspace.exec":
+            if step.receipt is not None:
+                job_id = step.receipt.runtime_job_ref
+                if job_id is None:
+                    raise ToolBridgeError(
+                        "non-terminal Tool Step Receipt omitted its Runtime Job"
+                    )
+                observation = self._reconcile_cancel_requested(call, job_id)
+            else:
+                observation = self._reconcile_unrecorded_dispatch(call, intent)
         else:
-            observation = self._reconcile_unrecorded_dispatch(call, intent)
+            raise ToolBridgeError(
+                f"Runtime Tool Step is not reconciliable: {intent.runtime_operation}",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
         self._record_tool_step_receipt(intent, observation)
         return observation
+
+    def _reconcile_workspace_patch(
+        self,
+        call: AgentToolCall,
+        intent: HarnessToolStepIntent,
+    ) -> ToolObservation:
+        try:
+            payload = self.runtime.call_tool(
+                "workspace.patch.get",
+                {
+                    "schemaVersion": 1,
+                    "clientRequestId": intent.client_request_id,
+                },
+            )
+        except RuntimeToolRejected as error:
+            if error.detail.commit_state == "not_committed":
+                return ToolObservation(
+                    call.tool_call_id,
+                    call.name,
+                    "rejected",
+                    {
+                        "error": {
+                            "type": "runtime_patch_not_admitted",
+                            "message": str(error)[:2_048],
+                            "clientRequestId": intent.client_request_id,
+                            "commitState": error.detail.commit_state,
+                        }
+                    },
+                    reconciled=True,
+                )
+            return self._unknown(
+                call,
+                error,
+                client_request_id=intent.client_request_id,
+                operation="workspace.patch.get",
+                arguments={
+                    "schemaVersion": 1,
+                    "clientRequestId": intent.client_request_id,
+                },
+            )
+        except RuntimeClientError as error:
+            return ToolObservation(
+                call.tool_call_id,
+                call.name,
+                "unknown",
+                {
+                    "error": {
+                        "type": type(error).__name__,
+                        "message": str(error)[:2_048],
+                        "clientRequestId": intent.client_request_id,
+                    }
+                },
+                reconciled=True,
+            )
+        state = payload.get("state")
+        if state == "unknown":
+            return ToolObservation(
+                call.tool_call_id,
+                call.name,
+                "unknown",
+                dict(payload),
+                reconciled=True,
+            )
+        if state == "prepared":
+            return ToolObservation(
+                call.tool_call_id,
+                call.name,
+                "rejected",
+                {
+                    **dict(payload),
+                    "reason": "durable patch intent exists but no file effect was committed",
+                },
+                reconciled=True,
+            )
+        return self._observed(call, payload, reconciled=True)
 
     def _reconcile_unrecorded_dispatch(
         self, call: AgentToolCall, intent: HarnessToolStepIntent
@@ -648,7 +829,10 @@ class RuntimeToolBridge:
         control: ExecutionControl,
     ) -> ToolObservation:
         if control.stop_requested:
-            raise ToolBridgeError("Run control stopped before Runtime dispatch")
+            raise ToolBridgeError(
+                "Run control stopped before Runtime dispatch",
+                kind=ToolBridgeErrorKind.CONTROL_STOPPED,
+            )
         return self._execute(call, step_id=step_id, turn_id=turn_id, control=control)
 
     def _execute(
@@ -661,10 +845,14 @@ class RuntimeToolBridge:
     ) -> ToolObservation:
         if self.tool_grant is not None and not self.tool_grant.allows_tool(call.name):
             raise ToolBridgeError(
-                f"Tool is not granted for this Assignment: {call.name}"
+                f"Tool is not granted for this Assignment: {call.name}",
+                kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
             )
         if call.tool_call_id in self._seen_tool_calls:
-            raise ToolBridgeError(f"duplicate Tool Call identity: {call.tool_call_id}")
+            raise ToolBridgeError(
+                f"duplicate Tool Call identity: {call.tool_call_id}",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
         self._seen_tool_calls.add(call.tool_call_id)
         operation, arguments, client_request_id = self._lower(call, step_id=step_id)
         desired_wait_ms = 0
@@ -688,15 +876,16 @@ class RuntimeToolBridge:
                     "durable native Harness mode does not dispatch workspace.mutate "
                     "without a reconciliable Runtime dispatch identity"
                 )
-            if operation == "workspace.exec":
+            if operation in {"workspace.exec", "workspace.patch"}:
                 if client_request_id is None or turn_id is None:
                     raise ToolBridgeError(
-                        "durable Runtime execution requires turn and client request identities"
+                        "durable Runtime effect requires turn and client request identities"
                     )
                 arguments = dict(arguments)
-                assert control is not None
-                desired_wait_ms = control.remaining_ms
-                arguments["waitMs"] = 0
+                if operation == "workspace.exec":
+                    assert control is not None
+                    desired_wait_ms = control.remaining_ms
+                    arguments["waitMs"] = 0
                 intent, fence = self._prepare_tool_step_intent(
                     call,
                     step_id=step_id,
@@ -705,7 +894,8 @@ class RuntimeToolBridge:
                     arguments=arguments,
                     client_request_id=client_request_id,
                 )
-                arguments = self._with_dispatch_fence(arguments, fence)
+                if operation == "workspace.exec":
+                    arguments = self._with_dispatch_fence(arguments, fence)
                 self.run_store.assert_dispatch_fence_current(fence)
 
         try:
@@ -720,13 +910,21 @@ class RuntimeToolBridge:
                 )
             else:
                 observation = self._unknown(
-                    call, error, client_request_id=client_request_id
+                    call,
+                    error,
+                    client_request_id=client_request_id,
+                    operation=operation,
+                    arguments=arguments,
                 )
             self._record_tool_step_receipt(intent, observation)
             return observation
         except RuntimeClientError as error:
             observation = self._unknown(
-                call, error, client_request_id=client_request_id
+                call,
+                error,
+                client_request_id=client_request_id,
+                operation=operation,
+                arguments=arguments,
             )
             self._record_tool_step_receipt(intent, observation)
             return observation
@@ -1024,7 +1222,8 @@ class RuntimeToolBridge:
                     raise ToolBridgeError(str(error)) from error
                 if not allowed_path:
                     raise ToolBridgeError(
-                        f"read_workspace path is outside the Tool Grant: {relative_path}"
+                        f"read_workspace path is outside the Tool Grant: {relative_path}",
+                        kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                     )
             return (
                 "workspace.read",
@@ -1066,7 +1265,8 @@ class RuntimeToolBridge:
                         raise ToolBridgeError(str(error)) from error
                     if not allowed_path:
                         raise ToolBridgeError(
-                            f"mutate_workspace path is outside the Tool Grant: {relative_path}"
+                            f"mutate_workspace path is outside the Tool Grant: {relative_path}",
+                            kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                         )
             request: dict[str, JsonValue] = {
                 "schemaVersion": 1,
@@ -1075,6 +1275,71 @@ class RuntimeToolBridge:
             }
             validate_json_value(request)
             return "workspace.mutate", request, None
+        if call.name == "patch_workspace":
+            _only(arguments, {"files", "maxDiffBytes"}, call.name)
+            files = arguments.get("files")
+            if not isinstance(files, list) or not files:
+                raise ToolBridgeError(
+                    "patch_workspace files must be a non-empty list",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            for file in files:
+                if not isinstance(file, dict):
+                    raise ToolBridgeError(
+                        "patch_workspace files must be objects",
+                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                    )
+                relative_path = file.get("relativePath")
+                if not isinstance(relative_path, str):
+                    raise ToolBridgeError(
+                        "patch_workspace file omitted relativePath",
+                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                    )
+                edits = file.get("edits")
+                if not isinstance(edits, list) or not edits:
+                    raise ToolBridgeError(
+                        "patch_workspace file edits must be a non-empty list",
+                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                    )
+                if self.tool_grant is not None:
+                    try:
+                        allowed_path = self.tool_grant.allows_path(
+                            call.name, relative_path
+                        )
+                    except ValueError as error:
+                        raise ToolBridgeError(
+                            str(error), kind=ToolBridgeErrorKind.AUTHORITY_DENIED
+                        ) from error
+                    if not allowed_path:
+                        raise ToolBridgeError(
+                            f"patch_workspace path is outside the Tool Grant: {relative_path}",
+                            kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
+                        )
+            assignment = self.committed.assignment
+            request_token = canonical_digest(
+                {
+                    "assignmentId": assignment.assignment_id,
+                    "assignmentGeneration": assignment.generation,
+                    "assignmentDigest": assignment.digest,
+                    "harnessRunId": self.harness_run_id,
+                    "stepId": step_id,
+                    "toolCallDigest": call.digest,
+                }
+            )[7:39]
+            client_request_id = (
+                f"request:harness-patch:g{assignment.generation}:{request_token}"
+            )
+            request: dict[str, JsonValue] = {
+                "schemaVersion": 1,
+                "clientRequestId": client_request_id,
+                "workspaceId": workspace_id,
+                "files": files,
+                "maxDiffBytes": _optional_int(
+                    arguments, "maxDiffBytes", 1_048_576, positive=True
+                ),
+            }
+            validate_json_value(request)
+            return "workspace.patch", request, client_request_id
         if call.name == "diff_workspace":
             _only(arguments, {"maxBytes"}, call.name)
             return (
@@ -1095,7 +1360,10 @@ class RuntimeToolBridge:
                 call.name,
             )
             if self.tool_grant is None:
-                raise ToolBridgeError("run_check requires a Tool Grant")
+                raise ToolBridgeError(
+                    "run_check requires a Tool Grant",
+                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
+                )
             check_id = _required_string(arguments, "checkId", call.name)
             try:
                 check = self.tool_grant.execution_check(check_id)
@@ -1129,7 +1397,10 @@ class RuntimeToolBridge:
             return "workspace.exec", request, client_request_id
         if call.name == "run_in_workspace":
             if self.tool_grant is not None and not self.tool_grant.allow_opaque_exec:
-                raise ToolBridgeError("opaque Runtime execution is not granted")
+                raise ToolBridgeError(
+                    "opaque Runtime execution is not granted",
+                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
+                )
             allowed = {
                 "executable",
                 "args",
@@ -1148,13 +1419,19 @@ class RuntimeToolBridge:
             if not isinstance(raw_args, list) or any(
                 not isinstance(item, str) for item in raw_args
             ):
-                raise ToolBridgeError("run_in_workspace args must be strings")
+                raise ToolBridgeError(
+                    "run_in_workspace args must be strings",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
             raw_env = arguments.get("env", {})
             if not isinstance(raw_env, dict) or any(
                 not isinstance(key, str) or not isinstance(value, str)
                 for key, value in raw_env.items()
             ):
-                raise ToolBridgeError("run_in_workspace env must contain string values")
+                raise ToolBridgeError(
+                    "run_in_workspace env must contain string values",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
             try:
                 request = build_harness_workspace_exec_request(
                     self.committed,
@@ -1194,7 +1471,8 @@ class RuntimeToolBridge:
             job_id = _required_string(arguments, "jobId", call.name)
             if self.tool_grant is not None and job_id not in self._known_job_ids:
                 raise ToolBridgeError(
-                    "observe_job may only observe a Job created by this Run"
+                    "observe_job may only observe a Job created by this Run",
+                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                 )
             return (
                 "task.observe",
@@ -1220,7 +1498,8 @@ class RuntimeToolBridge:
                 and (job_id, artifact_id) not in self._known_artifacts
             ):
                 raise ToolBridgeError(
-                    "read_artifact may only read an Artifact observed in this Run"
+                    "read_artifact may only read an Artifact observed in this Run",
+                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                 )
             return (
                 "artifact.read",
@@ -1235,7 +1514,10 @@ class RuntimeToolBridge:
                 },
                 None,
             )
-        raise ToolBridgeError(f"Tool is not in the Ordivon Harness ACI: {call.name}")
+        raise ToolBridgeError(
+            f"Tool is not in the Ordivon Harness ACI: {call.name}",
+            kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+        )
 
     def _unknown(
         self,
@@ -1243,8 +1525,16 @@ class RuntimeToolBridge:
         error: RuntimeClientError,
         *,
         client_request_id: str | None,
+        operation: str | None = None,
+        arguments: dict[str, JsonValue] | None = None,
     ) -> ToolObservation:
-        if client_request_id is not None:
+        if operation == "workspace.patch" and arguments is not None:
+            try:
+                payload = self.runtime.call_tool("workspace.patch", arguments)
+                return self._observed(call, payload, reconciled=True)
+            except RuntimeClientError as reconciliation_error:
+                error = reconciliation_error
+        elif client_request_id is not None:
             try:
                 jobs = find_jobs_by_client_request(self.runtime, client_request_id)
                 job_ids = {job.get("jobId") for job in jobs}
@@ -1363,7 +1653,10 @@ def _extract_artifacts(payload: dict[str, JsonValue]) -> tuple[ArtifactRef, ...]
 def _only(arguments: dict[str, JsonValue], allowed: set[str], tool_name: str) -> None:
     unknown = sorted(set(arguments) - allowed)
     if unknown:
-        raise ToolBridgeError(f"{tool_name} received unknown fields: {unknown}")
+        raise ToolBridgeError(
+            f"{tool_name} received unknown fields: {unknown}",
+            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+        )
 
 
 def _required_string(
@@ -1371,14 +1664,20 @@ def _required_string(
 ) -> str:
     value = arguments.get(field)
     if not isinstance(value, str) or not value or value != value.strip():
-        raise ToolBridgeError(f"{tool_name} requires trimmed string {field}")
+        raise ToolBridgeError(
+            f"{tool_name} requires trimmed string {field}",
+            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+        )
     return value
 
 
 def _optional_string(arguments: dict[str, JsonValue], field: str, default: str) -> str:
     value = arguments.get(field, default)
     if not isinstance(value, str) or value != value.strip():
-        raise ToolBridgeError(f"{field} must be a trimmed string")
+        raise ToolBridgeError(
+            f"{field} must be a trimmed string",
+            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+        )
     return value
 
 
@@ -1392,5 +1691,8 @@ def _optional_int(
     value = arguments.get(field, default)
     if type(value) is not int or value < (1 if positive else 0):
         qualifier = "positive" if positive else "non-negative"
-        raise ToolBridgeError(f"{field} must be a {qualifier} integer")
+        raise ToolBridgeError(
+            f"{field} must be a {qualifier} integer",
+            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+        )
     return value

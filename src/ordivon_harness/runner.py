@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import queue
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -23,6 +24,7 @@ from .host import (
 )
 from .models import CompletionDecisionReceipt
 from .ordivon.control import CancellationToken
+from .ordivon.events import HarnessRunEvent
 from .ordivon.input import (
     HarnessContextCompiler,
     HarnessContextRequest,
@@ -45,6 +47,9 @@ _DEFAULT_BUDGET = RunBudget(
     max_tool_calls=16,
     max_observation_bytes=1_048_576,
     max_wall_time_ms=600_000,
+    max_total_tokens=131_072,
+    max_model_retries=2,
+    max_tool_corrections=3,
 )
 _DURABLE_CAPABILITIES = (
     "tool_events",
@@ -210,11 +215,14 @@ class RunHandle:
         task_id: str,
         worker: Callable[[CancellationToken], HarnessExecutionResult],
         *,
+        event_queue: queue.Queue[HarnessRunEvent | object] | None = None,
         on_done: Callable[[RunHandle], None] | None = None,
     ) -> None:
         self.task_id = task_id
         self._worker = worker
         self._on_done = on_done
+        self._events = event_queue or queue.Queue()
+        self._event_end = object()
         self._cancellation = CancellationToken()
         self._done = threading.Event()
         self._lock = threading.Lock()
@@ -245,6 +253,28 @@ class RunHandle:
             self._started = True
         self._thread.start()
 
+    def iter_events(self, timeout: float | None = None) -> Iterator[HarnessRunEvent]:
+        """Yield live semantic events until the Run terminates.
+
+        A timeout applies independently to each wait. Canonical evidence remains the
+        final Harness Trace; this stream is a best-effort projection.
+        """
+        if timeout is not None and timeout < 0:
+            raise ValueError("RunHandle event timeout must be non-negative")
+        while True:
+            try:
+                item = self._events.get(timeout=timeout)
+            except queue.Empty as error:
+                if self.done:
+                    return
+                raise TimeoutError(
+                    f"Harness Run emitted no event before timeout: {self.task_id}"
+                ) from error
+            if item is self._event_end:
+                return
+            assert isinstance(item, HarnessRunEvent)
+            yield item
+
     def result(self, timeout: float | None = None) -> HarnessExecutionResult:
         if timeout is not None and timeout < 0:
             raise ValueError("RunHandle timeout must be non-negative")
@@ -269,6 +299,7 @@ class RunHandle:
                 self._result = result
         finally:
             self._done.set()
+            self._events.put(self._event_end)
             if self._on_done is not None:
                 self._on_done(self)
 
@@ -290,6 +321,7 @@ class HarnessRunner:
         artifact_exists: ArtifactExists | None = None,
         acceptance_verifier: AcceptanceVerifier | None = None,
         verification_method: str = "ordivon-harness-runner-v1",
+        event_sink: Callable[[HarnessRunEvent], None] | None = None,
     ) -> None:
         self.host = host
         self.runtime = runtime
@@ -298,6 +330,7 @@ class HarnessRunner:
         self.artifact_exists = artifact_exists
         self.acceptance_verifier = acceptance_verifier
         self.verification_method = verification_method
+        self.event_sink = event_sink
         self._handles: dict[str, RunHandle] = {}
         self._handles_lock = threading.Lock()
 
@@ -585,6 +618,8 @@ class HarnessRunner:
                     f"this Runner already owns an active Run: {active[0].task_id}"
                 )
 
+            event_queue: queue.Queue[HarnessRunEvent | object] = queue.Queue()
+
             def worker(token: CancellationToken) -> HarnessExecutionResult:
                 with HostStorage(self.host.storage.root) as storage:
                     child = HarnessRunner(
@@ -595,10 +630,16 @@ class HarnessRunner:
                         artifact_exists=self.artifact_exists,
                         acceptance_verifier=self.acceptance_verifier,
                         verification_method=self.verification_method,
+                        event_sink=event_queue.put,
                     )
                     return operation(child, token)
 
-            handle = RunHandle(task_id, worker, on_done=self._handle_done)
+            handle = RunHandle(
+                task_id,
+                worker,
+                event_queue=event_queue,
+                on_done=self._handle_done,
+            )
             self._handles[task_id] = handle
             try:
                 handle._start()
@@ -644,6 +685,7 @@ class HarnessRunner:
             bridge,
             budget=budget,
             clock_ms=self.host.kernel.clock_ms,
+            event_sink=self.event_sink,
         )
         started_at_ms = self.host.kernel.clock_ms()
         if retained is None:
@@ -749,15 +791,32 @@ class HarnessRunner:
         raw = committed.assignment.budget
         defaults = self.default_budget
 
-        def read(name: str, fallback: int) -> int:
+        def read(
+            name: str,
+            fallback: int,
+            *,
+            allow_zero: bool = False,
+        ) -> int:
             value = raw.get(name)
-            return value if type(value) is int and value > 0 else fallback
+            minimum = 0 if allow_zero else 1
+            return value if type(value) is int and value >= minimum else fallback
 
         return RunBudget(
             read("maxModelCalls", defaults.max_model_calls),
             read("maxToolCalls", defaults.max_tool_calls),
             read("maxObservationBytes", defaults.max_observation_bytes),
             read("maxWallTimeMs", defaults.max_wall_time_ms),
+            read("maxTotalTokens", defaults.max_total_tokens),
+            read(
+                "maxModelRetries",
+                defaults.max_model_retries,
+                allow_zero=True,
+            ),
+            read(
+                "maxToolCorrections",
+                defaults.max_tool_corrections,
+                allow_zero=True,
+            ),
         )
 
     @staticmethod
@@ -767,6 +826,9 @@ class HarnessRunner:
             "maxToolCalls": budget.max_tool_calls,
             "maxObservationBytes": budget.max_observation_bytes,
             "maxWallTimeMs": budget.max_wall_time_ms,
+            "maxTotalTokens": budget.max_total_tokens,
+            "maxModelRetries": budget.max_model_retries,
+            "maxToolCorrections": budget.max_tool_corrections,
         }
 
     def _require_runtime(self) -> RuntimeClient:

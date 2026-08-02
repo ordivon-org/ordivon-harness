@@ -74,6 +74,14 @@ def _add_execution_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-tool-calls", type=int)
     parser.add_argument("--max-observation-bytes", type=int)
     parser.add_argument("--max-wall-time-ms", type=int)
+    parser.add_argument("--max-total-tokens", type=int)
+    parser.add_argument("--max-model-retries", type=int)
+    parser.add_argument("--max-tool-corrections", type=int)
+    parser.add_argument(
+        "--events-jsonl",
+        action="store_true",
+        help="write live semantic events as JSON Lines to stderr",
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -164,21 +172,40 @@ def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]
         budget = _budget(args, host)
         completion_mode = CompletionMode(args.completion_mode)
         if args.command == "run":
-            result = runner.run_current(
-                args.task_id,
-                budget=budget,
-                completion_mode=completion_mode,
-            )
+            if args.events_jsonl:
+                handle = runner.start_current(
+                    args.task_id,
+                    budget=budget,
+                    completion_mode=completion_mode,
+                )
+                _write_events(handle)
+                result = handle.result()
+            else:
+                result = runner.run_current(
+                    args.task_id,
+                    budget=budget,
+                    completion_mode=completion_mode,
+                )
         elif args.command == "resume":
             messages = tuple(
                 {"role": "user", "content": message} for message in args.message
             )
-            result = runner.resume(
-                args.task_id,
-                additional_messages=messages,
-                budget=budget,
-                completion_mode=completion_mode,
-            )
+            if args.events_jsonl:
+                handle = runner.start_resume(
+                    args.task_id,
+                    additional_messages=messages,
+                    budget=budget,
+                    completion_mode=completion_mode,
+                )
+                _write_events(handle)
+                result = handle.result()
+            else:
+                result = runner.resume(
+                    args.task_id,
+                    additional_messages=messages,
+                    budget=budget,
+                    completion_mode=completion_mode,
+                )
         else:
             raise ValueError("unsupported command")
         return {"ok": True, **result.to_dict()}
@@ -204,24 +231,52 @@ def _budget(args: argparse.Namespace, host: HarnessHost) -> RunBudget | None:
         args.max_tool_calls,
         args.max_observation_bytes,
         args.max_wall_time_ms,
+        args.max_total_tokens,
+        args.max_model_retries,
+        args.max_tool_corrections,
     )
     if all(value is None for value in values):
         return None
     committed = host.load_current_assignment(args.task_id)
     raw = committed.assignment.budget
 
-    def selected(value: int | None, name: str, fallback: int) -> int:
+    def selected(
+        value: int | None,
+        name: str,
+        fallback: int,
+        *,
+        allow_zero: bool = False,
+    ) -> int:
         if value is not None:
             return value
         retained = raw.get(name)
-        return retained if type(retained) is int and retained > 0 else fallback
+        minimum = 0 if allow_zero else 1
+        return retained if type(retained) is int and retained >= minimum else fallback
 
     return RunBudget(
         selected(args.max_model_calls, "maxModelCalls", 8),
         selected(args.max_tool_calls, "maxToolCalls", 16),
         selected(args.max_observation_bytes, "maxObservationBytes", 1_048_576),
         selected(args.max_wall_time_ms, "maxWallTimeMs", 600_000),
+        selected(args.max_total_tokens, "maxTotalTokens", 131_072),
+        selected(
+            args.max_model_retries,
+            "maxModelRetries",
+            2,
+            allow_zero=True,
+        ),
+        selected(
+            args.max_tool_corrections,
+            "maxToolCorrections",
+            3,
+            allow_zero=True,
+        ),
     )
+
+
+def _write_events(handle) -> None:
+    for event in handle.iter_events():
+        print(json.dumps(event.to_dict(), sort_keys=True), file=sys.stderr, flush=True)
 
 
 def _wall_clock_ms() -> int:

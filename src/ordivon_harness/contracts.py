@@ -11,6 +11,7 @@ from ordivon_host.effects import ArtifactRef, StateRef
 _NATIVE_TOOL_NAMES = {
     "read_workspace",
     "mutate_workspace",
+    "patch_workspace",
     "diff_workspace",
     "run_check",
     "run_in_workspace",
@@ -308,8 +309,14 @@ class ToolGrant:
             raise ValueError("Tool Grant Execution Check identities must be unique")
         if "read_workspace" in self.allowed_tools and not self.read_path_rules:
             raise ValueError("read_workspace requires at least one read path rule")
-        if "mutate_workspace" in self.allowed_tools and not self.mutate_path_rules:
-            raise ValueError("mutate_workspace requires at least one mutate path rule")
+        mutation_tools = {"mutate_workspace", "patch_workspace"}
+        if (
+            mutation_tools.intersection(self.allowed_tools)
+            and not self.mutate_path_rules
+        ):
+            raise ValueError(
+                "workspace mutation Tools require at least one mutate path rule"
+            )
         if "run_check" in self.allowed_tools and not self.execution_checks:
             raise ValueError("run_check requires at least one Execution Check")
         if self.execution_checks and "run_check" not in self.allowed_tools:
