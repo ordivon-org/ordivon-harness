@@ -18,7 +18,7 @@ from ordivon_host.runtime import (
     RuntimeToolRejected,
 )
 from ordivon_host.runtime.jobs import find_jobs_by_client_request
-from ordivon_protocol import (
+from ..protocol import (
     HarnessDispatchFence,
     HarnessRecoveryConsequence,
     HarnessRunPauseReason,
