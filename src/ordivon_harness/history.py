@@ -9,7 +9,7 @@ from ordivon_host.domain import EventKind, TaskProjection
 from ordivon_host.journal import JournalCorruption
 from ordivon_host.objects import ObjectCorrupt
 from ordivon_host.storage import HostStorage
-from ordivon_protocol import (
+from .protocol import (
     HarnessDispatchFence,
     HarnessRunSnapshot,
     HarnessToolStepIntent,

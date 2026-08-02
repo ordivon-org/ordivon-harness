@@ -9,7 +9,7 @@ from anc_canonical import JsonValue
 from ordivon_host import ArtifactRef, HostStorage
 from ordivon_host.cognition.context import CompiledContext, ContextBlock
 from ordivon_host.runtime import RuntimeClient
-from ordivon_protocol import HarnessRunSnapshot
+from .protocol import HarnessRunSnapshot
 
 from .contracts import TaskContract, ToolGrant
 from .host import (

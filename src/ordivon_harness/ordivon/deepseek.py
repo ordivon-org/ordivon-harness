@@ -234,7 +234,7 @@ class _HttpClientPostHandle:
         if response is not None:
             try:
                 response.close()
-            except OSError:
+            except (OSError, AttributeError):
                 pass
         if connection is not None:
             sock = connection.sock
@@ -314,7 +314,7 @@ class _HttpClientPostHandle:
                 failure_code=AgentTurnFailureCode.TIMEOUT,
             )
             self._error.__cause__ = error
-        except (OSError, http.client.HTTPException) as error:
+        except (OSError, AttributeError, http.client.HTTPException) as error:
             message = (
                 "DeepSeek request was cancelled in flight"
                 if self._cancelled.is_set()
@@ -335,7 +335,7 @@ class _HttpClientPostHandle:
             if response is not None:
                 try:
                     response.close()
-                except OSError:
+                except (OSError, AttributeError):
                     pass
             if connection is not None:
                 try:

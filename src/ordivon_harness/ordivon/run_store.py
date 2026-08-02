@@ -5,7 +5,7 @@ from dataclasses import dataclass, replace
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from ordivon_host import HostExtensionPort, HostKernelError
 from ordivon_host.objects import StoredObject
-from ordivon_protocol import (
+from ..protocol import (
     HarnessDispatchFence,
     HarnessRunPauseReason,
     HarnessRunSnapshot,
