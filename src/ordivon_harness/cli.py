@@ -221,7 +221,7 @@ def _runtime(config: HostConfig) -> McpRuntimeClient:
         timeout_seconds=config.runtime.timeout_seconds,
         max_response_bytes=config.runtime.max_response_bytes,
         client_name="ordivon-harness",
-        client_version="0.4.0",
+        client_version="0.5.0",
     )
 
 

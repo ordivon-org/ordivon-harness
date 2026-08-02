@@ -52,7 +52,11 @@ The resumed Run restores cumulative budget use, messages, observations, seen Mod
 
 Runtime owns physical Job and process truth. Harness requests `task.cancel`, observes the result and keeps `cancel-requested` nonterminal until a later Receipt proves `cancelled`, completion, failure, timeout or UNKNOWN. Runtime execution is dispatched with `waitMs=0`, then polled in short bounded intervals so cancellation and deadlines remain responsive.
 
-Provider execution follows the same shape through `AgentTurnCallHandle.poll()` and `cancel()`. The default DeepSeek transport owns one HTTP connection per call and closes the active response/socket on cancellation. Codex and Hermes retain their provider-faithful process/session mechanics.
+Provider execution follows the same shape through `AgentTurnCallHandle.poll()` and `cancel()`. Explicit `transport_failed` and `unavailable` failures may be retried within a bounded retry budget while preserving the same logical Turn request. Timeout, rejection, malformed output and ambiguous failures are not retried. Provider-reported token usage is accumulated as a hard Run budget; Harness does not estimate missing usage. The default DeepSeek transport owns one HTTP connection per call and closes the active response/socket on cancellation. Codex and Hermes retain their provider-faithful process/session mechanics.
+
+## Live event projection
+
+The canonical `HarnessTrace` remains the durable semantic event record. `TraceRecorder` may additionally emit each already-recorded event to a best-effort sink used by `RunHandle.iter_events()` and CLI JSON Lines. Sink failure cannot change Run execution or evidence; consumers reconnect through Host state and the final Trace rather than treating the live stream as a durable broker.
 
 ## Dispatch fencing
 
@@ -66,7 +70,7 @@ Each durable `workspace.exec` preparation writes a `HarnessDispatchFence` bound 
 
 Harness verifies the fence before dispatch and again when the Runtime response returns. A stale Assignment therefore cannot be silently admitted as current Harness work, and an exposed Runtime Job is cancelled if post-dispatch validation fails.
 
-The fence is also included in Runtime `foreignReferences` as immutable correlation evidence. Runtime does not yet validate a Host MAC or call back into Host at admission, so this is not claimed as cryptographic end-to-end authorization.
+The fence is also included in Runtime `foreignReferences` as immutable correlation evidence. Durable `workspace.patch` uses the same Host Intent/fence ordering but delegates physical effect reconciliation to Runtime's stable Patch receipt. On restart Harness queries `workspace.patch.get`; it never reconstructs or redispatches the edit from a partial local transcript. Runtime does not yet validate a Host MAC or call back into Host at admission, so this is not claimed as cryptographic end-to-end authorization.
 
 ## Recovery ordering
 
@@ -99,14 +103,15 @@ HarnessRunPlan
 
 It adds no durable object of its own. Every persisted transition still passes through `HarnessHost`, Host CAS and the Host Journal. Every physical Tool operation still passes through Runtime. `HarnessExecutionResult` only aggregates the already-authoritative Run, proposal and decision results for the caller.
 
-`RunHandle` is an in-process thread boundary for responsive Provider cancellation. The Runner registers the handle before starting its worker, uses a fresh HostStorage connection in that worker, and removes the handle after completion. It is not a scheduler, service or recoverable process registry. After process loss, continuity comes from the durable Snapshot and `recover()`/`resume()`, not from the handle.
+`RunHandle` is an in-process thread boundary for responsive Provider cancellation and live event projection. The Runner registers the handle before starting its worker, uses a fresh HostStorage connection in that worker, and removes the handle after completion. It is not a scheduler, service or recoverable process registry. After process loss, continuity comes from the durable Snapshot and `recover()`/`resume()`, not from the handle.
 
 Execution entry guards are explicit:
 
 - a current durable Snapshot must be resumed rather than restarted;
 - an already recorded Run cannot be executed again;
 - adjudication configuration is validated before an Attempt or Assignment is created;
-- durable mutation is removed from model Tool definitions and rejected by `HarnessRunPlan`;
+- durable `workspace.mutate` is removed from model Tool definitions and rejected by `HarnessRunPlan`;
+- durable `patch_workspace` is admitted only when both Runtime Patch operations are present and the Tool Grant binds allowed mutation paths;
 - approval events remain unsupported rather than represented by an unreachable pause state.
 
 The CLI is a thin projection of the same facade: `status`, `run`, `resume`, `cancel`, `recover` and `doctor`. It creates no alternate lifecycle. CLI `run` consumes a current Assignment; Assignment construction remains with the integrating Host/application because it requires concrete Task Contract, Context and Tool authority.

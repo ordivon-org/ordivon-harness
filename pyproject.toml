@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ordivon-harness"
-version = "0.4.0"
+version = "0.5.0"
 description = "Replaceable Agent Harness execution and Host continuity extension for Ordivon."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"

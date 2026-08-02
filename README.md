@@ -37,6 +37,10 @@ The retained evidence proves:
 - monotonic Run deadlines, cancellable Provider call handles and requested/effective model provenance;
 - active socket cancellation for the default DeepSeek HTTP transport;
 - durable native `workspace.exec` Intent → DispatchFence → Receipt → Observation with restart reconciliation by `clientRequestId`;
+- capability-adaptive durable `workspace.patch` with exact request replay and `workspace.patch.get` receipt reconciliation;
+- bounded Provider retry for explicit transient transport/unavailable failures, with stable logical Turn identity and no Tool redispatch;
+- Provider-reported token hard limits and bounded known-no-effect Tool correction;
+- best-effort live semantic event projection whose authoritative form remains the final canonical Trace;
 - nonterminal `cancel-requested` Receipts that can be superseded by one final reconciled Receipt;
 - active-Tool-Step-first Run recovery before Workspace assessment;
 - executable `needs-input` and prepared-effect Run resume;
@@ -44,7 +48,7 @@ The retained evidence proves:
 
 The current DispatchFence is a Host revision/Assignment/Intent fence retained in CAS and Runtime correlation evidence, with validation immediately before and after dispatch. Runtime does not independently authenticate it with a Host-issued MAC; it is therefore a practical stale-dispatch fence, not a cryptographic cross-service capability token.
 
-Generic effectful continuation remains deliberately narrower than the Runtime catalog: durable `workspace.exec` is accepted, while durable `workspace.mutate` is not exposed to the model and `HarnessRunPlan` rejects mutation grants until Runtime exposes a reconciliable mutation dispatch identity. Approval pause/resume is also not advertised or accepted. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+Generic effectful continuation remains deliberately narrower than the Runtime catalog: durable `workspace.exec` is accepted; `patch_workspace` is exposed only when Runtime advertises the paired `workspace.patch` and `workspace.patch.get` contract; durable `workspace.mutate` remains hidden and `HarnessRunPlan` rejects that grant. Patch uses complete before digests and a stable Runtime receipt identity rather than weakening the mutation boundary. Approval pause/resume is also not advertised or accepted. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
 
 ## Recommended application surface
 
@@ -77,20 +81,21 @@ cancel(task)        cancel this Runner's active call or reconcile a Runtime effe
 recover(task)       perform active-step-first lost-process recovery
 ```
 
-`RunHandle` provides in-process start/result/cancel mechanics without introducing a daemon. A durable Snapshot forces callers onto `resume`; a recorded Run cannot be executed again and requires a replacement Assignment.
+`RunHandle` provides in-process start/result/cancel mechanics without introducing a daemon. `iter_events()` projects semantic events while the Run is active; the returned final Trace remains authoritative and event consumers must tolerate a lossy sink. A durable Snapshot forces callers onto `resume`; a recorded Run cannot be executed again and requires a replacement Assignment.
 
 The CLI operates on existing Host state:
 
 ```bash
 ordivon-harness --state-root /path/to/host-state status task:example
 ordivon-harness --state-root /path/to/host-state run task:example
+ordivon-harness --state-root /path/to/host-state run task:example --events-jsonl
 ordivon-harness --state-root /path/to/host-state resume task:example --message 'operator input'
 ordivon-harness --state-root /path/to/host-state cancel task:example
 ordivon-harness --state-root /path/to/host-state recover task:example
 ordivon-harness --state-root /path/to/host-state doctor
 ```
 
-CLI `run` executes the current committed Assignment; creation of Task Contracts, Context blocks, Tool Grants and new Assignments remains an explicit Python/Host integration operation. A separate CLI process cannot interrupt an in-memory Provider socket owned by another process, but it can reconcile or cancel a durable active Runtime Tool Step.
+CLI `run` executes the current committed Assignment; creation of Task Contracts, Context blocks, Tool Grants and new Assignments remains an explicit Python/Host integration operation. `--max-total-tokens`, `--max-model-retries` and `--max-tool-corrections` set explicit bounded Run policy. `--events-jsonl` writes the live event projection to stderr and preserves the final result JSON on stdout. A separate CLI process cannot interrupt an in-memory Provider socket owned by another process, but it can reconcile or cancel a durable active Runtime Tool Step.
 
 ## Development
 
@@ -112,4 +117,4 @@ Harness semantic history can be checked separately from the Host core doctor:
 ordivon-harness --state-root /path/to/host-state doctor
 ```
 
-See `ARCHITECTURE.md`, `docs/ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md` and `docs/ORDIVON_HARNESS_P0_P1_CLOSEOUT.md`.
+See `ARCHITECTURE.md`, `docs/ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md`, `docs/ORDIVON_HARNESS_P0_P1_CLOSEOUT.md` and `docs/ORDIVON_HARNESS_R2_R3_CLOSEOUT.md`.

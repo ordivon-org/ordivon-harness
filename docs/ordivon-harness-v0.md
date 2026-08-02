@@ -84,6 +84,8 @@ read_artifact
 
 `workspace.patch` is deliberately not required by OH2 because the current production MCP catalog does not expose it. The Harness does not manufacture capabilities from a newer client surface or a research expectation.
 
+> **R3 update — 2026-08-02:** Runtime now exposes paired `workspace.patch` / `workspace.patch.get` operations with a durable receipt. Current Harness discovers that pair dynamically and exposes `patch_workspace` only when both operations are present. This update does not rewrite the OH2 production evidence above.
+
 Workspace creation and closure remain Host responsibilities. `task.list` is retained below the ACI only for identity-preserving reconciliation. `artifact.read` requires both the producing Runtime Job identity and Artifact identity.
 
 The Runtime catalog digest binds both the selected Runtime Tool schemas and the model-facing ACI. A drifted catalog cannot execute an existing Assignment.
