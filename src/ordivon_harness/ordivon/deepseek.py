@@ -187,6 +187,27 @@ class CancellableDeepSeekTransport(Protocol):
     ) -> DeepSeekPostHandle: ...
 
 
+def _response_socket(response: http.client.HTTPResponse) -> socket.socket | None:
+    """Return the socket retained by HTTPResponse after HTTPConnection releases it."""
+    stream = response.fp
+    raw = getattr(stream, "raw", None)
+    candidate = getattr(raw, "_sock", None)
+    return candidate if isinstance(candidate, socket.socket) else None
+
+
+def _shutdown_socket(sock: socket.socket | None) -> None:
+    if sock is None:
+        return
+    try:
+        sock.shutdown(socket.SHUT_RDWR)
+    except (OSError, ValueError):
+        pass
+    try:
+        sock.close()
+    except OSError:
+        pass
+
+
 class _HttpClientPostHandle:
     def __init__(
         self,
@@ -231,22 +252,17 @@ class _HttpClientPostHandle:
         with self._lock:
             response = self._response
             connection = self._connection
+        response_socket = _response_socket(response) if response is not None else None
+        connection_socket = connection.sock if connection is not None else None
+        _shutdown_socket(response_socket)
+        if connection_socket is not response_socket:
+            _shutdown_socket(connection_socket)
         if response is not None:
             try:
                 response.close()
             except (OSError, AttributeError):
                 pass
         if connection is not None:
-            sock = connection.sock
-            if sock is not None:
-                try:
-                    sock.shutdown(socket.SHUT_RDWR)
-                except OSError:
-                    pass
-                try:
-                    sock.close()
-                except OSError:
-                    pass
             try:
                 connection.close()
             except OSError:
