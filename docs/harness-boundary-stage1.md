@@ -70,7 +70,7 @@ The Stage 1 Provider-boundary implementation stays inside `ordivon-host`. It int
 | `ModelInvocationIntent` and receipts | direct one-shot baseline and identity precedent |
 | `OperatorHandoffCapsule` | recovery projection and later operator inspection |
 | `TaskOutcome` and verification receipts | final accepted semantic outcome |
-| `RuntimeEffectExecutor` and job lookup | response-loss reconciliation and Runtime evidence |
+| Runtime job lookup and evidence queries | response-loss reconciliation and Runtime evidence |
 
 The existing Task lease remains a transition lock. Its revision is not the durable worker fence because releasing the lease deletes the row. Assignment generation owns fencing across Harness processes.
 

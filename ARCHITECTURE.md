@@ -6,8 +6,8 @@ Ordivon Harness is an extension over the thin Ordivon Host kernel, not a second 
 
 ```text
 ordivon-computing / ordivon-protocol
-  HarnessToolStepIntent / HarnessToolStepReceipt
-  HarnessRunSnapshot / HarnessDispatchFence
+  owner-local HarnessToolStepIntent / HarnessToolStepReceipt
+  owner-local HarnessRunSnapshot / HarnessDispatchFence
           ↓
 ordivon-host
   Task / Journal / CAS / Kernel / HostExtensionPort / Runtime client
@@ -40,6 +40,8 @@ The bytes remain in Host CAS and their event admission remains in the Host Journ
 ## Execution ownership
 
 Provider Sessions, subprocesses, transcripts and hidden model state are disposable execution state. They never own Task continuity. Public Run state can be restored from a `HarnessRunSnapshot` plus its full-or-delta state object chain.
+
+These durable formats are internal to `ordivon_harness.protocol`. They are not exported from the package root and are not part of `ordivon-protocol`; promotion requires another materially different consumer or transport boundary.
 
 `OrdivonAgentLoop.resume()` currently resumes:
 

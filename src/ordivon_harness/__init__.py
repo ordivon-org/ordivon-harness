@@ -1,13 +1,3 @@
-from .protocol import (
-    HarnessDispatchFence,
-    HarnessProtocolError,
-    HarnessRecoveryConsequence,
-    HarnessRunPauseReason,
-    HarnessRunSnapshot,
-    HarnessToolStepIntent,
-    HarnessToolStepReceipt,
-    HarnessToolStepStatus,
-)
 from .codex_app import (
     CodexAppNormalizedEvent,
     CodexAppServerDriver,
@@ -110,14 +100,6 @@ from .tool_semantics import (
 )
 
 __all__ = [
-    "HarnessDispatchFence",
-    "HarnessProtocolError",
-    "HarnessRecoveryConsequence",
-    "HarnessRunPauseReason",
-    "HarnessRunSnapshot",
-    "HarnessToolStepIntent",
-    "HarnessToolStepReceipt",
-    "HarnessToolStepStatus",
     "COMPLETION_DECIDED",
     "COMPLETION_PROPOSED",
     "HARNESS_ASSIGNMENT_COMMITTED",
