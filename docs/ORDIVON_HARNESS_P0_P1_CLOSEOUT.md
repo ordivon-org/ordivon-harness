@@ -5,7 +5,7 @@
 P0–P1 closes the minimum execution-control, durable Tool-step and public Run-resume path without turning Host or Runtime into Harness implementations.
 
 ```text
-Ordivon Computer / ordivon-protocol 0.5.0
+owner-local Harness protocol over released ordivon-protocol 0.3.0
   HarnessToolStepIntent
   HarnessToolStepReceipt + predecessor chain
   HarnessRunSnapshot
@@ -214,4 +214,4 @@ The `0.4.0` gate adds focused Runner tests for:
 - pre-effect adjudication configuration failure;
 - Host-only CLI status projection.
 
-Final deterministic gate: 132 pytest cases plus 29 subtests, the matching unittest discovery suite, changed-file Ruff/format, Python 3.12 compile, wheel/sdist build and fresh wheel installation against exact Host `0.1.2` and Protocol `0.5.0` Git pins.
+Final deterministic gate: 132 pytest cases plus 29 subtests, the matching unittest discovery suite, changed-file Ruff/format, Python 3.12 compile, wheel/sdist build and fresh wheel installation against exact Host `0.1.2` and Protocol `0.3.0` Git pins.
