@@ -164,3 +164,9 @@ ordivon-harness --state-root /path/to/host-state doctor
 ```
 
 See `ARCHITECTURE.md` and `docs/OPERATIONS.md` for the active contract. The OH, P/R, extraction, and boundary documents remain historical evidence for the stages that produced it.
+
+## Project family
+
+- [Public project directory](https://ordivon.com/projects) — reader-facing role, maturity, and next steps.
+- [Cross-project map](https://github.com/zycxfyh/ordivon-computing/blob/main/projects/README.md) — stable roles, repository links, and authority entry points for all nine repositories.
+- Related owners: [Ordivon Host](https://github.com/zycxfyh/ordivon-host) preserves durable Task continuity; [Ordivon Runtime](https://github.com/zycxfyh/ordivon-runtime) owns physical execution; [Ordivon Computing](https://github.com/zycxfyh/ordivon-computing) owns promoted shared contracts.
