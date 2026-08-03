@@ -19,6 +19,7 @@ from .event_kinds import (
     HARNESS_RUN_RECORDED,
     HARNESS_RUN_SNAPSHOT_RECORDED,
     HARNESS_TOOL_STEP_PREPARED,
+    HARNESS_TOOL_STEP_RECORDED,
 )
 from .ordivon.model import AgentTurnResult
 from .protocol import (
@@ -165,19 +166,11 @@ class _HistoricalProviderHead:
 
 def validate_history(storage: HostStorage) -> HistoryValidation:
     """Validate every historical Event payload and known semantic cross-link."""
-    # object_refs has no Event join; first-seen time is its strongest causal proof.
-    admissions_by_time: dict[int, set[str]] = {}
-    for row in storage.journal.connection.execute(
-        "SELECT digest, first_seen_at_ms FROM object_refs "
-        "ORDER BY first_seen_at_ms, digest"
-    ):
-        admissions_by_time.setdefault(int(row["first_seen_at_ms"]), set()).add(
-            str(row["digest"])
-        )
-    admitted: set[str] = set()
+    exact_start = storage.journal.event_object_refs_start_sequence()
+    admitted = {item.digest for item in storage.journal.legacy_object_refs()}
     rows = storage.journal.connection.execute(
-        "SELECT event_id, stream_id, stream_kind, stream_revision, event_kind, "
-        "payload_digest, recorded_at_ms FROM events ORDER BY sequence"
+        "SELECT sequence, event_id, stream_id, stream_kind, stream_revision, "
+        "event_kind, payload_digest, recorded_at_ms FROM events ORDER BY sequence"
     )
     events = 0
     task_streams: set[str] = set()
@@ -188,9 +181,22 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
     recovery_provider_resolutions: dict[str, tuple[str, str, str]] = {}
     for row in rows:
         events += 1
+        sequence = int(row["sequence"])
         event_id = str(row["event_id"])
         stream_id = str(row["stream_id"])
-        admitted.update(admissions_by_time.pop(int(row["recorded_at_ms"]), ()))
+        event_references: set[str] | None = None
+        if sequence >= exact_start:
+            edges = storage.journal.event_object_references(event_id)
+            payload_edges = {item.digest for item in edges if item.role == "payload"}
+            if payload_edges != {str(row["payload_digest"])}:
+                raise JournalCorruption(
+                    f"historical Event payload edge differs: {event_id}"
+                )
+            event_references = {
+                item.digest for item in edges if item.role == "reference"
+            }
+            admitted.update(payload_edges)
+            admitted.update(event_references)
         if row["stream_kind"] != "task":
             raise JournalCorruption(
                 f"unsupported historical stream kind at {event_id}: {row['stream_kind']}"
@@ -234,6 +240,12 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
             )
         data = value["data"]
         validate_json_value(data)
+        _require_event_owned_evidence(
+            data,
+            event_id=event_id,
+            event_kind=event_kind,
+            event_references=event_references,
+        )
         references = _known_references(data)
         semantic_references += len(references)
         for key, digest in references:
@@ -241,10 +253,13 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
                 raise JournalCorruption(
                     f"historical {key} is not admitted in object_refs: {event_id}"
                 )
-        semantic_link_checks += _validate_semantic_links(storage, data, event_id)
+        semantic_link_checks += _validate_semantic_links(
+            storage, data, event_id
+        )
         provider_checks, provider_head = _validate_provider_semantic_links(
             storage,
             admitted=admitted,
+            event_references=event_references,
             data=data,
             event_id=event_id,
             event_kind=event_kind,
@@ -314,10 +329,80 @@ def _known_references(value: JsonValue) -> tuple[tuple[str, str], ...]:
     return tuple(found)
 
 
+def _require_event_owned_evidence(
+    data: JsonValue,
+    *,
+    event_id: str,
+    event_kind: EventKind,
+    event_references: set[str] | None,
+) -> None:
+    if event_references is None or not isinstance(data, dict):
+        return
+    required: dict[str, str] = {}
+    if event_kind is HARNESS_TOOL_STEP_PREPARED:
+        for label, key in (
+            ("Tool Intent", "harnessToolStepIntentObjectDigest"),
+            ("Dispatch Fence", "harnessDispatchFenceObjectDigest"),
+            ("Run Snapshot", "harnessRunSnapshotObjectDigest"),
+            ("Run state", "harnessRunStateObjectDigest"),
+        ):
+            value = data.get(key)
+            if isinstance(value, str):
+                required[label] = value
+    elif event_kind is HARNESS_TOOL_STEP_RECORDED:
+        for label, key in (
+            ("Tool Receipt", "harnessToolStepReceiptObjectDigest"),
+            ("Tool Observation", "harnessToolStepObservationObjectDigest"),
+            ("previous Tool Receipt", "harnessToolStepPreviousReceiptObjectDigest"),
+        ):
+            value = data.get(key)
+            if isinstance(value, str):
+                required[label] = value
+    elif event_kind is HARNESS_RUN_SNAPSHOT_RECORDED:
+        for label, key in (
+            ("Run Snapshot", "harnessRunSnapshotObjectDigest"),
+            ("Run state", "harnessRunStateObjectDigest"),
+        ):
+            value = data.get(key)
+            if isinstance(value, str):
+                required[label] = value
+    elif event_kind is HARNESS_RUN_RECORDED:
+        for label, key in (
+            ("Run Receipt", "harnessRunObjectDigest"),
+            ("Run Trace", "harnessTraceObjectDigest"),
+            ("Run Conclusion", "runConclusionObjectDigest"),
+        ):
+            value = data.get(key)
+            if isinstance(value, str):
+                required[label] = value
+        observations = data.get("toolObservationObjectDigests", [])
+        if isinstance(observations, list):
+            for index, value in enumerate(observations):
+                if isinstance(value, str):
+                    required[f"Run Observation {index}"] = value
+    _require_exact_event_references(
+        event_references, required, event_id=event_id
+    )
+
+
+def _require_exact_event_references(
+    event_references: set[str],
+    required: dict[str, str],
+    *,
+    event_id: str,
+) -> None:
+    for label, digest in required.items():
+        if digest not in event_references:
+            raise JournalCorruption(
+                f"historical {label} is not admitted by its Event: {event_id}"
+            )
+
+
 def _validate_provider_semantic_links(
     storage: HostStorage,
     *,
     admitted: set[str],
+    event_references: set[str] | None,
     data: JsonValue,
     event_id: str,
     event_kind: EventKind,
@@ -404,6 +489,29 @@ def _validate_provider_semantic_links(
     if any(data.get(field) != value for field, value in expected_head.items()):
         raise JournalCorruption(
             f"historical Harness Provider Call head differs from its Record: {event_id}"
+        )
+    if provider_event and event_references is not None:
+        required_provider_objects = {
+            "Provider Call Record": record_object_digest,
+            "Provider Call state": record.state_object_digest,
+        }
+        if record.status is HarnessProviderCallStatus.COMPLETED:
+            assert record.result_object_digest is not None
+            required_provider_objects["Provider Call result"] = (
+                record.result_object_digest
+            )
+        elif record.status in {
+            HarnessProviderCallStatus.FAILED,
+            HarnessProviderCallStatus.UNKNOWN,
+        }:
+            assert record.failure_object_digest is not None
+            required_provider_objects["Provider Call failure"] = (
+                record.failure_object_digest
+            )
+        _require_exact_event_references(
+            event_references,
+            required_provider_objects,
+            event_id=event_id,
         )
 
     assignment_object_digest = data.get("assignmentObjectDigest")

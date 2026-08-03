@@ -6,7 +6,13 @@ from dataclasses import replace
 from pathlib import Path
 
 from anc_canonical import canonical_digest
-from ordivon_host import HostExtensionPort, HostStorage
+from ordivon_host import (
+    EventKind,
+    HostExtensionPort,
+    HostKernel,
+    HostStorage,
+    TaskState,
+)
 from ordivon_host.journal import JournalCorruption
 from ordivon_host.objects import ObjectCorrupt, ObjectMissing, StoredObject
 from test_ordivon_harness_oh5 import (
@@ -34,7 +40,6 @@ from ordivon_harness.event_kinds import (
     HARNESS_PROVIDER_CALL_DISPATCHING,
     HARNESS_PROVIDER_CALL_FAILED,
     HARNESS_PROVIDER_CALL_SUPERSEDED,
-    HARNESS_RUN_SNAPSHOT_RECORDED,
 )
 from ordivon_harness.history import validate_history
 from ordivon_harness.ordivon import (
@@ -734,67 +739,72 @@ class ProviderCallHistoryTests(unittest.TestCase):
                     ):
                         validate_history(storage)
 
-    def test_later_object_admission_cannot_repair_completed_provider_event(
+    def test_same_millisecond_later_event_cannot_repair_provider_admission(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as directory:
             clock = _MutableClock()
             with HostStorage(directory) as storage:
                 _create_task(storage, clock)
-                _, store, state, _, claimed = _claim(storage, clock)
+                _, store, _, _, claimed = _claim(storage, clock)
                 dispatching = store.mark_provider_call_dispatching(claimed)
                 completed = store.complete_provider_call(
                     dispatching,
                     _provider_result(),
                 )
-                assert completed.record.result_object_digest is not None
+                result_digest = completed.record.result_object_digest
+                assert result_digest is not None
                 completed_event = storage.journal.connection.execute(
-                    "SELECT recorded_at_ms FROM events WHERE event_kind = ? "
-                    "ORDER BY sequence DESC LIMIT 1",
+                    "SELECT sequence, event_id, recorded_at_ms FROM events "
+                    "WHERE event_kind = ? ORDER BY sequence DESC LIMIT 1",
                     (HARNESS_PROVIDER_CALL_COMPLETED.value,),
                 ).fetchone()
-                result_ref = storage.journal.connection.execute(
-                    "SELECT first_seen_at_ms FROM object_refs WHERE digest = ?",
-                    (completed.record.result_object_digest,),
-                ).fetchone()
                 assert completed_event is not None
-                assert result_ref is not None
-                self.assertEqual(
-                    int(result_ref["first_seen_at_ms"]),
-                    int(completed_event["recorded_at_ms"]),
+                storage.journal.connection.execute(
+                    "DELETE FROM event_object_refs WHERE event_id = ? "
+                    "AND digest = ?",
+                    (completed_event["event_id"], result_digest),
                 )
 
-                store.bind_state(state)
-                store.record_pause(HarnessRunPauseReason.NEEDS_INPUT)
+                same_ms = int(completed_event["recorded_at_ms"])
+                HostKernel(
+                    storage,
+                    clock_ms=lambda: same_ms,
+                    owner_id="host:provider-history:same-ms",
+                ).create_task(
+                    event_id="event:provider-history:same-ms:later",
+                    kind=EventKind.TASK_CREATED,
+                    task_id="task:provider-history:same-ms:later",
+                    goal_id="goal:provider-history:same-ms",
+                    payload={"workloadId": "provider-history-same-ms"},
+                    state=TaskState.READY,
+                    frontier=("node:provider-history:same-ms",),
+                    referenced_objects=(storage.objects.inspect(result_digest),),
+                )
                 later = storage.journal.connection.execute(
-                    "SELECT recorded_at_ms FROM events WHERE event_kind = ? "
-                    "ORDER BY sequence DESC LIMIT 1",
-                    (HARNESS_RUN_SNAPSHOT_RECORDED.value,),
+                    "SELECT sequence, recorded_at_ms FROM events "
+                    "WHERE event_id = ?",
+                    ("event:provider-history:same-ms:later",),
                 ).fetchone()
                 assert later is not None
                 self.assertGreater(
-                    int(later["recorded_at_ms"]),
-                    int(completed_event["recorded_at_ms"]),
+                    int(later["sequence"]),
+                    int(completed_event["sequence"]),
                 )
-                storage.journal.connection.execute(
-                    "UPDATE object_refs SET first_seen_at_ms = ? "
-                    "WHERE digest = ?",
-                    (
-                        int(later["recorded_at_ms"]),
-                        completed.record.result_object_digest,
-                    ),
-                )
-
+                self.assertEqual(int(later["recorded_at_ms"]), same_ms)
                 self.assertIn(
-                    completed.record.result_object_digest,
+                    result_digest,
                     {
                         item.digest
-                        for item in storage.journal.object_refs()
+                        for item in storage.journal.event_object_references(
+                            "event:provider-history:same-ms:later"
+                        )
                     },
                 )
+
                 with self.assertRaisesRegex(
                     JournalCorruption,
-                    "Provider Call result",
+                    "Provider Call result is not admitted by its Event",
                 ):
                     validate_history(storage)
 

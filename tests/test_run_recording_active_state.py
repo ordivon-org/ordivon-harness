@@ -270,7 +270,17 @@ class RunRecordingActiveStateTests(unittest.TestCase):
                         (target_digest,),
                     ).fetchone()
                     assert admitted is not None
+                    edges = storage.journal.connection.execute(
+                        "SELECT event_id, role FROM event_object_refs "
+                        "WHERE digest = ? ORDER BY event_id, role",
+                        (target_digest,),
+                    ).fetchall()
+                    self.assertGreater(len(edges), 0)
                     before = storage.read_task_event(TASK_ID)
+                    storage.journal.connection.execute(
+                        "DELETE FROM event_object_refs WHERE digest = ?",
+                        (target_digest,),
+                    )
                     storage.journal.connection.execute(
                         "DELETE FROM object_refs WHERE digest = ?",
                         (target_digest,),
@@ -311,6 +321,14 @@ class RunRecordingActiveStateTests(unittest.TestCase):
                             admitted["kind"],
                             admitted["byte_length"],
                             admitted["first_seen_at_ms"],
+                        ),
+                    )
+                    storage.journal.connection.executemany(
+                        "INSERT INTO event_object_refs(event_id, digest, role) "
+                        "VALUES (?, ?, ?)",
+                        (
+                            (edge["event_id"], target_digest, edge["role"])
+                            for edge in edges
                         ),
                     )
                     validate_history(storage)
