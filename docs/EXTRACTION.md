@@ -1,5 +1,7 @@
 # Ordivon Harness repository extraction
 
+> **Historical implementation evidence:** This document records a bounded pre-extraction or stage-specific design, closeout, experiment, or migration result. It is not a current Harness architecture or operations source. Use [`../README.md`](../README.md), [`../ARCHITECTURE.md`](../ARCHITECTURE.md), [`OPERATIONS.md`](OPERATIONS.md), and [`authority.md`](authority.md) for the active boundary. Historical paths and revisions are preserved for provenance.
+
 Status: standalone repository boundary implemented
 
 Source Host revision: `3f50c676802f1c3653767b200db445d15f2f7930`

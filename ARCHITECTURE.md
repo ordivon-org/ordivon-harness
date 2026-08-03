@@ -13,7 +13,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-03
+updated: 2026-08-04
 summary: Canonical Harness architecture for Assignment-bound Agent execution, durable Run state, Tool semantics, Provider adaptation, dispatch fencing, recovery, and completion.
 evidence_status: verified
 readiness: READY
@@ -32,6 +32,14 @@ Provide replaceable Agent execution lifecycles over durable Host Tasks while pre
 ## Boundaries
 
 Host owns generic Task continuity, Journal, CAS, revision fencing, and Runtime client mechanics. Harness owns Assignment, Run, Tool-step, Provider, recovery, abandonment, and completion semantics. Runtime owns physical Workspace, Job, Attempt, Artifact, and cancellation truth. Domain applications retain task meaning and final domain verification.
+
+### Component responsibility matrix
+
+| Component | Owns | Explicitly does not own |
+| --- | --- | --- |
+| Runtime | Workspace lifecycle, physical Jobs and Attempts, process trees, bounded Artifacts, cancellation, and physical reconciliation | Task semantics, Assignment/Run policy, Provider behavior, or domain completion |
+| Host | generic Task continuity, Journal/CAS, revision and lease fencing, generic extension admission, verification records, and Task outcomes | Harness-specific schemas, model–Tool execution, physical process truth, or domain-world truth |
+| Harness | Task Attempt and Assignment semantics, Agent Runs, Provider adapters, Tool authority/catalogs, Tool-step checkpoints, recovery, abandonment, and completion proposals/decisions | another Task database, generic Host persistence, Runtime supervision, promoted protocol, or final domain authority |
 
 ## Components
 

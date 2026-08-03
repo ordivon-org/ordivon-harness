@@ -13,7 +13,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-03
+updated: 2026-08-04
 summary: Canonical entry to replaceable Agent execution, Assignment and Run continuity, Tool semantics, Provider adapters, recovery, and completion.
 evidence_status: verified
 readiness: READY
@@ -54,11 +54,20 @@ ordivon-harness → ordivon-host → ordivon-protocol
 
 Harness owns replaceable Agent execution semantics above Host and before Runtime. It does not own durable Task continuity, physical execution truth, domain-world rules, promoted cross-project protocol, Provider hidden state, or another database or scheduler.
 
+## Repository selection
+
+| Change concerns | Use | Do not put here |
+| --- | --- | --- |
+| Workspace, Job, Attempt, process tree, Artifact, physical cancellation, or execution recovery | `ordivon-runtime` | Task meaning, Agent Run policy, or domain completion |
+| durable Task continuity, Journal/CAS, commitment admission, verification records, or Task outcomes | `ordivon-host` | Provider loops, Harness Run semantics, or physical process truth |
+| Assignment, Agent Run, Provider adapter, model–Tool loop, Tool-step checkpoint, or Run recovery | `ordivon-harness` | a second Task database, Runtime supervision, or domain-world authority |
+
 ## Start here
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) defines the current ownership, execution, recovery, fencing, and application boundaries.
+- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) defines Run operation, cancellation, restart recovery, Doctor, and cross-component escalation.
 - [`docs/authority.md`](docs/authority.md) identifies which records may define current Harness behavior.
-- `docs/ORDIVON_HARNESS_*`, H-series, extraction, and boundary-stage documents preserve implementation decisions and evidence but do not replace the current architecture.
+- `docs/ORDIVON_HARNESS_*`, extraction, and boundary-stage documents are historical implementation evidence and do not replace the current architecture or operations contract.
 
 ## Verified boundary
 
@@ -154,4 +163,4 @@ Harness semantic history can be checked separately from the Host core doctor:
 ordivon-harness --state-root /path/to/host-state doctor
 ```
 
-See `ARCHITECTURE.md`, `docs/ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md`, `docs/ORDIVON_HARNESS_P0_P1_CLOSEOUT.md` and `docs/ORDIVON_HARNESS_R2_R3_CLOSEOUT.md`.
+See `ARCHITECTURE.md` and `docs/OPERATIONS.md` for the active contract. The OH, P/R, extraction, and boundary documents remain historical evidence for the stages that produced it.

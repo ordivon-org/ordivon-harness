@@ -1,5 +1,7 @@
 # Ordivon Harness R2–R3 closeout
 
+> **Historical implementation evidence:** This document records a bounded pre-extraction or stage-specific design, closeout, experiment, or migration result. It is not a current Harness architecture or operations source. Use [`../README.md`](../README.md), [`../ARCHITECTURE.md`](../ARCHITECTURE.md), [`OPERATIONS.md`](OPERATIONS.md), and [`authority.md`](authority.md) for the active boundary. Historical paths and revisions are preserved for provenance.
+
 ## Accepted boundary
 
 R2–R3 closes four practical gaps without adding a daemon, scheduler, session database or generic workflow engine:
@@ -19,9 +21,10 @@ R3
 
 The authoritative owners remain unchanged:
 
-- Host owns Task, Assignment, Journal, CAS and completion authority;
-- Harness owns the model–Tool loop, Run-local state and semantic evidence;
-- Runtime owns Workspace bytes and Patch commitment truth.
+- Host owns generic Task continuity, Journal/CAS storage, and revision admission;
+- Harness owns Assignment and Run semantics, the model–Tool loop, Tool-step recovery, and completion proposals/decisions;
+- Runtime owns Workspace bytes, physical Jobs, and Patch commitment truth;
+- the integrating domain retains final world-state verification.
 
 ## Live events
 

@@ -14,6 +14,7 @@ documentation_roots:
 managed_paths:
   - README.md
   - ARCHITECTURE.md
+  - docs/OPERATIONS.md
   - docs/authority.md
 enforcement: strict
 maintainers:

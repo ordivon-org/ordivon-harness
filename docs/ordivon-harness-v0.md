@@ -1,10 +1,10 @@
 # Ordivon Harness v0
 
-> **Repository extraction note — 2026-08-01:** This document records the pre-extraction implementation while Harness lived under `ordivon-host`. The implementation, tests, scripts and evidence now live in the independent `ordivon-harness` repository. Historical paths and Host revision identities below are intentionally preserved as evidence.
+> **Historical implementation evidence:** This document records a bounded pre-extraction or stage-specific design, closeout, experiment, or migration result. It is not a current Harness architecture or operations source. Use [`../README.md`](../README.md), [`../ARCHITECTURE.md`](../ARCHITECTURE.md), [`OPERATIONS.md`](OPERATIONS.md), and [`authority.md`](authority.md) for the active boundary. Historical paths and revisions are preserved for provenance.
 
 Status: OH0–OH5 native Run recovery and safe abandonment implemented and verified
 
-This document is the chronological experiment record. The final capability matrix, code ownership, retained debt and future promotion gates are authoritative in [`ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md`](ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md).
+This document is the chronological OH0–OH5 experiment record. Its stage capability matrix and retained debt are summarized in [`ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md`](ORDIVON_HARNESS_OH1_OH5_CLOSEOUT.md); current ownership and operation are defined by the repository root architecture and operations documents.
 
 ## Purpose
 
