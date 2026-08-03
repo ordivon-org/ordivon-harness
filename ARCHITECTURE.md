@@ -1,4 +1,53 @@
+---
+schema_version: 1
+id: harness.architecture
+title: Ordivon Harness architecture
+type: architecture
+profile: engineering
+lifecycle: active
+source_role: canonical
+visibility: public
+owners:
+  - ordivon-harness
+audience:
+  - builder
+  - operator
+  - agent
+updated: 2026-08-03
+summary: Canonical Harness architecture for Assignment-bound Agent execution, durable Run state, Tool semantics, Provider adaptation, dispatch fencing, recovery, and completion.
+evidence_status: verified
+readiness: READY
+applies_to:
+  - ordivon-harness
+related:
+  - harness.start
+  - harness.authority
+---
 # Ordivon Harness architecture
+
+## Purpose
+
+Provide replaceable Agent execution lifecycles over durable Host Tasks while preserving explicit Tool authority, Runtime correlation, bounded Provider behavior, recoverable Run state, and independently admitted completion.
+
+## Boundaries
+
+Host owns generic Task continuity, Journal, CAS, revision fencing, and Runtime client mechanics. Harness owns Assignment, Run, Tool-step, Provider, recovery, abandonment, and completion semantics. Runtime owns physical Workspace, Job, Attempt, Artifact, and cancellation truth. Domain applications retain task meaning and final domain verification.
+
+## Components
+
+The architecture consists of the Host Harness extension, Assignment-bound native Tool catalog semantics, Provider-faithful adapters, the first-party bounded Agent loop, durable Run snapshots and deltas, Tool-step Intent and Receipt chains, RuntimeToolBridge, HarnessRunner, live event projection, recovery, operator handoff, and semantic Doctor checks.
+
+## Data flow
+
+An application prepares a Task Contract, Context, Tool Grant, and Assignment; the Agent loop calls a replaceable Provider; admitted Tool calls are fenced and lowered to Runtime; observations and usage become a canonical Trace and Run receipt; Harness recovers or resumes from durable checkpoints; completion is proposed and independently adjudicated through Host-backed state.
+
+## Failure modes
+
+Harness fails closed on catalog drift, stale Assignment or fence identity, unsupported durable mutation, ambiguous Provider output, unbounded retry or token use, unresolved effectful Tool steps, missing receipts, UNKNOWN physical consequence, invalid replacement, and attempts to treat live streams, handles, sessions, or hidden model state as durable continuity.
+
+## Verification
+
+Exact behavior is verified by deterministic tests, semantic history validation, Host and Runtime integration fixtures, frozen provider and fault evidence, production Runtime catalog inspection, recovery matrices, and the canonical final Trace. The repository entry is [`README.md`](README.md), and the authority boundary is recorded in [`docs/authority.md`](docs/authority.md). Stage and closeout documents retain the evidence behind these claims but are not alternate current architectures.
 
 ## Boundary
 
@@ -129,4 +178,4 @@ Host owns the generic extension persistence port, handoff capsule and core histo
 
 ## Freeze rule
 
-Do not generalize the accepted `workspace.exec` durable Tool-step slice into arbitrary mutation, a daemon, workflow DSL, plugin platform, parallel Tools, subagents or Provider routing without a real workload and a reconciliable physical dispatch identity.
+Do not generalize the accepted `workspace.exec` durable Tool-step slice into arbitrary mutation, a daemon, workflow DSL, plugin platform, parallel Tools, subagents or Provider routing without a real workload and a reconcilable physical dispatch identity.
