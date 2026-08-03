@@ -20,6 +20,7 @@ from .ordivon import (
     DeepSeekTurnAdapter,
     RunBudget,
 )
+from .recovery import NATIVE_RUN_RECOVERY_TRIGGERS
 from .runner import CompletionMode, HarnessRunner
 
 
@@ -59,7 +60,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     recover = commands.add_parser("recover")
     recover.add_argument("task_id")
-    recover.add_argument("--trigger", default="operator_recover")
+    recover.add_argument(
+        "--trigger",
+        choices=NATIVE_RUN_RECOVERY_TRIGGERS,
+        default="host_restart",
+    )
     recover.add_argument("--no-auto-abandon", action="store_true")
     return parser
 
@@ -77,6 +82,9 @@ def _add_execution_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--max-total-tokens", type=int)
     parser.add_argument("--max-model-retries", type=int)
     parser.add_argument("--max-tool-corrections", type=int)
+    parser.add_argument("--max-observation-only-turns", type=int)
+    parser.add_argument("--max-no-progress-turns", type=int)
+    parser.add_argument("--max-model-observation-bytes", type=int)
     parser.add_argument(
         "--events-jsonl",
         action="store_true",
@@ -234,6 +242,9 @@ def _budget(args: argparse.Namespace, host: HarnessHost) -> RunBudget | None:
         args.max_total_tokens,
         args.max_model_retries,
         args.max_tool_corrections,
+        args.max_observation_only_turns,
+        args.max_no_progress_turns,
+        args.max_model_observation_bytes,
     )
     if all(value is None for value in values):
         return None
@@ -270,6 +281,23 @@ def _budget(args: argparse.Namespace, host: HarnessHost) -> RunBudget | None:
             "maxToolCorrections",
             3,
             allow_zero=True,
+        ),
+        selected(
+            args.max_observation_only_turns,
+            "maxObservationOnlyTurns",
+            6,
+            allow_zero=True,
+        ),
+        selected(
+            args.max_no_progress_turns,
+            "maxNoProgressTurns",
+            3,
+            allow_zero=True,
+        ),
+        selected(
+            args.max_model_observation_bytes,
+            "maxModelObservationBytes",
+            32_768,
         ),
     )
 

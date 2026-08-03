@@ -40,6 +40,7 @@ from ordivon_harness.ordivon import (
     RuntimeToolBridge,
     ScriptedTurnAdapter,
     ToolBridgeError,
+    static_provider_request_digest,
 )
 
 
@@ -62,6 +63,7 @@ def _block() -> ContextBlock:
 def _plan(
     *,
     completion_mode: CompletionMode = CompletionMode.RECORD,
+    budget: RunBudget | None = None,
 ) -> HarnessRunPlan:
     return HarnessRunPlan(
         task_contract=_contract(),
@@ -69,7 +71,7 @@ def _plan(
         workspace_ref="workspace:runner-r0-r1",
         tool_grant=_grant(),
         token_budget=4_000,
-        budget=RunBudget(4, 4, 262_144, 120_000),
+        budget=budget or RunBudget(4, 4, 262_144, 120_000),
         source_ref="repository:ordivon-harness@fixture",
         source_digest=canonical_digest({"revision": "fixture"}),
         completion_mode=completion_mode,
@@ -123,6 +125,7 @@ class _BlockingAdapter:
     adapter_id = "ordivon.test-blocking-adapter.v1"
     model_id = "ordivon.test-blocking-model.v1"
     supports_call_handle = True
+    provider_request_digest = static_provider_request_digest
 
     def __init__(self) -> None:
         self.handle = _BlockingCallHandle()
@@ -233,6 +236,81 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
                 first.run_current(TASK_ID)
             self.assertGreater(validate_history(storage).events, 0)
 
+    def test_no_progress_pause_persists_and_resets_after_operator_input(self) -> None:
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            HostStorage(directory) as storage,
+        ):
+            clock = _clock()
+            _create_task(storage, clock)
+            runtime = _RecoveryRuntime()
+            read = AgentToolCall(
+                "tool-call:runner:no-progress-read",
+                "read_workspace",
+                {
+                    "relativePath": "README.md",
+                    "mode": "SLICE",
+                    "byteOffset": 0,
+                    "maxBytes": 1,
+                },
+            )
+            first = HarnessRunner(
+                HarnessHost(storage, clock_ms=clock),
+                runtime=runtime,
+                adapter=ScriptedTurnAdapter(
+                    (_turn("no-progress-read", calls=(read,)),)
+                ),
+            )
+
+            paused = first.run(
+                _plan(
+                    budget=RunBudget(
+                        4,
+                        4,
+                        262_144,
+                        120_000,
+                        max_observation_only_turns=1,
+                        max_no_progress_turns=0,
+                    )
+                )
+            )
+
+            self.assertTrue(paused.paused)
+            self.assertEqual(paused.loop_result.stop_code, RunStopCode.NO_PROGRESS)
+            self.assertEqual(first.status(TASK_ID).pause_reason, "needs-input")
+            retained = HostHarnessRunStore(
+                first.host,
+                first.host.load_current_assignment(TASK_ID),
+            ).load_current_snapshot()
+            self.assertEqual(
+                retained.state.remaining_budget["observationOnlyTurns"],
+                0,
+            )
+
+            adapter = ScriptedTurnAdapter((_completion("after-no-progress"),))
+            resumed = HarnessRunner(
+                first.host,
+                runtime=runtime,
+                adapter=adapter,
+            ).resume(
+                TASK_ID,
+                additional_messages=(
+                    {
+                        "role": "user",
+                        "content": "Use the retained byte and conclude.",
+                    },
+                ),
+            )
+
+            self.assertEqual(
+                resumed.loop_result.stop_code,
+                RunStopCode.CANDIDATE_COMPLETED,
+            )
+            self.assertEqual(
+                adapter.requests[0].remaining_budget["observationOnlyTurns"],
+                1,
+            )
+
     def test_run_handle_cancels_active_provider_call_and_records_result(self) -> None:
         with (
             tempfile.TemporaryDirectory() as directory,
@@ -259,10 +337,16 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
                 cancellation.status,
                 "in-process-cancellation-requested",
             )
-            self.assertEqual(result.loop_result.stop_code, RunStopCode.CANCELLED)
+            self.assertEqual(
+                result.loop_result.stop_code,
+                RunStopCode.CANCEL_UNKNOWN,
+            )
             self.assertIsNotNone(result.recorded)
             self.assertTrue(adapter.handle.cancelled.is_set())
-            self.assertEqual(runner.status(TASK_ID).termination_code, "cancelled")
+            self.assertEqual(
+                runner.status(TASK_ID).termination_code,
+                "cancel_unknown",
+            )
 
     def test_durable_tool_surface_hides_mutation_and_approval_pause(self) -> None:
         with (

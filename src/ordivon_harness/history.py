@@ -9,8 +9,24 @@ from ordivon_host.domain import EventKind, TaskProjection
 from ordivon_host.journal import JournalCorruption
 from ordivon_host.objects import ObjectCorrupt
 from ordivon_host.storage import HostStorage
+from .event_kinds import (
+    HARNESS_PROVIDER_CALL_CLAIMED,
+    HARNESS_PROVIDER_CALL_COMPLETED,
+    HARNESS_PROVIDER_CALL_DISPATCHING,
+    HARNESS_PROVIDER_CALL_FAILED,
+    HARNESS_PROVIDER_CALL_SUPERSEDED,
+    HARNESS_PROVIDER_CALL_UNKNOWN,
+    HARNESS_RUN_RECORDED,
+    HARNESS_RUN_SNAPSHOT_RECORDED,
+    HARNESS_TOOL_STEP_PREPARED,
+)
+from .ordivon.model import AgentTurnResult
 from .protocol import (
     HarnessDispatchFence,
+    HarnessProviderCallFailureReceipt,
+    HarnessProviderCallRecord,
+    HarnessProviderCallSource,
+    HarnessProviderCallStatus,
     HarnessRunSnapshot,
     HarnessToolStepIntent,
     HarnessToolStepReceipt,
@@ -26,7 +42,7 @@ from .disposition import (
 )
 from .models import HarnessAssignment, HarnessRunReceipt
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
-from .run_state import load_state_object
+from .run_state import HarnessRunState, load_state_object
 from .tool_semantics import (
     NativeToolCatalogSnapshot,
     legacy_grant_recovery_consequence,
@@ -79,6 +95,7 @@ _CAS_DIGEST_KEYS = frozenset(
         "harnessToolStepObservationObjectDigest",
         "harnessRunSnapshotObjectDigest",
         "harnessRunStateObjectDigest",
+        "activeHarnessProviderCallObjectDigest",
         "harnessRunRecoveryAssessmentObjectDigest",
         "harnessRunAbandonmentObjectDigest",
         "completionProposalObjectDigest",
@@ -88,6 +105,35 @@ _CAS_DIGEST_KEYS = frozenset(
     }
 )
 _CAS_DIGEST_LIST_KEYS = frozenset({"toolObservationObjectDigests"})
+_SEMANTIC_DIGEST_OBJECT_PAIRS = {
+    "outcomeDigest": "outcomeObjectDigest",
+    "verificationDigest": "completionVerificationObjectDigest",
+}
+_PROVIDER_HEAD_FIELDS = frozenset(
+    {
+        "activeHarnessProviderCallDigest",
+        "activeHarnessProviderCallObjectDigest",
+        "activeHarnessProviderCallId",
+        "activeHarnessProviderCallStatus",
+        "activeHarnessProviderCallExpiresAtMs",
+        "activeHarnessProviderCallGeneration",
+    }
+)
+_PROVIDER_EVENT_STATUSES = {
+    HARNESS_PROVIDER_CALL_CLAIMED: HarnessProviderCallStatus.CLAIMED,
+    HARNESS_PROVIDER_CALL_SUPERSEDED: HarnessProviderCallStatus.CLAIMED,
+    HARNESS_PROVIDER_CALL_DISPATCHING: HarnessProviderCallStatus.DISPATCHING,
+    HARNESS_PROVIDER_CALL_COMPLETED: HarnessProviderCallStatus.COMPLETED,
+    HARNESS_PROVIDER_CALL_FAILED: HarnessProviderCallStatus.FAILED,
+    HARNESS_PROVIDER_CALL_UNKNOWN: HarnessProviderCallStatus.UNKNOWN,
+}
+_PROVIDER_CLEAR_EVENTS = frozenset(
+    {
+        HARNESS_RUN_RECORDED,
+        HARNESS_RUN_SNAPSHOT_RECORDED,
+        HARNESS_TOOL_STEP_PREPARED,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +142,7 @@ class HistoryValidation:
     task_streams: int
     semantic_references: int
     semantic_link_checks: int
+    provider_semantic_link_checks: int
 
     def to_dict(self) -> dict[str, int]:
         return {
@@ -103,12 +150,30 @@ class HistoryValidation:
             "taskStreams": self.task_streams,
             "semanticReferences": self.semantic_references,
             "semanticLinkChecks": self.semantic_link_checks,
+            "providerSemanticLinkChecks": self.provider_semantic_link_checks,
         }
+
+
+@dataclass(frozen=True, slots=True)
+class _HistoricalProviderHead:
+    record: HarnessProviderCallRecord
+    record_object_digest: str
+    state: HarnessRunState
+    failure: HarnessProviderCallFailureReceipt | None
 
 
 def validate_history(storage: HostStorage) -> HistoryValidation:
     """Validate every historical Event payload and known semantic cross-link."""
-    admitted = {item.digest for item in storage.journal.object_refs()}
+    # object_refs has no Event join; first-seen time is its strongest causal proof.
+    admissions_by_time: dict[int, set[str]] = {}
+    for row in storage.journal.connection.execute(
+        "SELECT digest, first_seen_at_ms FROM object_refs "
+        "ORDER BY first_seen_at_ms, digest"
+    ):
+        admissions_by_time.setdefault(int(row["first_seen_at_ms"]), set()).add(
+            str(row["digest"])
+        )
+    admitted: set[str] = set()
     rows = storage.journal.connection.execute(
         "SELECT event_id, stream_id, stream_kind, stream_revision, event_kind, "
         "payload_digest, recorded_at_ms FROM events ORDER BY sequence"
@@ -117,10 +182,13 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
     task_streams: set[str] = set()
     semantic_references = 0
     semantic_link_checks = 0
+    provider_semantic_link_checks = 0
+    provider_heads: dict[str, _HistoricalProviderHead] = {}
     for row in rows:
         events += 1
         event_id = str(row["event_id"])
         stream_id = str(row["stream_id"])
+        admitted.update(admissions_by_time.pop(int(row["recorded_at_ms"]), ()))
         if row["stream_kind"] != "task":
             raise JournalCorruption(
                 f"unsupported historical stream kind at {event_id}: {row['stream_kind']}"
@@ -172,11 +240,27 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
                     f"historical {key} is not admitted in object_refs: {event_id}"
                 )
         semantic_link_checks += _validate_semantic_links(storage, data, event_id)
+        provider_checks, provider_head = _validate_provider_semantic_links(
+            storage,
+            admitted=admitted,
+            data=data,
+            event_id=event_id,
+            event_kind=event_kind,
+            stream_id=stream_id,
+            previous=provider_heads.get(stream_id),
+        )
+        provider_semantic_link_checks += provider_checks
+        semantic_link_checks += provider_checks
+        if provider_head is None:
+            provider_heads.pop(stream_id, None)
+        else:
+            provider_heads[stream_id] = provider_head
     return HistoryValidation(
         events=events,
         task_streams=len(task_streams),
         semantic_references=semantic_references,
         semantic_link_checks=semantic_link_checks,
+        provider_semantic_link_checks=provider_semantic_link_checks,
     )
 
 
@@ -186,7 +270,17 @@ def _known_references(value: JsonValue) -> tuple[tuple[str, str], ...]:
     def visit(current: JsonValue) -> None:
         if isinstance(current, dict):
             for key, item in current.items():
-                if key in _CAS_DIGEST_KEYS and isinstance(item, str):
+                paired_object_key = _SEMANTIC_DIGEST_OBJECT_PAIRS.get(key)
+                paired_object_digest = (
+                    None
+                    if paired_object_key is None
+                    else current.get(paired_object_key)
+                )
+                if (
+                    key in _CAS_DIGEST_KEYS
+                    and isinstance(item, str)
+                    and not isinstance(paired_object_digest, str)
+                ):
                     found.append((key, item))
                 if key in _CAS_DIGEST_LIST_KEYS and isinstance(item, list):
                     for digest in item:
@@ -201,6 +295,615 @@ def _known_references(value: JsonValue) -> tuple[tuple[str, str], ...]:
 
     visit(value)
     return tuple(found)
+
+
+def _validate_provider_semantic_links(
+    storage: HostStorage,
+    *,
+    admitted: set[str],
+    data: JsonValue,
+    event_id: str,
+    event_kind: EventKind,
+    stream_id: str,
+    previous: _HistoricalProviderHead | None,
+) -> tuple[int, _HistoricalProviderHead | None]:
+    if not isinstance(data, dict):
+        return 0, None
+    present_head_fields = _PROVIDER_HEAD_FIELDS.intersection(data)
+    provider_event = event_kind in _PROVIDER_EVENT_STATUSES
+    if present_head_fields and present_head_fields != _PROVIDER_HEAD_FIELDS:
+        raise JournalCorruption(
+            f"historical Harness Provider Call head fields are incomplete: {event_id}"
+        )
+    if not present_head_fields:
+        if provider_event:
+            raise JournalCorruption(
+                f"historical Provider lifecycle Event omitted its active head: {event_id}"
+            )
+        if previous is not None:
+            allowed_statuses = {
+                HARNESS_RUN_SNAPSHOT_RECORDED: {
+                    HarnessProviderCallStatus.COMPLETED
+                },
+                HARNESS_TOOL_STEP_PREPARED: {
+                    HarnessProviderCallStatus.COMPLETED
+                },
+                HARNESS_RUN_RECORDED: {
+                    HarnessProviderCallStatus.COMPLETED,
+                    HarnessProviderCallStatus.FAILED,
+                    HarnessProviderCallStatus.UNKNOWN,
+                },
+            }.get(event_kind)
+            if (
+                event_kind not in _PROVIDER_CLEAR_EVENTS
+                or allowed_statuses is None
+                or previous.record.status not in allowed_statuses
+                or (
+                    event_kind is HARNESS_RUN_RECORDED
+                    and previous.record.status
+                    is HarnessProviderCallStatus.UNKNOWN
+                    and data.get("harnessRunTerminationCode")
+                    not in {"provider_state_unknown", "cancel_unknown"}
+                )
+            ):
+                raise JournalCorruption(
+                    f"historical Event illegally cleared an active Provider Call: {event_id}"
+                )
+        return 0, None
+
+    record_object_digest = data["activeHarnessProviderCallObjectDigest"]
+    if not isinstance(record_object_digest, str):
+        raise JournalCorruption(
+            f"historical Harness Provider Call object reference is invalid: {event_id}"
+        )
+    _require_provider_object_admitted(
+        admitted,
+        record_object_digest,
+        "Provider Call Record",
+        event_id,
+    )
+    raw_record = storage.objects.get(
+        record_object_digest,
+        expected_kind="harness-provider-call-record",
+    )
+    if not isinstance(raw_record, dict):
+        raise ObjectCorrupt(
+            f"historical Harness Provider Call Record is not an object: {event_id}"
+        )
+    try:
+        record = HarnessProviderCallRecord.from_dict(raw_record)
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical Harness Provider Call Record is invalid: {event_id}"
+        ) from error
+    expected_head: dict[str, JsonValue] = {
+        "activeHarnessProviderCallDigest": record.digest,
+        "activeHarnessProviderCallObjectDigest": record_object_digest,
+        "activeHarnessProviderCallId": record.provider_call_id,
+        "activeHarnessProviderCallStatus": record.status.value,
+        "activeHarnessProviderCallExpiresAtMs": record.expires_at_ms,
+        "activeHarnessProviderCallGeneration": record.claim_generation,
+    }
+    if any(data.get(field) != value for field, value in expected_head.items()):
+        raise JournalCorruption(
+            f"historical Harness Provider Call head differs from its Record: {event_id}"
+        )
+
+    assignment_object_digest = data.get("assignmentObjectDigest")
+    native_object_digest = data.get("nativeHarnessRunContractObjectDigest")
+    if not isinstance(assignment_object_digest, str) or not isinstance(
+        native_object_digest, str
+    ):
+        raise JournalCorruption(
+            f"historical Harness Provider Call has no native Assignment: {event_id}"
+        )
+    raw_assignment = storage.objects.get(
+        assignment_object_digest,
+        expected_kind="harness-assignment",
+    )
+    raw_native = storage.objects.get(
+        native_object_digest,
+        expected_kind="native-harness-run-contract",
+    )
+    if not isinstance(raw_assignment, dict) or not isinstance(raw_native, dict):
+        raise ObjectCorrupt(
+            f"historical Harness Provider Call Assignment is invalid: {event_id}"
+        )
+    try:
+        assignment = HarnessAssignment.from_dict(raw_assignment)
+        native = NativeHarnessRunContract.from_dict(raw_native)
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical Harness Provider Call Assignment is invalid: {event_id}"
+        ) from error
+    if (
+        record.task_id != stream_id
+        or record.task_id != assignment.task_id
+        or record.harness_run_id != native.harness_run_id
+        or record.harness_run_id != data.get("harnessRunId")
+        or record.assignment_id != assignment.assignment_id
+        or record.assignment_generation != assignment.generation
+        or record.assignment_digest != assignment.digest
+        or data.get("assignmentDigest") != assignment.digest
+    ):
+        raise JournalCorruption(
+            f"historical Harness Provider Call identities differ: {event_id}"
+        )
+
+    _require_provider_object_admitted(
+        admitted,
+        record.source_object_digest,
+        "Provider Call source",
+        event_id,
+    )
+    if record.source_kind is HarnessProviderCallSource.ASSIGNMENT:
+        if (
+            record.source_digest != assignment.digest
+            or record.source_object_digest != assignment_object_digest
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call Assignment source differs: {event_id}"
+            )
+    else:
+        snapshot_object_digest = data.get("harnessRunSnapshotObjectDigest")
+        if not isinstance(snapshot_object_digest, str):
+            raise JournalCorruption(
+                f"historical Provider Call Snapshot source is missing: {event_id}"
+            )
+        raw_snapshot = storage.objects.get(
+            snapshot_object_digest,
+            expected_kind="harness-run-snapshot",
+        )
+        if not isinstance(raw_snapshot, dict):
+            raise ObjectCorrupt(
+                f"historical Provider Call Snapshot source is invalid: {event_id}"
+            )
+        try:
+            snapshot = HarnessRunSnapshot.from_dict(raw_snapshot)
+        except (TypeError, ValueError) as error:
+            raise ObjectCorrupt(
+                f"historical Provider Call Snapshot source is invalid: {event_id}"
+            ) from error
+        if (
+            record.source_digest != snapshot.digest
+            or record.source_object_digest != snapshot_object_digest
+            or data.get("harnessRunSnapshotDigest") != snapshot.digest
+            or snapshot.harness_run_id != record.harness_run_id
+            or snapshot.assignment_digest != record.assignment_digest
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call Snapshot source differs: {event_id}"
+            )
+
+    _require_provider_object_admitted(
+        admitted,
+        record.state_object_digest,
+        "Provider Call state",
+        event_id,
+    )
+    storage.objects.get(
+        record.state_object_digest,
+        expected_kind="harness-run-state",
+    )
+    try:
+        provider_state = load_state_object(
+            storage.objects,
+            record.state_object_digest,
+            harness_run_id=record.harness_run_id,
+        )
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical Provider Call state is invalid: {event_id}"
+        ) from error
+    assignment_max_model_calls = assignment.budget.get("maxModelCalls")
+    remaining_model_calls = provider_state.remaining_budget.get("modelCalls")
+    if (
+        provider_state.requested_model_id != record.requested_model_id
+        or not _active_time_budget_is_consistent(assignment, provider_state)
+        or type(assignment_max_model_calls) is not int
+        or type(remaining_model_calls) is not int
+        or assignment_max_model_calls - remaining_model_calls + 1
+        != record.turn_sequence
+    ):
+        raise JournalCorruption(
+            f"historical Provider Call saved Run state differs: {event_id}"
+        )
+
+    failure: HarnessProviderCallFailureReceipt | None = None
+    outcome_checks = 0
+    if record.status is HarnessProviderCallStatus.COMPLETED:
+        assert record.result_digest is not None
+        assert record.result_object_digest is not None
+        _require_provider_object_admitted(
+            admitted,
+            record.result_object_digest,
+            "Provider Call result",
+            event_id,
+        )
+        raw_result = storage.objects.get(
+            record.result_object_digest,
+            expected_kind="agent-turn-result",
+        )
+        if not isinstance(raw_result, dict):
+            raise ObjectCorrupt(
+                f"historical Provider Call result is not an object: {event_id}"
+            )
+        try:
+            result = AgentTurnResult.from_dict(raw_result)
+        except (TypeError, ValueError) as error:
+            raise ObjectCorrupt(
+                f"historical Provider Call result is invalid: {event_id}"
+            ) from error
+        if result.digest != record.result_digest:
+            raise JournalCorruption(
+                f"historical Provider Call result digest differs: {event_id}"
+            )
+        outcome_checks = 1
+    elif record.status in {
+        HarnessProviderCallStatus.FAILED,
+        HarnessProviderCallStatus.UNKNOWN,
+    }:
+        assert record.failure_digest is not None
+        assert record.failure_object_digest is not None
+        _require_provider_object_admitted(
+            admitted,
+            record.failure_object_digest,
+            "Provider Call failure",
+            event_id,
+        )
+        raw_failure = storage.objects.get(
+            record.failure_object_digest,
+            expected_kind="harness-provider-call-failure",
+        )
+        if not isinstance(raw_failure, dict):
+            raise ObjectCorrupt(
+                f"historical Provider Call failure is not an object: {event_id}"
+            )
+        try:
+            failure = HarnessProviderCallFailureReceipt.from_dict(raw_failure)
+        except (TypeError, ValueError) as error:
+            raise ObjectCorrupt(
+                f"historical Provider Call failure is invalid: {event_id}"
+            ) from error
+        if (
+            failure.digest != record.failure_digest
+            or failure.provider_call_id != record.provider_call_id
+            or failure.request_digest != record.request_digest
+            or failure.provider_request_digest != record.provider_request_digest
+            or (
+                record.status is HarnessProviderCallStatus.UNKNOWN
+                and failure.dispatch_safety != "dispatch_ambiguous"
+            )
+            or (
+                record.status is HarnessProviderCallStatus.FAILED
+                and failure.dispatch_safety == "dispatch_ambiguous"
+            )
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call failure digest differs: {event_id}"
+            )
+        outcome_checks = 1
+
+    current = _HistoricalProviderHead(
+        record,
+        record_object_digest,
+        provider_state,
+        failure,
+    )
+    transition_checks = _validate_provider_transition(
+        event_id=event_id,
+        event_kind=event_kind,
+        previous=previous,
+        current=current,
+    )
+    return 4 + outcome_checks + transition_checks, current
+
+
+def _require_provider_object_admitted(
+    admitted: set[str],
+    digest: str,
+    label: str,
+    event_id: str,
+) -> None:
+    if digest not in admitted:
+        raise JournalCorruption(
+            f"historical {label} is not admitted in object_refs: {event_id}"
+        )
+
+
+def _validate_provider_transition(
+    *,
+    event_id: str,
+    event_kind: EventKind,
+    previous: _HistoricalProviderHead | None,
+    current: _HistoricalProviderHead,
+) -> int:
+    record = current.record
+    expected_status = _PROVIDER_EVENT_STATUSES.get(event_kind)
+    if expected_status is None:
+        if previous is None:
+            raise JournalCorruption(
+                f"historical Event introduced a Provider Call head: {event_id}"
+            )
+        if (
+            current.record != previous.record
+            or current.record_object_digest != previous.record_object_digest
+        ):
+            raise JournalCorruption(
+                f"historical non-Provider Event changed the Provider Call head: {event_id}"
+            )
+        return 1
+    if record.status is not expected_status:
+        raise JournalCorruption(
+            f"historical Provider lifecycle Event status differs: {event_id}"
+        )
+    if previous is None:
+        if (
+            event_kind is not HARNESS_PROVIDER_CALL_CLAIMED
+            or record.claim_generation != 1
+            or record.previous_record_digest is not None
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call chain has an invalid root: {event_id}"
+            )
+        return 1
+    if record.previous_record_digest != previous.record.digest:
+        raise JournalCorruption(
+            f"historical Provider Call predecessor digest differs: {event_id}"
+        )
+
+    prior = previous.record
+    if event_kind is HARNESS_PROVIDER_CALL_CLAIMED:
+        if (
+            prior.status is not HarnessProviderCallStatus.COMPLETED
+            or record.provider_call_id == prior.provider_call_id
+            or record.claim_generation != 1
+            or record.turn_sequence != prior.turn_sequence + 1
+            or not _same_provider_source(prior, record)
+            or not _same_provider_assignment(prior, record)
+            or record.adapter_id != prior.adapter_id
+            or record.requested_model_id != prior.requested_model_id
+            or record.recorded_at_ms < prior.recorded_at_ms
+            or not _provider_time_is_monotonic(previous.state, current.state)
+        ):
+            raise JournalCorruption(
+                f"historical next-turn Provider Call transition differs: {event_id}"
+            )
+        return 1
+    if event_kind is HARNESS_PROVIDER_CALL_SUPERSEDED:
+        safe_failure_retry = (
+            prior.status is HarnessProviderCallStatus.FAILED
+            and previous.failure is not None
+            and previous.failure.dispatch_safety == "pre_dispatch_safe"
+            and _valid_safe_retry_state(previous.state, current.state)
+        )
+        expired_claim = (
+            prior.status is HarnessProviderCallStatus.CLAIMED
+            and record.issued_at_ms > prior.expires_at_ms
+            and record.holder_id != prior.holder_id
+            and _valid_provider_outcome_state(previous.state, current.state)
+        )
+        if (
+            not (safe_failure_retry or expired_claim)
+            or not _same_provider_attempt(prior, record)
+            or record.claim_generation != prior.claim_generation + 1
+            or record.recorded_at_ms < prior.recorded_at_ms
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call supersession differs: {event_id}"
+            )
+        return 1
+    if event_kind is HARNESS_PROVIDER_CALL_DISPATCHING:
+        if (
+            prior.status is not HarnessProviderCallStatus.CLAIMED
+            or not _same_provider_generation_identity(prior, record)
+            or not _valid_provider_outcome_state(previous.state, current.state)
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call dispatch transition differs: {event_id}"
+            )
+        return 1
+    if event_kind in {
+        HARNESS_PROVIDER_CALL_COMPLETED,
+        HARNESS_PROVIDER_CALL_FAILED,
+        HARNESS_PROVIDER_CALL_UNKNOWN,
+    }:
+        dispatched_outcome = (
+            prior.status is HarnessProviderCallStatus.DISPATCHING
+        )
+        safe_pre_dispatch_failure = (
+            event_kind is HARNESS_PROVIDER_CALL_FAILED
+            and prior.status is HarnessProviderCallStatus.CLAIMED
+            and current.failure is not None
+            and current.failure.dispatch_safety == "pre_dispatch_safe"
+        )
+        if (
+            not (dispatched_outcome or safe_pre_dispatch_failure)
+            or not _same_provider_generation_identity(prior, record)
+            or not _valid_provider_outcome_state(previous.state, current.state)
+        ):
+            raise JournalCorruption(
+                f"historical Provider Call outcome transition differs: {event_id}"
+            )
+        return 1
+    raise JournalCorruption(
+        f"historical Provider lifecycle Event is unsupported: {event_id}"
+    )
+
+
+def _same_provider_assignment(
+    previous: HarnessProviderCallRecord,
+    current: HarnessProviderCallRecord,
+) -> bool:
+    return (
+        previous.task_id == current.task_id
+        and previous.harness_run_id == current.harness_run_id
+        and previous.assignment_id == current.assignment_id
+        and previous.assignment_generation == current.assignment_generation
+        and previous.assignment_digest == current.assignment_digest
+    )
+
+
+def _same_provider_source(
+    previous: HarnessProviderCallRecord,
+    current: HarnessProviderCallRecord,
+) -> bool:
+    return (
+        previous.source_kind is current.source_kind
+        and previous.source_digest == current.source_digest
+        and previous.source_object_digest == current.source_object_digest
+    )
+
+
+def _same_provider_attempt(
+    previous: HarnessProviderCallRecord,
+    current: HarnessProviderCallRecord,
+) -> bool:
+    return (
+        _same_provider_assignment(previous, current)
+        and _same_provider_source(previous, current)
+        and previous.provider_call_id == current.provider_call_id
+        and previous.turn_id == current.turn_id
+        and previous.turn_sequence == current.turn_sequence
+        and previous.request_digest == current.request_digest
+        and previous.provider_request_digest == current.provider_request_digest
+        and previous.adapter_id == current.adapter_id
+        and previous.requested_model_id == current.requested_model_id
+    )
+
+
+def _same_provider_generation(
+    previous: HarnessProviderCallRecord,
+    current: HarnessProviderCallRecord,
+) -> bool:
+    return (
+        _same_provider_generation_identity(previous, current)
+        and previous.state_object_digest == current.state_object_digest
+    )
+
+
+def _same_provider_generation_identity(
+    previous: HarnessProviderCallRecord,
+    current: HarnessProviderCallRecord,
+) -> bool:
+    return (
+        _same_provider_attempt(previous, current)
+        and previous.holder_id == current.holder_id
+        and previous.claim_generation == current.claim_generation
+        and previous.issued_at_ms == current.issued_at_ms
+        and previous.expires_at_ms == current.expires_at_ms
+        and current.recorded_at_ms >= previous.recorded_at_ms
+    )
+
+
+def _valid_safe_retry_state(
+    previous: HarnessRunState,
+    current: HarnessRunState,
+) -> bool:
+    if (
+        previous.messages != current.messages
+        or previous.observations != current.observations
+        or previous.requested_model_id != current.requested_model_id
+        or previous.effective_model_id != current.effective_model_id
+        or previous.seen_model_call_ids != current.seen_model_call_ids
+        or previous.seen_tool_call_ids != current.seen_tool_call_ids
+        or previous.provider_usage != current.provider_usage
+        or previous.effective_model_ids != current.effective_model_ids
+        or set(previous.remaining_budget) != set(current.remaining_budget)
+        or not _provider_time_is_monotonic(previous, current)
+    ):
+        return False
+    previous_retries = previous.remaining_budget.get("modelRetries")
+    current_retries = current.remaining_budget.get("modelRetries")
+    if (
+        type(previous_retries) is not int
+        or type(current_retries) is not int
+        or current_retries != previous_retries - 1
+    ):
+        return False
+    for field, previous_value in previous.remaining_budget.items():
+        current_value = current.remaining_budget[field]
+        if field == "modelRetries":
+            continue
+        if field == "wallTimeMs":
+            if (
+                type(previous_value) is not int
+                or type(current_value) is not int
+                or current_value > previous_value
+            ):
+                return False
+        elif current_value != previous_value:
+            return False
+    return True
+
+
+def _valid_provider_outcome_state(
+    previous: HarnessRunState,
+    current: HarnessRunState,
+) -> bool:
+    if (
+        previous.messages != current.messages
+        or previous.observations != current.observations
+        or previous.requested_model_id != current.requested_model_id
+        or previous.effective_model_id != current.effective_model_id
+        or previous.seen_model_call_ids != current.seen_model_call_ids
+        or previous.seen_tool_call_ids != current.seen_tool_call_ids
+        or previous.provider_usage != current.provider_usage
+        or previous.effective_model_ids != current.effective_model_ids
+        or set(previous.remaining_budget) != set(current.remaining_budget)
+        or not _provider_time_is_monotonic(previous, current)
+    ):
+        return False
+    for field, previous_value in previous.remaining_budget.items():
+        current_value = current.remaining_budget[field]
+        if field == "wallTimeMs":
+            if (
+                type(previous_value) is not int
+                or type(current_value) is not int
+                or current_value > previous_value
+            ):
+                return False
+        elif current_value != previous_value:
+            return False
+    return True
+
+
+def _provider_time_is_monotonic(
+    previous: HarnessRunState,
+    current: HarnessRunState,
+) -> bool:
+    previous_elapsed = previous.active_elapsed_ms
+    current_elapsed = current.active_elapsed_ms
+    if previous_elapsed is not None and (
+        current_elapsed is None or current_elapsed < previous_elapsed
+    ):
+        return False
+    previous_wall = previous.remaining_budget.get("wallTimeMs")
+    current_wall = current.remaining_budget.get("wallTimeMs")
+    return (
+        type(previous_wall) is int
+        and type(current_wall) is int
+        and current_wall <= previous_wall
+    )
+
+
+def _active_time_budget_is_consistent(
+    assignment: HarnessAssignment,
+    state: HarnessRunState,
+) -> bool:
+    if state.active_elapsed_ms is None:
+        return True
+    max_wall_time_ms = assignment.budget.get("maxWallTimeMs")
+    if max_wall_time_ms is None:
+        return True
+    remaining_wall_time_ms = state.remaining_budget.get("wallTimeMs")
+    return (
+        type(max_wall_time_ms) is int
+        and max_wall_time_ms >= 1
+        and type(remaining_wall_time_ms) is int
+        and remaining_wall_time_ms
+        == max(0, max_wall_time_ms - state.active_elapsed_ms)
+    )
 
 
 def _validate_semantic_links(
@@ -556,6 +1259,7 @@ def _validate_semantic_links(
             or snapshot.remaining_budget != state.remaining_budget
             or snapshot.requested_model_id != state.requested_model_id
             or snapshot.effective_model_id != state.effective_model_id
+            or not _active_time_budget_is_consistent(assignment, state)
         ):
             raise JournalCorruption(
                 f"historical Harness Run Snapshot identities differ: {event_id}"
@@ -644,6 +1348,11 @@ def _validate_semantic_links(
                             "toolStepUnresolvedUnknowns", []
                         )
                     ),
+                    *tuple(
+                        recovery.workspace_evidence.get(
+                            "providerCallUnresolvedUnknowns", []
+                        )
+                    ),
                 )
             )
         ):
@@ -724,7 +1433,12 @@ def _validate_semantic_links(
         )
         if (
             disposition.completion_route is CompletionRoute.RECONCILE_UNKNOWN
-            and receipt.termination_code != "runtime_unknown"
+            and receipt.termination_code
+            not in {
+                "runtime_unknown",
+                "provider_state_unknown",
+                "cancel_unknown",
+            }
         ):
             raise JournalCorruption(
                 f"historical native Harness Run UNKNOWN termination differs: {event_id}"

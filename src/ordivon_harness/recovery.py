@@ -6,13 +6,14 @@ from typing import Any
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
 
-_RECOVERY_TRIGGERS = {
+NATIVE_RUN_RECOVERY_TRIGGERS = (
     "host_restart",
     "process_lost",
     "operator_cancelled",
     "deadline_expired",
     "provider_state_lost",
-}
+)
+_RECOVERY_TRIGGERS = frozenset(NATIVE_RUN_RECOVERY_TRIGGERS)
 _GRANT_EFFECT_CLASSES = {
     "read_only",
     "workspace_mutation_possible",
@@ -69,6 +70,12 @@ def _digest(value: str, label: str) -> str:
     return value
 
 
+def validate_native_run_recovery_trigger(trigger: str) -> str:
+    if not isinstance(trigger, str) or trigger not in _RECOVERY_TRIGGERS:
+        raise ValueError(f"unsupported Run Recovery trigger: {trigger}")
+    return trigger
+
+
 @dataclass(frozen=True, slots=True)
 class NativeRunRecoveryAssessment:
     assessment_id: str
@@ -92,8 +99,7 @@ class NativeRunRecoveryAssessment:
         if self.sequence < 1 or self.assignment_generation < 1:
             raise ValueError("Run Recovery sequence and Assignment generation must be positive")
         _digest(self.assignment_digest, "Run Recovery Assignment digest")
-        if self.trigger not in _RECOVERY_TRIGGERS:
-            raise ValueError(f"unsupported Run Recovery trigger: {self.trigger}")
+        validate_native_run_recovery_trigger(self.trigger)
         if self.grant_effect_class not in _GRANT_EFFECT_CLASSES:
             raise ValueError(
                 f"unsupported Run Recovery Grant effect class: {self.grant_effect_class}"

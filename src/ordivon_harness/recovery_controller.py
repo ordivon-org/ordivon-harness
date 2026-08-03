@@ -17,6 +17,8 @@ from .host import (
 )
 from .ordivon.run_store import HostHarnessRunStore
 from .ordivon.tools import RuntimeToolBridge, discover_harness_runtime_catalog
+from .protocol import HarnessProviderCallStatus
+from .recovery import validate_native_run_recovery_trigger
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +45,7 @@ class NativeRunRecoveryController:
         trigger: str = "host_restart",
         auto_abandon: bool = True,
     ) -> NativeRunRecoveryResult:
+        validate_native_run_recovery_trigger(trigger)
         try:
             abandonment = self.host.load_current_native_run_abandonment(task_id)
         except HarnessLifecycleError:
@@ -66,6 +69,110 @@ class NativeRunRecoveryController:
                 "current Harness Assignment is not a native Run"
             )
 
+        run_store = HostHarnessRunStore(self.host, committed)
+        provider_unknowns: list[str] = []
+        provider_evidence: dict[str, JsonValue] = {"status": "not-present"}
+        try:
+            retained_provider_call = run_store.load_current_provider_call()
+        except KeyError:
+            retained_provider_call = None
+        except Exception as error:  # noqa: BLE001 - corrupt extension state becomes recovery evidence.
+            retained_provider_call = None
+            provider_evidence = {
+                "status": "unreadable",
+                "errorType": type(error).__name__,
+                "message": str(error)[:2_048],
+            }
+            provider_unknowns.append("active Provider Call state is unreadable")
+        if retained_provider_call is not None:
+            record = retained_provider_call.record
+            failure = retained_provider_call.failure
+            now_ms = self.host.kernel.clock_ms()
+            structured_outcome = (
+                retained_provider_call.result is not None
+                and retained_provider_call.result_object is not None
+            ) or (
+                failure is not None
+                and retained_provider_call.failure_object is not None
+            )
+            provider_evidence = {
+                "status": record.status.value,
+                "providerCallId": record.provider_call_id,
+                "recordDigest": record.digest,
+                "recordObjectDigest": retained_provider_call.record_object.digest,
+                "sourceKind": record.source_kind.value,
+                "sourceDigest": record.source_digest,
+                "sourceObjectDigest": record.source_object_digest,
+                "stateObjectDigest": record.state_object_digest,
+                "turnId": record.turn_id,
+                "turnSequence": record.turn_sequence,
+                "requestDigest": record.request_digest,
+                "adapterId": record.adapter_id,
+                "requestedModelId": record.requested_model_id,
+                "holderId": record.holder_id,
+                "claimGeneration": record.claim_generation,
+                "issuedAtMs": record.issued_at_ms,
+                "expiresAtMs": record.expires_at_ms,
+                "recordedAtMs": record.recorded_at_ms,
+                "expired": now_ms > record.expires_at_ms,
+                "resultDigest": record.result_digest,
+                "resultObjectDigest": record.result_object_digest,
+                "failureDigest": record.failure_digest,
+                "failureObjectDigest": record.failure_object_digest,
+                "failureReceipt": (
+                    None if failure is None else failure.to_dict()
+                ),
+                "structuredFailure": failure is not None,
+                "structuredOutcome": structured_outcome,
+            }
+            if record.status is HarnessProviderCallStatus.COMPLETED:
+                raise HarnessLifecycleError(
+                    "durable completed Provider Call result requires resume; "
+                    "abandonment recovery is not admissible"
+                )
+            if (
+                record.status
+                in {
+                    HarnessProviderCallStatus.FAILED,
+                    HarnessProviderCallStatus.UNKNOWN,
+                }
+                and structured_outcome
+            ):
+                raise HarnessLifecycleError(
+                    f"durable structured {record.status.value.upper()} Provider "
+                    "outcome requires resume; abandonment recovery is not admissible"
+                )
+            if record.status is HarnessProviderCallStatus.CLAIMED:
+                if now_ms <= record.expires_at_ms:
+                    detail = (
+                        "has a live claim; wait for its holder or resume after expiry"
+                    )
+                else:
+                    detail = "claim expired before dispatch and resume must reclaim it"
+                raise HarnessLifecycleError(
+                    f"Provider Call {record.provider_call_id} {detail}; "
+                    "abandonment recovery is not admissible"
+                )
+            if record.status is HarnessProviderCallStatus.DISPATCHING:
+                provider_unknowns.append(
+                    "Provider Call DISPATCHING outcome remains UNKNOWN: "
+                    f"{record.provider_call_id}"
+                )
+            elif record.status is HarnessProviderCallStatus.UNKNOWN:
+                provider_unknowns.append(
+                    "Provider Call UNKNOWN outcome requires explicit reconciliation: "
+                    f"{record.provider_call_id}"
+                )
+            elif record.status is HarnessProviderCallStatus.FAILED:
+                detail = (
+                    "has a durable structured outcome that is not yet consumed"
+                    if structured_outcome
+                    else "has no durable structured outcome"
+                )
+                provider_unknowns.append(
+                    f"Provider Call FAILED {detail}: {record.provider_call_id}"
+                )
+
         try:
             catalog = discover_harness_runtime_catalog(self.runtime)
         except RuntimeClientError:
@@ -79,7 +186,6 @@ class NativeRunRecoveryController:
 
         tool_step_unknowns: list[str] = []
         tool_step_evidence: dict[str, JsonValue] = {"status": "not-present"}
-        run_store = HostHarnessRunStore(self.host, committed)
         try:
             retained_step = run_store.load_current_tool_step()
         except KeyError:
@@ -208,14 +314,19 @@ class NativeRunRecoveryController:
             **workspace_evidence,
             "toolStepReconciliation": tool_step_evidence,
             "toolStepUnresolvedUnknowns": list(tool_step_unknowns),
+            "providerCallReconciliation": provider_evidence,
+            "providerCallUnresolvedUnknowns": list(provider_unknowns),
         }
+        additional_unknowns = tuple(
+            dict.fromkeys((*tool_step_unknowns, *provider_unknowns))
+        )
         recovery = self.host.record_native_run_recovery(
             committed,
             trigger=trigger,
             catalog_status=catalog_status,
             workspace_status=workspace_status,
             workspace_evidence=workspace_evidence,
-            additional_unknowns=tuple(tool_step_unknowns),
+            additional_unknowns=additional_unknowns,
         )
         if recovery.assessment.safe_to_abandon and auto_abandon:
             abandonment = self.host.abandon_native_run(

@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ordivon_host.effects import ArtifactRef
-from ..host import CommittedHarnessAssignment, HarnessHost, RecordedHarnessRun
+from ..host import (
+    CommittedHarnessAssignment,
+    HarnessHost,
+    HarnessSuperseded,
+    RecordedHarnessRun,
+)
 from ..models import HarnessRunReceipt
 from .loop import AgentLoopResult, RunStopCode
 from .manifest import ORDIVON_HARNESS_PROTOCOL_REVISION
@@ -11,6 +16,7 @@ from .manifest import ORDIVON_HARNESS_PROTOCOL_REVISION
 _STOP_CLASS = {
     RunStopCode.CANDIDATE_COMPLETED: "completed",
     RunStopCode.NEEDS_INPUT: "interrupted",
+    RunStopCode.NO_PROGRESS: "interrupted",
     RunStopCode.BUDGET_EXHAUSTED: "interrupted",
     RunStopCode.CANCELLED: "cancelled",
     RunStopCode.CANCEL_UNKNOWN: "unknown",
@@ -19,6 +25,7 @@ _STOP_CLASS = {
     RunStopCode.PROVIDER_TRANSPORT_FAILED: "failed",
     RunStopCode.PROVIDER_REJECTED: "failed",
     RunStopCode.PROVIDER_UNAVAILABLE: "failed",
+    RunStopCode.PROVIDER_STATE_UNKNOWN: "unknown",
     RunStopCode.INVALID_TOOL_CALL: "failed",
     RunStopCode.RUNTIME_UNKNOWN: "unknown",
     RunStopCode.INVALID_MODEL_OUTPUT: "failed",
@@ -92,11 +99,16 @@ def record_native_run_result(
     times: NativeRunTimes,
 ) -> RecordedHarnessRun:
     current = host.load_current_assignment(committed.assignment.task_id)
-    if current.assignment != committed.assignment:
-        raise ValueError("native Harness Run result belongs to a superseded Assignment")
-    receipt = build_native_run_receipt(current, result, times=times)
+    if (
+        current.assignment != committed.assignment
+        or current.task_revision != committed.task_revision
+    ):
+        raise HarnessSuperseded(
+            "native Harness Run result belongs to a superseded execution revision"
+        )
+    receipt = build_native_run_receipt(committed, result, times=times)
     return host.record_run(
-        current,
+        committed,
         receipt,
         trace=result.trace.to_dict(),
         observations=tuple(item.to_dict() for item in result.observations),

@@ -22,6 +22,7 @@ from ordivon_harness.ordivon import (
     AgentToolCall,
     AgentToolDefinition,
     AgentTurnAdapterError,
+    AgentTurnDispatchSafety,
     AgentTurnFailureCode,
     AgentTurnResult,
     CancellationToken,
@@ -109,6 +110,77 @@ class _RetryAdapter:
 
     def invoke(self, request):
         raise AssertionError(request)
+
+
+class _PreflightAdapter(_RetryAdapter):
+    def __init__(
+        self,
+        outcomes: list[AgentTurnResult | BaseException],
+        bounds: tuple[int, ...],
+    ) -> None:
+        super().__init__(outcomes)
+        self.bounds = bounds
+
+    def request_token_upper_bound(self, request) -> int:
+        del request
+        return self.bounds[len(self.requests)]
+
+
+class _LargeObservationBridge(_LoopBridge):
+    def execute(self, call: AgentToolCall, *, step_id: str) -> ToolObservation:
+        del step_id
+        self.attempts += 1
+        self.effects += 1
+        return ToolObservation(
+            call.tool_call_id,
+            call.name,
+            "observed",
+            {
+                "content": "x" * 10_000,
+                "digest": canonical_digest("x" * 10_000),
+                "relativePath": "large.txt",
+                "effectiveByteRange": {
+                    "startInclusive": 0,
+                    "endExclusive": 10_000,
+                    "unit": "utf8-bytes",
+                },
+            },
+        )
+
+
+class _ZeroSearchBridge(_LoopBridge):
+    def definitions(self) -> tuple[AgentToolDefinition, ...]:
+        return (
+            AgentToolDefinition(
+                "search_workspace",
+                "Search one fixture path.",
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "query": {"type": "string"},
+                        "relativePath": {"type": "string"},
+                    },
+                    "required": ["query", "relativePath"],
+                },
+            ),
+        )
+
+    def execute(self, call: AgentToolCall, *, step_id: str) -> ToolObservation:
+        del step_id
+        self.attempts += 1
+        self.effects += 1
+        return ToolObservation(
+            call.tool_call_id,
+            call.name,
+            "observed",
+            {
+                "matches": [],
+                "matchCount": 0,
+                "transportSequence": self.attempts,
+            },
+            runtime_job_ref=f"job:zero-search:{self.attempts}",
+        )
 
 
 def _turn(
@@ -279,6 +351,9 @@ class HarnessR2R3Tests(unittest.TestCase):
                 AgentTurnAdapterError(
                     "temporary transport failure",
                     failure_code=AgentTurnFailureCode.TRANSPORT_FAILED,
+                    dispatch_safety=(
+                        AgentTurnDispatchSafety.PRE_DISPATCH_SAFE
+                    ),
                 ),
                 _turn("retry-success", model_id=_RetryAdapter.model_id, calls=(call,)),
                 _turn(
@@ -317,7 +392,7 @@ class HarnessR2R3Tests(unittest.TestCase):
         self.assertEqual(kinds.count("model_call_retry_scheduled"), 1)
         self.assertEqual(kinds.count("tool_call_dispatched"), 1)
 
-    def test_provider_timeout_is_not_retried(self) -> None:
+    def test_ambiguous_provider_timeout_is_unknown_and_not_retried(self) -> None:
         adapter = _RetryAdapter(
             [
                 AgentTurnAdapterError(
@@ -338,7 +413,7 @@ class HarnessR2R3Tests(unittest.TestCase):
             initial_messages=({"role": "user", "content": "inspect"},),
         )
 
-        self.assertEqual(result.stop_code, RunStopCode.PROVIDER_TIMEOUT)
+        self.assertEqual(result.stop_code, RunStopCode.PROVIDER_STATE_UNKNOWN)
         self.assertEqual(len(adapter.requests), 1)
         self.assertEqual(result.usage["modelRetries"], 0)
 
@@ -391,6 +466,76 @@ class HarnessR2R3Tests(unittest.TestCase):
         self.assertEqual(rejected["observation"]["status"], "rejected")
         self.assertTrue(rejected["observation"]["content"]["error"]["safeToCorrect"])
 
+    def test_malformed_provider_arguments_are_corrected_without_effect(self) -> None:
+        malformed = AgentToolCall(
+            "tool-call:r2-r3:malformed",
+            "read_workspace",
+            {},
+            argument_error="invalid_json",
+            raw_arguments_digest=canonical_digest('{"relativePath":'),
+            raw_arguments_preview='{"relativePath":',
+        )
+        corrected = AgentToolCall(
+            "tool-call:r2-r3:corrected",
+            "read_workspace",
+            {"relativePath": "README.md"},
+        )
+        adapter = ScriptedTurnAdapter(
+            (
+                _turn(
+                    "malformed-tool",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(malformed,),
+                ),
+                _turn(
+                    "corrected-tool",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(corrected,),
+                ),
+                _turn(
+                    "corrected-conclusion",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    conclusion=AgentRunConclusion(
+                        "candidate_completed",
+                        "The corrected Tool Call completed.",
+                    ),
+                ),
+            )
+        )
+        bridge = _LoopBridge()
+        result = OrdivonAgentLoop(
+            adapter,
+            bridge,
+            budget=RunBudget(4, 4, 64_000, 10_000, 10_000, 0, 1),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-malformed-correction",
+            assignment_id="assignment:r2-r3-malformed-correction",
+            context_digest=canonical_digest({"context": "malformed-correction"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
+        self.assertEqual(bridge.attempts, 1)
+        self.assertEqual(bridge.effects, 1)
+        self.assertEqual(result.usage["toolCorrections"], 1)
+        rejected = adapter.requests[1].messages[-1]
+        self.assertEqual(rejected["observation"]["status"], "rejected")
+        self.assertIn(
+            malformed.raw_arguments_digest,
+            rejected["observation"]["content"]["error"]["message"],
+        )
+        completed = next(
+            event
+            for event in result.trace.events
+            if event.kind == "model_call_completed"
+        )
+        normalized = completed.payload["normalizedResult"]
+        self.assertEqual(
+            normalized["toolCalls"][0]["providerArguments"]["error"],
+            "invalid_json",
+        )
+
     def test_token_hard_limit_blocks_tool_effect(self) -> None:
         call = AgentToolCall(
             "tool-call:r2-r3:token-effect",
@@ -424,6 +569,257 @@ class HarnessR2R3Tests(unittest.TestCase):
         self.assertEqual(result.usage["totalTokens"], 101)
         self.assertEqual(bridge.attempts, 0)
         self.assertEqual(bridge.effects, 0)
+
+    def test_provider_token_preflight_stops_before_overshooting_request(self) -> None:
+        call = AgentToolCall(
+            "tool-call:r2-r3:preflight-read",
+            "read_workspace",
+            {"relativePath": "README.md"},
+        )
+        adapter = _PreflightAdapter(
+            [
+                _turn(
+                    "preflight-first",
+                    model_id=_RetryAdapter.model_id,
+                    calls=(call,),
+                    usage={"total_tokens": 60},
+                ),
+                _turn(
+                    "preflight-unused",
+                    model_id=_RetryAdapter.model_id,
+                    conclusion=AgentRunConclusion(
+                        "candidate_completed",
+                        "This result must never be requested.",
+                    ),
+                ),
+            ],
+            (10, 50),
+        )
+        bridge = _LoopBridge()
+        result = OrdivonAgentLoop(
+            adapter,
+            bridge,
+            budget=RunBudget(
+                3,
+                3,
+                64_000,
+                10_000,
+                100,
+                max_no_progress_turns=0,
+            ),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-token-preflight",
+            assignment_id="assignment:r2-r3-token-preflight",
+            context_digest=canonical_digest({"context": "token-preflight"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.BUDGET_EXHAUSTED)
+        self.assertEqual(result.usage["totalTokens"], 60)
+        self.assertEqual(len(adapter.requests), 1)
+        self.assertEqual(bridge.effects, 1)
+        kinds = [event.kind for event in result.trace.events]
+        self.assertEqual(kinds.count("model_call_budget_rejected"), 1)
+        self.assertEqual(kinds.count("model_call_started"), 1)
+
+    def test_seven_turn_observation_only_stress_stops_before_last_call(self) -> None:
+        calls = tuple(
+            AgentToolCall(
+                f"tool-call:r2-r3:observation-{index}",
+                "read_workspace",
+                {"relativePath": f"fixture-{index}.txt"},
+            )
+            for index in range(1, 8)
+        )
+        adapter = ScriptedTurnAdapter(
+            tuple(
+                _turn(
+                    f"observation-{index}",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(call,),
+                )
+                for index, call in enumerate(calls, 1)
+            )
+        )
+        result = OrdivonAgentLoop(
+            adapter,
+            _LoopBridge(),
+            budget=RunBudget(
+                8,
+                8,
+                64_000,
+                10_000,
+                max_observation_only_turns=6,
+                max_no_progress_turns=0,
+            ),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-observation-limit",
+            assignment_id="assignment:r2-r3-observation-limit",
+            context_digest=canonical_digest({"context": "observation-limit"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.NO_PROGRESS)
+        self.assertEqual(result.model_calls, 6)
+        self.assertEqual(result.tool_calls, 6)
+        self.assertEqual(result.usage["observationOnlyTurns"], 6)
+        self.assertEqual(len(adapter.requests), 6)
+        self.assertEqual(result.conclusion.status, "needs_input")
+
+    def test_repeated_observation_without_new_evidence_stops(self) -> None:
+        calls = tuple(
+            AgentToolCall(
+                f"tool-call:r2-r3:repeat-{index}",
+                "read_workspace",
+                {"relativePath": "README.md"},
+            )
+            for index in range(1, 4)
+        )
+        adapter = ScriptedTurnAdapter(
+            tuple(
+                _turn(
+                    f"repeat-{index}",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(call,),
+                )
+                for index, call in enumerate(calls, 1)
+            )
+        )
+        result = OrdivonAgentLoop(
+            adapter,
+            _LoopBridge(),
+            budget=RunBudget(
+                4,
+                4,
+                64_000,
+                10_000,
+                max_observation_only_turns=0,
+                max_no_progress_turns=1,
+            ),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-no-new-evidence",
+            assignment_id="assignment:r2-r3-no-new-evidence",
+            context_digest=canonical_digest({"context": "no-new-evidence"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.NO_PROGRESS)
+        self.assertEqual(result.model_calls, 2)
+        self.assertEqual(result.usage["noProgressTurns"], 1)
+        progress = [
+            event.payload
+            for event in result.trace.events
+            if event.kind == "run_progress_evaluated"
+        ]
+        self.assertEqual([item["newEvidence"] for item in progress], [True, False])
+
+    def test_subsumed_zero_search_ignores_new_runtime_job_identity(self) -> None:
+        broad = AgentToolCall(
+            "tool-call:r2-r3:zero-broad",
+            "search_workspace",
+            {"query": "missing-symbol", "relativePath": "."},
+        )
+        narrow = AgentToolCall(
+            "tool-call:r2-r3:zero-narrow",
+            "search_workspace",
+            {"query": "missing-symbol", "relativePath": "src/module.py"},
+        )
+        adapter = ScriptedTurnAdapter(
+            (
+                _turn(
+                    "zero-broad",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(broad,),
+                ),
+                _turn(
+                    "zero-narrow",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(narrow,),
+                ),
+            )
+        )
+        result = OrdivonAgentLoop(
+            adapter,
+            _ZeroSearchBridge(),
+            budget=RunBudget(
+                3,
+                3,
+                64_000,
+                10_000,
+                max_observation_only_turns=0,
+                max_no_progress_turns=1,
+            ),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-subsumed-zero-search",
+            assignment_id="assignment:r2-r3-subsumed-zero-search",
+            context_digest=canonical_digest({"context": "subsumed-zero-search"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.NO_PROGRESS)
+        progress = [
+            event.payload
+            for event in result.trace.events
+            if event.kind == "run_progress_evaluated"
+        ]
+        self.assertEqual([item["newEvidence"] for item in progress], [True, False])
+        self.assertNotEqual(
+            result.observations[0].runtime_job_ref,
+            result.observations[1].runtime_job_ref,
+        )
+
+    def test_large_observation_is_replaced_by_digest_summary(self) -> None:
+        call = AgentToolCall(
+            "tool-call:r2-r3:large-observation",
+            "read_workspace",
+            {"relativePath": "large.txt"},
+        )
+        adapter = ScriptedTurnAdapter(
+            (
+                _turn(
+                    "large-observation",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(call,),
+                ),
+                _turn(
+                    "large-observation-complete",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    conclusion=AgentRunConclusion(
+                        "candidate_completed",
+                        "The bounded Observation was sufficient.",
+                    ),
+                ),
+            )
+        )
+        result = OrdivonAgentLoop(
+            adapter,
+            _LargeObservationBridge(),
+            budget=RunBudget(
+                3,
+                3,
+                64_000,
+                10_000,
+                max_model_observation_bytes=1_024,
+            ),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-large-observation",
+            assignment_id="assignment:r2-r3-large-observation",
+            context_digest=canonical_digest({"context": "large-observation"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
+        content = result.observations[0].structured_content
+        self.assertTrue(content["truncated"])
+        self.assertGreater(content["originalContentBytes"], 10_000)
+        self.assertNotIn("content", content)
+        self.assertEqual(content["relativePath"], "large.txt")
+        self.assertEqual(content["effectiveByteRange"]["endExclusive"], 10_000)
 
     def test_run_handle_stream_matches_canonical_trace(self) -> None:
         with (

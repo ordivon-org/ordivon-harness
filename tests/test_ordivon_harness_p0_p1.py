@@ -182,6 +182,51 @@ class _IntentOrderRuntime(_RecoveryRuntime):
         return payload
 
 
+class _MutableMonotonic:
+    def __init__(self, value_ms: int) -> None:
+        self.value_ms = value_ms
+
+    def __call__(self) -> int:
+        return self.value_ms
+
+    def advance(self, delta_ms: int) -> None:
+        self.value_ms += delta_ms
+
+
+class _ExpireAfterPrepareBridge(RuntimeToolBridge):
+    def __init__(
+        self,
+        *args,
+        monotonic: _MutableMonotonic,
+        deadline_advance_ms: int,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self._monotonic = monotonic
+        self._deadline_advance_ms = deadline_advance_ms
+
+    def _prepare_tool_step_intent(
+        self,
+        call,
+        *,
+        step_id,
+        turn_id,
+        operation,
+        arguments,
+        client_request_id,
+    ):
+        prepared = super()._prepare_tool_step_intent(
+            call,
+            step_id=step_id,
+            turn_id=turn_id,
+            operation=operation,
+            arguments=arguments,
+            client_request_id=client_request_id,
+        )
+        self._monotonic.advance(self._deadline_advance_ms)
+        return prepared
+
+
 class _ReconcileRuntime(_IntentOrderRuntime):
     def __init__(self, storage: HostStorage) -> None:
         super().__init__(storage)
@@ -432,7 +477,7 @@ class HarnessP0ControlTests(unittest.TestCase):
             )
         finally:
             timer.cancel()
-        self.assertEqual(result.stop_code, RunStopCode.CANCELLED)
+        self.assertEqual(result.stop_code, RunStopCode.CANCEL_UNKNOWN)
         self.assertTrue(transport.handle.cancelled.is_set())
         self.assertGreaterEqual(transport.handle.poll_count, 1)
         self.assertLess(time.monotonic() - started, 1.0)
@@ -476,6 +521,124 @@ class HarnessP0ControlTests(unittest.TestCase):
 
 
 class HarnessP1DurabilityTests(unittest.TestCase):
+    def test_deadline_after_durable_prepare_closes_runtime_dispatch_admission(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            clock = itertools.count(90_000).__next__
+            monotonic = _MutableMonotonic(10_000)
+            with HostStorage(directory) as storage:
+                _create_task(storage, clock)
+                runtime = _IntentOrderRuntime(storage)
+                grant = ToolGrant(
+                    tool_grant_id="tool-grant:p1:dispatch-admission",
+                    allowed_tools=("run_check",),
+                    execution_checks=(
+                        GrantedExecutionCheck(
+                            check_id="check:p1:dispatch-admission",
+                            executable="/usr/bin/python3",
+                            args=("-V",),
+                            timeout_ms=30_000,
+                        ),
+                    ),
+                )
+                host, committed, context_digest, _ = _assign(
+                    storage,
+                    clock,
+                    runtime,
+                    grant=grant,
+                )
+                assert committed.native_run_contract is not None
+                run_store = HostHarnessRunStore(host, committed)
+                bridge = _ExpireAfterPrepareBridge(
+                    committed,
+                    harness_run_id=committed.native_run_contract.harness_run_id,
+                    runtime=runtime,
+                    run_store=run_store,
+                    monotonic=monotonic,
+                    deadline_advance_ms=1_001,
+                )
+                adapter = ScriptedTurnAdapter(
+                    (
+                        AgentTurnResult(
+                            model_call_id="model-call:p1:dispatch-admission",
+                            model_id="ordivon.scripted-model.v1",
+                            content=None,
+                            tool_calls=(
+                                AgentToolCall(
+                                    "tool-call:p1:dispatch-admission",
+                                    "run_check",
+                                    {"checkId": "check:p1:dispatch-admission"},
+                                ),
+                            ),
+                            conclusion=None,
+                            usage={},
+                            finish_reason="tool_calls",
+                            raw_response_digest=canonical_digest(
+                                {"p1": "dispatch-admission"}
+                            ),
+                        ),
+                    )
+                )
+
+                result = OrdivonAgentLoop(
+                    adapter,
+                    bridge,
+                    budget=RunBudget(4, 4, 65_536, 1_000),
+                    clock_ms=clock,
+                    monotonic_ms=monotonic,
+                ).run(
+                    harness_run_id=committed.native_run_contract.harness_run_id,
+                    assignment_id=committed.assignment.assignment_id,
+                    context_digest=context_digest,
+                    initial_messages=(
+                        {"role": "user", "content": "run the granted check"},
+                    ),
+                )
+
+                self.assertEqual(result.stop_code, RunStopCode.BUDGET_EXHAUSTED)
+                self.assertFalse(
+                    any(name == "workspace.exec" for name, _ in runtime.calls)
+                )
+                self.assertEqual(len(result.observations), 1)
+                observation = result.observations[0]
+                self.assertEqual(observation.status, "rejected")
+                error = observation.structured_content["error"]
+                assert isinstance(error, dict)
+                self.assertEqual(error["type"], "execution_control_stopped")
+                self.assertEqual(error["commitState"], "not_started")
+                self.assertIs(error["physicalDispatch"], False)
+                self.assertEqual(result.usage["toolCorrections"], 0)
+
+                retained = run_store.load_current_tool_step()
+                self.assertIsNotNone(retained.fence)
+                self.assertIsNotNone(retained.receipt)
+                self.assertIsNotNone(retained.observation)
+                assert retained.receipt is not None
+                self.assertTrue(retained.receipt.terminal)
+                self.assertEqual(
+                    retained.receipt.observation_digest,
+                    observation.digest,
+                )
+                current = storage.read_task_event(committed.assignment.task_id)
+                assert isinstance(current.data, dict)
+                self.assertNotIn(
+                    "activeHarnessToolStepIntentDigest",
+                    current.data,
+                )
+
+                recorded = record_native_run_result(
+                    host,
+                    run_store.committed,
+                    result,
+                    times=NativeRunTimes(90_000, 91_001),
+                )
+                self.assertEqual(
+                    recorded.receipt.termination_code,
+                    RunStopCode.BUDGET_EXHAUSTED.value,
+                )
+                validate_history(storage)
+
     def test_exec_intent_precedes_runtime_dispatch_and_survives_restart(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             clock = itertools.count(100_000).__next__
@@ -575,7 +738,7 @@ class HarnessP1DurabilityTests(unittest.TestCase):
                 )
                 recorded = record_native_run_result(
                     host,
-                    committed,
+                    restarted_store.committed,
                     result,
                     times=NativeRunTimes(100_000, 100_100),
                 )

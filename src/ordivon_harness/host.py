@@ -7,7 +7,7 @@ from typing import TypeVar
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from ordivon_host.domain import TaskState
 from ordivon_host.effects import ArtifactRef, TaskOutcome
-from ordivon_host.journal import JournalCorruption
+from ordivon_host.journal import EventConflict, JournalCorruption, LeaseHeld
 from ordivon_host.kernel import HostKernel, worker_owner_id
 from ordivon_host.objects import ObjectCorrupt, ObjectMissing, StoredObject
 from ordivon_host.storage import HostStorage, TaskEventSnapshot
@@ -44,7 +44,19 @@ from .models import (
     HarnessRunReceipt,
     TaskAttemptDescriptor,
 )
-from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
+from .recovery import (
+    NativeRunAbandonment,
+    NativeRunRecoveryAssessment,
+    validate_native_run_recovery_trigger,
+)
+from .run_state import load_state_object
+from .protocol import (
+    HarnessProviderCallFailureReceipt,
+    HarnessProviderCallRecord,
+    HarnessProviderCallStatus,
+    HarnessToolStepIntent,
+    HarnessToolStepReceipt,
+)
 from .tool_semantics import (
     NativeToolCatalogSnapshot,
     NativeToolRecoveryConsequence,
@@ -126,6 +138,14 @@ class ProposedCompletion:
 AcceptanceVerifier = Callable[[CompletionProposal], tuple[bool, str | None, JsonValue]]
 ArtifactExists = Callable[[ArtifactRef], bool]
 T = TypeVar("T")
+_ACTIVE_PROVIDER_CALL_FIELDS = (
+    "activeHarnessProviderCallDigest",
+    "activeHarnessProviderCallObjectDigest",
+    "activeHarnessProviderCallId",
+    "activeHarnessProviderCallStatus",
+    "activeHarnessProviderCallExpiresAtMs",
+    "activeHarnessProviderCallGeneration",
+)
 
 
 class HarnessHost:
@@ -527,6 +547,7 @@ class HarnessHost:
             raise ValueError(
                 "native Run Recovery requires a native Assignment and Tool Grant"
             )
+        validate_native_run_recovery_trigger(trigger)
         snapshot = self.storage.read_task_event(committed.assignment.task_id)
         if snapshot.projection.state.terminal:
             raise HarnessLifecycleError(
@@ -591,9 +612,67 @@ class HarnessHost:
                 raise ValueError("additional Run Recovery unknowns must be trimmed")
         if len(additional_unknowns) != len(set(additional_unknowns)):
             raise ValueError("additional Run Recovery unknowns must be unique")
-        evidence_unknowns = workspace_evidence.get("toolStepUnresolvedUnknowns", [])
+        data = self._data(snapshot)
+        active_provider_status = data.get("activeHarnessProviderCallStatus")
+        active_provider_present = any(
+            field in data for field in _ACTIVE_PROVIDER_CALL_FIELDS
+        )
+        provider_reconciliation = workspace_evidence.get(
+            "providerCallReconciliation"
+        )
+        provider_evidence_status = (
+            provider_reconciliation.get("status")
+            if isinstance(provider_reconciliation, dict)
+            else None
+        )
+        if (
+            active_provider_status
+            in {"claimed", "completed", "failed", "unknown"}
+            and provider_evidence_status != "unreadable"
+        ):
+            raise HarnessLifecycleError(
+                f"active {active_provider_status} Provider Call requires resume; "
+                "native Run Recovery is not admissible"
+            )
+        tool_step_unknowns = workspace_evidence.get(
+            "toolStepUnresolvedUnknowns", []
+        )
+        if not isinstance(tool_step_unknowns, list) or any(
+            not isinstance(value, str) for value in tool_step_unknowns
+        ):
+            raise ValueError("Run Recovery Tool Step unknown evidence is invalid")
+        provider_unknowns = workspace_evidence.get(
+            "providerCallUnresolvedUnknowns"
+        )
+        if provider_unknowns is None:
+            if active_provider_present:
+                raise ValueError(
+                    "active Provider Call requires Recovery unknown evidence"
+                )
+            evidence_unknowns = tool_step_unknowns
+        else:
+            if not isinstance(provider_unknowns, list) or any(
+                not isinstance(value, str) for value in provider_unknowns
+            ):
+                raise ValueError(
+                    "Run Recovery Provider Call unknown evidence is invalid"
+                )
+            provider_evidence = workspace_evidence.get(
+                "providerCallReconciliation"
+            )
+            if active_provider_present:
+                if (
+                    not isinstance(provider_evidence, dict)
+                    or provider_evidence.get("status")
+                    not in {active_provider_status, "unreadable"}
+                    or not provider_unknowns
+                ):
+                    raise ValueError(
+                        "active Provider Call Recovery evidence differs"
+                    )
+            evidence_unknowns = [*tool_step_unknowns, *provider_unknowns]
         if evidence_unknowns != list(additional_unknowns):
-            raise ValueError("Run Recovery Tool Step unknown evidence differs")
+            raise ValueError("Run Recovery unresolved unknown evidence differs")
         unknowns = tuple(
             dict.fromkeys(
                 (
@@ -660,7 +739,9 @@ class HarnessHost:
                 ),
                 frontier=locked.projection.ready_frontier,
                 referenced_objects=self._dedupe_objects(
-                    self._assignment_objects(committed) + (assessment_object,)
+                    self._assignment_objects(committed)
+                    + self._state_objects(data)
+                    + (assessment_object,)
                 ),
             ).projection
         return RecordedNativeRunRecovery(
@@ -694,6 +775,12 @@ class HarnessHost:
                 "native Harness Run retains UNKNOWN state and cannot be abandoned"
             )
         snapshot = self.storage.read_task_event(recovery.assignment.assignment.task_id)
+        data = self._data(snapshot)
+        if any(field in data for field in _ACTIVE_PROVIDER_CALL_FIELDS):
+            raise HarnessLifecycleError(
+                "active Provider Call must be resumed or reconciled before "
+                "native Harness Run abandonment"
+            )
         existing = self._abandonment_from_snapshot(snapshot)
         if existing is not None:
             if (
@@ -798,8 +885,12 @@ class HarnessHost:
                 )
         snapshot = self.storage.read_task_event(committed.assignment.task_id)
         existing = self._run_from_snapshot(snapshot)
-        if existing is not None and existing.receipt == receipt:
-            return existing
+        if existing is not None:
+            if existing.receipt == receipt:
+                return existing
+            raise HarnessSuperseded(
+                "Harness Run already has another recorded result"
+            )
         if snapshot.projection.revision != committed.task_revision:
             raise HarnessSuperseded(
                 f"Task revision is {snapshot.projection.revision}, expected {committed.task_revision}"
@@ -813,6 +904,11 @@ class HarnessHost:
             )
         if self._abandonment_from_snapshot(snapshot) is not None:
             raise HarnessSuperseded("native Harness Run is already abandoned")
+        self._require_recordable_run_head(
+            snapshot,
+            receipt,
+            observations=observations,
+        )
         trace_object: StoredObject | None = None
         observation_objects: tuple[StoredObject, ...] = ()
         conclusion_object: StoredObject | None = None
@@ -895,7 +991,12 @@ class HarnessHost:
             )
             if (
                 disposition.completion_route is CompletionRoute.RECONCILE_UNKNOWN
-                and receipt.termination_code != "runtime_unknown"
+                and receipt.termination_code
+                not in {
+                    "runtime_unknown",
+                    "provider_state_unknown",
+                    "cancel_unknown",
+                }
             ):
                 raise ValueError(
                     "native Harness Run with UNKNOWN evidence must terminate runtime_unknown"
@@ -926,22 +1027,27 @@ class HarnessHost:
         references += observation_objects
         if conclusion_object is not None:
             references += (conclusion_object,)
-        with self.kernel.locked_task(
-            committed.assignment.task_id,
-            expected_revision=committed.task_revision,
-            expected_state=snapshot.projection.state,
-            expected_frontier=snapshot.projection.ready_frontier,
-            label="Harness Run",
-            error_factory=self._kernel_error,
-        ) as locked:
-            projection = locked.commit(
-                event_id=f"event:{self._token(committed.assignment.task_id)}:harness-run:{self._run_token(receipt.harness_run_id)}",
-                kind=HARNESS_RUN_RECORDED,
-                payload=payload,
-                state=TaskState.WAITING,
-                frontier=locked.projection.ready_frontier,
-                referenced_objects=self._dedupe_objects(references),
-            ).projection
+        try:
+            with self.kernel.locked_task(
+                committed.assignment.task_id,
+                expected_revision=committed.task_revision,
+                expected_state=snapshot.projection.state,
+                expected_frontier=snapshot.projection.ready_frontier,
+                label="Harness Run",
+                error_factory=self._kernel_error,
+            ) as locked:
+                projection = locked.commit(
+                    event_id=f"event:{self._token(committed.assignment.task_id)}:harness-run:{self._run_token(receipt.harness_run_id)}",
+                    kind=HARNESS_RUN_RECORDED,
+                    payload=payload,
+                    state=TaskState.WAITING,
+                    frontier=locked.projection.ready_frontier,
+                    referenced_objects=self._dedupe_objects(references),
+                ).projection
+        except (EventConflict, LeaseHeld) as error:
+            raise HarnessSuperseded(
+                "concurrent Harness Run recording superseded this result"
+            ) from error
         return RecordedHarnessRun(
             assignment=committed,
             receipt=receipt,
@@ -951,6 +1057,280 @@ class HarnessHost:
             observation_objects=observation_objects,
             conclusion_object=conclusion_object,
         )
+
+    def _require_recordable_run_head(
+        self,
+        snapshot: TaskEventSnapshot,
+        receipt: HarnessRunReceipt,
+        *,
+        observations: tuple[dict[str, JsonValue], ...],
+    ) -> None:
+        data = self._data(snapshot)
+        present_provider_fields = {
+            field for field in _ACTIVE_PROVIDER_CALL_FIELDS if field in data
+        }
+        if present_provider_fields and present_provider_fields != set(
+            _ACTIVE_PROVIDER_CALL_FIELDS
+        ):
+            raise HarnessLifecycleError(
+                "incomplete active Provider Call head blocks Run recording"
+            )
+        if present_provider_fields:
+            record_object_digest = data["activeHarnessProviderCallObjectDigest"]
+            if not isinstance(record_object_digest, str):
+                raise HarnessLifecycleError(
+                    "malformed active Provider Call head blocks Run recording"
+                )
+            admitted_object_digests = {
+                item.digest for item in self.storage.journal.object_refs()
+            }
+            if record_object_digest not in admitted_object_digests:
+                raise HarnessLifecycleError(
+                    "unadmitted active Provider Call record blocks Run recording"
+                )
+            try:
+                raw_record = self.storage.objects.get(
+                    record_object_digest,
+                    expected_kind="harness-provider-call-record",
+                )
+                if not isinstance(raw_record, dict):
+                    raise ValueError("Provider Call record is not an object")
+                provider_record = HarnessProviderCallRecord.from_dict(raw_record)
+            except (ObjectCorrupt, ObjectMissing, TypeError, ValueError) as error:
+                raise HarnessLifecycleError(
+                    "malformed active Provider Call record blocks Run recording"
+                ) from error
+            expected_provider_head: dict[str, JsonValue] = {
+                "activeHarnessProviderCallDigest": provider_record.digest,
+                "activeHarnessProviderCallObjectDigest": record_object_digest,
+                "activeHarnessProviderCallId": provider_record.provider_call_id,
+                "activeHarnessProviderCallStatus": provider_record.status.value,
+                "activeHarnessProviderCallExpiresAtMs": provider_record.expires_at_ms,
+                "activeHarnessProviderCallGeneration": (
+                    provider_record.claim_generation
+                ),
+            }
+            if any(
+                data.get(field) != value
+                for field, value in expected_provider_head.items()
+            ):
+                raise HarnessLifecycleError(
+                    "active Provider Call head differs from its record"
+                )
+            if (
+                provider_record.task_id != snapshot.projection.task_id
+                or provider_record.harness_run_id != receipt.harness_run_id
+                or provider_record.assignment_id != receipt.assignment_id
+                or provider_record.assignment_generation
+                != receipt.assignment_generation
+                or provider_record.assignment_digest != data.get("assignmentDigest")
+            ):
+                raise HarnessLifecycleError(
+                    "active Provider Call belongs to another Run or Assignment"
+                )
+            if provider_record.status in {
+                HarnessProviderCallStatus.CLAIMED,
+                HarnessProviderCallStatus.DISPATCHING,
+            }:
+                raise HarnessLifecycleError(
+                    f"active {provider_record.status.value} Provider Call requires recovery "
+                    "before recording the Run"
+                )
+            if provider_record.status not in {
+                HarnessProviderCallStatus.COMPLETED,
+                HarnessProviderCallStatus.FAILED,
+                HarnessProviderCallStatus.UNKNOWN,
+            }:
+                raise HarnessLifecycleError(
+                    "malformed active Provider Call head blocks Run recording"
+                )
+            try:
+                if (
+                    provider_record.state_object_digest
+                    not in admitted_object_digests
+                ):
+                    raise HarnessLifecycleError(
+                        "active Provider Call saved state is not admitted"
+                    )
+                provider_state = load_state_object(
+                    self.storage.objects,
+                    provider_record.state_object_digest,
+                    harness_run_id=provider_record.harness_run_id,
+                )
+                if (
+                    provider_state.requested_model_id
+                    != provider_record.requested_model_id
+                ):
+                    raise HarnessLifecycleError(
+                        "active Provider Call saved state differs from its record"
+                    )
+                if provider_record.status is HarnessProviderCallStatus.COMPLETED:
+                    from .ordivon.model import AgentTurnResult
+
+                    assert provider_record.result_object_digest is not None
+                    raw_result = self.storage.objects.get(
+                        provider_record.result_object_digest,
+                        expected_kind="agent-turn-result",
+                    )
+                    if not isinstance(raw_result, dict):
+                        raise ValueError("Provider Call result is not an object")
+                    provider_result = AgentTurnResult.from_dict(raw_result)
+                    result_object = self.storage.objects.inspect(
+                        provider_record.result_object_digest
+                    )
+                    if (
+                        provider_result.digest != provider_record.result_digest
+                        or result_object.digest
+                        != provider_record.result_object_digest
+                        or result_object.digest not in admitted_object_digests
+                    ):
+                        raise HarnessLifecycleError(
+                            "active Provider Call terminal outcome differs "
+                            "from its record"
+                        )
+                else:
+                    assert provider_record.failure_object_digest is not None
+                    raw_failure = self.storage.objects.get(
+                        provider_record.failure_object_digest,
+                        expected_kind="harness-provider-call-failure",
+                    )
+                    if not isinstance(raw_failure, dict):
+                        raise ValueError("Provider Call failure is not an object")
+                    provider_failure = (
+                        HarnessProviderCallFailureReceipt.from_dict(raw_failure)
+                    )
+                    failure_object = self.storage.objects.inspect(
+                        provider_record.failure_object_digest
+                    )
+                    if (
+                        provider_failure.digest != provider_record.failure_digest
+                        or failure_object.digest
+                        != provider_record.failure_object_digest
+                        or failure_object.digest not in admitted_object_digests
+                        or provider_failure.provider_call_id
+                        != provider_record.provider_call_id
+                        or provider_failure.request_digest
+                        != provider_record.request_digest
+                        or provider_failure.provider_request_digest
+                        != provider_record.provider_request_digest
+                        or (
+                            provider_record.status
+                            is HarnessProviderCallStatus.UNKNOWN
+                            and provider_failure.dispatch_safety
+                            != "dispatch_ambiguous"
+                        )
+                        or (
+                            provider_record.status
+                            is HarnessProviderCallStatus.FAILED
+                            and provider_failure.dispatch_safety
+                            == "dispatch_ambiguous"
+                        )
+                    ):
+                        raise HarnessLifecycleError(
+                            "active Provider Call terminal outcome differs "
+                            "from its record"
+                        )
+            except HarnessLifecycleError:
+                raise
+            except (ObjectCorrupt, ObjectMissing, TypeError, ValueError) as error:
+                raise HarnessLifecycleError(
+                    "malformed active Provider Call terminal outcome blocks "
+                    "Run recording"
+                ) from error
+            if (
+                provider_record.status is HarnessProviderCallStatus.UNKNOWN
+                and receipt.termination_code
+                not in {"provider_state_unknown", "cancel_unknown"}
+            ):
+                raise HarnessLifecycleError(
+                    "UNKNOWN Provider Call requires an uncertainty-preserving "
+                    "Run termination"
+                )
+
+        if data.get("activeHarnessToolStepIntentDigest") is not None:
+            raise HarnessLifecycleError(
+                "active Harness Tool Step requires recovery before recording the Run"
+            )
+        receipt_object_digest = data.get("harnessToolStepReceiptObjectDigest")
+        if receipt_object_digest is None:
+            if any(
+                data.get(field) is not None
+                for field in (
+                    "harnessToolStepReceiptDigest",
+                    "harnessToolStepObservationObjectDigest",
+                    "harnessToolStepPreviousReceiptObjectDigest",
+                )
+            ):
+                raise HarnessLifecycleError(
+                    "incomplete Harness Tool Step result blocks Run recording"
+                )
+            return
+        if not isinstance(receipt_object_digest, str):
+            raise HarnessLifecycleError(
+                "malformed Harness Tool Step Receipt blocks Run recording"
+            )
+        try:
+            raw_receipt = self.storage.objects.get(
+                receipt_object_digest,
+                expected_kind="harness-tool-step-receipt",
+            )
+            if not isinstance(raw_receipt, dict):
+                raise ValueError("Tool Step Receipt is not an object")
+            tool_receipt = HarnessToolStepReceipt.from_dict(raw_receipt)
+            intent_object_digest = data.get("harnessToolStepIntentObjectDigest")
+            if not isinstance(intent_object_digest, str):
+                raise ValueError("Tool Step Intent object reference is missing")
+            raw_intent = self.storage.objects.get(
+                intent_object_digest,
+                expected_kind="harness-tool-step-intent",
+            )
+            if not isinstance(raw_intent, dict):
+                raise ValueError("Tool Step Intent is not an object")
+            tool_intent = HarnessToolStepIntent.from_dict(raw_intent)
+            observation_object_digest = data.get(
+                "harnessToolStepObservationObjectDigest"
+            )
+            if not isinstance(observation_object_digest, str):
+                raise ValueError("Tool Step Observation object reference is missing")
+            tool_observation = self.storage.objects.get(
+                observation_object_digest,
+                expected_kind="harness-tool-observation",
+            )
+            if not isinstance(tool_observation, dict):
+                raise ValueError("Tool Step Observation is not an object")
+            validate_json_value(tool_observation)
+        except (ObjectCorrupt, ObjectMissing, TypeError, ValueError) as error:
+            raise HarnessLifecycleError(
+                "malformed Harness Tool Step evidence blocks Run recording"
+            ) from error
+        if (
+            data.get("harnessToolStepReceiptDigest") != tool_receipt.digest
+            or data.get("harnessToolStepIntentDigest") != tool_intent.digest
+            or tool_receipt.intent_digest != tool_intent.digest
+            or tool_intent.harness_run_id != receipt.harness_run_id
+            or tool_intent.assignment_id != receipt.assignment_id
+            or tool_intent.assignment_generation != receipt.assignment_generation
+            or tool_intent.assignment_digest != data.get("assignmentDigest")
+            or tool_receipt.harness_run_id != receipt.harness_run_id
+            or tool_receipt.tool_call_id != tool_intent.tool_call_id
+            or canonical_digest(tool_observation)
+            != tool_receipt.observation_digest
+        ):
+            raise HarnessLifecycleError(
+                "Harness Tool Step evidence links differ from the current Run"
+            )
+        if not tool_receipt.terminal:
+            raise HarnessLifecycleError(
+                "non-terminal Harness Tool Step requires recovery before "
+                "recording the Run"
+            )
+        observation_digests = {
+            canonical_digest(observation) for observation in observations
+        }
+        if tool_receipt.observation_digest not in observation_digests:
+            raise HarnessLifecycleError(
+                "terminal Harness Tool Step Observation is absent from Run evidence"
+            )
 
     def load_current_run(self, task_id: str) -> RecordedHarnessRun:
         run = self._run_from_snapshot(self.storage.read_task_event(task_id))
@@ -2199,6 +2579,7 @@ class HarnessHost:
             "harnessRunSnapshotDigest",
             "harnessRunSnapshotObjectDigest",
             "harnessRunStateObjectDigest",
+            *_ACTIVE_PROVIDER_CALL_FIELDS,
             "harnessRunRecoveryAssessmentId",
             "harnessRunRecoveryAssessmentDigest",
             "harnessRunRecoveryAssessmentObjectDigest",
@@ -2250,6 +2631,7 @@ class HarnessHost:
             "harnessDispatchFenceObjectDigest",
             "harnessRunSnapshotObjectDigest",
             "harnessRunStateObjectDigest",
+            "activeHarnessProviderCallObjectDigest",
             "harnessRunRecoveryAssessmentObjectDigest",
             "harnessRunAbandonmentObjectDigest",
             "completionVerificationObjectDigest",

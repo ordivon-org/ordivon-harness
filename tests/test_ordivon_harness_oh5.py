@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import itertools
+import http.client
 from pathlib import Path
 import tempfile
 import unittest
@@ -34,6 +35,7 @@ from ordivon_harness.ordivon import (
     AgentToolCall,
     AgentToolDefinition,
     AgentTurnAdapterError,
+    AgentTurnDispatchSafety,
     AgentTurnFailureCode,
     AgentTurnResult,
     CancellationToken,
@@ -258,11 +260,23 @@ class _FailingAdapter:
     adapter_id = "ordivon.test-failing-adapter.v1"
     model_id = "ordivon.test-model.v1"
 
-    def __init__(self, code: AgentTurnFailureCode) -> None:
+    def __init__(
+        self,
+        code: AgentTurnFailureCode,
+        *,
+        dispatch_safety: AgentTurnDispatchSafety = (
+            AgentTurnDispatchSafety.PROVIDER_REJECTED
+        ),
+    ) -> None:
         self.code = code
+        self.dispatch_safety = dispatch_safety
 
     def invoke(self, request):
-        raise AgentTurnAdapterError("injected Provider failure", failure_code=self.code)
+        raise AgentTurnAdapterError(
+            "injected Provider failure",
+            failure_code=self.code,
+            dispatch_safety=self.dispatch_safety,
+        )
 
 
 def _fault_result(code: AgentTurnFailureCode, catalog_digest: str):
@@ -279,22 +293,29 @@ def _fault_result(code: AgentTurnFailureCode, catalog_digest: str):
     )
 
 
-def _conclusion_result(committed, context_digest: str):
+def _conclusion_result(
+    committed,
+    context_digest: str,
+    *,
+    suffix: str = "conclusion",
+):
     assert committed.native_run_contract is not None
     adapter = ScriptedTurnAdapter(
         (
             AgentTurnResult(
-                model_call_id="model-call:oh5:conclusion",
+                model_call_id=f"model-call:oh5:{suffix}",
                 model_id="ordivon.scripted-model.v1",
                 content=None,
                 tool_calls=(),
                 conclusion=AgentRunConclusion(
                     status="candidate_completed",
-                    summary="Fixture candidate.",
+                    summary=f"Fixture candidate {suffix}.",
                 ),
                 usage={},
                 finish_reason="tool_calls",
-                raw_response_digest=canonical_digest({"response": "oh5"}),
+                raw_response_digest=canonical_digest(
+                    {"response": "oh5", "suffix": suffix}
+                ),
             ),
         )
     )
@@ -401,6 +422,10 @@ class OH5ProviderFaultTests(unittest.TestCase):
             ),
             (
                 urllib.error.URLError("network unavailable"),
+                AgentTurnFailureCode.TRANSPORT_FAILED,
+            ),
+            (
+                http.client.RemoteDisconnected("peer closed the connection"),
                 AgentTurnFailureCode.TRANSPORT_FAILED,
             ),
             (TimeoutError("timed out"), AgentTurnFailureCode.TIMEOUT),
@@ -515,6 +540,62 @@ class OH5ProviderFaultTests(unittest.TestCase):
             cancellation=cancellation,
         )
         self.assertEqual(cancelled.stop_code, RunStopCode.CANCELLED)
+
+
+class OH5ConcurrentResultTests(unittest.TestCase):
+    def test_late_result_for_recorded_run_is_superseded_before_cas_writes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            clock = itertools.count(900_000).__next__
+            runtime = _RecoveryRuntime()
+            with HostStorage(directory) as storage:
+                _create_task(storage, clock)
+                host, committed, context_digest, _ = _assign(
+                    storage,
+                    clock,
+                    runtime,
+                )
+                first = _conclusion_result(
+                    committed,
+                    context_digest,
+                    suffix="race-first",
+                )
+                late = _conclusion_result(
+                    committed,
+                    context_digest,
+                    suffix="race-late",
+                )
+                recorded = record_native_run_result(
+                    host,
+                    committed,
+                    first,
+                    times=NativeRunTimes(900_100, 900_110),
+                )
+                object_count = len(
+                    tuple((Path(directory) / "objects").glob("*.json"))
+                )
+
+                with self.assertRaisesRegex(
+                    HarnessSuperseded,
+                    "superseded execution revision",
+                ):
+                    record_native_run_result(
+                        host,
+                        committed,
+                        late,
+                        times=NativeRunTimes(900_100, 900_120),
+                    )
+
+                self.assertEqual(
+                    len(tuple((Path(directory) / "objects").glob("*.json"))),
+                    object_count,
+                )
+                self.assertEqual(
+                    host.load_current_run(TASK_ID).receipt.digest,
+                    recorded.receipt.digest,
+                )
+                validate_history(storage)
 
 
 class OH5AbandonmentTests(unittest.TestCase):

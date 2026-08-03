@@ -30,6 +30,12 @@ from .event_kinds import (
     COMPLETION_PROPOSED,
     HARNESS_ASSIGNMENT_COMMITTED,
     HARNESS_EVENT_KINDS,
+    HARNESS_PROVIDER_CALL_CLAIMED,
+    HARNESS_PROVIDER_CALL_COMPLETED,
+    HARNESS_PROVIDER_CALL_DISPATCHING,
+    HARNESS_PROVIDER_CALL_FAILED,
+    HARNESS_PROVIDER_CALL_SUPERSEDED,
+    HARNESS_PROVIDER_CALL_UNKNOWN,
     HARNESS_RUN_ABANDONED,
     HARNESS_RUN_RECORDED,
     HARNESS_RUN_RECOVERY_RECORDED,
@@ -70,6 +76,17 @@ from .models import (
     HarnessRunReceipt,
     TaskAttemptDescriptor,
 )
+from .protocol import (
+    HarnessProviderCallFailureReceipt,
+    HarnessProviderCallRecord,
+    HarnessProviderCallSource,
+    HarnessProviderCallStatus,
+)
+from .ordivon.run_store import (
+    HarnessProviderCallClaimHeld,
+    HarnessProviderCallRecoveryRequired,
+    HarnessProviderCallRequestMismatch,
+)
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
 from .recovery_controller import (
     NativeRunRecoveryController,
@@ -104,6 +121,12 @@ __all__ = [
     "COMPLETION_PROPOSED",
     "HARNESS_ASSIGNMENT_COMMITTED",
     "HARNESS_EVENT_KINDS",
+    "HARNESS_PROVIDER_CALL_CLAIMED",
+    "HARNESS_PROVIDER_CALL_COMPLETED",
+    "HARNESS_PROVIDER_CALL_DISPATCHING",
+    "HARNESS_PROVIDER_CALL_FAILED",
+    "HARNESS_PROVIDER_CALL_SUPERSEDED",
+    "HARNESS_PROVIDER_CALL_UNKNOWN",
     "HARNESS_RUN_ABANDONED",
     "HARNESS_RUN_RECORDED",
     "HARNESS_RUN_RECOVERY_RECORDED",
@@ -133,6 +156,13 @@ __all__ = [
     "HarnessExecutionResult",
     "HarnessHost",
     "HarnessLifecycleError",
+    "HarnessProviderCallRecord",
+    "HarnessProviderCallClaimHeld",
+    "HarnessProviderCallFailureReceipt",
+    "HarnessProviderCallRecoveryRequired",
+    "HarnessProviderCallRequestMismatch",
+    "HarnessProviderCallSource",
+    "HarnessProviderCallStatus",
     "HarnessRunPlan",
     "HarnessRunReceipt",
     "HarnessRunner",

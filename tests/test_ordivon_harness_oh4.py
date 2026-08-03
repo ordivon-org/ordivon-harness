@@ -24,6 +24,7 @@ from ordivon_harness import (
 )
 from ordivon_host.cognition import BlockKind, ContextBlock, Freshness
 from ordivon_harness import NativeHarnessRunContract
+from ordivon_harness.protocol import HarnessToolStepReceipt, HarnessToolStepStatus
 from ordivon_harness.ordivon import (
     AgentRunConclusion,
     AgentToolCall,
@@ -297,6 +298,26 @@ def _run_native(committed, context, runtime: _Runtime):
 
 
 class OH4ContractModelTests(unittest.TestCase):
+    def test_tool_step_receipt_accepts_opaque_runtime_job_identity(self) -> None:
+        receipt = HarnessToolStepReceipt(
+            receipt_id="harness-tool-step-receipt:opaque-runtime-job",
+            intent_digest=canonical_digest({"intent": "opaque-runtime-job"}),
+            harness_run_id="harness-run:opaque-runtime-job",
+            tool_call_id="tool-call:opaque-runtime-job",
+            status=HarnessToolStepStatus.OBSERVED,
+            runtime_job_ref="job-019fc10e-be25-7d53-bd57-c86c906b7b54",
+            observation_digest=canonical_digest(
+                {"observation": "opaque-runtime-job"}
+            ),
+            reconciled=False,
+            created_at_ms=1,
+        )
+
+        self.assertEqual(
+            HarnessToolStepReceipt.from_dict(receipt.to_dict()),
+            receipt,
+        )
+
     def test_contract_models_round_trip_and_v1_receipt_remains_readable(self) -> None:
         contract = _contract()
         grant = _grant(include_check=True)
@@ -395,6 +416,13 @@ class OH4ToolGrantTests(unittest.TestCase):
                     tuple(tool.name for tool in bridge.definitions()),
                     ("read_workspace", "run_check", "observe_job", "read_artifact"),
                 )
+                run_check = next(
+                    tool for tool in bridge.definitions() if tool.name == "run_check"
+                )
+                self.assertEqual(
+                    run_check.input_schema["properties"]["waitMs"]["maximum"],
+                    30_000,
+                )
                 calls_before = len(runtime.calls)
                 with self.assertRaises(ToolBridgeError):
                     bridge.execute(
@@ -406,6 +434,7 @@ class OH4ToolGrantTests(unittest.TestCase):
                         step_id="turn-1-tool-1",
                     )
                 self.assertEqual(len(runtime.calls), calls_before)
+
                 with self.assertRaisesRegex(ToolBridgeError, "not granted"):
                     bridge.execute(
                         AgentToolCall(
@@ -415,6 +444,23 @@ class OH4ToolGrantTests(unittest.TestCase):
                         ),
                         step_id="turn-1-tool-2",
                     )
+                with self.assertRaisesRegex(
+                    ToolBridgeError,
+                    "Runtime wait must be between 0 and 30000 milliseconds",
+                ) as invalid_wait:
+                    bridge.execute(
+                        AgentToolCall(
+                            "tool-call:oh4:check-invalid-wait",
+                            "run_check",
+                            {
+                                "checkId": "check:oh4-unit-tests",
+                                "waitMs": 60_000,
+                            },
+                        ),
+                        step_id="turn-1-tool-invalid-wait",
+                    )
+                self.assertTrue(invalid_wait.exception.recoverable_by_model)
+                self.assertEqual(len(runtime.calls), calls_before)
                 observation = bridge.execute(
                     AgentToolCall(
                         "tool-call:oh4:check",
@@ -482,6 +528,18 @@ class OH4ToolGrantTests(unittest.TestCase):
                         ),
                         step_id="turn-3-tool-2",
                     )
+
+    def test_search_workspace_uses_read_path_authority(self) -> None:
+        grant = ToolGrant(
+            tool_grant_id="tool-grant:oh4-native:search",
+            allowed_tools=("search_workspace",),
+            read_path_rules=("src/**",),
+        )
+        self.assertTrue(grant.allows_path("search_workspace", "src"))
+        self.assertTrue(
+            grant.allows_path("search_workspace", "src/ordivon_harness/loop.py")
+        )
+        self.assertFalse(grant.allows_path("search_workspace", "tests"))
 
 
 class OH4NativeLifecycleTests(unittest.TestCase):
