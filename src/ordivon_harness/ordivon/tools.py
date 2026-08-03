@@ -49,6 +49,7 @@ from .model import (
     AgentTurnResult,
 )
 from .run_store import (
+    HarnessProviderCallRecoveryRequired,
     HarnessProviderCallSourceRef,
     HarnessRunState,
     HostHarnessRunStore,
@@ -772,6 +773,10 @@ class RuntimeToolBridge:
             result,
         )
         self.committed = self.run_store.committed
+        if self.run_store.provider_outcome_requires_resume:
+            raise HarnessProviderCallRecoveryRequired(
+                "Provider outcome was admitted after Recovery; explicit resume is required"
+            )
 
     def fail_provider_call(
         self,
@@ -802,6 +807,10 @@ class RuntimeToolBridge:
             failure=failure,
         )
         self.committed = self.run_store.committed
+        if self.run_store.provider_outcome_requires_resume:
+            raise HarnessProviderCallRecoveryRequired(
+                "Provider outcome was admitted after Recovery; explicit resume is required"
+            )
 
     def retry_provider_call(self, request: AgentTurnRequest) -> None:
         if self.run_store is None:

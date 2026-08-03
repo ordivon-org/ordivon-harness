@@ -898,9 +898,10 @@ class HarnessHost:
         current = self._assignment_from_snapshot(snapshot)
         if current is None or current.assignment != committed.assignment:
             raise HarnessSuperseded("Harness Assignment is no longer current")
-        if self._recovery_from_snapshot(snapshot) is not None:
-            raise HarnessSuperseded(
-                "native Harness Run Recovery already superseded this unrecorded result"
+        recovery = self._recovery_from_snapshot(snapshot)
+        if recovery is not None:
+            self._require_recovery_resolved_provider_outcome(
+                snapshot, recovery, receipt
             )
         if self._abandonment_from_snapshot(snapshot) is not None:
             raise HarnessSuperseded("native Harness Run is already abandoned")
@@ -1057,6 +1058,79 @@ class HarnessHost:
             observation_objects=observation_objects,
             conclusion_object=conclusion_object,
         )
+
+
+    def _require_recovery_resolved_provider_outcome(
+        self,
+        snapshot: TaskEventSnapshot,
+        recovery: RecordedNativeRunRecovery,
+        receipt: HarnessRunReceipt,
+    ) -> None:
+        data = self._data(snapshot)
+        resolved_digest = data.get(
+            "harnessRunRecoveryResolvedProviderCallDigest"
+        )
+        resolved_object_digest = data.get(
+            "harnessRunRecoveryResolvedProviderCallObjectDigest"
+        )
+        previous_digest = data.get(
+            "harnessRunRecoveryResolvedPreviousProviderCallDigest"
+        )
+        if not all(
+            isinstance(value, str)
+            for value in (
+                resolved_digest,
+                resolved_object_digest,
+                previous_digest,
+            )
+        ):
+            raise HarnessSuperseded(
+                "native Harness Run Recovery has no resolved Provider outcome"
+            )
+        admitted = {item.digest for item in self.storage.journal.object_refs()}
+        if resolved_object_digest not in admitted:
+            raise HarnessLifecycleError(
+                "resolved Provider outcome record is not admitted"
+            )
+        raw = self.storage.objects.get(
+            resolved_object_digest,
+            expected_kind="harness-provider-call-record",
+        )
+        if not isinstance(raw, dict):
+            raise HarnessLifecycleError(
+                "resolved Provider outcome record is invalid"
+            )
+        record = HarnessProviderCallRecord.from_dict(raw)
+        evidence = recovery.assessment.workspace_evidence.get(
+            "providerCallReconciliation"
+        )
+        if (
+            record.digest != resolved_digest
+            or record.previous_record_digest != previous_digest
+            or record.status
+            not in {
+                HarnessProviderCallStatus.COMPLETED,
+                HarnessProviderCallStatus.FAILED,
+                HarnessProviderCallStatus.UNKNOWN,
+            }
+            or record.task_id != snapshot.projection.task_id
+            or record.harness_run_id != receipt.harness_run_id
+            or record.assignment_id != receipt.assignment_id
+            or record.assignment_generation != receipt.assignment_generation
+            or record.assignment_digest != data.get("assignmentDigest")
+            or not isinstance(evidence, dict)
+            or evidence.get("status") != "dispatching"
+            or evidence.get("recordDigest") != previous_digest
+            or evidence.get("providerCallId") != record.provider_call_id
+            or evidence.get("claimGeneration") != record.claim_generation
+            or evidence.get("sourceKind") != record.source_kind.value
+            or evidence.get("sourceDigest") != record.source_digest
+            or evidence.get("sourceObjectDigest")
+            != record.source_object_digest
+        ):
+            raise HarnessSuperseded(
+                "native Harness Run Recovery does not match the resolved Provider outcome"
+            )
 
     def _require_recordable_run_head(
         self,
@@ -2584,6 +2658,9 @@ class HarnessHost:
             "harnessRunRecoveryAssessmentDigest",
             "harnessRunRecoveryAssessmentObjectDigest",
             "harnessRunRecoverySafeToAbandon",
+            "harnessRunRecoveryResolvedProviderCallDigest",
+            "harnessRunRecoveryResolvedProviderCallObjectDigest",
+            "harnessRunRecoveryResolvedPreviousProviderCallDigest",
             "harnessRunAbandonmentId",
             "harnessRunAbandonmentDigest",
             "harnessRunAbandonmentObjectDigest",

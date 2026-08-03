@@ -71,6 +71,7 @@ class NativeRunRecoveryController:
 
         run_store = HostHarnessRunStore(self.host, committed)
         provider_unknowns: list[str] = []
+        provider_dispatch_pending = False
         provider_evidence: dict[str, JsonValue] = {"status": "not-present"}
         try:
             retained_provider_call = run_store.load_current_provider_call()
@@ -154,6 +155,7 @@ class NativeRunRecoveryController:
                     "abandonment recovery is not admissible"
                 )
             if record.status is HarnessProviderCallStatus.DISPATCHING:
+                provider_dispatch_pending = True
                 provider_unknowns.append(
                     "Provider Call DISPATCHING outcome remains UNKNOWN: "
                     f"{record.provider_call_id}"
@@ -252,7 +254,7 @@ class NativeRunRecoveryController:
         if workspace_id is None:
             workspace_status = "not_applicable"
             workspace_evidence = {"workspaceId": None, "notApplicable": True}
-        elif consequence.value == "observation-only":
+        elif consequence.value == "observation-only" and not provider_dispatch_pending:
             try:
                 workspace_evidence = ensure_workspace_closed(
                     self.runtime,

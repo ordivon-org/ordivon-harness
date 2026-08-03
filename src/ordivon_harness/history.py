@@ -97,6 +97,7 @@ _CAS_DIGEST_KEYS = frozenset(
         "harnessRunStateObjectDigest",
         "activeHarnessProviderCallObjectDigest",
         "harnessRunRecoveryAssessmentObjectDigest",
+        "harnessRunRecoveryResolvedProviderCallObjectDigest",
         "harnessRunAbandonmentObjectDigest",
         "completionProposalObjectDigest",
         "completionVerificationObjectDigest",
@@ -184,6 +185,7 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
     semantic_link_checks = 0
     provider_semantic_link_checks = 0
     provider_heads: dict[str, _HistoricalProviderHead] = {}
+    recovery_provider_resolutions: dict[str, tuple[str, str, str]] = {}
     for row in rows:
         events += 1
         event_id = str(row["event_id"])
@@ -255,6 +257,21 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
             provider_heads.pop(stream_id, None)
         else:
             provider_heads[stream_id] = provider_head
+        resolution_checks, resolution = _validate_recovery_provider_resolution(
+            storage,
+            admitted=admitted,
+            data=data,
+            event_id=event_id,
+            event_kind=event_kind,
+            provider_head=provider_head,
+            previous=recovery_provider_resolutions.get(stream_id),
+        )
+        semantic_link_checks += resolution_checks
+        provider_semantic_link_checks += resolution_checks
+        if resolution is None:
+            recovery_provider_resolutions.pop(stream_id, None)
+        else:
+            recovery_provider_resolutions[stream_id] = resolution
     return HistoryValidation(
         events=events,
         task_streams=len(task_streams),
@@ -598,6 +615,142 @@ def _validate_provider_semantic_links(
     )
     return 4 + outcome_checks + transition_checks, current
 
+
+
+_RECOVERY_PROVIDER_RESOLUTION_FIELDS = frozenset(
+    {
+        "harnessRunRecoveryResolvedProviderCallDigest",
+        "harnessRunRecoveryResolvedProviderCallObjectDigest",
+        "harnessRunRecoveryResolvedPreviousProviderCallDigest",
+    }
+)
+
+
+def _validate_recovery_provider_resolution(
+    storage: HostStorage,
+    *,
+    admitted: set[str],
+    data: JsonValue,
+    event_id: str,
+    event_kind: EventKind,
+    provider_head: _HistoricalProviderHead | None,
+    previous: tuple[str, str, str] | None,
+) -> tuple[int, tuple[str, str, str] | None]:
+    if not isinstance(data, dict):
+        return 0, None
+    present = _RECOVERY_PROVIDER_RESOLUTION_FIELDS.intersection(data)
+    if present and present != _RECOVERY_PROVIDER_RESOLUTION_FIELDS:
+        raise JournalCorruption(
+            f"historical Recovery Provider resolution is incomplete: {event_id}"
+        )
+    if not present:
+        if previous is not None and event_kind is not HARNESS_RUN_RECORDED:
+            raise JournalCorruption(
+                f"historical Event cleared Recovery Provider resolution: {event_id}"
+            )
+        return 0, None
+
+    resolved_digest = data["harnessRunRecoveryResolvedProviderCallDigest"]
+    resolved_object_digest = data[
+        "harnessRunRecoveryResolvedProviderCallObjectDigest"
+    ]
+    previous_digest = data[
+        "harnessRunRecoveryResolvedPreviousProviderCallDigest"
+    ]
+    if not all(
+        isinstance(value, str)
+        for value in (resolved_digest, resolved_object_digest, previous_digest)
+    ):
+        raise JournalCorruption(
+            f"historical Recovery Provider resolution is invalid: {event_id}"
+        )
+    _require_provider_object_admitted(
+        admitted,
+        resolved_object_digest,
+        "Recovery-resolved Provider Call Record",
+        event_id,
+    )
+    raw_record = storage.objects.get(
+        resolved_object_digest,
+        expected_kind="harness-provider-call-record",
+    )
+    if not isinstance(raw_record, dict):
+        raise ObjectCorrupt(
+            f"historical Recovery-resolved Provider Call is not an object: {event_id}"
+        )
+    try:
+        record = HarnessProviderCallRecord.from_dict(raw_record)
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical Recovery-resolved Provider Call is invalid: {event_id}"
+        ) from error
+    recovery_object_digest = data.get("harnessRunRecoveryAssessmentObjectDigest")
+    if not isinstance(recovery_object_digest, str):
+        raise JournalCorruption(
+            f"historical Recovery Provider resolution has no Recovery: {event_id}"
+        )
+    raw_recovery = storage.objects.get(
+        recovery_object_digest,
+        expected_kind="native-run-recovery-assessment",
+    )
+    if not isinstance(raw_recovery, dict):
+        raise ObjectCorrupt(
+            f"historical Recovery Provider resolution Recovery is invalid: {event_id}"
+        )
+    try:
+        recovery = NativeRunRecoveryAssessment.from_dict(raw_recovery)
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical Recovery Provider resolution Recovery is invalid: {event_id}"
+        ) from error
+    evidence = recovery.workspace_evidence.get("providerCallReconciliation")
+    resolution = (resolved_digest, resolved_object_digest, previous_digest)
+    if (
+        record.digest != resolved_digest
+        or record.previous_record_digest != previous_digest
+        or record.status
+        not in {
+            HarnessProviderCallStatus.COMPLETED,
+            HarnessProviderCallStatus.FAILED,
+            HarnessProviderCallStatus.UNKNOWN,
+        }
+        or not isinstance(evidence, dict)
+        or evidence.get("status") != "dispatching"
+        or evidence.get("recordDigest") != previous_digest
+        or evidence.get("providerCallId") != record.provider_call_id
+        or evidence.get("claimGeneration") != record.claim_generation
+        or evidence.get("sourceKind") != record.source_kind.value
+        or evidence.get("sourceDigest") != record.source_digest
+        or evidence.get("sourceObjectDigest") != record.source_object_digest
+        or recovery.assignment_id != record.assignment_id
+        or recovery.assignment_generation != record.assignment_generation
+        or recovery.assignment_digest != record.assignment_digest
+        or recovery.harness_run_id != record.harness_run_id
+    ):
+        raise JournalCorruption(
+            f"historical Recovery Provider resolution identities differ: {event_id}"
+        )
+    if previous is None:
+        if (
+            event_kind
+            not in {
+                HARNESS_PROVIDER_CALL_COMPLETED,
+                HARNESS_PROVIDER_CALL_FAILED,
+                HARNESS_PROVIDER_CALL_UNKNOWN,
+            }
+            or provider_head is None
+            or provider_head.record != record
+            or provider_head.record_object_digest != resolved_object_digest
+        ):
+            raise JournalCorruption(
+                f"historical Recovery Provider resolution was not introduced by "
+                f"its terminal Provider Event: {event_id}"
+            )
+    elif resolution != previous:
+        raise JournalCorruption(
+            f"historical Recovery Provider resolution changed: {event_id}"
+        )
+    return 2, resolution
 
 def _require_provider_object_admitted(
     admitted: set[str],

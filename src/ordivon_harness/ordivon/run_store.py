@@ -128,11 +128,16 @@ class HostHarnessRunStore:
         self.committed = committed
         self.harness_run_id = native.harness_run_id
         self._bound_state: HarnessRunState | None = None
+        self._provider_outcome_requires_resume = False
         self._snapshot_sequence = self._current_snapshot_sequence()
 
     def bind_state(self, state: HarnessRunState) -> None:
         self._require_active_time_budget_consistent(state)
         self._bound_state = state
+
+    @property
+    def provider_outcome_requires_resume(self) -> bool:
+        return self._provider_outcome_requires_resume
 
     def assignment_provider_source(self) -> HarnessProviderCallSourceRef:
         return HarnessProviderCallSourceRef(
@@ -354,13 +359,32 @@ class HostHarnessRunStore:
         retained: StoredHarnessProviderCall,
         result: AgentTurnResult,
     ) -> StoredHarnessProviderCall:
-        current = self._require_current_provider_call(retained.record)
+        self._provider_outcome_requires_resume = False
+        current = self.load_current_provider_call()
+        if current.record.status is HarnessProviderCallStatus.COMPLETED:
+            if (
+                current.record.previous_record_digest == retained.record.digest
+                and current.result == result
+            ):
+                self.committed = self.host.load_current_assignment(
+                    self.committed.assignment.task_id
+                )
+                self._provider_outcome_requires_resume = (
+                    self._current_provider_outcome_requires_resume(current.record)
+                )
+                return current
+            raise HarnessProviderCallRecoveryRequired(
+                "another Provider result already completed this call"
+            )
+        if current.record != retained.record:
+            raise HarnessSuperseded("Harness Provider Call is no longer current")
         if current.record.status is not HarnessProviderCallStatus.DISPATCHING:
             raise HarnessProviderCallRecoveryRequired(
                 "Provider result arrived without a current dispatch record"
             )
         terminal_state = self._require_state()
         self._require_provider_outcome_state(current.state, terminal_state)
+        self._preflight_provider_terminal(current.record)
         terminal_state_object = self.extension.put_object(
             terminal_state.to_dict(self.harness_run_id),
             kind="harness-run-state",
@@ -382,7 +406,7 @@ class HostHarnessRunStore:
             result=result,
             result_object=result_object,
         )
-        self._commit(
+        self._provider_outcome_requires_resume = self._commit(
             kind=HARNESS_PROVIDER_CALL_COMPLETED,
             updates=self._provider_call_updates(stored),
             remove_fields=(),
@@ -393,6 +417,8 @@ class HostHarnessRunStore:
             ),
             label="Harness Provider Call Result",
             event_suffix=f"provider-call-completed:{record.digest[7:23]}",
+            provider_terminal_from=current.record,
+            provider_terminal=stored,
         )
         return stored
 
@@ -402,7 +428,28 @@ class HostHarnessRunStore:
         *,
         failure: HarnessProviderCallFailureReceipt,
     ) -> StoredHarnessProviderCall:
-        current = self._require_current_provider_call(retained.record)
+        self._provider_outcome_requires_resume = False
+        current = self.load_current_provider_call()
+        if current.record.status in {
+            HarnessProviderCallStatus.FAILED,
+            HarnessProviderCallStatus.UNKNOWN,
+        }:
+            if (
+                current.record.previous_record_digest == retained.record.digest
+                and current.failure == failure
+            ):
+                self.committed = self.host.load_current_assignment(
+                    self.committed.assignment.task_id
+                )
+                self._provider_outcome_requires_resume = (
+                    self._current_provider_outcome_requires_resume(current.record)
+                )
+                return current
+            raise HarnessProviderCallRecoveryRequired(
+                "another Provider failure already completed this call"
+            )
+        if current.record != retained.record:
+            raise HarnessSuperseded("Harness Provider Call is no longer current")
         if current.record.status is not HarnessProviderCallStatus.DISPATCHING:
             raise HarnessProviderCallRecoveryRequired(
                 "Provider failure arrived without a current dispatch record"
@@ -420,6 +467,7 @@ class HostHarnessRunStore:
             )
         terminal_state = self._require_state()
         self._require_provider_outcome_state(current.state, terminal_state)
+        self._preflight_provider_terminal(current.record)
         terminal_state_object = self.extension.put_object(
             terminal_state.to_dict(self.harness_run_id),
             kind="harness-run-state",
@@ -447,7 +495,7 @@ class HostHarnessRunStore:
             failure=failure,
             failure_object=failure_object,
         )
-        self._commit(
+        self._provider_outcome_requires_resume = self._commit(
             kind=(
                 HARNESS_PROVIDER_CALL_UNKNOWN
                 if unknown
@@ -462,6 +510,8 @@ class HostHarnessRunStore:
             ),
             label="Harness Provider Call Failure",
             event_suffix=f"provider-call-{status.value}:{record.digest[7:23]}",
+            provider_terminal_from=current.record,
+            provider_terminal=stored,
         )
         return stored
 
@@ -1670,14 +1720,37 @@ class HostHarnessRunStore:
         referenced_objects: tuple[StoredObject, ...],
         label: str,
         event_suffix: str,
-    ) -> None:
+        provider_terminal_from: HarnessProviderCallRecord | None = None,
+        provider_terminal: StoredHarnessProviderCall | None = None,
+    ) -> bool:
         task_id = self.committed.assignment.task_id
         current_assignment = self.host.load_current_assignment(task_id)
-        if (
-            current_assignment.task_revision != self.committed.task_revision
-            or current_assignment.assignment != self.committed.assignment
-        ):
+        recovery_fenced = False
+        if current_assignment.assignment != self.committed.assignment:
             raise HarnessSuperseded("Harness Assignment is no longer current")
+        if current_assignment.task_revision != self.committed.task_revision:
+            if (
+                provider_terminal_from is None
+                or provider_terminal is None
+                or not self._recovery_allows_provider_terminal(
+                    current_assignment, provider_terminal_from
+                )
+            ):
+                raise HarnessSuperseded("Harness Assignment is no longer current")
+            recovery_fenced = True
+            self.committed = current_assignment
+            updates = {
+                **updates,
+                "harnessRunRecoveryResolvedProviderCallDigest": (
+                    provider_terminal.record.digest
+                ),
+                "harnessRunRecoveryResolvedProviderCallObjectDigest": (
+                    provider_terminal.record_object.digest
+                ),
+                "harnessRunRecoveryResolvedPreviousProviderCallDigest": (
+                    provider_terminal_from.digest
+                ),
+            }
         event_token = canonical_digest(
             {
                 "taskId": task_id,
@@ -1705,6 +1778,87 @@ class HostHarnessRunStore:
             raise HarnessSuperseded(str(error)) from error
         self.committed = replace(
             self.committed, task_revision=committed.projection.revision
+        )
+        return recovery_fenced
+
+    def _preflight_provider_terminal(
+        self,
+        dispatching: HarnessProviderCallRecord,
+    ) -> None:
+        current_assignment = self.host.load_current_assignment(
+            self.committed.assignment.task_id
+        )
+        if current_assignment.assignment != self.committed.assignment:
+            raise HarnessSuperseded("Harness Assignment is no longer current")
+        if (
+            current_assignment.task_revision != self.committed.task_revision
+            and not self._recovery_allows_provider_terminal(
+                current_assignment, dispatching
+            )
+        ):
+            raise HarnessSuperseded(
+                "Provider terminal outcome does not match the current Recovery fence"
+            )
+
+    def _current_provider_outcome_requires_resume(
+        self,
+        record: HarnessProviderCallRecord,
+    ) -> bool:
+        current = self.extension.load(self.committed.assignment.task_id)
+        return bool(
+            current.data.get("harnessRunRecoveryAssessmentObjectDigest")
+            is not None
+            and current.data.get(
+                "harnessRunRecoveryResolvedProviderCallDigest"
+            )
+            == record.digest
+            and current.data.get(
+                "harnessRunRecoveryResolvedProviderCallObjectDigest"
+            )
+            == current.data.get("activeHarnessProviderCallObjectDigest")
+        )
+
+    def _recovery_allows_provider_terminal(
+        self,
+        current_assignment: CommittedHarnessAssignment,
+        dispatching: HarnessProviderCallRecord,
+    ) -> bool:
+        current = self.extension.load(current_assignment.assignment.task_id)
+        if current.data.get("harnessRunAbandonmentObjectDigest") is not None:
+            return False
+        active = self._load_provider_call_from_data(current.data)
+        if active is None or active.record != dispatching:
+            return False
+        if dispatching.status is not HarnessProviderCallStatus.DISPATCHING:
+            return False
+        try:
+            recovery = self.host.load_current_native_run_recovery(
+                current_assignment.assignment.task_id
+            )
+        except HarnessLifecycleError:
+            return False
+        evidence = recovery.assessment.workspace_evidence.get(
+            "providerCallReconciliation"
+        )
+        return bool(
+            isinstance(evidence, dict)
+            and evidence.get("status") == "dispatching"
+            and evidence.get("providerCallId") == dispatching.provider_call_id
+            and evidence.get("recordDigest") == dispatching.digest
+            and evidence.get("sourceKind") == dispatching.source_kind.value
+            and evidence.get("sourceDigest") == dispatching.source_digest
+            and evidence.get("sourceObjectDigest")
+            == dispatching.source_object_digest
+            and evidence.get("stateObjectDigest")
+            == dispatching.state_object_digest
+            and evidence.get("claimGeneration")
+            == dispatching.claim_generation
+            and recovery.assessment.assignment_id
+            == dispatching.assignment_id
+            and recovery.assessment.assignment_generation
+            == dispatching.assignment_generation
+            and recovery.assessment.assignment_digest
+            == dispatching.assignment_digest
         )
 
     def _current_snapshot_sequence(self) -> int:
