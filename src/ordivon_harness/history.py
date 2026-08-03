@@ -5,11 +5,14 @@ from dataclasses import dataclass
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from anc_effect_binding import EffectBinding
 from anc_effect_ir import EffectEnvelope, effect_digest
-from ordivon_host.domain import EventKind, TaskProjection
+from ordivon_host.domain import EventKind, TaskProjection, TaskState
+from ordivon_host.effects import TaskOutcome
 from ordivon_host.journal import JournalCorruption
 from ordivon_host.objects import ObjectCorrupt
 from ordivon_host.storage import HostStorage
 from .event_kinds import (
+    COMPLETION_DECIDED,
+    COMPLETION_PROPOSED,
     HARNESS_PROVIDER_CALL_CLAIMED,
     HARNESS_PROVIDER_CALL_COMPLETED,
     HARNESS_PROVIDER_CALL_DISPATCHING,
@@ -33,7 +36,7 @@ from .protocol import (
     HarnessToolStepReceipt,
 )
 
-from .contracts import NativeHarnessRunContract, ToolGrant
+from .contracts import CompletionVerification, NativeHarnessRunContract, ToolGrant
 from .disposition import (
     CompletionRoute,
     NativeRunFacts,
@@ -41,7 +44,12 @@ from .disposition import (
     derive_native_run_disposition,
     recovery_unknowns,
 )
-from .models import HarnessAssignment, HarnessRunReceipt
+from .models import (
+    CompletionDecision,
+    CompletionProposal,
+    HarnessAssignment,
+    HarnessRunReceipt,
+)
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
 from .run_state import HarnessRunState, load_state_object
 from .tool_semantics import (
@@ -256,6 +264,13 @@ def validate_history(storage: HostStorage) -> HistoryValidation:
         semantic_link_checks += _validate_semantic_links(
             storage, data, event_id
         )
+        semantic_link_checks += _validate_completion_semantic_links(
+            storage,
+            data=data,
+            event_id=event_id,
+            event_kind=event_kind,
+            projection=projection,
+        )
         provider_checks, provider_head = _validate_provider_semantic_links(
             storage,
             admitted=admitted,
@@ -380,6 +395,20 @@ def _require_event_owned_evidence(
             for index, value in enumerate(observations):
                 if isinstance(value, str):
                     required[f"Run Observation {index}"] = value
+    elif event_kind is COMPLETION_PROPOSED:
+        value = data.get("completionProposalObjectDigest")
+        if isinstance(value, str):
+            required["Completion Proposal"] = value
+    elif event_kind is COMPLETION_DECIDED:
+        for label, key in (
+            ("Completion Proposal", "completionProposalObjectDigest"),
+            ("Completion Verification", "completionVerificationObjectDigest"),
+            ("Completion Decision", "completionDecisionObjectDigest"),
+            ("Task Outcome", "outcomeObjectDigest"),
+        ):
+            value = data.get(key)
+            if isinstance(value, str):
+                required[label] = value
     _require_exact_event_references(
         event_references, required, event_id=event_id
     )
@@ -1165,6 +1194,191 @@ def _active_time_budget_is_consistent(
         and remaining_wall_time_ms
         == max(0, max_wall_time_ms - state.active_elapsed_ms)
     )
+
+
+def _validate_completion_semantic_links(
+    storage: HostStorage,
+    *,
+    data: JsonValue,
+    event_id: str,
+    event_kind: EventKind,
+    projection: TaskProjection,
+) -> int:
+    if not isinstance(data, dict):
+        return 0
+    proposal_object_digest = data.get("completionProposalObjectDigest")
+    proposal_digest = data.get("completionProposalDigest")
+    proposal_id = data.get("completionProposalId")
+    proposal_fields = (proposal_object_digest, proposal_digest, proposal_id)
+    if not any(value is not None for value in proposal_fields):
+        if event_kind in {COMPLETION_PROPOSED, COMPLETION_DECIDED}:
+            raise JournalCorruption(
+                f"historical completion Event omitted its Proposal: {event_id}"
+            )
+        return 0
+    if not all(isinstance(value, str) for value in proposal_fields):
+        raise JournalCorruption(
+            f"historical CompletionProposal references are incomplete: {event_id}"
+        )
+    assert isinstance(proposal_object_digest, str)
+    assert isinstance(proposal_digest, str)
+    assert isinstance(proposal_id, str)
+    proposal = _load_history_semantic_object(
+        storage,
+        object_digest=proposal_object_digest,
+        semantic_digest=proposal_digest,
+        kind="completion-proposal",
+        decoder=CompletionProposal.from_dict,
+        label="CompletionProposal",
+        event_id=event_id,
+    )
+    if (
+        proposal.completion_proposal_id != proposal_id
+        or proposal.task_id != projection.task_id
+    ):
+        raise JournalCorruption(
+            f"historical CompletionProposal identities differ: {event_id}"
+        )
+    checks = 1
+
+    decision_object_digest = data.get("completionDecisionObjectDigest")
+    decision_digest = data.get("completionDecisionDigest")
+    decision_id = data.get("completionDecisionId")
+    verification_object_digest = data.get(
+        "completionVerificationObjectDigest"
+    )
+    completion_verification_digest = data.get(
+        "completionVerificationDigest"
+    )
+    verification_digest = data.get("verificationDigest")
+    decision_fields = (
+        decision_object_digest,
+        decision_digest,
+        decision_id,
+        verification_object_digest,
+        completion_verification_digest,
+        verification_digest,
+    )
+    if not any(value is not None for value in decision_fields):
+        if event_kind is COMPLETION_DECIDED:
+            raise JournalCorruption(
+                f"historical CompletionDecision references are missing: {event_id}"
+            )
+        return checks
+    if not all(isinstance(value, str) for value in decision_fields):
+        raise JournalCorruption(
+            f"historical CompletionDecision references are incomplete: {event_id}"
+        )
+    assert isinstance(decision_object_digest, str)
+    assert isinstance(decision_digest, str)
+    assert isinstance(decision_id, str)
+    assert isinstance(verification_object_digest, str)
+    assert isinstance(completion_verification_digest, str)
+    assert isinstance(verification_digest, str)
+    verification = _load_history_semantic_object(
+        storage,
+        object_digest=verification_object_digest,
+        semantic_digest=completion_verification_digest,
+        kind="completion-verification",
+        decoder=CompletionVerification.from_dict,
+        label="CompletionVerification",
+        event_id=event_id,
+    )
+    decision = _load_history_semantic_object(
+        storage,
+        object_digest=decision_object_digest,
+        semantic_digest=decision_digest,
+        kind="completion-decision",
+        decoder=CompletionDecision.from_dict,
+        label="CompletionDecision",
+        event_id=event_id,
+    )
+    accepted = data.get("completionAccepted")
+    reason_code = data.get("completionReasonCode")
+    if (
+        type(accepted) is not bool
+        or not isinstance(reason_code, str)
+        or verification_digest != completion_verification_digest
+        or verification.digest != completion_verification_digest
+        or verification.completion_proposal_id != proposal_id
+        or verification.accepted is not accepted
+        or decision.completion_decision_id != decision_id
+        or decision.completion_proposal_id != proposal_id
+        or decision.task_id != projection.task_id
+        or decision.accepted is not accepted
+        or decision.reason_code != reason_code
+        or decision.verification_digest != verification.digest
+    ):
+        raise JournalCorruption(
+            f"historical CompletionDecision identities differ: {event_id}"
+        )
+    checks += 2
+
+    outcome_object_digest = data.get("outcomeObjectDigest")
+    outcome_digest = data.get("outcomeDigest")
+    if accepted:
+        if not isinstance(outcome_object_digest, str) or not isinstance(
+            outcome_digest, str
+        ):
+            raise JournalCorruption(
+                f"historical accepted CompletionDecision omitted TaskOutcome: {event_id}"
+            )
+        outcome = _load_history_semantic_object(
+            storage,
+            object_digest=outcome_object_digest,
+            semantic_digest=outcome_digest,
+            kind="task-outcome",
+            decoder=TaskOutcome.from_dict,
+            label="TaskOutcome",
+            event_id=event_id,
+        )
+        if (
+            projection.state is not TaskState.COMPLETED
+            or projection.ready_frontier
+            or outcome.task_id != projection.task_id
+            or outcome.goal_id != projection.goal_id
+            or outcome.status != "completed"
+            or outcome.verification_digest != verification.digest
+            or outcome.artifact_refs != proposal.artifact_refs
+        ):
+            raise JournalCorruption(
+                f"historical TaskOutcome identities differ: {event_id}"
+            )
+        checks += 1
+    elif outcome_object_digest is not None or outcome_digest is not None:
+        raise JournalCorruption(
+            f"historical rejected CompletionDecision retained TaskOutcome: {event_id}"
+        )
+    return checks
+
+
+def _load_history_semantic_object(
+    storage: HostStorage,
+    *,
+    object_digest: str,
+    semantic_digest: str,
+    kind: str,
+    decoder,
+    label: str,
+    event_id: str,
+):
+    raw = storage.objects.get(object_digest, expected_kind=kind)
+    if not isinstance(raw, dict):
+        raise ObjectCorrupt(
+            f"historical {label} is not an object: {event_id}"
+        )
+    try:
+        decoded = decoder(raw)
+    except (TypeError, ValueError) as error:
+        raise ObjectCorrupt(
+            f"historical {label} is invalid: {event_id}"
+        ) from error
+    to_dict = getattr(decoded, "to_dict", None)
+    if not callable(to_dict) or canonical_digest(to_dict()) != semantic_digest:
+        raise JournalCorruption(
+            f"historical {label} semantic digest differs: {event_id}"
+        )
+    return decoded
 
 
 def _validate_semantic_links(
