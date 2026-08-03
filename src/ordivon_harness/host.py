@@ -31,6 +31,9 @@ from .event_kinds import (
     COMPLETION_DECIDED,
     COMPLETION_PROPOSED,
     HARNESS_ASSIGNMENT_COMMITTED,
+    HARNESS_PROVIDER_CALL_COMPLETED,
+    HARNESS_PROVIDER_CALL_FAILED,
+    HARNESS_PROVIDER_CALL_UNKNOWN,
     HARNESS_RUN_ABANDONED,
     HARNESS_RUN_RECORDED,
     HARNESS_RUN_RECOVERY_RECORDED,
@@ -1132,6 +1135,106 @@ class HarnessHost:
                 "native Harness Run Recovery does not match the resolved Provider outcome"
             )
 
+    def _require_provider_terminal_event_admission(
+        self,
+        snapshot: TaskEventSnapshot,
+        record: HarnessProviderCallRecord,
+        *,
+        record_object_digest: str,
+    ) -> None:
+        expected_kind = {
+            HarnessProviderCallStatus.COMPLETED: HARNESS_PROVIDER_CALL_COMPLETED,
+            HarnessProviderCallStatus.FAILED: HARNESS_PROVIDER_CALL_FAILED,
+            HarnessProviderCallStatus.UNKNOWN: HARNESS_PROVIDER_CALL_UNKNOWN,
+        }[record.status]
+        outcome_object_digest = (
+            record.result_object_digest
+            if record.status is HarnessProviderCallStatus.COMPLETED
+            else record.failure_object_digest
+        )
+        if not isinstance(outcome_object_digest, str):
+            raise HarnessLifecycleError(
+                "terminal Provider Call omitted its nested outcome object"
+            )
+        required = {
+            "record": record_object_digest,
+            "saved state": record.state_object_digest,
+            "terminal outcome": outcome_object_digest,
+        }
+        exact_start = self.storage.journal.event_object_refs_start_sequence()
+        rows = self.storage.journal.connection.execute(
+            "SELECT e.sequence, e.event_id, e.payload_digest "
+            "FROM events e JOIN event_object_refs r ON r.event_id = e.event_id "
+            "WHERE e.stream_id = ? AND e.stream_revision <= ? "
+            "AND e.event_kind = ? AND r.digest = ? AND r.role = 'reference' "
+            "ORDER BY e.sequence",
+            (
+                snapshot.projection.task_id,
+                snapshot.projection.revision,
+                expected_kind.value,
+                record_object_digest,
+            ),
+        ).fetchall()
+        exact_rows = [row for row in rows if int(row["sequence"]) >= exact_start]
+        if len(exact_rows) > 1:
+            raise HarnessLifecycleError(
+                "active Provider Call record is owned by multiple terminal Events"
+            )
+        if exact_rows:
+            row = exact_rows[0]
+            event_id = str(row["event_id"])
+            event_references = {
+                item.digest
+                for item in self.storage.journal.event_object_references(event_id)
+                if item.role == "reference"
+            }
+            missing = [
+                label for label, digest in required.items()
+                if digest not in event_references
+            ]
+            if missing:
+                raise HarnessLifecycleError(
+                    "terminal Provider lifecycle Event did not admit its "
+                    + ", ".join(missing)
+                )
+            try:
+                payload = self.storage.objects.get(
+                    str(row["payload_digest"]), expected_kind="host-event-payload"
+                )
+            except (ObjectCorrupt, ObjectMissing) as error:
+                raise HarnessLifecycleError(
+                    "terminal Provider lifecycle Event payload is unreadable"
+                ) from error
+            if not isinstance(payload, dict):
+                raise HarnessLifecycleError(
+                    "terminal Provider lifecycle Event payload is malformed"
+                )
+            event_data = payload.get("data")
+            if (
+                payload.get("eventKind") != expected_kind.value
+                or not isinstance(event_data, dict)
+                or event_data.get("activeHarnessProviderCallDigest")
+                != record.digest
+                or event_data.get("activeHarnessProviderCallObjectDigest")
+                != record_object_digest
+                or event_data.get("activeHarnessProviderCallStatus")
+                != record.status.value
+            ):
+                raise HarnessLifecycleError(
+                    "terminal Provider lifecycle Event differs from its record"
+                )
+            return
+
+        legacy = {
+            item.digest for item in self.storage.journal.legacy_object_refs()
+        }
+        if all(digest in legacy for digest in required.values()):
+            return
+        raise HarnessLifecycleError(
+            "terminal Provider lifecycle Event did not admit its record, "
+            "saved state, and terminal outcome"
+        )
+
     def _require_recordable_run_head(
         self,
         snapshot: TaskEventSnapshot,
@@ -1218,6 +1321,11 @@ class HarnessHost:
                 raise HarnessLifecycleError(
                     "malformed active Provider Call head blocks Run recording"
                 )
+            self._require_provider_terminal_event_admission(
+                snapshot,
+                provider_record,
+                record_object_digest=record_object_digest,
+            )
             try:
                 if (
                     provider_record.state_object_digest

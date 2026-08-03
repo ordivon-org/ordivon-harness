@@ -288,7 +288,7 @@ class RunRecordingActiveStateTests(unittest.TestCase):
 
                     with self.assertRaisesRegex(
                         HarnessLifecycleError,
-                        "Provider Call",
+                        "Provider Call|saved state",
                     ):
                         record_native_run_result(
                             host,
