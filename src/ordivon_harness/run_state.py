@@ -31,6 +31,7 @@ class HarnessRunState:
     remaining_budget: dict[str, JsonValue]
     requested_model_id: str
     effective_model_id: str | None
+    active_elapsed_ms: int | None = None
     seen_model_call_ids: tuple[str, ...] = ()
     seen_tool_call_ids: tuple[str, ...] = ()
     provider_usage: tuple[dict[str, JsonValue], ...] = ()
@@ -40,6 +41,10 @@ class HarnessRunState:
         validate_json_value(list(self.messages))
         validate_json_value(list(self.observations))
         validate_json_value(self.remaining_budget)
+        if self.active_elapsed_ms is not None and (
+            type(self.active_elapsed_ms) is not int or self.active_elapsed_ms < 0
+        ):
+            raise ValueError("active elapsed time must be a non-negative integer")
         if (
             not self.requested_model_id
             or self.requested_model_id != self.requested_model_id.strip()
@@ -72,8 +77,8 @@ class HarnessRunState:
         return tuple(canonical_digest(item) for item in self.observations)
 
     def to_dict(self, harness_run_id: str) -> dict[str, JsonValue]:
-        return {
-            "schemaVersion": 1,
+        value: dict[str, JsonValue] = {
+            "schemaVersion": 2 if self.active_elapsed_ms is not None else 1,
             "kind": _FULL_KIND,
             "harnessRunId": harness_run_id,
             "messages": list(self.messages),
@@ -86,6 +91,9 @@ class HarnessRunState:
             "providerUsage": list(self.provider_usage),
             "effectiveModelIds": list(self.effective_model_ids),
         }
+        if self.active_elapsed_ms is not None:
+            value["activeElapsedMs"] = self.active_elapsed_ms
+        return value
 
 
 def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRunState:
@@ -99,17 +107,22 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         "requestedModelId",
         "effectiveModelId",
     }
-    current_fields = legacy_fields | {
+    version_one_fields = legacy_fields | {
         "seenModelCallIds",
         "seenToolCallIds",
         "providerUsage",
         "effectiveModelIds",
     }
-    if set(value) != legacy_fields and set(value) != current_fields:
+    version_two_fields = version_one_fields | {"activeElapsedMs"}
+    fields = frozenset(value)
+    version = value.get("schemaVersion")
+    if not (
+        version == 1 and fields in {frozenset(legacy_fields), frozenset(version_one_fields)}
+        or version == 2 and fields == version_two_fields
+    ):
         raise ValueError("Harness Run state fields differ")
     if (
-        value["schemaVersion"] != 1
-        or value["kind"] != _FULL_KIND
+        value["kind"] != _FULL_KIND
         or value["harnessRunId"] != harness_run_id
         or not isinstance(value["messages"], list)
         or not isinstance(value["observations"], list)
@@ -119,6 +132,11 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         and not isinstance(value["effectiveModelId"], str)
     ):
         raise ValueError("Harness Run state is invalid")
+    active_elapsed_ms = value.get("activeElapsedMs")
+    if active_elapsed_ms is not None and (
+        type(active_elapsed_ms) is not int or active_elapsed_ms < 0
+    ):
+        raise ValueError("Harness Run active elapsed time is invalid")
     if any(not isinstance(item, dict) for item in value["messages"]):
         raise ValueError("Harness Run messages are invalid")
     if any(not isinstance(item, dict) for item in value["observations"]):
@@ -139,6 +157,7 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         remaining_budget=dict(value["remainingBudget"]),
         requested_model_id=value["requestedModelId"],
         effective_model_id=value["effectiveModelId"],
+        active_elapsed_ms=active_elapsed_ms,
         seen_model_call_ids=tuple(value.get("seenModelCallIds", [])),
         seen_tool_call_ids=tuple(value.get("seenToolCallIds", [])),
         provider_usage=tuple(dict(item) for item in provider_usage),
@@ -155,6 +174,19 @@ def build_state_delta(
 ) -> dict[str, JsonValue] | None:
     if previous.requested_model_id != current.requested_model_id:
         return None
+    if previous.active_elapsed_ms is not None and (
+        current.active_elapsed_ms is None
+        or current.active_elapsed_ms < previous.active_elapsed_ms
+    ):
+        raise ValueError("Harness Run active elapsed time cannot decrease")
+    previous_wall_time = previous.remaining_budget.get("wallTimeMs")
+    current_wall_time = current.remaining_budget.get("wallTimeMs")
+    if (
+        type(previous_wall_time) is int
+        and type(current_wall_time) is int
+        and current_wall_time > previous_wall_time
+    ):
+        raise ValueError("Harness Run remaining wall time cannot increase")
     sequences = (
         (previous.messages, current.messages),
         (previous.observations, current.observations),
@@ -169,7 +201,7 @@ def build_state_delta(
     ):
         return None
     delta: dict[str, JsonValue] = {
-        "schemaVersion": 1,
+        "schemaVersion": 2 if current.active_elapsed_ms is not None else 1,
         "kind": _DELTA_KIND,
         "harnessRunId": harness_run_id,
         "previousStateObjectDigest": previous_state_object_digest,
@@ -194,6 +226,8 @@ def build_state_delta(
             current.effective_model_ids[len(previous.effective_model_ids) :]
         ),
     }
+    if current.active_elapsed_ms is not None:
+        delta["activeElapsedMs"] = current.active_elapsed_ms
     validate_json_value(delta)
     if len(canonical_bytes(delta)) >= len(
         canonical_bytes(current.to_dict(harness_run_id))
@@ -237,7 +271,7 @@ def _apply_state_delta(
     harness_run_id: str,
     max_depth: int,
 ) -> HarnessRunState:
-    expected = {
+    version_one_fields = {
         "schemaVersion",
         "kind",
         "harnessRunId",
@@ -253,7 +287,13 @@ def _apply_state_delta(
         "appendedProviderUsage",
         "appendedEffectiveModelIds",
     }
-    if set(value) != expected:
+    version_two_fields = version_one_fields | {"activeElapsedMs"}
+    version = value.get("schemaVersion")
+    fields = frozenset(value)
+    if not (
+        version == 1 and fields == version_one_fields
+        or version == 2 and fields == version_two_fields
+    ):
         raise ValueError("Harness Run state delta fields differ")
     list_fields = (
         "appendedMessages",
@@ -264,8 +304,7 @@ def _apply_state_delta(
         "appendedEffectiveModelIds",
     )
     if (
-        value["schemaVersion"] != 1
-        or value["kind"] != _DELTA_KIND
+        value["kind"] != _DELTA_KIND
         or value["harnessRunId"] != harness_run_id
         or not isinstance(value["previousStateObjectDigest"], str)
         or not isinstance(value["previousStateDigest"], str)
@@ -282,6 +321,11 @@ def _apply_state_delta(
         or any(not isinstance(item, str) for item in value["appendedEffectiveModelIds"])
     ):
         raise ValueError("Harness Run state delta is invalid")
+    active_elapsed_ms = value.get("activeElapsedMs")
+    if active_elapsed_ms is not None and (
+        type(active_elapsed_ms) is not int or active_elapsed_ms < 0
+    ):
+        raise ValueError("Harness Run state delta active elapsed time is invalid")
     validate_json_value(value)
     previous = load_state_object(
         objects,
@@ -296,6 +340,19 @@ def _apply_state_delta(
         raise ValueError("Harness Run state delta predecessor differs")
     if previous.requested_model_id != value["requestedModelId"]:
         raise ValueError("Harness Run state delta requested model differs")
+    if previous.active_elapsed_ms is not None and (
+        active_elapsed_ms is None
+        or active_elapsed_ms < previous.active_elapsed_ms
+    ):
+        raise ValueError("Harness Run state delta active elapsed time decreased")
+    previous_wall_time = previous.remaining_budget.get("wallTimeMs")
+    current_wall_time = value["remainingBudget"].get("wallTimeMs")
+    if (
+        type(previous_wall_time) is int
+        and type(current_wall_time) is int
+        and current_wall_time > previous_wall_time
+    ):
+        raise ValueError("Harness Run state delta remaining wall time increased")
     return HarnessRunState(
         messages=previous.messages
         + tuple(dict(item) for item in value["appendedMessages"]),
@@ -304,6 +361,7 @@ def _apply_state_delta(
         remaining_budget=dict(value["remainingBudget"]),
         requested_model_id=value["requestedModelId"],
         effective_model_id=value["effectiveModelId"],
+        active_elapsed_ms=active_elapsed_ms,
         seen_model_call_ids=previous.seen_model_call_ids
         + tuple(value["appendedSeenModelCallIds"]),
         seen_tool_call_ids=previous.seen_tool_call_ids

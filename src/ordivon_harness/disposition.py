@@ -5,6 +5,10 @@ from enum import StrEnum
 
 from .tool_semantics import NativeToolRecoveryConsequence
 
+_UNKNOWN_TERMINATION_CODES = frozenset(
+    {"runtime_unknown", "provider_state_unknown", "cancel_unknown"}
+)
+
 
 class NativeRunPhase(StrEnum):
     ASSIGNED_UNRECORDED = "assigned-unrecorded"
@@ -132,8 +136,15 @@ def derive_native_run_disposition(facts: NativeRunFacts) -> NativeRunDisposition
             NativeRunOperatorAction.REPLACE_ASSIGNMENT,
         )
     assert facts.phase is NativeRunPhase.RUN_RECORDED
-    if facts.termination_code == "runtime_unknown" or facts.has_unknown_observation:
-        unknowns = facts.unresolved_unknowns or ("runtime_unknown",)
+    if (
+        facts.termination_code in _UNKNOWN_TERMINATION_CODES
+        or facts.has_unknown_observation
+    ):
+        unknowns = facts.unresolved_unknowns or (
+            facts.termination_code
+            if facts.termination_code in _UNKNOWN_TERMINATION_CODES
+            else "runtime_unknown",
+        )
         return NativeRunDisposition(
             unknowns,
             False,
@@ -207,7 +218,7 @@ def projected_native_run_disposition(
         )
     if termination_code is None:
         raise ValueError("projected recorded Run requires termination code")
-    if termination_code == "runtime_unknown":
+    if termination_code in _UNKNOWN_TERMINATION_CODES:
         consequence = NativeToolRecoveryConsequence.UNKNOWN
         observations = True
         unknown = True

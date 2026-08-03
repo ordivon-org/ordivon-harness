@@ -1,4 +1,31 @@
+---
+schema_version: 1
+id: harness.start
+title: Ordivon Harness
+type: start
+profile: organization
+lifecycle: active
+source_role: canonical
+visibility: public
+owners:
+  - ordivon-harness
+audience:
+  - builder
+  - operator
+  - agent
+updated: 2026-08-03
+summary: Canonical entry to replaceable Agent execution, Assignment and Run continuity, Tool semantics, Provider adapters, recovery, and completion.
+evidence_status: verified
+readiness: READY
+applies_to:
+  - ordivon-harness
+related:
+  - harness.architecture
+  - harness.authority
+---
 # Ordivon Harness
+
+## Purpose
 
 Ordivon Harness owns replaceable Agent execution lifecycles above the thin `ordivon-host` continuity kernel.
 
@@ -22,6 +49,16 @@ ordivon-harness → ordivon-host → ordivon-protocol
 ```
 
 `ordivon-host` does not import this package. Host owns generic Task, Journal, CAS, Kernel, the public `HostExtensionPort`, and Runtime client mechanics; Harness owns its event vocabulary, semantic history validation, handoff projection, durable Run state and Agent execution behavior.
+
+## Current boundary
+
+Harness owns replaceable Agent execution semantics above Host and before Runtime. It does not own durable Task continuity, physical execution truth, domain-world rules, promoted cross-project protocol, Provider hidden state, or another database or scheduler.
+
+## Start here
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) defines the current ownership, execution, recovery, fencing, and application boundaries.
+- [`docs/authority.md`](docs/authority.md) identifies which records may define current Harness behavior.
+- `docs/ORDIVON_HARNESS_*`, H-series, extraction, and boundary-stage documents preserve implementation decisions and evidence but do not replace the current architecture.
 
 ## Verified boundary
 

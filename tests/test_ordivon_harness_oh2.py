@@ -108,6 +108,8 @@ class _Runtime:
 
 
 class _RejectingRuntime(_Runtime):
+    commit_state = "not_committed"
+
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         self.calls.append((name, dict(arguments)))
         if name == "workspace.read":
@@ -119,7 +121,7 @@ class _RejectingRuntime(_Runtime):
                     field="relativePath",
                     retryable=False,
                     retry_class=None,
-                    commit_state="not_committed",
+                    commit_state=self.commit_state,
                     origin="runtime",
                     trace_id="trace:test",
                     raw={},
@@ -197,6 +199,7 @@ class OrdivonHarnessOH2Tests(unittest.TestCase):
             tuple(tool.name for tool in catalog.model_tools),
             (
                 "read_workspace",
+                "search_workspace",
                 "mutate_workspace",
                 "diff_workspace",
                 "run_check",
@@ -206,6 +209,113 @@ class OrdivonHarnessOH2Tests(unittest.TestCase):
             ),
         )
         self.assertTrue(catalog.digest.startswith("sha256:"))
+        read_tool = next(
+            item for item in catalog.model_tools if item.name == "read_workspace"
+        )
+        properties = read_tool.input_schema["properties"]
+        self.assertIn("byteOffset", properties)
+        self.assertNotIn("offset", properties)
+        self.assertIn("UTF-8 byte", read_tool.description)
+
+    def test_read_location_is_explicit_and_legacy_compatible(self) -> None:
+        runtime = _Runtime()
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-read-location",
+            runtime=runtime,
+        )
+        observation = bridge.execute(
+            AgentToolCall(
+                "tool-call:read-legacy-offset",
+                "read_workspace",
+                {
+                    "relativePath": "src/example.py",
+                    "mode": "SLICE",
+                    "offset": 4,
+                    "maxBytes": 5,
+                },
+            ),
+            step_id="turn-1-tool-1",
+        )
+        self.assertEqual(runtime.calls[-1][1]["offset"], 4)
+        self.assertEqual(
+            observation.structured_content["effectiveByteRange"],
+            {
+                "startInclusive": 4,
+                "endExclusive": 9,
+                "unit": "utf8-bytes",
+            },
+        )
+
+    def test_read_location_rejects_ambiguous_fields_before_runtime(self) -> None:
+        runtime = _Runtime()
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-read-location-ambiguous",
+            runtime=runtime,
+        )
+        calls_before = len(runtime.calls)
+        with self.assertRaisesRegex(
+            ToolBridgeError,
+            "mutually exclusive",
+        ) as raised:
+            bridge.execute(
+                AgentToolCall(
+                    "tool-call:read-ambiguous-offset",
+                    "read_workspace",
+                    {
+                        "relativePath": "src/example.py",
+                        "mode": "SLICE",
+                        "byteOffset": 4,
+                        "offset": 4,
+                        "maxBytes": 5,
+                    },
+                ),
+                step_id="turn-1-tool-1",
+            )
+        self.assertEqual(raised.exception.kind.value, "model_correctable")
+        self.assertEqual(len(runtime.calls), calls_before)
+
+    def test_read_location_tracks_non_ascii_utf8_byte_range(self) -> None:
+        class NonAsciiRuntime(_Runtime):
+            def call_tool(
+                self, name: str, arguments: dict[str, Any]
+            ) -> dict[str, Any]:
+                if name == "workspace.read":
+                    self.calls.append((name, dict(arguments)))
+                    return {
+                        "content": "éx",
+                        "digest": canonical_digest("éx"),
+                    }
+                return super().call_tool(name, arguments)
+
+        runtime = NonAsciiRuntime()
+        observation = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-read-location-utf8",
+            runtime=runtime,
+        ).execute(
+            AgentToolCall(
+                "tool-call:read-byte-offset",
+                "read_workspace",
+                {
+                    "relativePath": "src/example.py",
+                    "mode": "SLICE",
+                    "byteOffset": 7,
+                    "maxBytes": 3,
+                },
+            ),
+            step_id="turn-1-tool-1",
+        )
+        self.assertEqual(runtime.calls[-1][1]["offset"], 7)
+        self.assertEqual(
+            observation.structured_content["effectiveByteRange"],
+            {
+                "startInclusive": 7,
+                "endExclusive": 10,
+                "unit": "utf8-bytes",
+            },
+        )
 
     def test_exec_request_is_assignment_and_run_bound(self) -> None:
         runtime = _Runtime()
@@ -237,6 +347,288 @@ class OrdivonHarnessOH2Tests(unittest.TestCase):
             [item["type"] for item in references],
             ["assignment", "harness_run", "task", "task_attempt"],
         )
+
+    def test_search_lowers_to_bounded_fixed_string_runtime_exec(self) -> None:
+        runtime = _Runtime()
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-search",
+            runtime=runtime,
+        )
+        observation = bridge.execute(
+            AgentToolCall(
+                "tool-call:search-1",
+                "search_workspace",
+                {
+                    "query": "source_ref",
+                    "relativePath": "scripts",
+                    "maxMatches": 12,
+                },
+            ),
+            step_id="turn-1-tool-1",
+        )
+        self.assertEqual(observation.runtime_job_ref, "job:test-direct")
+        request = [call for call in runtime.calls if call[0] == "workspace.exec"][0][1]
+        execution = request["execution"]
+        self.assertEqual(execution["executable"], "/usr/bin/rg")
+        self.assertEqual(
+            execution["args"],
+            [
+                "--json",
+                "--fixed-strings",
+                "--line-number",
+                "--column",
+                "--no-heading",
+                "--color=never",
+                "--max-count",
+                "12",
+                "--",
+                "source_ref",
+                "scripts",
+            ],
+        )
+        self.assertEqual(observation.structured_content["matches"], [])
+        self.assertIn(
+            "byteOffset",
+            observation.structured_content["locationSemantics"],
+        )
+        with self.assertRaisesRegex(ToolBridgeError, "must not exceed 200"):
+            RuntimeToolBridge(
+                _committed(_Runtime()),
+                harness_run_id="harness-run:test-search-bound",
+                runtime=_Runtime(),
+            ).execute(
+                AgentToolCall(
+                    "tool-call:search-bound",
+                    "search_workspace",
+                    {
+                        "query": "source_ref",
+                        "relativePath": "scripts",
+                        "maxMatches": 201,
+                    },
+                ),
+                step_id="turn-1-tool-1",
+            )
+
+    def test_search_observation_exposes_runtime_slice_byte_offsets(self) -> None:
+        class SearchRuntime(_Runtime):
+            def call_tool(
+                self, name: str, arguments: dict[str, Any]
+            ) -> dict[str, Any]:
+                if name == "workspace.exec":
+                    self.calls.append((name, dict(arguments)))
+                    return {
+                        "jobId": "job:test-search-terminal",
+                        "status": "succeeded",
+                        "artifacts": [],
+                        "stdoutTail": (
+                            '{"type":"match","data":{"path":{"text":"scripts/x.py"},'
+                            '"lines":{"text":"xx source_ref yy\\n"},'
+                            '"line_number":7,"absolute_offset":120,'
+                            '"submatches":[{"start":3,"end":13}]}}\n'
+                        ),
+                    }
+                return super().call_tool(name, arguments)
+
+        runtime = SearchRuntime()
+        observation = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-search-location",
+            runtime=runtime,
+        ).execute(
+            AgentToolCall(
+                "tool-call:search-location",
+                "search_workspace",
+                {"query": "source_ref", "relativePath": "scripts/x.py"},
+            ),
+            step_id="turn-1-tool-1",
+        )
+        self.assertEqual(
+            observation.structured_content["matches"],
+            [
+                {
+                    "relativePath": "scripts/x.py",
+                    "lineNumber": 7,
+                    "column": 4,
+                    "byteOffset": 123,
+                    "matchBytes": 10,
+                    "lineText": "xx source_ref yy\n",
+                }
+            ],
+        )
+
+    def test_complete_read_rejects_redundant_reads_until_workspace_changes(
+        self,
+    ) -> None:
+        runtime = _Runtime()
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-read-progress",
+            runtime=runtime,
+        )
+        bridge.execute(
+            AgentToolCall(
+                "tool-call:read-complete",
+                "read_workspace",
+                {"relativePath": "src/example.py", "mode": "FULL"},
+            ),
+            step_id="turn-1-tool-1",
+        )
+        calls_after_read = len(runtime.calls)
+        with self.assertRaisesRegex(
+            ToolBridgeError,
+            "already returned the complete current content",
+        ) as raised:
+            bridge.execute(
+                AgentToolCall(
+                    "tool-call:read-redundant",
+                    "read_workspace",
+                    {
+                        "relativePath": "src/example.py",
+                        "mode": "SLICE",
+                        "offset": 0,
+                        "maxBytes": 1,
+                    },
+                ),
+                step_id="turn-2-tool-1",
+            )
+        self.assertEqual(raised.exception.kind.value, "model_correctable")
+        self.assertEqual(len(runtime.calls), calls_after_read)
+        bridge.execute(
+            AgentToolCall(
+                "tool-call:mutate-clears-read",
+                "mutate_workspace",
+                {
+                    "mutations": [
+                        {
+                            "mode": "WRITE",
+                            "relativePath": "src/example.py",
+                            "content": "changed",
+                        }
+                    ]
+                },
+            ),
+            step_id="turn-3-tool-1",
+        )
+        bridge.execute(
+            AgentToolCall(
+                "tool-call:read-after-change",
+                "read_workspace",
+                {
+                    "relativePath": "src/example.py",
+                    "mode": "SLICE",
+                    "offset": 0,
+                    "maxBytes": 1,
+                },
+            ),
+            step_id="turn-4-tool-1",
+        )
+        self.assertEqual(runtime.calls[-1][0], "workspace.read")
+
+    def test_read_progress_rejects_highly_overlapping_slices(self) -> None:
+        runtime = _Runtime()
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-read-overlap",
+            runtime=runtime,
+        )
+        bridge.execute(
+            AgentToolCall(
+                "tool-call:read-slice-first",
+                "read_workspace",
+                {
+                    "relativePath": "src/example.py",
+                    "mode": "SLICE",
+                    "byteOffset": 100,
+                    "maxBytes": 5,
+                },
+            ),
+            step_id="turn-1-tool-1",
+        )
+        calls_after_read = len(runtime.calls)
+        with self.assertRaisesRegex(ToolBridgeError, "at least 80%"):
+            bridge.execute(
+                AgentToolCall(
+                    "tool-call:read-slice-overlap",
+                    "read_workspace",
+                    {
+                        "relativePath": "src/example.py",
+                        "mode": "SLICE",
+                        "byteOffset": 101,
+                        "maxBytes": 5,
+                    },
+                ),
+                step_id="turn-2-tool-1",
+            )
+        self.assertEqual(len(runtime.calls), calls_after_read)
+        bridge.execute(
+            AgentToolCall(
+                "tool-call:read-slice-adjacent",
+                "read_workspace",
+                {
+                    "relativePath": "src/example.py",
+                    "mode": "SLICE",
+                    "byteOffset": 105,
+                    "maxBytes": 5,
+                },
+            ),
+            step_id="turn-3-tool-1",
+        )
+        self.assertEqual(runtime.calls[-1][0], "workspace.read")
+
+    def test_complete_read_progress_survives_fresh_bridge_restore(self) -> None:
+        runtime = _Runtime()
+        committed = _committed(runtime)
+        original = RuntimeToolBridge(
+            committed,
+            harness_run_id="harness-run:test-read-progress-restore",
+            runtime=runtime,
+        )
+        read_call = AgentToolCall(
+            "tool-call:read-before-restore",
+            "read_workspace",
+            {"relativePath": "src/example.py", "mode": "FULL"},
+        )
+        observation = original.execute(read_call, step_id="turn-1-tool-1")
+
+        restored = RuntimeToolBridge(
+            committed,
+            harness_run_id="harness-run:test-read-progress-restore",
+            runtime=runtime,
+        )
+        restored.bind_run_state(
+            messages=(
+                {
+                    "role": "assistant",
+                    "content": "",
+                    "toolCalls": [read_call.to_dict()],
+                },
+                observation.to_model_message(),
+            ),
+            observations=(observation,),
+            remaining_budget={},
+            requested_model_id="model:test",
+            effective_model_id=None,
+        )
+        calls_after_restore = len(runtime.calls)
+        with self.assertRaisesRegex(
+            ToolBridgeError,
+            "already returned the complete current content",
+        ):
+            restored.execute(
+                AgentToolCall(
+                    "tool-call:read-after-restore",
+                    "read_workspace",
+                    {
+                        "relativePath": "src/example.py",
+                        "mode": "SLICE",
+                        "offset": 0,
+                        "maxBytes": 1,
+                    },
+                ),
+                step_id="turn-2-tool-1",
+            )
+        self.assertEqual(len(runtime.calls), calls_after_restore)
 
     def test_response_loss_reconciles_original_job_without_redispatch(self) -> None:
         runtime = _Runtime(lose_exec_response=True)
@@ -277,6 +669,29 @@ class OrdivonHarnessOH2Tests(unittest.TestCase):
         self.assertEqual(observation.status, "rejected")
         self.assertIsNone(observation.runtime_job_ref)
         self.assertEqual(observation.structured_content["error"]["commitState"], "not_committed")
+
+    def test_not_started_rejection_is_not_dispatch_unknown(self) -> None:
+        runtime = _RejectingRuntime()
+        runtime.commit_state = "not_started"
+        bridge = RuntimeToolBridge(
+            _committed(runtime),
+            harness_run_id="harness-run:test-not-started-reject",
+            runtime=runtime,
+        )
+        observation = bridge.execute(
+            AgentToolCall(
+                "tool-call:read-not-started-reject",
+                "read_workspace",
+                {"relativePath": "bad"},
+            ),
+            step_id="turn-1-tool-1",
+        )
+        self.assertEqual(observation.status, "rejected")
+        self.assertIsNone(observation.runtime_job_ref)
+        self.assertEqual(
+            observation.structured_content["error"]["commitState"],
+            "not_started",
+        )
 
     def test_artifact_read_binds_producing_job_and_artifact(self) -> None:
         runtime = _Runtime()

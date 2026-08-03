@@ -428,6 +428,61 @@ class OrdivonHarnessOH3DeepSeekTests(unittest.TestCase):
         self.assertTrue(headers["Authorization"].startswith("Bearer sk-"))
         self.assertNotIn("sk-", transport.calls[0]["url"])
 
+    def test_malformed_runtime_tool_arguments_are_retained_for_correction(
+        self,
+    ) -> None:
+        response = _response(
+            "call-read-malformed",
+            "read_workspace",
+            {"relativePath": "README.md"},
+            response_id="chatcmpl-oh3-malformed",
+        )
+        calls = response["choices"][0]["message"]["tool_calls"]
+        assert isinstance(calls, list)
+        calls[0]["function"]["arguments"] = '{"relativePath":'
+        adapter = DeepSeekTurnAdapter(
+            DeepSeekSettings(api_key="sk-" + "m" * 40),
+            transport=_Transport((response,)),
+        )
+
+        result = adapter.invoke(_request(({"role": "user", "content": "test"},)))
+
+        call = result.tool_calls[0]
+        self.assertEqual(call.arguments, {})
+        self.assertEqual(call.argument_error, "invalid_json")
+        self.assertEqual(call.raw_arguments_preview, '{"relativePath":')
+        self.assertTrue(call.raw_arguments_digest.startswith("sha256:"))
+        self.assertIn("providerArguments", call.to_dict())
+
+    def test_invalid_conclusion_arguments_are_retained_for_correction(
+        self,
+    ) -> None:
+        response = _response(
+            "call-conclusion-invalid",
+            "submit_run_conclusion",
+            {
+                "status": "candidate_completed",
+                "summary": "Checks passed, but this unknown is contradictory.",
+                "artifact_refs": [],
+                "evidence_refs": [],
+                "unresolved_unknowns": ["none"],
+            },
+            response_id="chatcmpl-oh3-invalid-conclusion",
+        )
+        adapter = DeepSeekTurnAdapter(
+            DeepSeekSettings(api_key="sk-" + "c" * 40),
+            transport=_Transport((response,)),
+        )
+
+        result = adapter.invoke(_request(({"role": "user", "content": "test"},)))
+
+        self.assertIsNone(result.conclusion)
+        call = result.tool_calls[0]
+        self.assertEqual(call.name, "submit_run_conclusion")
+        self.assertIn("invalid_conclusion", call.argument_error)
+        self.assertEqual(call.arguments["status"], "candidate_completed")
+        self.assertTrue(call.raw_arguments_digest.startswith("sha256:"))
+
     def test_second_turn_translates_tool_history_and_parses_conclusion(self) -> None:
         transport = _Transport(
             (
@@ -489,6 +544,55 @@ class OrdivonHarnessOH3DeepSeekTests(unittest.TestCase):
         self.assertEqual(tool["tool_call_id"], "call-read-1")
         observation = loads_strict(tool["content"].encode("utf-8"))
         self.assertEqual(observation["status"], "observed")
+
+    def test_needs_input_conclusion_history_can_resume_without_provider_call_id(
+        self,
+    ) -> None:
+        transport = _Transport(
+            (
+                _response(
+                    "call-conclusion-resumed",
+                    "submit_run_conclusion",
+                    {
+                        "status": "candidate_completed",
+                        "summary": "Continued from the retained Observation.",
+                        "artifact_refs": [],
+                        "evidence_refs": [],
+                        "unresolved_unknowns": [],
+                    },
+                    response_id="chatcmpl-oh3-resumed",
+                ),
+            )
+        )
+        adapter = DeepSeekTurnAdapter(
+            DeepSeekSettings(api_key="sk-" + "r" * 40),
+            transport=transport,
+        )
+        messages: tuple[dict[str, JsonValue], ...] = (
+            {"role": "system", "content": "system"},
+            {
+                "role": "assistant",
+                "content": None,
+                "conclusion": {
+                    "status": "needs_input",
+                    "summary": "Authorize the final answer.",
+                    "artifactRefs": [],
+                    "evidenceRefs": [],
+                    "unresolvedUnknowns": ["operator authorization"],
+                },
+            },
+            {"role": "user", "content": "Authorization granted."},
+        )
+
+        result = adapter.invoke(_request(messages))
+
+        self.assertIsNotNone(result.conclusion)
+        body = loads_strict(transport.calls[0]["body"])
+        retained = body["messages"][1]
+        self.assertEqual(retained["role"], "assistant")
+        self.assertNotIn("tool_calls", retained)
+        self.assertIn('"status":"needs_input"', retained["content"])
+        self.assertIn("operator authorization", retained["content"])
 
     def test_mixed_runtime_and_conclusion_calls_fail_closed(self) -> None:
         mixed = _response(

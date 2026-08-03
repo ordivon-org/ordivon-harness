@@ -12,7 +12,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
-from anc_canonical import JsonValue, canonical_bytes, loads_strict, validate_json_value
+from anc_canonical import (
+    JsonValue,
+    canonical_bytes,
+    canonical_digest,
+    loads_strict,
+    validate_json_value,
+)
 
 from .control import ExecutionControl
 from .model import (
@@ -21,6 +27,7 @@ from .model import (
     AgentToolDefinition,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
+    AgentTurnDispatchSafety,
     AgentTurnFailureCode,
     AgentTurnRequest,
     AgentTurnResult,
@@ -31,6 +38,7 @@ DEFAULT_DEEPSEEK_SECRET_PATH = (
 )
 DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 SUPPORTED_DEEPSEEK_MODELS = ("deepseek-v4-flash", "deepseek-v4-pro")
+DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID = "deepseek:default"
 _CONCLUSION_TOOL_NAME = "submit_run_conclusion"
 
 
@@ -47,6 +55,7 @@ class DeepSeekSettings:
     api_key: str = field(repr=False)
     base_url: str = DEFAULT_DEEPSEEK_BASE_URL
     model: str = "deepseek-v4-flash"
+    credential_scope_id: str = DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID
     timeout_seconds: float = 90.0
     max_response_bytes: int = 4_194_304
     max_output_tokens: int = 8_192
@@ -59,6 +68,11 @@ class DeepSeekSettings:
             raise ValueError("DeepSeek base URL must use the official stable endpoint")
         if self.model not in SUPPORTED_DEEPSEEK_MODELS:
             raise ValueError(f"unsupported DeepSeek model: {self.model}")
+        _text(
+            self.credential_scope_id,
+            "DeepSeek credential scope identity",
+            max_bytes=300,
+        )
         if (
             self.timeout_seconds <= 0
             or self.max_response_bytes < 1
@@ -86,28 +100,48 @@ class DeepSeekSettings:
                 f"DeepSeek secret permissions are too broad: {oct(mode)}; expected 0o600"
             )
         value = loads_strict(secret_path.read_bytes())
-        if not isinstance(value, dict) or set(value) != {
+        required_fields = {
             "schemaVersion",
             "provider",
             "apiKey",
             "baseUrl",
             "model",
-        }:
+        }
+        allowed_fields = required_fields | {"credentialScopeId"}
+        if (
+            not isinstance(value, dict)
+            or not required_fields.issubset(value)
+            or not set(value).issubset(allowed_fields)
+        ):
             raise ValueError("DeepSeek secret file fields differ")
         if value["schemaVersion"] != 1 or value["provider"] != "deepseek":
             raise ValueError("DeepSeek secret schema is unsupported")
         api_key = value["apiKey"]
         base_url = value["baseUrl"]
         model = value["model"]
-        if not all(isinstance(item, str) for item in (api_key, base_url, model)):
+        credential_scope_id = value.get(
+            "credentialScopeId",
+            DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID,
+        )
+        if not all(
+            isinstance(item, str)
+            for item in (
+                api_key,
+                base_url,
+                model,
+                credential_scope_id,
+            )
+        ):
             raise ValueError("DeepSeek secret values must be strings")
         assert isinstance(api_key, str)
         assert isinstance(base_url, str)
         assert isinstance(model, str)
+        assert isinstance(credential_scope_id, str)
         return cls(
             api_key=api_key,
             base_url=base_url,
             model=model,
+            credential_scope_id=credential_scope_id,
             timeout_seconds=timeout_seconds,
             max_response_bytes=max_response_bytes,
             max_output_tokens=max_output_tokens,
@@ -151,6 +185,7 @@ class UrllibDeepSeekTransport:
             raise AgentTurnAdapterError(
                 f"DeepSeek returned HTTP {error.code}: {detail}",
                 failure_code=failure_code,
+                dispatch_safety=AgentTurnDispatchSafety.PROVIDER_REJECTED,
             ) from error
         except urllib.error.URLError as error:
             raise AgentTurnAdapterError(
@@ -161,6 +196,11 @@ class UrllibDeepSeekTransport:
             raise AgentTurnAdapterError(
                 "DeepSeek request timed out",
                 failure_code=AgentTurnFailureCode.TIMEOUT,
+            ) from error
+        except (OSError, http.client.HTTPException) as error:
+            raise AgentTurnAdapterError(
+                f"DeepSeek connection failed: {error}",
+                failure_code=AgentTurnFailureCode.TRANSPORT_FAILED,
             ) from error
         if len(raw) > max_response_bytes:
             raise AgentTurnAdapterError(
@@ -316,6 +356,7 @@ class _HttpClientPostHandle:
                 raise AgentTurnAdapterError(
                     f"DeepSeek returned HTTP {response.status}: {detail}",
                     failure_code=failure_code,
+                    dispatch_safety=AgentTurnDispatchSafety.PROVIDER_REJECTED,
                 )
             if len(raw) > self._max_response_bytes:
                 raise AgentTurnAdapterError(
@@ -475,14 +516,39 @@ def _provider_messages(
             continue
         if role == "assistant":
             raw_calls = message.get("toolCalls")
+            conclusion = message.get("conclusion")
+            if conclusion is not None:
+                if not isinstance(conclusion, dict):
+                    raise ValueError(
+                        "DeepSeek assistant conclusion history is invalid"
+                    )
+                validate_json_value(conclusion)
+                content = message.get("content")
+                if content is not None and not isinstance(content, str):
+                    raise ValueError(
+                        "DeepSeek assistant content must be a string or null"
+                    )
+                retained = (
+                    "Retained Harness conclusion: "
+                    + canonical_bytes(conclusion).decode("utf-8")
+                )
+                if content:
+                    retained = f"{content}\n\n{retained}"
+                translated.append({"role": "assistant", "content": retained})
+                continue
             if not isinstance(raw_calls, list) or not raw_calls:
                 raise ValueError("DeepSeek assistant history must retain Tool Calls")
             calls: list[dict[str, JsonValue]] = []
             for raw_call in raw_calls:
-                if not isinstance(raw_call, dict) or set(raw_call) != {
+                if not isinstance(raw_call, dict) or not {
                     "toolCallId",
                     "name",
                     "arguments",
+                }.issubset(raw_call) or set(raw_call) - {
+                    "toolCallId",
+                    "name",
+                    "arguments",
+                    "providerArguments",
                 }:
                     raise ValueError("DeepSeek assistant Tool Call history is invalid")
                 call_id = raw_call["toolCallId"]
@@ -611,6 +677,7 @@ class DeepSeekTurnAdapter:
             raise AgentTurnAdapterError(
                 "DeepSeek invocation stopped before dispatch",
                 failure_code=AgentTurnFailureCode.TIMEOUT,
+                dispatch_safety=AgentTurnDispatchSafety.PRE_DISPATCH_SAFE,
             )
         start_post = getattr(self.transport, "start_post", None)
         if not callable(start_post):
@@ -643,6 +710,7 @@ class DeepSeekTurnAdapter:
                 raise AgentTurnAdapterError(
                     "DeepSeek invocation stopped before dispatch",
                     failure_code=AgentTurnFailureCode.TIMEOUT,
+                    dispatch_safety=AgentTurnDispatchSafety.PRE_DISPATCH_SAFE,
                 )
             return self._invoke(
                 request,
@@ -670,6 +738,33 @@ class DeepSeekTurnAdapter:
 
     def accepts_effective_model_id(self, model_id: str) -> bool:
         return model_id == self.settings.model
+
+    def request_token_upper_bound(self, request: AgentTurnRequest) -> int:
+        """Bound prompt bytes plus the Provider-enforced completion ceiling."""
+        _, _, _, body = self._prepare_request(request)
+        return len(body) + self.settings.max_output_tokens
+
+    def provider_request_digest(self, request: AgentTurnRequest) -> str:
+        """Identify the exact non-secret request semantics sent to DeepSeek."""
+        _, url, headers, body = self._prepare_request(request)
+        semantic_headers = {
+            name: value
+            for name, value in headers.items()
+            if name.lower() != "authorization"
+        }
+        return canonical_digest(
+            {
+                "schemaVersion": 1,
+                "kind": "ordivon.deepseek-provider-request",
+                "adapterId": self.adapter_id,
+                "requestedModelId": self.model_id,
+                "credentialScopeId": self.settings.credential_scope_id,
+                "method": "POST",
+                "url": url,
+                "headers": semantic_headers,
+                "bodyDigest": "sha256:" + hashlib.sha256(body).hexdigest(),
+            }
+        )
 
     def _invoke(
         self, request: AgentTurnRequest, *, timeout_seconds: float
@@ -762,6 +857,7 @@ class DeepSeekTurnAdapter:
             raise AgentTurnAdapterError(
                 "DeepSeek reported insufficient system resources",
                 failure_code=AgentTurnFailureCode.UNAVAILABLE,
+                dispatch_safety=AgentTurnDispatchSafety.PROVIDER_REJECTED,
             )
         if not isinstance(finish_reason, str) or not isinstance(message, dict):
             raise TypeError("DeepSeek choice fields are invalid")
@@ -778,6 +874,28 @@ class DeepSeekTurnAdapter:
 
         runtime_calls: list[AgentToolCall] = []
         conclusion: AgentRunConclusion | None = None
+
+        def invalid_call(
+            call_id: str,
+            name: str,
+            raw_arguments: str,
+            error: str,
+            arguments: dict[str, JsonValue] | None = None,
+        ) -> AgentToolCall:
+            raw_bytes = raw_arguments.encode("utf-8")
+            return AgentToolCall(
+                call_id,
+                name,
+                {} if arguments is None else arguments,
+                argument_error=error[:300],
+                raw_arguments_digest=(
+                    "sha256:" + hashlib.sha256(raw_bytes).hexdigest()
+                ),
+                raw_arguments_preview=raw_bytes[:2_048].decode(
+                    "utf-8", errors="ignore"
+                ),
+            )
+
         for raw_call in raw_calls:
             if not isinstance(raw_call, dict) or raw_call.get("type") != "function":
                 raise ValueError("DeepSeek Tool Call is not a function")
@@ -791,24 +909,72 @@ class DeepSeekTurnAdapter:
                 raise TypeError("DeepSeek Tool Call name or arguments are invalid")
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
-            except ValueError as error:
-                raise ValueError(
-                    f"DeepSeek Tool Call {name} arguments are invalid JSON"
-                ) from error
-            if not isinstance(arguments, dict):
-                raise TypeError(
-                    f"DeepSeek Tool Call {name} arguments must be an object"
+            except ValueError:
+                if (
+                    name != _CONCLUSION_TOOL_NAME
+                    and name not in allowed_tool_names
+                ):
+                    raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
+                runtime_calls.append(
+                    invalid_call(
+                        call_id,
+                        name,
+                        raw_arguments,
+                        "invalid_json",
+                    )
                 )
+                continue
+            if not isinstance(arguments, dict):
+                if (
+                    name != _CONCLUSION_TOOL_NAME
+                    and name not in allowed_tool_names
+                ):
+                    raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
+                runtime_calls.append(
+                    invalid_call(
+                        call_id,
+                        name,
+                        raw_arguments,
+                        "arguments_not_object",
+                    )
+                )
+                continue
             validate_json_value(arguments)
             if name == _CONCLUSION_TOOL_NAME:
                 if conclusion is not None:
-                    raise ValueError("DeepSeek returned multiple Run conclusions")
-                conclusion = _parse_conclusion(arguments)
+                    runtime_calls.append(
+                        invalid_call(
+                            call_id,
+                            name,
+                            raw_arguments,
+                            "multiple_conclusions",
+                            dict(arguments),
+                        )
+                    )
+                    continue
+                try:
+                    conclusion = _parse_conclusion(arguments)
+                except (KeyError, TypeError, ValueError) as error:
+                    runtime_calls.append(
+                        invalid_call(
+                            call_id,
+                            name,
+                            raw_arguments,
+                            f"invalid_conclusion: {error}",
+                            dict(arguments),
+                        )
+                    )
             else:
                 if name not in allowed_tool_names:
                     raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(AgentToolCall(call_id, name, dict(arguments)))
 
+        invalid_calls = [
+            call for call in runtime_calls if call.argument_error is not None
+        ]
+        if invalid_calls:
+            runtime_calls = invalid_calls
+            conclusion = None
         if conclusion is not None and runtime_calls:
             raise ValueError("DeepSeek mixed Runtime Tool Calls with a Run conclusion")
         if finish_reason != "tool_calls":

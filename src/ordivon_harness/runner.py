@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -59,6 +60,9 @@ _DURABLE_CAPABILITIES = (
     "ordivon.run-state-resume.v1",
     "ordivon.effect-checkpoint.v1",
     "ordivon.provider-call-cancel.v1",
+    "ordivon.provider-call-claim.v1",
+    "ordivon.provider-result-replay.v1",
+    "ordivon.provider-dispatch-outcome.v1",
     "ordivon.runtime-job-cancel.v1",
 )
 
@@ -122,7 +126,10 @@ class HarnessExecutionResult:
 
     @property
     def paused(self) -> bool:
-        return self.loop_result.stop_code is RunStopCode.NEEDS_INPUT
+        return self.loop_result.stop_code in {
+            RunStopCode.NEEDS_INPUT,
+            RunStopCode.NO_PROGRESS,
+        }
 
     @property
     def candidate_completed(self) -> bool:
@@ -169,6 +176,9 @@ class HarnessStatus:
     termination_code: str | None
     pause_reason: str | None
     active_tool_step: bool
+    provider_call_status: str | None
+    provider_call_generation: int | None
+    provider_call_expires_at_ms: int | None
     completion_proposal_id: str | None
     completion_accepted: bool | None
 
@@ -184,6 +194,9 @@ class HarnessStatus:
             "terminationCode": self.termination_code,
             "pauseReason": self.pause_reason,
             "activeToolStep": self.active_tool_step,
+            "providerCallStatus": self.provider_call_status,
+            "providerCallGeneration": self.provider_call_generation,
+            "providerCallExpiresAtMs": self.provider_call_expires_at_ms,
             "completionProposalId": self.completion_proposal_id,
             "completionAccepted": self.completion_accepted,
         }
@@ -322,6 +335,7 @@ class HarnessRunner:
         acceptance_verifier: AcceptanceVerifier | None = None,
         verification_method: str = "ordivon-harness-runner-v1",
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
+        monotonic_ms: Callable[[], int] | None = None,
     ) -> None:
         self.host = host
         self.runtime = runtime
@@ -331,10 +345,20 @@ class HarnessRunner:
         self.acceptance_verifier = acceptance_verifier
         self.verification_method = verification_method
         self.event_sink = event_sink
+        self.monotonic_ms = monotonic_ms or (
+            lambda: time.monotonic_ns() // 1_000_000
+        )
         self._handles: dict[str, RunHandle] = {}
         self._handles_lock = threading.Lock()
 
     def prepare(self, plan: HarnessRunPlan) -> CommittedHarnessAssignment:
+        if (
+            plan.deadline_ms is not None
+            and plan.deadline_ms <= self.host.kernel.clock_ms()
+        ):
+            raise HarnessLifecycleError(
+                "Harness Run Plan deadline expired before preparation"
+            )
         runtime = self._require_runtime()
         catalog = discover_harness_runtime_catalog(runtime)
         attempt = self.host.start_attempt(
@@ -397,9 +421,14 @@ class HarnessRunner:
     ) -> HarnessExecutionResult:
         self._validate_completion_mode(completion_mode)
         committed = self.host.load_current_assignment(task_id)
+        committed_budget = self._budget_from_assignment(committed)
+        if budget is not None and budget != committed_budget:
+            raise HarnessLifecycleError(
+                "Harness Run cannot replace its committed Run budget"
+            )
         return self._execute(
             committed,
-            budget=budget or self._budget_from_assignment(committed),
+            budget=committed_budget if budget is None else budget,
             completion_mode=completion_mode,
             cancellation=cancellation,
         )
@@ -442,7 +471,7 @@ class HarnessRunner:
         self,
         task_id: str,
         *,
-        trigger: str = "operator_recover",
+        trigger: str = "host_restart",
         auto_abandon: bool = True,
     ) -> NativeRunRecoveryResult:
         return NativeRunRecoveryController(
@@ -474,6 +503,15 @@ class HarnessRunner:
         active_tool_step = isinstance(
             data.get("activeHarnessToolStepIntentDigest"), str
         )
+        provider_call_status = self._optional_string(
+            data.get("activeHarnessProviderCallStatus")
+        )
+        provider_call_generation = data.get(
+            "activeHarnessProviderCallGeneration"
+        )
+        provider_call_expires_at_ms = data.get(
+            "activeHarnessProviderCallExpiresAtMs"
+        )
         if snapshot.projection.state.terminal:
             phase = "completed" if completion_accepted is True else "terminal"
         elif completion_accepted is not None:
@@ -482,6 +520,14 @@ class HarnessRunner:
             phase = "completion-proposed"
         elif termination_code is not None:
             phase = "run-recorded"
+        elif provider_call_status is not None:
+            phase = {
+                "claimed": "provider-active",
+                "dispatching": "provider-recovery-required",
+                "completed": "provider-result-durable",
+                "failed": "provider-failure-durable",
+                "unknown": "provider-recovery-required",
+            }.get(provider_call_status, "provider-active")
         elif active_tool_step:
             phase = "tool-active"
         elif pause_reason is not None:
@@ -504,6 +550,17 @@ class HarnessRunner:
             termination_code=termination_code,
             pause_reason=pause_reason,
             active_tool_step=active_tool_step,
+            provider_call_status=provider_call_status,
+            provider_call_generation=(
+                provider_call_generation
+                if type(provider_call_generation) is int
+                else None
+            ),
+            provider_call_expires_at_ms=(
+                provider_call_expires_at_ms
+                if type(provider_call_expires_at_ms) is int
+                else None
+            ),
             completion_proposal_id=proposal_id,
             completion_accepted=completion_accepted,
         )
@@ -631,6 +688,7 @@ class HarnessRunner:
                         acceptance_verifier=self.acceptance_verifier,
                         verification_method=self.verification_method,
                         event_sink=event_queue.put,
+                        monotonic_ms=self.monotonic_ms,
                     )
                     return operation(child, token)
 
@@ -663,28 +721,41 @@ class HarnessRunner:
         retained: StoredHarnessRunSnapshot | None = None,
         additional_messages: tuple[dict[str, JsonValue], ...] = (),
     ) -> HarnessExecutionResult:
-        runtime = self._require_runtime()
-        adapter = self._require_adapter()
         native = committed.native_run_contract
         if native is None:
             raise HarnessLifecycleError(
                 "current Assignment is not a native Harness Run"
             )
+        if budget != self._budget_from_assignment(committed):
+            raise HarnessLifecycleError(
+                "Harness Run cannot replace its committed Run budget"
+            )
+        runtime = self._require_runtime()
+        adapter = self._require_adapter()
         self._validate_execution_entry(committed, retained=retained)
         context = self._load_context(committed)
         compiled_input = OrdivonInputCompiler().compile(committed, context)
         run_store = HostHarnessRunStore(self.host, committed)
+        provider_source = (
+            run_store.assignment_provider_source()
+            if retained is None
+            else run_store.snapshot_provider_source(retained)
+        )
         bridge = RuntimeToolBridge(
-            committed,
+            run_store.committed,
             harness_run_id=native.harness_run_id,
             runtime=runtime,
             run_store=run_store,
+            provider_source=provider_source,
+            defer_runtime_catalog_validation=True,
         )
         loop = OrdivonAgentLoop(
             adapter,
             bridge,
             budget=budget,
             clock_ms=self.host.kernel.clock_ms,
+            monotonic_ms=self.monotonic_ms,
+            assignment_deadline_ms=committed.assignment.deadline_ms,
             event_sink=self.event_sink,
         )
         started_at_ms = self.host.kernel.clock_ms()
@@ -704,7 +775,10 @@ class HarnessRunner:
                 additional_messages=additional_messages,
                 cancellation=cancellation,
             )
-        if result.stop_code is RunStopCode.NEEDS_INPUT:
+        if result.stop_code in {
+            RunStopCode.NEEDS_INPUT,
+            RunStopCode.NO_PROGRESS,
+        }:
             return HarnessExecutionResult(
                 task_id=committed.assignment.task_id,
                 assignment_id=committed.assignment.assignment_id,
@@ -718,7 +792,10 @@ class HarnessRunner:
             self.host,
             bridge.committed,
             result,
-            times=NativeRunTimes(started_at_ms, self.host.kernel.clock_ms()),
+            times=NativeRunTimes(
+                started_at_ms,
+                self.host.kernel.timestamp(started_at_ms),
+            ),
         )
         proposal: ProposedCompletion | None = None
         decision: CompletionDecisionReceipt | None = None
@@ -775,6 +852,17 @@ class HarnessRunner:
             raise HarnessLifecycleError(
                 "Harness Run resume Snapshot is no longer current"
             )
+        if retained is not None and (
+            snapshot.data.get("harnessRunSnapshotObjectDigest")
+            != retained.snapshot_object.digest
+            or snapshot.data.get("harnessRunSnapshotDigest")
+            != retained.snapshot.digest
+            or snapshot.data.get("harnessRunStateObjectDigest")
+            != retained.state_object.digest
+        ):
+            raise HarnessLifecycleError(
+                "Harness Run resume Snapshot is no longer the exact current Snapshot"
+            )
 
     def _load_context(self, committed: CommittedHarnessAssignment) -> CompiledContext:
         value = self.host.storage.objects.get(
@@ -817,6 +905,20 @@ class HarnessRunner:
                 defaults.max_tool_corrections,
                 allow_zero=True,
             ),
+            read(
+                "maxObservationOnlyTurns",
+                defaults.max_observation_only_turns,
+                allow_zero=True,
+            ),
+            read(
+                "maxNoProgressTurns",
+                defaults.max_no_progress_turns,
+                allow_zero=True,
+            ),
+            read(
+                "maxModelObservationBytes",
+                defaults.max_model_observation_bytes,
+            ),
         )
 
     @staticmethod
@@ -829,6 +931,9 @@ class HarnessRunner:
             "maxTotalTokens": budget.max_total_tokens,
             "maxModelRetries": budget.max_model_retries,
             "maxToolCorrections": budget.max_tool_corrections,
+            "maxObservationOnlyTurns": budget.max_observation_only_turns,
+            "maxNoProgressTurns": budget.max_no_progress_turns,
+            "maxModelObservationBytes": budget.max_model_observation_bytes,
         }
 
     def _require_runtime(self) -> RuntimeClient:

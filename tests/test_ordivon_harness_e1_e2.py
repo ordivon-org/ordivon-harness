@@ -53,12 +53,13 @@ from tests.test_ordivon_harness_oh5 import (
 class NativeToolCatalogTests(unittest.TestCase):
     def test_all_current_tools_have_complete_explicit_semantics(self) -> None:
         catalog = discover_harness_runtime_catalog(_RecoveryRuntime())
-        self.assertEqual(len(catalog.tools), 7)
-        self.assertEqual(len({tool.name for tool in catalog.tools}), 7)
+        self.assertEqual(len(catalog.tools), 8)
+        self.assertEqual(len({tool.name for tool in catalog.tools}), 8)
         self.assertEqual(
             {tool.name for tool in catalog.tools},
             {
                 "read_workspace",
+                "search_workspace",
                 "mutate_workspace",
                 "diff_workspace",
                 "run_check",
@@ -108,6 +109,7 @@ class NativeToolCatalogTests(unittest.TestCase):
             tool_grant_id="tool-grant:e1:all-tools",
             allowed_tools=(
                 "read_workspace",
+                "search_workspace",
                 "mutate_workspace",
                 "diff_workspace",
                 "run_check",
@@ -130,6 +132,11 @@ class NativeToolCatalogTests(unittest.TestCase):
                 "tool-call:e1:read",
                 "read_workspace",
                 {"relativePath": "README.md"},
+            ),
+            AgentToolCall(
+                "tool-call:e1:search",
+                "search_workspace",
+                {"query": "Ordivon", "relativePath": "README.md"},
             ),
             AgentToolCall(
                 "tool-call:e1:mutate",

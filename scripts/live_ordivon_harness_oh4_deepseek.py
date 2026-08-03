@@ -141,7 +141,11 @@ def _create_task(storage: HostStorage) -> None:
     )
 
 
-def _task_contract(source_revision: str, source_digest: str) -> TaskContract:
+def _task_contract(
+    source_ref: str,
+    source_revision: str,
+    source_digest: str,
+) -> TaskContract:
     return TaskContract(
         contract_id="task-contract:oh4-live-readme:v1",
         task_id=TASK_ID,
@@ -176,7 +180,7 @@ def _task_contract(source_revision: str, source_digest: str) -> TaskContract:
         ),
         resource_refs=(
             StateRef(
-                ref=f"repository:ordivon-host@{source_revision}",
+                ref=source_ref,
                 digest=source_digest,
             ),
         ),
@@ -272,6 +276,9 @@ def _run_with_state_root(
 ) -> LiveRunEvidence:
     source_repo = args.source_repo.expanduser().resolve()
     source_revision = _git_revision(source_repo, args.source_revision)
+    source_ref = (
+        f"repository:{source_repo.name}@{source_revision}"
+    )
     source_digest = canonical_digest(
         {"sourceRepo": str(source_repo), "sourceRevision": source_revision}
     )
@@ -299,7 +306,9 @@ def _run_with_state_root(
 
     try:
         catalog = discover_harness_runtime_catalog(runtime)
-        contract = _task_contract(source_revision, source_digest)
+        contract = _task_contract(
+            source_ref, source_revision, source_digest
+        )
         grant = ToolGrant(
             tool_grant_id="tool-grant:oh4-live-readme:read-only",
             allowed_tools=("read_workspace",),
@@ -349,7 +358,7 @@ def _run_with_state_root(
                 tool_catalog_digest=catalog.digest,
             tool_catalog=catalog,
                 workspace_ref=workspace_id,
-                source_ref=f"repository:ordivon-host@{source_revision}",
+                source_ref=source_ref,
                 source_digest=source_digest,
                 required_capabilities=("tool_events", "usage"),
                 budget={

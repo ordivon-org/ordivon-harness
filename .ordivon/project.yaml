@@ -1,0 +1,22 @@
+schema_version: 1
+id: ordivon-harness
+name: Ordivon Harness
+repository: https://github.com/zycxfyh/ordivon-harness
+kind: research-engineering
+default_profiles:
+  - engineering
+  - research
+  - organization
+documentation_roots:
+  - README.md
+  - ARCHITECTURE.md
+  - docs
+managed_paths:
+  - README.md
+  - ARCHITECTURE.md
+  - docs/authority.md
+enforcement: strict
+maintainers:
+  - zycxfyh
+public_projection: ordivon-web
+description: Replaceable Agent execution lifecycles, provider adapters, context, tool use, and Run continuity.

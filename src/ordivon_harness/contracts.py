@@ -10,6 +10,7 @@ from ordivon_host.effects import ArtifactRef, StateRef
 
 _NATIVE_TOOL_NAMES = {
     "read_workspace",
+    "search_workspace",
     "mutate_workspace",
     "patch_workspace",
     "diff_workspace",
@@ -307,8 +308,13 @@ class ToolGrant:
         checks = [item.check_id for item in self.execution_checks]
         if len(checks) != len(set(checks)):
             raise ValueError("Tool Grant Execution Check identities must be unique")
-        if "read_workspace" in self.allowed_tools and not self.read_path_rules:
-            raise ValueError("read_workspace requires at least one read path rule")
+        if (
+            {"read_workspace", "search_workspace"}.intersection(self.allowed_tools)
+            and not self.read_path_rules
+        ):
+            raise ValueError(
+                "workspace read Tools require at least one read path rule"
+            )
         mutation_tools = {"mutate_workspace", "patch_workspace"}
         if (
             mutation_tools.intersection(self.allowed_tools)
@@ -338,7 +344,9 @@ class ToolGrant:
     def allows_path(self, name: str, relative_path: str) -> bool:
         normalized = _relative_path(relative_path, f"{name} relative path")
         rules = (
-            self.read_path_rules if name == "read_workspace" else self.mutate_path_rules
+            self.read_path_rules
+            if name in {"read_workspace", "search_workspace"}
+            else self.mutate_path_rules
         )
         for rule in rules:
             if rule == "**" or rule == normalized:
