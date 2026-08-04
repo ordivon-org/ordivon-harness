@@ -42,6 +42,10 @@ REQUIRED_README_HEADINGS = {
 }
 STABLE_API = {
     "CompletionMode",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
     "HarnessCancellationResult",
     "HarnessExecutionResult",
     "HarnessRunner",

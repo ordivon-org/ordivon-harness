@@ -128,6 +128,20 @@ uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 
 The wheel check validates metadata, exact dependency pins, the CLI entry point and an isolated installation. The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
+## Domain-owned Tool loops
+
+Version `0.6` exposes a dependency-inverted domain Tool seam for projects that already own their durable Actor or Contest boundary:
+
+```python
+from ordivon_harness.api import (
+    DomainToolCatalog,
+    DomainToolLoopPlan,
+    DomainToolLoopRunner,
+)
+```
+
+A domain supplies immutable Tool definitions, a Bridge implementation, a per-loop grant, and domain effect evidence. Harness supplies the Provider-neutral model loop, budgets, cancellation, stopping, and Tool-call observations. Harness does not import the domain and does not claim domain truth. See [`docs/DOMAIN-TOOL-BRIDGE-P0.md`](docs/DOMAIN-TOOL-BRIDGE-P0.md).
+
 ## Public API
 
 New application integrations should import from the stable facade:

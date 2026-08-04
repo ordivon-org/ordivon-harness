@@ -45,6 +45,7 @@ Harness contains current architecture, extraction history, OH/H/P/R closeouts, P
 | installation and first deterministic/live journeys | [`QUICKSTART.md`](QUICKSTART.md) |
 | maturity, support graph and known limits | [`STATUS.md`](STATUS.md) |
 | architecture and semantic ownership | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) |
+| dependency-inverted domain Tool Loop boundary | [`DOMAIN-TOOL-BRIDGE-P0.md`](DOMAIN-TOOL-BRIDGE-P0.md) |
 | dependency, Host API, durable object and upgrade compatibility | [`COMPATIBILITY.md`](COMPATIBILITY.md) |
 | evidence classes and claim interpretation | [`VERIFICATION.md`](VERIFICATION.md) |
 | operation, cancellation, recovery, Doctor and escalation | [`OPERATIONS.md`](OPERATIONS.md) |

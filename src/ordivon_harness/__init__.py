@@ -16,6 +16,12 @@ from .contracts import (
     TaskContract,
     ToolGrant,
 )
+from .domain_tools import (
+    DomainToolBridge,
+    DomainToolCatalog,
+    DomainToolLoopPlan,
+    DomainToolLoopRunner,
+)
 from .disposition import (
     CompletionRoute,
     NativeRunDisposition,
@@ -146,6 +152,10 @@ __all__ = [
     "CompletionDecision",
     "CompletionDecisionReceipt",
     "CompletionMode",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
     "CompletionProposal",
     "CompletionRoute",
     "CompletionVerification",

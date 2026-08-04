@@ -6,6 +6,12 @@ Provider-driver, and recovery implementation types can evolve independently.
 """
 
 from .contracts import TaskContract, ToolGrant
+from .domain_tools import (
+    DomainToolBridge,
+    DomainToolCatalog,
+    DomainToolLoopPlan,
+    DomainToolLoopRunner,
+)
 from .runner import (
     CompletionMode,
     HarnessCancellationResult,
@@ -18,6 +24,10 @@ from .runner import (
 
 __all__ = [
     "CompletionMode",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
     "HarnessCancellationResult",
     "HarnessExecutionResult",
     "HarnessRunner",

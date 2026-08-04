@@ -45,7 +45,7 @@ Package SemVer does not replace these stronger identities.
 
 ## Current stage
 
-Harness `0.5.0` is pre-1.0. Public behavior may evolve, but retained state, effect identities and uncertainty cannot be silently reinterpreted.
+Harness `0.6.0` is pre-1.0. Public behavior may evolve, but retained state, effect identities and uncertainty cannot be silently reinterpreted.
 
 ## Change classes
 

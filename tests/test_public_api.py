@@ -12,6 +12,10 @@ from ordivon_harness.version import package_version
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
     "CompletionMode",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
     "HarnessCancellationResult",
     "HarnessExecutionResult",
     "HarnessRunner",

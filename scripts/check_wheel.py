@@ -18,6 +18,10 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
     "CompletionMode",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
     "HarnessCancellationResult",
     "HarnessExecutionResult",
     "HarnessRunner",
@@ -29,6 +33,7 @@ EXPECTED_API = {
 }
 REQUIRED_MEMBERS = {
     "ordivon_harness/api.py",
+    "ordivon_harness/domain_tools.py",
     "ordivon_harness/version.py",
     "ordivon_harness/ordivon/run_recovery.py",
     "ordivon_harness/ordivon/runtime_lowering.py",

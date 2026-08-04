@@ -4,7 +4,27 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
-No user-visible changes recorded after `0.5.0`.
+No user-visible changes recorded after `0.6.0`.
+
+## 0.6.0 — 2026-08-04
+
+### Added
+
+- public `DomainToolCatalog`, `DomainToolBridge`, `DomainToolLoopPlan` and `DomainToolLoopRunner`;
+- deterministic domain catalog/grant identity and an inspectable execution identity binding Harness, Provider, domain Bridge and complete Loop budget;
+- fail-closed tests proving unknown grants are rejected before Provider invocation and non-Runtime domain Tools complete a full model/Tool/conclusion loop.
+
+### Compatibility
+
+- existing `HarnessRunner`, Host Assignment persistence and `RuntimeToolBridge` behavior are unchanged;
+- the new boundary is additive and keeps Harness independent of Security, Game, World and other domain packages;
+- domains remain responsible for durable domain state, admission, effect truth and verification.
+
+### Verification
+
+- 264 deterministic and semantic-history tests pass;
+- the new module passes isolated strict type checking and full-repository Ruff checks;
+- public API, documentation, dependency direction and wheel installation remain release gates.
 
 ## 0.5.0 — 2026-08-04
 

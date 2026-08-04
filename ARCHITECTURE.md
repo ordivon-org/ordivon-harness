@@ -127,6 +127,21 @@ The canonical `HarnessTrace` remains the durable semantic event record. `TraceRe
 
 These modules are internal seams, not new public protocols or persistence owners. They preserve the existing `RuntimeToolBridge._lower()` compatibility entry, durable object schemas, dispatch identities, and recovery ordering.
 
+### Domain-owned Tool loops
+
+`DomainToolLoopRunner` is the public low-level cognition seam for a domain that already owns durable Actor state, action admission, effect truth and evaluation. The domain supplies an immutable `DomainToolCatalog`, a `DomainToolBridge`, an explicit per-loop grant and a Bridge implementation identity. Harness binds that identity to the Provider adapter, requested model, complete Loop budget and granted catalog, then runs the existing `OrdivonAgentLoop`.
+
+```text
+domain-owned observation and objective
+→ DomainToolLoopPlan
+→ Provider-neutral Harness loop
+→ granted domain Tool call
+→ domain-owned admission/effect/observation
+→ Harness conclusion or typed stop
+```
+
+This path creates neither Host Assignment persistence nor Runtime Tool durability. It must not disguise domain actions as workspace operations, and Harness does not infer domain effect success. The consuming domain binds `execution_identity(plan)` into its own Trial or Assignment evidence.
+
 ## Dispatch fencing
 
 Each durable `workspace.exec` preparation writes a `HarnessDispatchFence` bound to:

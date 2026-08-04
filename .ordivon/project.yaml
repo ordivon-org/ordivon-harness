@@ -23,6 +23,7 @@ managed_paths:
   - docs/OPERATIONS.md
   - docs/DATA_AND_PRIVACY.md
   - docs/RELEASES.md
+  - docs/DOMAIN-TOOL-BRIDGE-P0.md
   - docs/authority.md
 enforcement: strict
 maintainers:
