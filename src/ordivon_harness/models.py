@@ -5,7 +5,7 @@ from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from ordivon_host.effects import ArtifactRef, TaskOutcome
+from ._host_compat.effects import ArtifactRef, TaskOutcome
 
 
 def _exact(value: dict[str, Any], expected: set[str], label: str) -> None:

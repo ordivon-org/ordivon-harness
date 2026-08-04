@@ -1,0 +1,30 @@
+name: Release acceptance
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  portable-release-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+      - run: uv sync --locked
+      - run: uv lock --check
+      - run: uv run python -m compileall -q src tests scripts evals
+      - run: uvx ruff==0.15.17 check src tests scripts
+      - run: uv run python -W error::ResourceWarning -m unittest discover -s tests -v
+      - run: uv run python scripts/check_dependencies.py
+      - run: uv run python scripts/check_docs.py
+      - run: uv run python scripts/check_evidence.py
+      - run: uv run python scripts/demo_deterministic_run.py
+      - run: uvx pip-audit -r requirements-audit.txt --strict --progress-spinner off
+      - run: uv build --wheel --out-dir /tmp/ordivon-harness-wheel

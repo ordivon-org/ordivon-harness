@@ -12,7 +12,7 @@ from typing import Any, Callable
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from ordivon_host.effects import ArtifactRef
+from ._host_compat.effects import ArtifactRef
 from .host import CommittedHarnessAssignment
 from .models import HarnessCapabilityManifest, HarnessRunReceipt
 from .subprocess_lifecycle import close_owned_process

@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a reproducible Harness lifecycle, Provider, Tool, recovery, or compatibility defect
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Do not report vulnerabilities here. Use the private channel in SECURITY.md.
+  - type: input
+    id: graph
+    attributes:
+      label: Exact dependency graph
+      description: Harness, Host, Protocol, Runtime and Provider identities
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected boundary
+      options:
+        - Assignment or Run admission
+        - Provider Call
+        - Tool Step or Runtime lowering
+        - Snapshot, resume or recovery
+        - Completion or verification
+        - Compatibility or packaging
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include whether a Provider or Tool effect may already have occurred.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction and evidence
+      description: Remove secrets, private source and sensitive model output.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials, private source, prompts and sensitive Artifact content.
+          required: true
+        - label: This is not a vulnerability report.
+          required: true

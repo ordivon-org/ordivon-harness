@@ -4,7 +4,6 @@ import json
 import time
 import uuid
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Protocol
 
 from anc_canonical import (
@@ -13,14 +12,14 @@ from anc_canonical import (
     canonical_digest,
     validate_json_value,
 )
-from ordivon_host.effects import ArtifactRef
-from ordivon_host.runtime import (
+from .._host_compat.effects import ArtifactRef
+from .._host_compat.runtime import (
     RuntimeClient,
     RuntimeClientError,
     RuntimeProtocolError,
     RuntimeToolRejected,
+    find_jobs_by_client_request,
 )
-from ordivon_host.runtime.jobs import find_jobs_by_client_request
 from ..protocol import (
     HarnessDispatchFence,
     HarnessProviderCallFailureReceipt,
@@ -33,7 +32,6 @@ from ..protocol import (
 )
 
 from ..host import CommittedHarnessAssignment
-from ..runtime_refs import build_harness_workspace_exec_request
 from ..tool_semantics import (
     NativeToolCatalogSnapshot,
     build_native_tool_catalog_snapshot,
@@ -56,34 +54,14 @@ from .run_store import (
     StoredHarnessProviderCall,
     StoredHarnessRunSnapshot,
 )
+from .runtime_lowering import lower_runtime_tool, _read_workspace_byte_offset
+from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
 _MAX_PROVIDER_CLAIM_TTL_MS = 15_000
 
 
-class ToolBridgeErrorKind(StrEnum):
-    MODEL_CORRECTABLE = "model_correctable"
-    AUTHORITY_DENIED = "authority_denied"
-    PROTOCOL_INVALID = "protocol_invalid"
-    CONTROL_STOPPED = "control_stopped"
-    INTERNAL = "internal"
 
 
-class ToolBridgeError(RuntimeError):
-    def __init__(
-        self,
-        message: str,
-        *,
-        kind: ToolBridgeErrorKind = ToolBridgeErrorKind.INTERNAL,
-    ) -> None:
-        super().__init__(message)
-        self.kind = kind
-
-    @property
-    def recoverable_by_model(self) -> bool:
-        return self.kind in {
-            ToolBridgeErrorKind.MODEL_CORRECTABLE,
-            ToolBridgeErrorKind.AUTHORITY_DENIED,
-        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -1812,400 +1790,21 @@ class RuntimeToolBridge:
             )
         return result
 
+
     def _lower(
         self,
         call: AgentToolCall,
         *,
         step_id: str,
     ) -> tuple[str, dict[str, JsonValue], str | None]:
-        arguments = dict(call.arguments)
-        workspace_id = self.committed.assignment.workspace_ref
-        assert workspace_id is not None
-        if call.name == "read_workspace":
-            _only(
-                arguments,
-                {"relativePath", "mode", "byteOffset", "offset", "maxBytes"},
-                call.name,
-            )
-            relative_path = _required_string(arguments, "relativePath", call.name)
-            if self.tool_grant is not None:
-                try:
-                    allowed_path = self.tool_grant.allows_path(call.name, relative_path)
-                except ValueError as error:
-                    raise ToolBridgeError(str(error)) from error
-                if not allowed_path:
-                    raise ToolBridgeError(
-                        f"read_workspace path is outside the Tool Grant: {relative_path}",
-                        kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                    )
-            return (
-                "workspace.read",
-                {
-                    "schemaVersion": 1,
-                    "workspaceId": workspace_id,
-                    "relativePath": relative_path,
-                    "mode": _optional_string(arguments, "mode", "FULL"),
-                    "offset": _read_workspace_byte_offset(arguments),
-                    "maxBytes": _optional_int(
-                        arguments, "maxBytes", 262_144, positive=True
-                    ),
-                },
-                None,
-            )
-        if call.name == "search_workspace":
-            _only(arguments, {"query", "relativePath", "maxMatches"}, call.name)
-            query = _required_string(arguments, "query", call.name)
-            relative_path = _required_string(arguments, "relativePath", call.name)
-            if len(query.encode("utf-8")) > 2_048:
-                raise ToolBridgeError(
-                    "search_workspace query exceeds 2048 UTF-8 bytes",
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                )
-            if self.tool_grant is not None:
-                try:
-                    allowed_path = self.tool_grant.allows_path(
-                        call.name, relative_path
-                    )
-                except ValueError as error:
-                    raise ToolBridgeError(str(error)) from error
-                if not allowed_path:
-                    raise ToolBridgeError(
-                        (
-                            "search_workspace path is outside the Tool Grant: "
-                            f"{relative_path}"
-                        ),
-                        kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                    )
-            max_matches = _optional_int(
-                arguments,
-                "maxMatches",
-                50,
-                positive=True,
-            )
-            if max_matches > 200:
-                raise ToolBridgeError(
-                    "search_workspace maxMatches must not exceed 200",
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                )
-            try:
-                request = build_harness_workspace_exec_request(
-                    self.committed,
-                    harness_run_id=self.harness_run_id,
-                    step_id=step_id,
-                    executable="/usr/bin/rg",
-                    args=(
-                        "--json",
-                        "--fixed-strings",
-                        "--line-number",
-                        "--column",
-                        "--no-heading",
-                        "--color=never",
-                        "--max-count",
-                        str(max_matches),
-                        "--",
-                        query,
-                        relative_path,
-                    ),
-                    timeout_ms=30_000,
-                    stdout_limit_bytes=65_536,
-                    stderr_limit_bytes=8_192,
-                    wait_ms=0,
-                    stdout_tail_bytes=65_536,
-                    stderr_tail_bytes=8_192,
-                )
-            except ValueError as error:
-                raise ToolBridgeError(
-                    str(error),
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                ) from error
-            client_request_id = request.get("clientRequestId")
-            if not isinstance(client_request_id, str):
-                raise ToolBridgeError("Runtime request omitted clientRequestId")
-            return "workspace.exec", request, client_request_id
-        if call.name == "mutate_workspace":
-            _only(arguments, {"mutations"}, call.name)
-            mutations = arguments.get("mutations")
-            if not isinstance(mutations, list) or not mutations:
-                raise ToolBridgeError(
-                    "mutate_workspace mutations must be a non-empty list"
-                )
-            if self.tool_grant is not None:
-                for mutation in mutations:
-                    if not isinstance(mutation, dict):
-                        raise ToolBridgeError(
-                            "mutate_workspace mutations must be objects"
-                        )
-                    relative_path = mutation.get("relativePath")
-                    if not isinstance(relative_path, str):
-                        raise ToolBridgeError(
-                            "mutate_workspace mutation omitted relativePath"
-                        )
-                    try:
-                        allowed_path = self.tool_grant.allows_path(
-                            call.name, relative_path
-                        )
-                    except ValueError as error:
-                        raise ToolBridgeError(str(error)) from error
-                    if not allowed_path:
-                        raise ToolBridgeError(
-                            f"mutate_workspace path is outside the Tool Grant: {relative_path}",
-                            kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                        )
-            request: dict[str, JsonValue] = {
-                "schemaVersion": 1,
-                "workspaceId": workspace_id,
-                "mutations": mutations,
-            }
-            validate_json_value(request)
-            return "workspace.mutate", request, None
-        if call.name == "patch_workspace":
-            _only(arguments, {"files", "maxDiffBytes"}, call.name)
-            files = arguments.get("files")
-            if not isinstance(files, list) or not files:
-                raise ToolBridgeError(
-                    "patch_workspace files must be a non-empty list",
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                )
-            for file in files:
-                if not isinstance(file, dict):
-                    raise ToolBridgeError(
-                        "patch_workspace files must be objects",
-                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                    )
-                relative_path = file.get("relativePath")
-                if not isinstance(relative_path, str):
-                    raise ToolBridgeError(
-                        "patch_workspace file omitted relativePath",
-                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                    )
-                edits = file.get("edits")
-                if not isinstance(edits, list) or not edits:
-                    raise ToolBridgeError(
-                        "patch_workspace file edits must be a non-empty list",
-                        kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                    )
-                if self.tool_grant is not None:
-                    try:
-                        allowed_path = self.tool_grant.allows_path(
-                            call.name, relative_path
-                        )
-                    except ValueError as error:
-                        raise ToolBridgeError(
-                            str(error), kind=ToolBridgeErrorKind.AUTHORITY_DENIED
-                        ) from error
-                    if not allowed_path:
-                        raise ToolBridgeError(
-                            f"patch_workspace path is outside the Tool Grant: {relative_path}",
-                            kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                        )
-            assignment = self.committed.assignment
-            request_token = canonical_digest(
-                {
-                    "assignmentId": assignment.assignment_id,
-                    "assignmentGeneration": assignment.generation,
-                    "assignmentDigest": assignment.digest,
-                    "harnessRunId": self.harness_run_id,
-                    "stepId": step_id,
-                    "toolCallDigest": call.digest,
-                }
-            )[7:39]
-            client_request_id = (
-                f"request:harness-patch:g{assignment.generation}:{request_token}"
-            )
-            request: dict[str, JsonValue] = {
-                "schemaVersion": 1,
-                "clientRequestId": client_request_id,
-                "workspaceId": workspace_id,
-                "files": files,
-                "maxDiffBytes": _optional_int(
-                    arguments, "maxDiffBytes", 1_048_576, positive=True
-                ),
-            }
-            validate_json_value(request)
-            return "workspace.patch", request, client_request_id
-        if call.name == "diff_workspace":
-            _only(arguments, {"maxBytes"}, call.name)
-            return (
-                "workspace.diff",
-                {
-                    "schemaVersion": 1,
-                    "workspaceId": workspace_id,
-                    "maxBytes": _optional_int(
-                        arguments, "maxBytes", 1_048_576, positive=True
-                    ),
-                },
-                None,
-            )
-        if call.name == "run_check":
-            _only(
-                arguments,
-                {"checkId", "waitMs", "stdoutTailBytes", "stderrTailBytes"},
-                call.name,
-            )
-            if self.tool_grant is None:
-                raise ToolBridgeError(
-                    "run_check requires a Tool Grant",
-                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                )
-            check_id = _required_string(arguments, "checkId", call.name)
-            try:
-                check = self.tool_grant.execution_check(check_id)
-            except KeyError as error:
-                raise ToolBridgeError(str(error)) from error
-            try:
-                request = build_harness_workspace_exec_request(
-                    self.committed,
-                    harness_run_id=self.harness_run_id,
-                    step_id=step_id,
-                    executable=check.executable,
-                    args=check.args,
-                    cwd_relative=check.cwd_relative,
-                    env=dict(check.env),
-                    timeout_ms=check.timeout_ms,
-                    stdout_limit_bytes=check.stdout_limit_bytes,
-                    stderr_limit_bytes=check.stderr_limit_bytes,
-                    wait_ms=_optional_int(arguments, "waitMs", 0),
-                    stdout_tail_bytes=_optional_int(
-                        arguments, "stdoutTailBytes", 8_192
-                    ),
-                    stderr_tail_bytes=_optional_int(
-                        arguments, "stderrTailBytes", 8_192
-                    ),
-                )
-            except ValueError as error:
-                raise ToolBridgeError(
-                    str(error),
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                ) from error
-            client_request_id = request.get("clientRequestId")
-            if not isinstance(client_request_id, str):
-                raise ToolBridgeError("Runtime request omitted clientRequestId")
-            return "workspace.exec", request, client_request_id
-        if call.name == "run_in_workspace":
-            if self.tool_grant is not None and not self.tool_grant.allow_opaque_exec:
-                raise ToolBridgeError(
-                    "opaque Runtime execution is not granted",
-                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                )
-            allowed = {
-                "executable",
-                "args",
-                "cwdRelative",
-                "env",
-                "timeoutMs",
-                "stdoutLimitBytes",
-                "stderrLimitBytes",
-                "waitMs",
-                "stdoutTailBytes",
-                "stderrTailBytes",
-            }
-            _only(arguments, allowed, call.name)
-            executable = _required_string(arguments, "executable", call.name)
-            raw_args = arguments.get("args", [])
-            if not isinstance(raw_args, list) or any(
-                not isinstance(item, str) for item in raw_args
-            ):
-                raise ToolBridgeError(
-                    "run_in_workspace args must be strings",
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                )
-            raw_env = arguments.get("env", {})
-            if not isinstance(raw_env, dict) or any(
-                not isinstance(key, str) or not isinstance(value, str)
-                for key, value in raw_env.items()
-            ):
-                raise ToolBridgeError(
-                    "run_in_workspace env must contain string values",
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                )
-            try:
-                request = build_harness_workspace_exec_request(
-                    self.committed,
-                    harness_run_id=self.harness_run_id,
-                    step_id=step_id,
-                    executable=executable,
-                    args=tuple(raw_args),
-                    cwd_relative=_optional_string(arguments, "cwdRelative", "."),
-                    env=dict(raw_env),
-                    timeout_ms=_optional_int(arguments, "timeoutMs", 30_000),
-                    stdout_limit_bytes=_optional_int(
-                        arguments, "stdoutLimitBytes", 262_144
-                    ),
-                    stderr_limit_bytes=_optional_int(
-                        arguments, "stderrLimitBytes", 262_144
-                    ),
-                    wait_ms=_optional_int(arguments, "waitMs", 0),
-                    stdout_tail_bytes=_optional_int(
-                        arguments, "stdoutTailBytes", 8_192
-                    ),
-                    stderr_tail_bytes=_optional_int(
-                        arguments, "stderrTailBytes", 8_192
-                    ),
-                )
-            except ValueError as error:
-                raise ToolBridgeError(
-                    str(error),
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                ) from error
-            client_request_id = request.get("clientRequestId")
-            if not isinstance(client_request_id, str):
-                raise ToolBridgeError("Runtime request omitted clientRequestId")
-            return "workspace.exec", request, client_request_id
-        if call.name == "observe_job":
-            _only(
-                arguments,
-                {"jobId", "waitMs", "stdoutTailBytes", "stderrTailBytes"},
-                call.name,
-            )
-            job_id = _required_string(arguments, "jobId", call.name)
-            if self.tool_grant is not None and job_id not in self._known_job_ids:
-                raise ToolBridgeError(
-                    "observe_job may only observe a Job created by this Run",
-                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                )
-            return (
-                "task.observe",
-                {
-                    "schemaVersion": 1,
-                    "jobId": job_id,
-                    "waitMs": _optional_int(arguments, "waitMs", 0),
-                    "stdoutTailBytes": _optional_int(
-                        arguments, "stdoutTailBytes", 8_192
-                    ),
-                    "stderrTailBytes": _optional_int(
-                        arguments, "stderrTailBytes", 8_192
-                    ),
-                },
-                None,
-            )
-        if call.name == "read_artifact":
-            _only(arguments, {"jobId", "artifactId", "offset", "maxBytes"}, call.name)
-            job_id = _required_string(arguments, "jobId", call.name)
-            artifact_id = _required_string(arguments, "artifactId", call.name)
-            if (
-                self.tool_grant is not None
-                and (job_id, artifact_id) not in self._known_artifacts
-            ):
-                raise ToolBridgeError(
-                    "read_artifact may only read an Artifact observed in this Run",
-                    kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
-                )
-            return (
-                "artifact.read",
-                {
-                    "schemaVersion": 1,
-                    "jobId": job_id,
-                    "artifactId": artifact_id,
-                    "offset": _optional_int(arguments, "offset", 0),
-                    "maxBytes": _optional_int(
-                        arguments, "maxBytes", 262_144, positive=True
-                    ),
-                },
-                None,
-            )
-        raise ToolBridgeError(
-            f"Tool is not in the Ordivon Harness ACI: {call.name}",
-            kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+        return lower_runtime_tool(
+            call,
+            step_id=step_id,
+            committed=self.committed,
+            harness_run_id=self.harness_run_id,
+            tool_grant=self.tool_grant,
+            known_job_ids=frozenset(self._known_job_ids),
+            known_artifacts=frozenset(self._known_artifacts),
         )
 
     def _unknown(
@@ -2465,52 +2064,12 @@ def _extract_artifacts(payload: dict[str, JsonValue]) -> tuple[ArtifactRef, ...]
     return tuple(unique[key] for key in sorted(unique))
 
 
-def _only(arguments: dict[str, JsonValue], allowed: set[str], tool_name: str) -> None:
-    unknown = sorted(set(arguments) - allowed)
-    if unknown:
-        raise ToolBridgeError(
-            f"{tool_name} received unknown fields: {unknown}",
-            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-        )
 
 
-def _required_string(
-    arguments: dict[str, JsonValue], field: str, tool_name: str
-) -> str:
-    value = arguments.get(field)
-    if not isinstance(value, str) or not value or value != value.strip():
-        raise ToolBridgeError(
-            f"{tool_name} requires trimmed string {field}",
-            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-        )
-    return value
 
 
-def _optional_string(arguments: dict[str, JsonValue], field: str, default: str) -> str:
-    value = arguments.get(field, default)
-    if not isinstance(value, str) or value != value.strip():
-        raise ToolBridgeError(
-            f"{field} must be a trimmed string",
-            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-        )
-    return value
 
 
-def _optional_int(
-    arguments: dict[str, JsonValue],
-    field: str,
-    default: int,
-    *,
-    positive: bool = False,
-) -> int:
-    value = arguments.get(field, default)
-    if type(value) is not int or value < (1 if positive else 0):
-        qualifier = "positive" if positive else "non-negative"
-        raise ToolBridgeError(
-            f"{field} must be a {qualifier} integer",
-            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-        )
-    return value
 
 
 def _bounded_provider_failure_detail(error: AgentTurnAdapterError) -> str:
@@ -2519,13 +2078,3 @@ def _bounded_provider_failure_detail(error: AgentTurnAdapterError) -> str:
     if len(encoded) <= 2_048:
         return detail
     return encoded[:2_048].decode("utf-8", errors="ignore").strip()
-
-
-def _read_workspace_byte_offset(arguments: dict[str, JsonValue]) -> int:
-    if "byteOffset" in arguments and "offset" in arguments:
-        raise ToolBridgeError(
-            "read_workspace byteOffset and legacy offset are mutually exclusive",
-            kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-        )
-    field = "byteOffset" if "byteOffset" in arguments else "offset"
-    return _optional_int(arguments, field, 0)

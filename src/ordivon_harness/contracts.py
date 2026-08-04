@@ -6,7 +6,7 @@ from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from ordivon_host.effects import ArtifactRef, StateRef
+from ._host_compat.effects import ArtifactRef, StateRef
 
 _NATIVE_TOOL_NAMES = {
     "read_workspace",

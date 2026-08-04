@@ -5,12 +5,20 @@ from dataclasses import dataclass
 from typing import TypeVar
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
-from ordivon_host.domain import TaskState
-from ordivon_host.effects import ArtifactRef, TaskOutcome
-from ordivon_host.journal import EventConflict, JournalCorruption, LeaseHeld
-from ordivon_host.kernel import HostKernel, worker_owner_id
-from ordivon_host.objects import ObjectCorrupt, ObjectMissing, StoredObject
-from ordivon_host.storage import HostStorage, TaskEventSnapshot
+from ._host_compat.domain import TaskState
+from ._host_compat.effects import ArtifactRef, TaskOutcome
+from ._host_compat.storage import (
+    EventConflict,
+    HostKernel,
+    HostStorage,
+    JournalCorruption,
+    LeaseHeld,
+    ObjectCorrupt,
+    ObjectMissing,
+    StoredObject,
+    TaskEventSnapshot,
+    worker_owner_id,
+)
 
 from .contracts import (
     CompletionVerification,

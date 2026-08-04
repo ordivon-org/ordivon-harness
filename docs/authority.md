@@ -15,32 +15,54 @@ audience:
   - operator
   - agent
 updated: 2026-08-04
-summary: Decision identifying the documents and machine sources allowed to define current Harness execution, recovery, and completion behavior.
+summary: Decision identifying the documents and machine sources allowed to define current Harness behavior, compatibility, evidence and operation.
 evidence_status: not_applicable
 readiness: READY
 applies_to:
   - ordivon-harness
 related:
   - harness.start
+  - harness.quickstart
+  - harness.status
   - harness.architecture
+  - harness.compatibility
+  - harness.verification
   - harness.operations
+  - harness.data-privacy
+  - harness.releases
 ---
 # Harness Content Authority
 
 ## Context
 
-Harness contains current architecture, extraction history, OH and P/R closeouts, H-series proposals, E-series design audits, boundary experiments, fixtures, and frozen evidence. Many records accurately describe the state at one implementation stage but cannot all define the current system simultaneously.
+Harness contains current architecture, extraction history, OH/H/P/R closeouts, Provider experiments, fixtures and frozen evidence. These records do not have equal authority, and an older live receipt cannot silently certify current source.
 
 ## Decision
 
-[`../README.md`](../README.md) is the canonical repository entry. [`../ARCHITECTURE.md`](../ARCHITECTURE.md) owns the current Harness architecture and responsibility split. [`OPERATIONS.md`](OPERATIONS.md) owns Run operation, cancellation, resume, recovery ordering, semantic Doctor, and cross-component escalation.
+| Responsibility | Canonical source |
+| --- | --- |
+| public identity, boundaries and navigation | [`../README.md`](../README.md) |
+| installation and first deterministic/live journeys | [`QUICKSTART.md`](QUICKSTART.md) |
+| maturity, support graph and known limits | [`STATUS.md`](STATUS.md) |
+| architecture and semantic ownership | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) |
+| dependency, Host API, durable object and upgrade compatibility | [`COMPATIBILITY.md`](COMPATIBILITY.md) |
+| evidence classes and claim interpretation | [`VERIFICATION.md`](VERIFICATION.md) |
+| operation, cancellation, recovery, Doctor and escalation | [`OPERATIONS.md`](OPERATIONS.md) |
+| sensitive data, Provider disclosure, retention and deletion | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) |
+| versions, release gates and deprecation | [`RELEASES.md`](RELEASES.md) |
 
-Source code, internal protocol codecs, deterministic tests, exact dependency pins, Runtime catalog discovery, Host Journal and CAS inspection, final canonical Traces, and retained receipts remain stronger owners for exact fields, transitions, compatibility, provider behavior, and observed recovery results. Extraction notes, H/OH/E/P/R documents, boundary stages, and closeouts explain design evolution and evidence; they do not silently redefine the current architecture.
+Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, Host Journal/CAS inspection, canonical Traces and digest-bound receipts remain stronger owners for exact fields, transitions and observed results.
+
+`evidence/index.json` classifies repository receipts. Historical stage reports and closeouts preserve provenance but do not override current contracts. `CHANGELOG.md` records change and does not redefine current behavior.
 
 ## Consequences
 
-Only the repository entry, architecture, operations contract, and this decision enter strict content management in this adoption step. Stage-oriented texts remain available with explicit historical markers. A later human-centered rewrite may turn the strongest evidence into clearer concepts, examples, and troubleshooting paths, but it must preserve provenance and declare supersession rather than create a second current Harness model.
+- canonical documents are listed in `.ordivon/project.yaml` and validated by `scripts/check_docs.py`;
+- exact dependency truth is validated separately by `scripts/check_dependencies.py`;
+- evidence/file correspondence and revision binding are validated by `scripts/check_evidence.py`;
+- new current claims must identify tests or a receipt bound to the current graph;
+- a new canonical document must declare which responsibility it owns and update this decision.
 
 ## Status
 
-Accepted and active. Reopen when Harness ownership changes, a stable external protocol or service boundary is introduced, or two managed documents claim the same execution responsibility.
+Accepted and active. Reopen when semantic ownership changes, a protocol-level Host boundary replaces source compatibility, or two managed documents claim the same fact.

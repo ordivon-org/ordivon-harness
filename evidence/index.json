@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-evidence-index",
+  "entries": [
+    {
+      "claimId": "harness.runtime-correlation.h2",
+      "file": "harness-h2-runtime-r2-live-d50f609-20260731.json",
+      "status": "historical",
+      "implementationRevision": "d50f609ef2d269b5adc36e7e2088400c1971d0eb",
+      "scope": "Host Assignment references, Runtime idempotency and terminal evidence"
+    },
+    {
+      "claimId": "harness.provider.codex-app.h3",
+      "file": "codex-app-h3-live-64ab44b-20260731.json",
+      "status": "historical",
+      "implementationRevision": "64ab44be667fa172027150a152b2f4660538ef00",
+      "scope": "Codex App Server lifecycle, events, usage and read-only Tool evidence"
+    },
+    {
+      "claimId": "harness.provider.hermes-acp.h4",
+      "file": "hermes-acp-h4-live-3d9a559-20260731.json",
+      "status": "historical",
+      "implementationRevision": "3d9a55904c735b388d8acf617262f0322174ba9a",
+      "scope": "Hermes ACP lifecycle, session provenance and read-only Tool evidence"
+    },
+    {
+      "claimId": "harness.replacement.h5",
+      "file": "harness-replacement-h5-live-76420e4-20260731.json",
+      "status": "historical",
+      "implementationRevision": "76420e4f1ab2d20799b09aad6497f195bd951aa7",
+      "scope": "Provider replacement orderings and failure trajectories"
+    },
+    {
+      "claimId": "harness.deepseek.oh3",
+      "file": "ordivon-harness-oh3-deepseek-live-20260801.json",
+      "status": "historical",
+      "implementationRevision": "79507fb6a000d241df19947de550610ebef6b8b1",
+      "scope": "DeepSeek Agent loop and Runtime read observation"
+    },
+    {
+      "claimId": "harness.completion.oh4",
+      "file": "ordivon-harness-oh4-deepseek-live-20260801.json",
+      "status": "historical",
+      "implementationRevision": "fb10eae6c178eb76dda51ab1baeb258da4682c38",
+      "scope": "Host-integrated Run receipt, verification, decision and outcome"
+    },
+    {
+      "claimId": "harness.recovery.oh5",
+      "file": "ordivon-harness-oh5-recovery-live-20260801.json",
+      "status": "historical",
+      "implementationRevision": "264d96cb2325e4a418c98459e05c74d482001fd8",
+      "scope": "lost-process assessment, abandonment, replacement and stale-result fencing"
+    }
+  ]
+}

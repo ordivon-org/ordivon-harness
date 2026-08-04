@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from ordivon_host.domain import EventKind
+from ._host_compat.domain import EventKind
 
 HARNESS_ASSIGNMENT_COMMITTED = EventKind("harness.assignment-committed")
 HARNESS_RUN_RECOVERY_RECORDED = EventKind("harness.run-recovery-recorded")

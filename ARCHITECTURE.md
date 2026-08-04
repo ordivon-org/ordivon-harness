@@ -68,7 +68,7 @@ ordivon-computing / ordivon-protocol
           ↓
 ordivon-host
   Task / Journal / CAS / Kernel / HostExtensionPort / Runtime client
-          ↑ thin generic extension port
+          ↑ Host-native source compatibility boundary
 ordivon-harness
   Attempt / Assignment / Run / Tool Step / Recovery / Completion
   Provider adapters and bare-model execution
@@ -78,6 +78,12 @@ ordivon-runtime
 ```
 
 The dependency remains one-way. Host preserves extension fields and CAS references under revision, state and ready-frontier fencing without importing Harness semantics. Runtime remains unaware of the Harness state machine.
+
+## Host compatibility boundary
+
+Harness is repository-independent and semantically independent, but it is currently source-compatible with one exact Host revision rather than a generic plugin protocol. Every direct `ordivon_host` import is centralized under `src/ordivon_harness/_host_compat/`, split by Context, domain, effects, persistence, extension admission and Runtime concerns. Other Harness modules import only that private boundary.
+
+This preserves the necessary non-symmetric relationship—Harness requires Host authority while Host does not require Harness—without introducing an unproven daemon, RPC layer or second persistence system. A Host pin change requires lockfile regeneration and the complete Harness suite.
 
 ## Durable ownership
 
@@ -98,7 +104,7 @@ The bytes remain in Host CAS and their event admission remains in the Host Journ
 
 Provider Sessions, subprocesses, transcripts and hidden model state are disposable execution state. They never own Task continuity. Public Run state can be restored from a `HarnessRunSnapshot` plus its full-or-delta state object chain.
 
-These durable formats are internal to `ordivon_harness.protocol`. They are not exported from the package root and are not part of `ordivon-protocol`; promotion requires another materially different consumer or transport boundary.
+These durable formats are defined by `ordivon_harness.protocol` and remain outside `ordivon-protocol`; promotion requires another materially different consumer or transport boundary. Historical package-root aliases still expose some low-level types during the pre-1.0 compatibility window, but new application code should use `ordivon_harness.api` and must not treat those aliases as a newly stable surface.
 
 `OrdivonAgentLoop.resume()` currently resumes:
 
@@ -114,6 +120,12 @@ Provider execution follows the same shape through `AgentTurnCallHandle.poll()` a
 ## Live event projection
 
 The canonical `HarnessTrace` remains the durable semantic event record. `TraceRecorder` may additionally emit each already-recorded event to a best-effort sink used by `RunHandle.iter_events()` and CLI JSON Lines. Sink failure cannot change Run execution or evidence; consumers reconnect through Host state and the final Trace rather than treating the live stream as a durable broker.
+
+## Internal execution seams
+
+`RuntimeToolBridge` remains the execution facade, but model-Tool argument validation and deterministic Runtime request construction live in the pure `ordivon.runtime_lowering` module. It performs no Runtime I/O and writes no Host state. Restart-time durable Tool-batch reconstruction and evidence comparison live in `ordivon.run_recovery`; the main Agent loop consumes their result and retains authority over stop, budget, Provider, and Trace behavior.
+
+These modules are internal seams, not new public protocols or persistence owners. They preserve the existing `RuntimeToolBridge._lower()` compatibility entry, durable object schemas, dispatch identities, and recovery ordering.
 
 ## Dispatch fencing
 
@@ -171,7 +183,7 @@ Execution entry guards are explicit:
 - durable `patch_workspace` is admitted only when both Runtime Patch operations are present and the Tool Grant binds allowed mutation paths;
 - approval events remain unsupported rather than represented by an unreachable pause state.
 
-The CLI is a thin projection of the same facade: `status`, `run`, `resume`, `cancel`, `recover` and `doctor`. It creates no alternate lifecycle. CLI `run` consumes a current Assignment; Assignment construction remains with the integrating Host/application because it requires concrete Task Contract, Context and Tool authority.
+The CLI is a thin projection of the same facade: `status`, `inspect`, `handoff`, `run`, `resume`, `cancel`, `recover` and `doctor`. It creates no alternate lifecycle. CLI `run` consumes a current Assignment; Assignment construction remains with the integrating Host/application because it requires concrete Task Contract, Context and Tool authority.
 
 ## Extension surfaces
 

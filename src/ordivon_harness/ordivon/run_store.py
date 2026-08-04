@@ -3,9 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
-from ordivon_host import HostExtensionPort, HostKernelError, LeaseHeld, RevisionConflict
-from ordivon_host.journal import EventConflict
-from ordivon_host.objects import StoredObject
+from .._host_compat.extensions import (
+    EventConflict,
+    HostExtensionPort,
+    HostKernelError,
+    LeaseHeld,
+    RevisionConflict,
+    StoredObject,
+)
 from ..protocol import (
     HarnessDispatchFence,
     HarnessProviderCallFailureReceipt,

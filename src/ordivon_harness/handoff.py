@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from anc_canonical import JsonValue, canonical_digest
 
-from ordivon_host.domain import EventKind, TaskState
+from ._host_compat.domain import EventKind, TaskState
 from .disposition import NativeRunPhase, projected_native_run_disposition
 from .event_kinds import (
     COMPLETION_DECIDED,
@@ -14,7 +14,7 @@ from .event_kinds import (
     HARNESS_RUN_RECORDED,
     HARNESS_RUN_RECOVERY_RECORDED,
 )
-from ordivon_host.storage import HostStorage
+from ._host_compat.storage import HostStorage
 
 
 @dataclass(frozen=True, slots=True)

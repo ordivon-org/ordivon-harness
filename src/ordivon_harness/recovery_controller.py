@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from anc_canonical import JsonValue
-from ordivon_host.runtime import (
+from ._host_compat.runtime import (
     RuntimeClient,
     RuntimeClientError,
     ensure_workspace_closed,

@@ -1,0 +1,33 @@
+name: Bounded capability proposal
+description: Propose a Harness capability justified by a repeated Agent Run failure
+title: "proposal: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: failure
+    attributes:
+      label: Repeated workload failure
+      description: Describe the real Agent Run that the current Host/Harness/Runtime owners cannot handle safely.
+    validations:
+      required: true
+  - type: textarea
+    id: owner
+    attributes:
+      label: Correct owner and boundary
+      description: Explain why this belongs to Harness rather than Host, Runtime, Provider or Domain.
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Smallest enforceable contract
+      description: Include identities, authority, evidence, UNKNOWN, recovery and stop conditions.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance and falsification evidence
+    validations:
+      required: true

@@ -5,11 +5,9 @@ from dataclasses import dataclass
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from anc_effect_binding import EffectBinding
 from anc_effect_ir import EffectEnvelope, effect_digest
-from ordivon_host.domain import EventKind, TaskProjection, TaskState
-from ordivon_host.effects import TaskOutcome
-from ordivon_host.journal import JournalCorruption
-from ordivon_host.objects import ObjectCorrupt
-from ordivon_host.storage import HostStorage
+from ._host_compat.domain import EventKind, TaskProjection, TaskState
+from ._host_compat.effects import TaskOutcome
+from ._host_compat.storage import HostStorage, JournalCorruption, ObjectCorrupt
 from .event_kinds import (
     COMPLETION_DECIDED,
     COMPLETION_PROPOSED,

@@ -5,7 +5,7 @@ from typing import Final
 
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest, validate_json_value
 
-from ordivon_host.cognition.context import (
+from .._host_compat.context import (
     CompiledContext,
     ContextBlock,
     ContextCompileError,

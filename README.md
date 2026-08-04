@@ -10,163 +10,172 @@ visibility: public
 owners:
   - ordivon-harness
 audience:
+  - user
   - builder
   - operator
   - agent
 updated: 2026-08-04
-summary: Canonical entry to replaceable Agent execution, Assignment and Run continuity, Tool semantics, Provider adapters, recovery, and completion.
+summary: Public entry to Host-native Agent Run execution, Provider adaptation, Tool checkpointing, evidence, resume, and recovery.
 evidence_status: verified
 readiness: READY
 applies_to:
   - ordivon-harness
 related:
+  - harness.quickstart
+  - harness.status
   - harness.architecture
+  - harness.compatibility
+  - harness.verification
+  - harness.operations
+  - harness.data-privacy
+  - harness.releases
   - harness.authority
 ---
 # Ordivon Harness
 
-## Purpose
+Ordivon Harness keeps one Agent Run understandable and recoverable when a model, Provider process, Tool response, or local process fails.
 
-Ordivon Harness owns replaceable Agent execution lifecycles above the thin `ordivon-host` continuity kernel.
-
-It contains three deliberately distinct concerns:
+It binds execution to a durable Host Assignment, adapts replaceable Providers, constrains and records Tool use, checkpoints public Run state, and produces evidence that Host or a domain verifier can evaluate.
 
 ```text
-Host Harness extension
-  TaskAttempt / Assignment / Run / Recovery / Completion
-
-Provider-faithful adapters
-  Codex App Server / Hermes ACP
-
-First-party bare-model execution
-  bounded sequential model–Tool loop / DeepSeek adapter / Runtime Tool bridge
+Host Task and Assignment
+→ Harness Context and ToolGrant
+→ Provider Call
+→ model Tool request
+→ durable Tool Step intent/fence
+→ Runtime physical execution
+→ Tool Observation and Run Snapshot
+→ Completion Proposal
+→ Host/domain verification and Task outcome
 ```
 
-The dependency is one-way:
+## Responsibility boundary
 
-```text
-ordivon-harness → ordivon-host → ordivon-protocol
-```
-
-`ordivon-host` does not import this package. Host owns generic Task, Journal, CAS, Kernel, the public `HostExtensionPort`, and Runtime client mechanics; Harness owns its event vocabulary, semantic history validation, handoff projection, durable Run state and Agent execution behavior.
-
-## Current boundary
-
-Harness owns replaceable Agent execution semantics above Host and before Runtime. It does not own durable Task continuity, physical execution truth, domain-world rules, promoted cross-project protocol, Provider hidden state, or another database or scheduler.
-
-## Repository selection
-
-| Change concerns | Use | Do not put here |
+| Concern | Canonical owner | Harness relationship |
 | --- | --- | --- |
-| Workspace, Job, Attempt, process tree, Artifact, physical cancellation, or execution recovery | `ordivon-runtime` | Task meaning, Agent Run policy, or domain completion |
-| durable Task continuity, Journal/CAS, commitment admission, verification records, or Task outcomes | `ordivon-host` | Provider loops, Harness Run semantics, or physical process truth |
-| Assignment, Agent Run, Provider adapter, model–Tool loop, Tool-step checkpoint, or Run recovery | `ordivon-harness` | a second Task database, Runtime supervision, or domain-world authority |
+| Task identity, revision fencing, Journal/CAS admission, commitments, verification admission, outcome | `ordivon-host` | required Host-native authority |
+| Assignment, Provider Call, Tool Step, Run Snapshot, resume/recovery and completion-proposal semantics | `ordivon-harness` | owned here |
+| Workspace, Job, process tree, Artifact and physical side-effect truth | `ordivon-runtime` | invoked and observed through Host Runtime client |
+| authoritative world state and semantic completion | domain system or verifier | Harness only proposes completion |
+| model inference and hidden Provider session | DeepSeek, Codex App Server, Hermes ACP or another adapter | replaceable execution source, not durable Task truth |
 
-## Start here
+Host stores Harness extension bytes and admits their events; Harness owns their schemas and lifecycle meaning. Storage does not transfer semantic ownership.
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) defines the current ownership, execution, recovery, fencing, and application boundaries.
-- [`docs/OPERATIONS.md`](docs/OPERATIONS.md) defines Run operation, cancellation, restart recovery, Doctor, and cross-component escalation.
-- [`docs/authority.md`](docs/authority.md) identifies which records may define current Harness behavior.
-- `docs/ORDIVON_HARNESS_*`, extraction, and boundary-stage documents are historical implementation evidence and do not replace the current architecture or operations contract.
+## Status
 
-## Verified boundary
+Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. It has durable Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
 
-The retained evidence proves:
+It is not a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, or independent Task database. See [`docs/STATUS.md`](docs/STATUS.md).
 
-- durable Task Attempt and Assignment identity before Provider or Runtime activity;
-- Codex and Hermes provider-faithful lifecycle adapters;
-- one first-party bare-model sequential loop;
-- Assignment-scoped Tool authority and Runtime correlation;
-- durable Trace, Tool Observation, Run receipt and completion verification;
-- conservative UNKNOWN handling, safe read-only abandonment and retained effectful recovery evidence;
-- Assignment-bound native Tool semantics and one pure Run disposition derivation;
-- monotonic Run deadlines, cancellable Provider call handles and requested/effective model provenance;
-- active socket cancellation for the default DeepSeek HTTP transport;
-- durable native `workspace.exec` Intent → DispatchFence → Receipt → Observation with restart reconciliation by `clientRequestId`;
-- capability-adaptive durable `workspace.patch` with exact request replay and `workspace.patch.get` receipt reconciliation;
-- bounded Provider retry for explicit transient transport/unavailable failures, with stable logical Turn identity and no Tool redispatch;
-- Provider-reported token hard limits and bounded known-no-effect Tool correction;
-- best-effort live semantic event projection whose authoritative form remains the final canonical Trace;
-- nonterminal `cancel-requested` Receipts that can be superseded by one final reconciled Receipt;
-- active-Tool-Step-first Run recovery before Workspace assessment;
-- executable `needs-input` and prepared-effect Run resume;
-- append-only Run-state deltas between bounded full checkpoints.
+## What works
 
-The current DispatchFence is a Host revision/Assignment/Intent fence retained in CAS and Runtime correlation evidence, with validation immediately before and after dispatch. Runtime does not independently authenticate it with a Host-issued MAC; it is therefore a practical stale-dispatch fence, not a cryptographic cross-service capability token.
+- Host-backed Task Attempt, Assignment and Run admission;
+- exact Host revision and Protocol pins with a checked `uv.lock`;
+- durable Provider Call claim, dispatch, result, failure, UNKNOWN and replay semantics;
+- durable Tool Step intent, dispatch fence, receipt, reconciliation and cancellation;
+- Run Snapshot, pause, resume, budget continuity and process-replacement recovery;
+- ToolGrant filtering and Runtime catalog binding;
+- DeepSeek turn adapter, Codex App Server adapter and Hermes ACP adapter;
+- independent completion proposal, verification admission and outcome handling;
+- semantic Doctor over Harness history;
+- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths.
 
-Generic effectful continuation remains deliberately narrower than the Runtime catalog: durable `workspace.exec` is accepted; `patch_workspace` is exposed only when Runtime advertises the paired `workspace.patch` and `workspace.patch.get` contract; durable `workspace.mutate` remains hidden and `HarnessRunPlan` rejects that grant. Patch uses complete before digests and a stable Runtime receipt identity rather than weakening the mutation boundary. Approval pause/resume is also not advertised or accepted. Parallel Tools, subagents, automatic routing, persistent Provider sessions, a Harness daemon and a separate Harness database remain outside the accepted boundary.
+## What it does not do
 
-## Recommended application surface
+- own Task or Goal truth;
+- create another Journal, database or scheduler;
+- treat Provider hidden state as authoritative continuity;
+- infer semantic completion from Runtime success;
+- provide hostile multi-tenant isolation;
+- support mid-call Provider migration;
+- guarantee arbitrary Tool retry safety;
+- automatically choose the “best” Provider;
+- expose every internal persistence type as stable API.
 
-`HarnessRunner` is the supported orchestration facade. It composes the existing Host lifecycle, Runtime Tool bridge and Agent loop; it does not own another Task state machine or database.
+## Requirements
 
-```python
-from ordivon_harness import CompletionMode, HarnessRunPlan, HarnessRunner
+- Python 3.12;
+- Linux for the canonical trusted-local operational path;
+- exact `ordivon-host` and `ordivon-protocol` revisions pinned in `pyproject.toml` and `uv.lock`;
+- Ordivon Runtime for real Tool execution;
+- an explicit Provider adapter for model inference.
 
-runner = HarnessRunner(host, runtime=runtime, adapter=adapter)
-result = runner.run(
-    HarnessRunPlan(
-        task_contract=task_contract,
-        context_blocks=context_blocks,
-        workspace_ref=workspace_id,
-        tool_grant=tool_grant,
-        completion_mode=CompletionMode.PROPOSE,
-    )
-)
-```
+## Quick start
 
-The public lifecycle is deliberately small:
-
-```text
-prepare(plan)       compile Context and commit the native Assignment
-run(plan)           prepare, execute and record one Run
-run_current(task)   execute an already committed Assignment
-resume(task)        continue a durable needs-input/effect checkpoint
-status(task)        project current Host-backed Harness state
-cancel(task)        cancel this Runner's active call or reconcile a Runtime effect
-recover(task)       perform active-step-first lost-process recovery
-```
-
-`RunHandle` provides in-process start/result/cancel mechanics without introducing a daemon. `iter_events()` projects semantic events while the Run is active; the returned final Trace remains authoritative and event consumers must tolerate a lossy sink. A durable Snapshot forces callers onto `resume`; a recorded Run cannot be executed again and requires a replacement Assignment.
-
-The CLI operates on existing Host state:
-
-```bash
-ordivon-harness --state-root /path/to/host-state status task:example
-ordivon-harness --state-root /path/to/host-state run task:example
-ordivon-harness --state-root /path/to/host-state run task:example --events-jsonl
-ordivon-harness --state-root /path/to/host-state resume task:example --message 'operator input'
-ordivon-harness --state-root /path/to/host-state cancel task:example
-ordivon-harness --state-root /path/to/host-state recover task:example
-ordivon-harness --state-root /path/to/host-state doctor
-```
-
-CLI `run` executes the current committed Assignment; creation of Task Contracts, Context blocks, Tool Grants and new Assignments remains an explicit Python/Host integration operation. `--max-total-tokens`, `--max-model-retries` and `--max-tool-corrections` set explicit bounded Run policy. `--events-jsonl` writes the live event projection to stderr and preserves the final result JSON on stdout. A separate CLI process cannot interrupt an in-memory Provider socket owned by another process, but it can reconcile or cancel a durable active Runtime Tool Step.
-
-## Development
-
-Python 3.12 is required.
+Install the pinned dependency graph:
 
 ```bash
 python3.12 -m venv .venv
 . .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -e .
-python -m pytest -q tests
-python -m unittest discover -s tests
-ruff check <changed files>
-python -m compileall -q src tests scripts
+python -m pip check
 ```
 
-Harness semantic history can be checked separately from the Host core doctor:
+Run the portable contract:
 
 ```bash
-ordivon-harness --state-root /path/to/host-state doctor
+python -m compileall -q src tests scripts evals
+python -m ruff check src tests scripts
+python -W error::ResourceWarning -m unittest discover -s tests -v
+python scripts/check_dependencies.py
+python scripts/check_docs.py
+uv lock --check
+scripts/local-acceptance check
 ```
 
-See `ARCHITECTURE.md` and `docs/OPERATIONS.md` for the active contract. The OH, P/R, extraction, and boundary documents remain historical evidence for the stages that produced it.
+The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
-## Project family
+## Public API
 
-- [Public project directory](https://ordivon.com/projects) — reader-facing role, maturity, and next steps.
-- [Cross-project map](https://github.com/zycxfyh/ordivon-computing/blob/main/projects/README.md) — stable roles, repository links, and authority entry points for all nine repositories.
-- Related owners: [Ordivon Host](https://github.com/zycxfyh/ordivon-host) preserves durable Task continuity; [Ordivon Runtime](https://github.com/zycxfyh/ordivon-runtime) owns physical execution; [Ordivon Computing](https://github.com/zycxfyh/ordivon-computing) owns promoted shared contracts.
+New application integrations should import from the stable facade:
+
+```python
+from ordivon_harness.api import (
+    CompletionMode,
+    HarnessRunner,
+    HarnessRunPlan,
+    TaskContract,
+    ToolGrant,
+)
+```
+
+The package root retains historical pre-1.0 exports for compatibility. Provider drivers, owner-local persistence records and recovery implementation types remain integration or internal APIs even when old root aliases still exist. See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
+
+## Operator interface
+
+```bash
+ordivon-harness --state-root /var/lib/ordivon/host status TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host inspect TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host handoff TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host cancel TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host recover TASK_ID
+```
+
+`inspect` and `handoff` require neither Runtime nor Provider access. Recovery never authorizes blind redispatch of an uncertain Provider or Tool effect.
+
+## Documentation map
+
+| Need | Start here |
+| --- | --- |
+| install and run first journeys | [`docs/QUICKSTART.md`](docs/QUICKSTART.md) |
+| current maturity and limits | [`docs/STATUS.md`](docs/STATUS.md) |
+| architecture and ownership | [`ARCHITECTURE.md`](ARCHITECTURE.md) |
+| dependency, object and upgrade compatibility | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) |
+| claim-to-evidence map | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) |
+| configuration and operations | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| sensitive data, retention and deletion | [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md) |
+| release and deprecation gates | [`docs/RELEASES.md`](docs/RELEASES.md) |
+| canonical document ownership | [`docs/authority.md`](docs/authority.md) |
+| repository contribution | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| private vulnerability reporting | [`SECURITY.md`](SECURITY.md) |
+
+Historical phase reports and `evidence/` receipts preserve earlier dependency graphs. They do not automatically certify current `main`.
+
+## Security and data
+
+Harness may send bounded Context and Tool observations to external Providers and persist prompts, model output, Tool arguments, Runtime references, traces and receipts in Host CAS. It does not automatically redact sensitive content. Read [`SECURITY.md`](SECURITY.md) and [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md).
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE).

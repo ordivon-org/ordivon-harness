@@ -9,10 +9,13 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
-from ordivon_host import HostConfig, HostStorage, McpRuntimeClient, load_config
-from ordivon_host.config import read_token_file
+from ._host_compat.config import HostConfig, load_config, read_token_file
+from ._host_compat.runtime import McpRuntimeClient
+from ._host_compat.storage import HostStorage
 
+from .handoff import operator_handoff
 from .history import validate_history
+from .version import package_version
 from .host import HarnessHost
 from .ordivon import (
     DEFAULT_DEEPSEEK_SECRET_PATH,
@@ -40,6 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = commands.add_parser("status")
     status.add_argument("task_id")
+
+    inspect = commands.add_parser("inspect")
+    inspect.add_argument("task_id")
+
+    handoff = commands.add_parser("handoff")
+    handoff.add_argument("task_id")
 
     run = commands.add_parser("run")
     run.add_argument("task_id")
@@ -151,6 +160,14 @@ def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]
         host = HarnessHost(storage, clock_ms=_wall_clock_ms)
         if args.command == "status":
             return {"ok": True, **HarnessRunner(host).status(args.task_id).to_dict()}
+        if args.command == "handoff":
+            return {"ok": True, "handoff": operator_handoff(storage, args.task_id).to_dict()}
+        if args.command == "inspect":
+            return {
+                "ok": True,
+                "status": HarnessRunner(host).status(args.task_id).to_dict(),
+                "handoff": operator_handoff(storage, args.task_id).to_dict(),
+            }
 
         runtime = _runtime(config)
         if args.command == "cancel":
@@ -229,7 +246,7 @@ def _runtime(config: HostConfig) -> McpRuntimeClient:
         timeout_seconds=config.runtime.timeout_seconds,
         max_response_bytes=config.runtime.max_response_bytes,
         client_name="ordivon-harness",
-        client_version="0.5.0",
+        client_version=package_version(),
     )
 
 

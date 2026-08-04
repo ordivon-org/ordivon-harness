@@ -1,0 +1,3 @@
+# Harness has no third-party PyPI runtime dependencies.
+# ordivon-host and ordivon-protocol are internal exact Git dependencies;
+# they are verified by commit pins, their repository gates, and cross-repo tests.

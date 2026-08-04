@@ -8,9 +8,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 from anc_canonical import JsonValue
-from ordivon_host import ArtifactRef, HostStorage
-from ordivon_host.cognition.context import CompiledContext, ContextBlock
-from ordivon_host.runtime import RuntimeClient
+from ._host_compat.context import CompiledContext, ContextBlock
+from ._host_compat.effects import ArtifactRef
+from ._host_compat.runtime import RuntimeClient
+from ._host_compat.storage import HostStorage
 from .protocol import HarnessRunSnapshot
 
 from .contracts import TaskContract, ToolGrant

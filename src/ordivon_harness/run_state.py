@@ -9,7 +9,7 @@ from anc_canonical import (
     canonical_digest,
     validate_json_value,
 )
-from ordivon_host.objects import StoredObject
+from ._host_compat.storage import StoredObject
 
 _FULL_KIND = "ordivon.harness-run-state"
 _DELTA_KIND = "ordivon.harness-run-state-delta"

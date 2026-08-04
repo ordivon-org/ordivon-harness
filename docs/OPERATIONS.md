@@ -36,6 +36,8 @@ Operate through `HarnessRunner` or the thin CLI against an existing Host state r
 
 ```bash
 ordivon-harness --state-root /path/to/host-state status TASK_ID
+ordivon-harness --state-root /path/to/host-state inspect TASK_ID
+ordivon-harness --state-root /path/to/host-state handoff TASK_ID
 ordivon-harness --state-root /path/to/host-state run TASK_ID
 ordivon-harness --state-root /path/to/host-state resume TASK_ID --message 'operator input'
 ordivon-harness --state-root /path/to/host-state cancel TASK_ID
@@ -43,7 +45,16 @@ ordivon-harness --state-root /path/to/host-state recover TASK_ID
 ordivon-harness --state-root /path/to/host-state doctor
 ```
 
-The Harness creates no daemon, scheduler, process registry, or separate database. Durable Harness objects remain in Host CAS and are admitted through the Host Journal.
+The Harness creates no daemon, scheduler, process registry, or separate database. Durable Harness objects remain in Host CAS and are admitted through the Host Journal. `inspect` and `handoff` are read-only and require neither Runtime nor Provider access.
+
+Before operation or upgrade, verify the exact dependency graph:
+
+```bash
+uv lock --check
+python scripts/check_dependencies.py
+python scripts/check_docs.py
+python scripts/check_evidence.py
+```
 
 ## Failure detection
 
@@ -82,6 +93,10 @@ Harness recovery may read Host-backed objects and Runtime evidence, but it does 
 Run Host Doctor first when core state integrity is uncertain. `ordivon-harness doctor` then decodes and validates Harness-specific Assignment, Run, Recovery, Completion, Tool catalog, Intent, Fence, Receipt, Snapshot, delta, Trace, and provenance relationships preserved through the generic Host extension boundary.
 
 Doctor is read-only. It does not invoke a Provider, redispatch a Tool, repair Host storage, cancel Runtime work, or adjudicate domain truth.
+
+## Acceptance
+
+`scripts/local-acceptance check` validates that all portable and live gates are present. `scripts/local-acceptance run` executes the full deterministic suite, the network-free Agent-loop demonstration, and the real H2 Host→Harness→Runtime correlation journey. The live journey retains exact Runtime Job and Artifact evidence, verifies idempotent replay and conflict behavior, and closes its disposable Workspace.
 
 ## Verification
 

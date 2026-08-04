@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ordivon_host.effects import ArtifactRef
+from .._host_compat.effects import ArtifactRef
 from ..host import (
     CommittedHarnessAssignment,
     HarnessHost,

@@ -1,0 +1,39 @@
+name: Harness Runtime acceptance
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "53 19 * * 0"
+
+permissions:
+  contents: read
+
+jobs:
+  host-harness-runtime:
+    runs-on: [self-hosted, linux, x64, ordivon-harness-runtime]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+      - run: uv sync --locked
+      - name: Run real Host to Harness to Runtime acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -a
+          source /etc/ordivon/ordivon-runtime.env
+          set +a
+          test -n "${ORDIVON_BEARER_TOKEN:-}"
+          echo "::add-mask::${ORDIVON_BEARER_TOKEN}"
+          export ORDIVON_MCP_ENDPOINT="http://127.0.0.1:8897/mcp"
+          export ORDIVON_HARNESS_ACCEPTANCE_OUTPUT="target/acceptance/harness-h2-runtime.json"
+          uv run scripts/local-acceptance run
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: harness-runtime-acceptance-${{ github.sha }}
+          path: target/acceptance/harness-h2-runtime.json
+          if-no-files-found: error
+          retention-days: 30

@@ -419,6 +419,37 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
             self.assertEqual(value["phase"], "task")
             self.assertEqual(value["taskId"], TASK_ID)
 
+    def test_cli_inspect_and_handoff_need_no_runtime_or_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with HostStorage(directory) as storage:
+                _create_task(storage, _clock())
+
+            inspect_output = StringIO()
+            with redirect_stdout(inspect_output):
+                inspect_code = cli_main(
+                    ["--state-root", directory, "inspect", TASK_ID]
+                )
+            inspect_value = json.loads(inspect_output.getvalue())
+            self.assertEqual(inspect_code, 0)
+            self.assertEqual(inspect_value["status"]["phase"], "task")
+            self.assertEqual(
+                inspect_value["handoff"]["nextAdmissible"],
+                ["node:oh5-native:work"],
+            )
+
+            handoff_output = StringIO()
+            with redirect_stdout(handoff_output):
+                handoff_code = cli_main(
+                    ["--state-root", directory, "handoff", TASK_ID]
+                )
+            handoff_value = json.loads(handoff_output.getvalue())
+            self.assertEqual(handoff_code, 0)
+            self.assertEqual(handoff_value["handoff"]["taskId"], TASK_ID)
+            self.assertEqual(
+                handoff_value["handoff"]["nextAdmissible"],
+                inspect_value["handoff"]["nextAdmissible"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
