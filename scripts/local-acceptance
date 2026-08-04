@@ -6,7 +6,7 @@ usage() {
 usage: scripts/local-acceptance check|run
 
 check  validate the portable, deterministic and live acceptance contract
-run    execute portable gates, deterministic demo and real Host→Harness→Runtime H2 journey
+run    execute portable gates, wheel smoke, deterministic demo and real Host→Harness→Runtime H2 journey
 
 Environment for run:
   ORDIVON_MCP_ENDPOINT          default http://127.0.0.1:8897/mcp
@@ -30,6 +30,7 @@ case "$mode" in
     test -f "$repo/scripts/check_dependencies.py"
     test -f "$repo/scripts/check_docs.py"
     test -f "$repo/scripts/check_evidence.py"
+    test -f "$repo/scripts/check_wheel.py"
     "$python_bin" "$repo/scripts/check_dependencies.py"
     "$python_bin" "$repo/scripts/check_docs.py"
     "$python_bin" "$repo/scripts/check_evidence.py"
@@ -48,6 +49,10 @@ case "$mode" in
     "$python_bin" scripts/check_evidence.py
     "$uv_bin" lock --check
     "$python_bin" scripts/demo_deterministic_run.py
+    wheel_dir=$(mktemp -d)
+    trap 'rm -rf "$wheel_dir"' EXIT
+    "$uv_bin" build --wheel --out-dir "$wheel_dir"
+    "$python_bin" scripts/check_wheel.py "$wheel_dir"
 
     revision=$(git rev-parse HEAD)
     output=${ORDIVON_HARNESS_ACCEPTANCE_OUTPUT:-target/acceptance/harness-h2-runtime.json}

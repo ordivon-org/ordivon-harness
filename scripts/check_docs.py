@@ -195,6 +195,45 @@ def validate_public_contracts() -> list[str]:
         errors.append("CHANGELOG.md lacks Unreleased")
     if "enforcement: strict" not in PROJECT.read_text():
         errors.append("project documentation enforcement is not strict")
+
+    required_repository_files = (
+        ROOT / ".github/pull_request_template.md",
+        ROOT / "scripts/check_wheel.py",
+    )
+    for path in required_repository_files:
+        if not path.is_file():
+            errors.append(f"required repository contract is missing: {path.relative_to(ROOT)}")
+
+    canonical_guides = "\n".join(
+        (ROOT / path).read_text(encoding="utf-8")
+        for path in ("README.md", "CONTRIBUTING.md", "docs/QUICKSTART.md")
+    )
+    if "python -m ruff" in canonical_guides:
+        errors.append("canonical setup still assumes Ruff is installed in the project environment")
+    if canonical_guides.count("uvx ruff==0.15.17") < 3:
+        errors.append("canonical setup does not pin the isolated Ruff invocation")
+    if canonical_guides.count("scripts/check_wheel.py") < 3:
+        errors.append("canonical setup omits isolated wheel verification")
+
+    ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    release = (ROOT / ".github/workflows/release-acceptance.yml").read_text(
+        encoding="utf-8"
+    )
+    for label, workflow in (("CI", ci), ("release acceptance", release)):
+        if "scripts/check_wheel.py" not in workflow:
+            errors.append(f"{label} does not verify the built wheel")
+    if 'tags:\n      - "v*"' not in release:
+        errors.append("release acceptance is not triggered by version tags")
+    if "actions/upload-artifact@" not in release:
+        errors.append("release acceptance does not retain the verified wheel")
+
+    pull_request = (ROOT / ".github/pull_request_template.md").read_text(
+        encoding="utf-8"
+    )
+    for heading in ("## Boundary", "## Evidence", "## Compatibility", "## Security and data"):
+        if heading not in pull_request:
+            errors.append(f"pull-request contract lacks heading: {heading}")
+
     if public_api_exports() != STABLE_API:
         errors.append(
             f"stable API differs: expected={sorted(STABLE_API)} observed={sorted(public_api_exports())}"

@@ -47,6 +47,6 @@ Read [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md) before sharing state
 
 ## Security process
 
-Security is enforced through exact dependency pins, lockfile checks, strict object decoding, immutable CAS identities, revision fencing, ToolGrant filtering, bounded budgets and observations, private secret files, no blind redispatch, semantic-history Doctor, deterministic tests, dependency audit, secret scanning and CodeQL.
+Security is enforced through exact Git dependency pins, lockfile checks, strict object decoding, immutable CAS identities, revision fencing, ToolGrant filtering, bounded budgets and observations, private secret files, no blind redispatch, semantic-history Doctor, deterministic tests, third-party PyPI audit when applicable, secret scanning and CodeQL.
 
 Passing checks are evidence for a bounded graph, not a security guarantee. Reassess the threat model when Provider, Tool, Host, Runtime, persistence or domain authority changes.

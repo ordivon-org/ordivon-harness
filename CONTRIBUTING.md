@@ -7,17 +7,10 @@ Harness changes must preserve the separation between durable Task authority, Age
 ```bash
 git status --short --branch
 git rev-parse HEAD
-python3.12 --version
+uv --version
+uv python install 3.12
+uv sync --locked
 uv lock --check
-```
-
-Install the exact graph:
-
-```bash
-python3.12 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e .
-python -m pip check
 ```
 
 A local sibling checkout may be used for compatibility experiments only when exact Host and Protocol revisions are recorded.
@@ -25,15 +18,17 @@ A local sibling checkout may be used for compatibility experiments only when exa
 ## Required checks
 
 ```bash
-python -m compileall -q src tests scripts evals
-python -m ruff check src tests scripts
-python -W error::ResourceWarning -m unittest discover -s tests -v
-python scripts/check_dependencies.py
-python scripts/check_docs.py
-python scripts/check_evidence.py
+uv run python -m compileall -q src tests scripts evals
+uvx ruff==0.15.17 check src tests scripts
+uv run python -W error::ResourceWarning -m unittest discover -s tests -v
+uv run python scripts/check_dependencies.py
+uv run python scripts/check_docs.py
+uv run python scripts/check_evidence.py
+uv run python scripts/demo_deterministic_run.py
 uv lock --check
 scripts/local-acceptance check
-python -m pip wheel --no-deps --wheel-dir /tmp/ordivon-harness-wheel .
+uv build --wheel --out-dir /tmp/ordivon-harness-wheel
+uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 ```
 
 Run live acceptance when changing Provider adapters, Runtime lowering, Tool recovery, cancellation, secret handling, compatibility or completion evidence.

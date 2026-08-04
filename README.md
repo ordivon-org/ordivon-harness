@@ -95,6 +95,7 @@ It is not a general workflow engine, Provider router, multi-Agent scheduler, hos
 ## Requirements
 
 - Python 3.12;
+- `uv` for exact graph installation, lock validation, isolated tooling and wheel smoke tests;
 - Linux for the canonical trusted-local operational path;
 - exact `ordivon-host` and `ordivon-protocol` revisions pinned in `pyproject.toml` and `uv.lock`;
 - Ordivon Runtime for real Tool execution;
@@ -105,26 +106,27 @@ It is not a general workflow engine, Provider router, multi-Agent scheduler, hos
 Install the pinned dependency graph:
 
 ```bash
-python3.12 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e .
-python -m pip check
+uv python install 3.12
+uv sync --locked
+uv lock --check
 ```
 
-Run the portable contract:
+Run the portable contract and verify the built distribution:
 
 ```bash
-python -m compileall -q src tests scripts evals
-python -m ruff check src tests scripts
-python -W error::ResourceWarning -m unittest discover -s tests -v
-python scripts/check_dependencies.py
-python scripts/check_docs.py
-uv lock --check
+uv run python -m compileall -q src tests scripts evals
+uvx ruff==0.15.17 check src tests scripts
+uv run python -W error::ResourceWarning -m unittest discover -s tests -v
+uv run python scripts/check_dependencies.py
+uv run python scripts/check_docs.py
+uv run python scripts/check_evidence.py
+uv run python scripts/demo_deterministic_run.py
 scripts/local-acceptance check
+uv build --wheel --out-dir /tmp/ordivon-harness-wheel
+uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 ```
 
-The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+The wheel check validates metadata, exact dependency pins, the CLI entry point and an isolated installation. The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 ## Public API
 

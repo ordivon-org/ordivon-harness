@@ -49,7 +49,7 @@ The current release gate includes:
 - stable API contract tests;
 - semantic-history validation tests;
 - documentation and evidence-index validation;
-- wheel build and dependency audit.
+- wheel metadata validation, isolated installation, CLI smoke testing and dependency audit.
 
 ## Historical live receipts
 

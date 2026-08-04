@@ -13,7 +13,7 @@ permissions:
 jobs:
   deterministic:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -30,8 +30,9 @@ jobs:
       - run: uv run python scripts/check_evidence.py
       - run: uv run python scripts/demo_deterministic_run.py
       - run: uv build --wheel --out-dir /tmp/ordivon-harness-wheel
+      - run: uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 
-  dependency-audit:
+  dependency-contract:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -40,7 +41,10 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
-      - run: uvx pip-audit -r requirements-audit.txt --strict --progress-spinner off
+      - run: uv sync --locked
+      - run: uv run python scripts/check_dependencies.py
+      - name: Audit declared third-party PyPI runtime dependencies
+        run: uvx pip-audit -r requirements-audit.txt --strict --progress-spinner off
 
   secret-scan:
     runs-on: ubuntu-latest

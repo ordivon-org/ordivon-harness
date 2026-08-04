@@ -34,7 +34,7 @@ The supported public graph is exact, not a floating version range:
 | Component | Required identity |
 | --- | --- |
 | Harness package | `0.5.0` plus exact Git commit |
-| Host | `a992d91661df7040dc666ad5dd2511e57d932d6d` |
+| Host | `1a4027bb26d77a2e051ca933bf664578f071a5a9` |
 | Protocol | `420dc356cb664d75db0f34f356156baebe5843db` |
 | Python | `>=3.12,<3.13` |
 | Runtime | required Tool catalog and request schemas discovered at execution time |

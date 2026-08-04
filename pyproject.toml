@@ -16,7 +16,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@a992d91661df7040dc666ad5dd2511e57d932d6d",
+  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@1a4027bb26d77a2e051ca933bf664578f071a5a9",
   "ordivon-protocol @ git+https://github.com/zycxfyh/ordivon-computing.git@420dc356cb664d75db0f34f356156baebe5843db#subdirectory=packages/ordivon-protocol",
 ]
 

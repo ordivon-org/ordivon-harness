@@ -65,15 +65,16 @@ Remove or reinterpret supported public APIs, object schemas, Host boundaries, Pr
 
 A releasable commit requires:
 
-1. `uv lock --check` and dependency-contract success;
+1. `uv sync --locked`, `uv lock --check` and dependency-contract success;
 2. complete deterministic tests and semantic history tests;
 3. public API and Host import-boundary tests;
 4. documentation/evidence validation;
-5. wheel build and metadata consistency;
-6. dependency vulnerability audit, secret scanning and CodeQL;
-7. Changelog entry;
-8. live receipt when Provider, Runtime, Tool recovery, cancellation or completion semantics change;
-9. named limitations and compatibility impact.
+5. wheel build, metadata validation, isolated installation and CLI entry-point smoke testing;
+6. exact Git dependency validation and third-party PyPI vulnerability audit when such dependencies exist;
+7. secret scanning and CodeQL;
+8. Changelog entry;
+9. live receipt when Provider, Runtime, Tool recovery, cancellation or completion semantics change;
+10. named limitations and compatibility impact.
 
 ## Version source
 
@@ -88,5 +89,7 @@ A Host or Protocol pin update is an architecture compatibility change, not routi
 Historical package-root aliases are retained during the transition to `ordivon_harness.api`. Removal requires Changelog notice, an observation window and a planned pre-1.0 breaking release. Durable decoders remain until retained state no longer requires them.
 
 ## Publication
+
+Tags matching `v*` trigger the portable release-acceptance workflow and retain the verified wheel as a GitHub Actions Artifact. This is repository provenance, not artifact signing or package-index publication.
 
 Current distribution is source and repository-built wheel. Public package-index publication, signed artifacts, hosted images or automatic deployment require a separate provenance and release-signing contract.

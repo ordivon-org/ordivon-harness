@@ -3,6 +3,9 @@ name: Release acceptance
 on:
   workflow_dispatch:
   workflow_call:
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: read
@@ -10,7 +13,7 @@ permissions:
 jobs:
   portable-release-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -19,6 +22,13 @@ jobs:
       - uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
       - run: uv sync --locked
       - run: uv lock --check
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          test "${GITHUB_REF_NAME}" = "v${version}"
       - run: uv run python -m compileall -q src tests scripts evals
       - run: uvx ruff==0.15.17 check src tests scripts
       - run: uv run python -W error::ResourceWarning -m unittest discover -s tests -v
@@ -28,3 +38,10 @@ jobs:
       - run: uv run python scripts/demo_deterministic_run.py
       - run: uvx pip-audit -r requirements-audit.txt --strict --progress-spinner off
       - run: uv build --wheel --out-dir /tmp/ordivon-harness-wheel
+      - run: uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ordivon-harness-wheel-${{ github.sha }}
+          path: /tmp/ordivon-harness-wheel/*.whl
+          if-no-files-found: error
+          retention-days: 30

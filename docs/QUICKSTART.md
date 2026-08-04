@@ -32,30 +32,29 @@ related:
 ```bash
 git clone https://github.com/zycxfyh/ordivon-harness.git
 cd ordivon-harness
-python3.12 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e .
-python -m pip check
+uv python install 3.12
+uv sync --locked
 uv lock --check
 ```
 
-The package uses exact Git revisions for Host and Protocol. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree.
+The package uses exact Git revisions for Host and Protocol. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree. A plain editable `pip install` is not the canonical repository setup because it does not validate `uv.lock`.
 
 ## Run the portable contract
 
 ```bash
-python -m compileall -q src tests scripts evals
-python -m ruff check src tests scripts
-python -W error::ResourceWarning -m unittest discover -s tests -v
-python scripts/check_dependencies.py
-python scripts/check_docs.py
-python scripts/check_evidence.py
+uv run python -m compileall -q src tests scripts evals
+uvx ruff==0.15.17 check src tests scripts
+uv run python -W error::ResourceWarning -m unittest discover -s tests -v
+uv run python scripts/check_dependencies.py
+uv run python scripts/check_docs.py
+uv run python scripts/check_evidence.py
+uv run python scripts/demo_deterministic_run.py
 scripts/local-acceptance check
-python -m pip wheel --no-deps --wheel-dir /tmp/ordivon-harness-wheel .
+uv build --wheel --out-dir /tmp/ordivon-harness-wheel
+uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 ```
 
-This proves deterministic lifecycle, compatibility and repository contracts. It does not prove a reachable Runtime or external Provider.
+This proves deterministic lifecycle, compatibility, repository contracts, wheel metadata and isolated wheel installation. It does not prove a reachable Runtime or external Provider.
 
 ## Deterministic Agent loop
 

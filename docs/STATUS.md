@@ -41,13 +41,11 @@ Pre-1.0 means public imports, owner-local object schemas, Provider adapter APIs 
 The canonical public graph currently requires:
 
 - Python 3.12;
-- `ordivon-host` at `a992d91661df7040dc666ad5dd2511e57d932d6d`;
+- `ordivon-host` at `1a4027bb26d77a2e051ca933bf664578f071a5a9`;
 - `ordivon-protocol` at `420dc356cb664d75db0f34f356156baebe5843db`;
 - `uv.lock` generated from those exact pins;
 - Linux for trusted-local live operation;
 - Ordivon Runtime for physical Tool execution.
-
-The local Host governance commit `1a4027bb…` has also passed the Harness suite, but is not the public dependency pin because it is not yet remote-reachable.
 
 ## Capability status
 
