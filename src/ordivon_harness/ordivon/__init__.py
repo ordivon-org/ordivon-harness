@@ -1,3 +1,7 @@
+from .continuity_records import (
+    HarnessDispatchFenceV2,
+    HarnessProviderCallRecordV2,
+)
 from .control import ExecutionControl, RunDeadline
 from .deepseek import (
     DEFAULT_DEEPSEEK_BASE_URL,
@@ -101,9 +105,11 @@ __all__ = [
     "ExecutionControl",
     "HarnessContextCompiler",
     "HarnessContextRequest",
+    "HarnessDispatchFenceV2",
     "HarnessProviderCallClaimHeld",
     "HarnessProviderCallRecoveryRequired",
     "HarnessProviderCallRequestMismatch",
+    "HarnessProviderCallRecordV2",
     "HarnessProviderCallSourceRef",
     "HarnessRunContinuityStore",
     "HarnessRunEvent",

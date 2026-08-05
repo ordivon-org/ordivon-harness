@@ -40,6 +40,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/store.py",
     "ordivon_harness/store_ops.py",
     "ordivon_harness/version.py",
+    "ordivon_harness/ordivon/continuity_records.py",
     "ordivon_harness/ordivon/run_recovery.py",
     "ordivon_harness/ordivon/run_store_port.py",
     "ordivon_harness/ordivon/runtime_lowering.py",

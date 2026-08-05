@@ -1558,7 +1558,7 @@ class RuntimeToolBridge:
                 "namespace": "ordivon.host",
                 "type": "dispatch_fence",
                 "id": fence.fence_id,
-                "generation": str(fence.task_revision),
+                "generation": str(fence.authority_generation),
                 "digest": fence.digest,
             }
         )

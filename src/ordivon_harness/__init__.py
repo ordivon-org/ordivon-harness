@@ -88,6 +88,10 @@ from .models import (
     HarnessRunReceipt,
     TaskAttemptDescriptor,
 )
+from .ordivon.continuity_records import (
+    HarnessDispatchFenceV2,
+    HarnessProviderCallRecordV2,
+)
 from .protocol import (
     HarnessProviderCallFailureReceipt,
     HarnessProviderCallRecord,
@@ -198,6 +202,7 @@ __all__ = [
     "HARNESS_STORE_EVENT_KINDS",
     "HarnessBoundReference",
     "HarnessCorrelationContext",
+    "HarnessDispatchFenceV2",
     "HarnessEventAdmission",
     "HarnessEventConflict",
     "HarnessJournalCorruption",
@@ -229,6 +234,7 @@ __all__ = [
     "HarnessHost",
     "HarnessLifecycleError",
     "HarnessProviderCallRecord",
+    "HarnessProviderCallRecordV2",
     "HarnessProviderCallClaimHeld",
     "HarnessProviderCallFailureReceipt",
     "HarnessProviderCallRecoveryRequired",

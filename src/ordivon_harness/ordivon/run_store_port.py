@@ -3,14 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from anc_canonical import JsonValue
+from anc_canonical import JsonValue, canonical_digest
 
 from ..errors import HarnessLifecycleError
 from ..protocol import (
-    HarnessDispatchFence,
     HarnessProviderCallFailureReceipt,
-    HarnessProviderCallRecord,
     HarnessProviderCallSource,
+    HarnessProviderCallStatus,
     HarnessRunPauseReason,
     HarnessRunSnapshot,
     HarnessToolStepIntent,
@@ -27,12 +26,78 @@ class HarnessStoredObject(Protocol):
     kind: str
 
 
+@runtime_checkable
+class HarnessProviderCallRecordView(Protocol):
+    record_id: str
+    provider_call_id: str
+    harness_run_id: str
+    source_kind: HarnessProviderCallSource
+    source_digest: str
+    source_object_digest: str
+    state_object_digest: str
+    turn_id: str
+    turn_sequence: int
+    request_digest: str
+    provider_request_digest: str
+    adapter_id: str
+    requested_model_id: str
+    holder_id: str
+    claim_generation: int
+    status: HarnessProviderCallStatus
+    result_digest: str | None
+    result_object_digest: str | None
+    failure_digest: str | None
+    failure_object_digest: str | None
+    previous_record_digest: str | None
+    issued_at_ms: int
+    expires_at_ms: int
+    recorded_at_ms: int
+
+    @property
+    def digest(self) -> str: ...
+
+    def to_dict(self) -> dict[str, JsonValue]: ...
+
+
+@runtime_checkable
+class HarnessDispatchFenceView(Protocol):
+    fence_id: str
+    harness_run_id: str
+    intent_digest: str
+    runtime_operation: str
+    client_request_id: str
+    issued_at_ms: int
+    expires_at_ms: int
+
+    @property
+    def authority_generation(self) -> int: ...
+
+    @property
+    def digest(self) -> str: ...
+
+    def to_dict(self) -> dict[str, JsonValue]: ...
+
+
 @dataclass(frozen=True, slots=True)
 class HarnessRunStoreBinding:
     harness_run_id: str
     assignment_id: str
     assignment_generation: int
     assignment_digest: str
+
+    @property
+    def digest(self) -> str:
+        return canonical_digest(self.to_dict())
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness-run-store-binding",
+            "harnessRunId": self.harness_run_id,
+            "assignmentId": self.assignment_id,
+            "assignmentGeneration": self.assignment_generation,
+            "assignmentDigest": self.assignment_digest,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,7 +117,7 @@ class HarnessProviderCallSourceRef:
 
 @dataclass(frozen=True, slots=True)
 class StoredHarnessProviderCall:
-    record: HarnessProviderCallRecord
+    record: HarnessProviderCallRecordView
     record_object: HarnessStoredObject
     state: HarnessRunState
     state_object: HarnessStoredObject
@@ -78,7 +143,7 @@ class HarnessProviderCallRequestMismatch(HarnessLifecycleError):
 class StoredHarnessToolStep:
     intent: HarnessToolStepIntent
     intent_object: HarnessStoredObject
-    fence: HarnessDispatchFence | None
+    fence: HarnessDispatchFenceView | None
     fence_object: HarnessStoredObject | None
     receipt: HarnessToolStepReceipt | None
     receipt_object: HarnessStoredObject | None
@@ -180,7 +245,7 @@ class HarnessRunContinuityStore(Protocol):
 
     def assert_dispatch_fence_current(
         self,
-        fence: HarnessDispatchFence,
+        fence: HarnessDispatchFenceView,
         *,
         require_unexpired: bool = True,
     ) -> None: ...

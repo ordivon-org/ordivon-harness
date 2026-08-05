@@ -9,6 +9,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - caller-neutral `HarnessRunContract`, bounded references, W3C correlation context and metadata-first privacy policy;
 - independent `SQLiteHarnessStore` with append-only Run Events, caller binding, revision fencing, Run leases, immutable CAS and full-history Doctor;
 - owner-neutral `HarnessRunContinuityStore` consumed by `RuntimeToolBridge`, with shared retained Run values and lifecycle errors outside the Host-backed implementation;
+- caller-neutral Provider Call Record and Dispatch Fence v2 codecs while retaining exact v1 Host-backed decoding;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
 - frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.

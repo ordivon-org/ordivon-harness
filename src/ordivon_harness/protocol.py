@@ -730,6 +730,10 @@ class HarnessDispatchFence:
             raise HarnessProtocolError("Dispatch Fence expiry must follow issue time")
 
     @property
+    def authority_generation(self) -> int:
+        return self.task_revision
+
+    @property
     def digest(self) -> str:
         return canonical_digest(self.to_dict())
 

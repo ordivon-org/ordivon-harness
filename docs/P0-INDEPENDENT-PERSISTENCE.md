@@ -92,6 +92,8 @@ The Provider Call and Tool Step tables exist for migration but are not yet the p
 
 `RuntimeToolBridge` now consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. The legacy Store implements the protocol and exposes only stable binding identity, clock and scalar caller revision. It no longer leaks its Host object through the Tool bridge. This is a structural prerequisite, not a persistence cutover.
 
+The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only intended v2 writer.
+
 ## Store operations
 
 Initialize and inspect the independent root:
