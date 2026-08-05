@@ -65,7 +65,7 @@ For the current production path, Host stores Harness extension bytes and admits 
 
 Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. Its current Runner has durable Host-backed Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
 
-The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, verified backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop bridge, and a Host-free observation-only Runtime Tool bridge with response-loss reconciliation. It owns restart-inspectable Trace segments, an independent Run Receipt, Recovery Assessment and caller-neutral CompletionProposal through an explicit Standalone Runner. A Host-neutral external-executor adapter now proves Host and Harness can retain separate histories across response loss; the legacy Host-backed Runner has not cut over. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
+The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, verified backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop bridge, and a Host-free observation-only Runtime Tool bridge with response-loss reconciliation. It owns restart-inspectable Trace segments, an independent Run Receipt, Recovery Assessment and caller-neutral CompletionProposal through an explicit Standalone Runner. A Host-neutral external-executor adapter proves Host and Harness can retain separate histories across response loss. Cutover inventory and append-only receipts now exist, but the repository does not activate them against production state automatically. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
 
 ## What works
 
@@ -86,14 +86,15 @@ The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, r
 - independent observation-only Runtime search with Harness-owned dispatch fencing and exact-request reconciliation;
 - explicit Standalone Runner with restart-safe Trace segments, Run Receipt, Recovery Assessment and CompletionProposal;
 - Host-neutral `OrdivonHarnessExternalExecutorAdapter` that exposes the independent Run as a foreign executor without sharing databases;
+- active legacy-Run inventory, append-only cutover/rollback receipts, and a fail-closed legacy writer gate;
 - caller-neutral `HarnessExecutionBinding` and Host-free Runtime request lowering;
 - verified online backup, tamper detection and restore to a fresh state root;
-- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths, plus explicit `store-*` operations.
+- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths, plus explicit `store-*` and `cutover-*` operations.
 
 ## What it does not do
 
 - own Task or Goal truth;
-- cut the production Runner over to the independent Journal before Provider Call, Tool Step, Snapshot, recovery and Host-adapter gates pass;
+- silently cut the production Runner over without a verified inventory and explicit cutover receipt;
 - treat Provider hidden state as authoritative continuity;
 - infer semantic completion from Runtime success;
 - provide hostile multi-tenant isolation;

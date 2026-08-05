@@ -186,14 +186,19 @@ These semantics are local single-node fencing. They do not claim distributed con
 
 Each entry records its current owner, intended P0 owner, schema versions, source literal, privacy class, causal role, and migration disposition. The checker [`../scripts/check_p0_persistence_inventory.py`](../scripts/check_p0_persistence_inventory.py) verifies that the inventory remains bound to current source literals and its canonical digest.
 
-The cutover rules are fixed:
+The cutover rules are fixed and now executable:
 
 ```text
 new Run dual write                forbidden
 bulk historical byte rewrite      forbidden
-active legacy Run at cutover       forbidden by default
-legacy Host-backed reader          required
+active legacy Run at cutover       forbidden
+active independent Run at cutover  forbidden
+legacy Host-backed reader          retained
+legacy writer after activation     rejected before Runtime access
+rollback after independent work    forbidden
 ```
+
+`cutover-inventory` scans every Host Task for legacy native Harness state and Ordivon Harness external requests, fully doctors the target independent Store, and lists every Run projection. `cutover-activate` publishes the canonical inventory plus an append-only, digest-chained receipt under the Host state root. That deployment receipt—not either Run database—selects the writer. Receipt or inventory tampering, a sequence gap, root drift, or mode-chain conflict fails closed.
 
 ## Verified evidence
 
@@ -227,6 +232,9 @@ The focused P0 suite proves:
 - Host request-only commit gap followed by response-loss retry to the same completed Harness Run;
 - two independently reopenable histories with one physical Harness execution and no Host Task completion;
 - caller-neutral CompletionProposal collection through the Host foreign-Run binding;
+- active legacy and independent Run inventory with exact blocker identities;
+- append-only activation/rollback receipts with inventory binding and tamper detection;
+- legacy writer rejection after activation and rollback refusal after independent work;
 - compatibility with the complete existing Host-backed Harness suite.
 
 Repository gates and exact revision receipts remain the stronger evidence for a particular commit.
@@ -237,7 +245,6 @@ This foundation does not yet provide:
 
 - production `HarnessRunner` selection of the independent Agent path;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- legacy active-Run inventory and cutover command;
 - production `/var/lib/ordivon/harness` deployment;
 - automatic observation export.
 
@@ -253,9 +260,15 @@ The historical Host-backed API remains available through the exact `host` extra 
 
 The local P0 roundtrip injects delivery loss after Harness completion but before Host binding. Host retains only its immutable request; retry calls the Adapter again, finds the same terminal Harness Run, records one foreign binding, and collects the proposal. The receipt proves one physical Harness execution, two Adapter start calls, independently healthy Host and Harness histories, Host Task state `ready`, and Harness Run state `completed`.
 
+## Cutover control
+
+The cutover journal lives under the Host state root because the legacy writer always knows that root and must be unable to bypass the selected mode. It is operational deployment authority, not Task or Harness Run authority. Inventories and receipts are immutable private files; receipts form a contiguous previous-digest chain. The independent adapter continues to write only the Harness Journal/CAS, while legacy reads remain available from Host history.
+
+Activation does not migrate or rewrite historical bytes. It disables only the legacy write commands; new independent work enters through the Host external-executor boundary. A rollback receipt can restore legacy selection only while no independent Run or Host external request has been created since activation.
+
 ## Next migration slice
 
-Work now moves to active legacy-Run inventory, explicit Store selection, the no-dual-write cutover command, production state roots, rollback receipts and the remaining fault/performance matrix. The legacy Host-backed Runner remains the default until those gates pass; Runtime or foreign Run success must still never become semantic Task acceptance.
+Work now moves to production state-root deployment, exact cross-repository release pins, backup/rollback receipts, the complete fault matrix, and the 1,000 Run / 100,000 Event performance acceptance. Runtime or foreign Run success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

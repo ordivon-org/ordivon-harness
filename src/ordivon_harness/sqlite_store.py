@@ -522,6 +522,17 @@ class SQLiteHarnessStore:
             raise KeyError(f"Harness Run does not exist: {harness_run_id}")
         return self._projection_from_row(harness_run_id, row)
 
+    def list_runs(self) -> tuple[HarnessRunProjection, ...]:
+        rows = self.connection.execute(
+            "SELECT harness_run_id, contract_digest, contract_object_digest, "
+            "caller_id, caller_run_ref, status, revision, created_at_ms, "
+            "updated_at_ms, terminal_event_id "
+            "FROM runs ORDER BY created_at_ms, harness_run_id"
+        ).fetchall()
+        return tuple(
+            self._projection_from_row(row["harness_run_id"], row) for row in rows
+        )
+
     def append_event(
         self,
         *,

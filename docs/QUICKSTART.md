@@ -91,6 +91,26 @@ ordivon-harness --state-root /var/lib/ordivon/host handoff TASK_ID
 
 `inspect` combines Harness status with an operator handoff capsule. It does not contact a Provider or Runtime.
 
+## Inspect and activate the independent writer
+
+Cutover is explicit and fail-closed. First initialize and doctor the independent root, then inventory both histories:
+
+```bash
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-init
+ordivon-harness --state-root /var/lib/ordivon/host \
+  --harness-state-root /var/lib/ordivon/harness cutover-inventory
+ordivon-harness --state-root /var/lib/ordivon/host cutover-status
+```
+
+Activate only when the inventory reports no blockers:
+
+```bash
+ordivon-harness --state-root /var/lib/ordivon/host \
+  --harness-state-root /var/lib/ordivon/harness cutover-activate
+```
+
+After activation, legacy write commands are disabled. Historical `status`, `inspect`, `handoff`, and Doctor remain read-only. Rollback is permitted only before any post-activation independent work exists.
+
 ## Configure live execution
 
 Harness reuses Host configuration for Runtime endpoint and token location. DeepSeek uses a private secret file; Codex and Hermes use explicit local adapter configuration. Follow [`OPERATIONS.md`](OPERATIONS.md) and [`../SECURITY.md`](../SECURITY.md).

@@ -28,7 +28,7 @@ related:
 
 ## Scope
 
-This document owns operation of current Assignment-bound Harness Runs and the explicit independent P0 Store surface. Current Run execution covers status, run, resume, cancellation, active Tool-step reconciliation, lost-process recovery and semantic Doctor through Host-backed state. P0 Store operation covers initialization, inspection, full Doctor, backup verification and restore. It does not own Host backup/restore or Runtime service repair.
+This document owns operation of current Assignment-bound Harness Runs, the independent Store surface, and the explicit P0 cutover control. Current Run execution covers status, run, resume, cancellation, active Tool-step reconciliation, lost-process recovery and semantic Doctor through Host-backed state. Independent operation covers initialization, inspection, full Doctor, backup verification and restore. Cutover operation inventories both histories, selects one writer through append-only receipts, and disables legacy writes after activation. It does not own Host backup/restore or Runtime service repair.
 
 ## Normal operation
 
@@ -59,7 +59,17 @@ ordivon-harness store-verify-backup /path/to/backup
 ordivon-harness store-restore /path/to/backup /absent/destination
 ```
 
-Only `store-init` creates a state root. Backup and restore refuse existing destinations. Restore performs full validation before publishing the destination. [`P0-INDEPENDENT-PERSISTENCE.md`](P0-INDEPENDENT-PERSISTENCE.md) owns the current migration and cutover boundary.
+Only `store-init` creates a state root. Backup and restore refuse existing destinations. Restore performs full validation before publishing the destination. Before cutover, operate the explicit preflight:
+
+```bash
+ordivon-harness --state-root /var/lib/ordivon/host \
+  --harness-state-root /var/lib/ordivon/harness cutover-inventory
+ordivon-harness --state-root /var/lib/ordivon/host cutover-status
+ordivon-harness --state-root /var/lib/ordivon/host \
+  --harness-state-root /var/lib/ordivon/harness cutover-activate
+```
+
+Activation requires zero nonterminal legacy Runs and zero nonterminal independent Runs. Its inventory and receipt are immutable files under the Host state root's `harness-cutover/` directory. After activation, legacy `run`, `resume`, `cancel`, and `recover` commands fail before Runtime or Provider access. `status`, `inspect`, `handoff`, Doctor and historical decoding remain available. Rollback is accepted only before any independent Run or Ordivon Harness external request created at or after activation. [`P0-INDEPENDENT-PERSISTENCE.md`](P0-INDEPENDENT-PERSISTENCE.md) owns the migration boundary.
 
 Before operation or upgrade, verify the exact dependency graph:
 
@@ -97,6 +107,7 @@ A same-process `RunHandle` may close an active Provider connection. A separate C
 | --- | --- |
 | Host SQLite, CAS, lease, Task projection, backup, or restore problem | `ordivon-host` Doctor or operations |
 | independent Harness Journal, CAS, Run lease, Store backup, or Store restore problem | `ordivon-harness store-doctor` or `store-verify-backup` |
+| cutover receipt, inventory, selected writer, or rollback refusal | `cutover-status`, `cutover-inventory`, and the immutable receipt chain under the Host state root |
 | current Assignment, Run, Trace, Tool-step, recovery, abandonment, or Harness completion problem | Host-backed `ordivon-harness doctor`, `status`, `resume`, or `recover` |
 | Workspace, Job, Attempt, process tree, Artifact, cancellation, or Runtime Registry problem | `ordivon-runtime` inspection and recovery |
 | domain acceptance or world-state uncertainty | the integrating domain application or participant |

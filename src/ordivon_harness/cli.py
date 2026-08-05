@@ -27,7 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--harness-state-root",
         type=Path,
-        help="independent P0 Harness state root used only by store-* commands",
+        help="independent Harness state root used by store-* and cutover commands",
     )
     parser.add_argument("--runtime-endpoint")
     parser.add_argument("--runtime-token-file", type=Path)
@@ -38,6 +38,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
+    commands.add_parser("cutover-status")
+    commands.add_parser("cutover-inventory")
+    commands.add_parser("cutover-activate")
+    commands.add_parser("cutover-rollback")
     commands.add_parser("store-init")
     commands.add_parser("store-doctor")
 
@@ -123,6 +127,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command.startswith("store-"):
             result = _dispatch_store(args)
+        elif args.command.startswith("cutover-"):
+            result = _dispatch_cutover(args)
         else:
             config = _config(args)
             result = _dispatch(config, args)
@@ -196,6 +202,57 @@ def _dispatch_store(args: argparse.Namespace) -> dict[str, object]:
     raise ValueError("unsupported Harness store command")
 
 
+def _dispatch_cutover(args: argparse.Namespace) -> dict[str, object]:
+    from .cutover import (
+        activate_cutover,
+        build_cutover_inventory,
+        cutover_status,
+        rollback_cutover,
+    )
+
+    host_root = args.state_root
+    if host_root is None:
+        raise ValueError("this cutover command requires --state-root")
+    host_root = host_root.expanduser().resolve()
+    if args.command == "cutover-status":
+        return {"ok": True, "cutover": cutover_status(host_root).to_dict()}
+    harness_root = args.harness_state_root
+    if harness_root is None:
+        raise ValueError("this cutover command requires --harness-state-root")
+    harness_root = harness_root.expanduser().resolve()
+    now_ms = _wall_clock_ms()
+    if args.command == "cutover-inventory":
+        inventory = build_cutover_inventory(
+            host_root,
+            harness_root,
+            generated_at_ms=now_ms,
+        )
+        return {"ok": True, "inventory": inventory.to_dict(), "digest": inventory.digest}
+    if args.command == "cutover-activate":
+        receipt, inventory = activate_cutover(
+            host_root,
+            harness_root,
+            created_at_ms=now_ms,
+        )
+        return {
+            "ok": True,
+            "receipt": receipt.to_dict(),
+            "inventory": inventory.to_dict(),
+        }
+    if args.command == "cutover-rollback":
+        receipt, inventory = rollback_cutover(
+            host_root,
+            harness_root,
+            created_at_ms=now_ms,
+        )
+        return {
+            "ok": True,
+            "receipt": receipt.to_dict(),
+            "inventory": inventory.to_dict(),
+        }
+    raise ValueError("unsupported Harness cutover command")
+
+
 def _config(args: argparse.Namespace):
     from ._host_compat.config import load_config
 
@@ -227,6 +284,8 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
     from .runner import CompletionMode, HarnessRunner
 
     if args.command == "doctor":
+        from .cutover import cutover_status
+
         with HostStorage(config.state_root, validation_mode="full") as storage:
             report = validate_history(storage).to_dict()
         return {
@@ -234,6 +293,7 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
             "healthy": True,
             "stateRoot": str(config.state_root),
             "harnessHistory": report,
+            "cutover": cutover_status(config.state_root).to_dict(),
         }
 
     with HostStorage(config.state_root) as storage:
@@ -249,6 +309,9 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
                 "handoff": operator_handoff(storage, args.task_id).to_dict(),
             }
 
+        from .cutover import assert_legacy_writer_allowed
+
+        assert_legacy_writer_allowed(config.state_root)
         runtime = _runtime(config)
         if args.command == "cancel":
             result = HarnessRunner(host, runtime=runtime).cancel(args.task_id)

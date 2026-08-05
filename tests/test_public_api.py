@@ -52,6 +52,8 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(hasattr(ordivon_harness, "IndependentHarnessRunReceipt"))
         self.assertTrue(hasattr(ordivon_harness, "IndependentCompletionProposal"))
         self.assertTrue(hasattr(ordivon_harness, "StandaloneHarnessRunner"))
+        self.assertTrue(hasattr(ordivon_harness, "HarnessCutoverReceipt"))
+        self.assertTrue(hasattr(ordivon_harness, "HarnessStoreMode"))
         self.assertTrue(
             hasattr(ordivon_harness, "OrdivonHarnessExternalExecutorAdapter")
         )

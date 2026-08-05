@@ -44,6 +44,7 @@ REQUIRED_CORE_API = {
 REQUIRED_MEMBERS = {
     "ordivon_harness/agent_tool_observation.py",
     "ordivon_harness/core.py",
+    "ordivon_harness/cutover.py",
     "ordivon_harness/api.py",
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
@@ -233,8 +234,9 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
             fail("Host extra did not install ordivon-host")
         commands = (
             "doctor", "status", "inspect", "handoff", "run", "resume", "cancel",
-            "recover", "store-init", "store-doctor", "store-inspect", "store-events",
-            "store-backup", "store-verify-backup", "store-restore",
+            "recover", "cutover-status", "cutover-inventory", "cutover-activate",
+            "cutover-rollback", "store-init", "store-doctor", "store-inspect",
+            "store-events", "store-backup", "store-verify-backup", "store-restore",
         )
         for command in commands:
             if command not in help_text:

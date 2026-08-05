@@ -69,7 +69,8 @@ The canonical public graph currently requires:
 | independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
 | independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
 | independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
-| Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin pending cutover |
+| Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin pending deployment |
+| active legacy-Run inventory and append-only cutover receipts | operational; activation disables legacy write commands before Runtime access |
 | Harness daemon or scheduler | not provided |
 
 ## Public interface
@@ -80,7 +81,7 @@ The canonical public graph currently requires:
 
 Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Package installation is now separated: the independent Core has no Host dependency, while the legacy production integration is available through the exact `host` extra. A Host-neutral foreign-Run adapter now exposes the independent authority without importing Host or sharing databases. Local cross-repository acceptance proves request-only commit gaps, exact retry, one physical Harness execution, separate reopenable histories and CompletionProposal collection while the Host Task remains ready. Until production selection, exact cross-repository release pins and cutover are complete, this remains a staged authority path rather than a production cutover. The semantic dependency remains intentionally non-symmetric for the legacy path:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Package installation is now separated: the independent Core has no Host dependency, while the legacy production integration is available through the exact `host` extra. A Host-neutral foreign-Run adapter now exposes the independent authority without importing Host or sharing databases. Local cross-repository acceptance proves request-only commit gaps, exact retry, one physical Harness execution, separate reopenable histories and CompletionProposal collection while the Host Task remains ready. An explicit inventory and append-only cutover receipt chain now select the deployment mode. Activation is refused while a legacy or independent Run is nonterminal; after activation, legacy `run`, `resume`, `cancel`, and `recover` commands fail before Runtime access. Rollback is allowed only before any post-activation independent Run or Host external request exists. Until these receipts are applied to production roots with exact cross-repository release pins, this remains a staged authority path rather than a production cutover. The semantic dependency remains intentionally non-symmetric for the legacy path:
 
 ```text
 Harness Core ↛ Host
@@ -90,7 +91,7 @@ Host ↛ Harness
 
 ## Known limits
 
-- no production Agent Run selection through the independent store yet;
+- the production service roots have not yet been activated by a cutover receipt;
 - the legacy production Runner still requires the optional exact Host integration and remains the default Host-backed entry point;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;
@@ -120,6 +121,7 @@ Independent P0 state:
 ordivon-harness --harness-state-root /var/lib/ordivon/harness store-doctor
 ordivon-harness --harness-state-root /var/lib/ordivon/harness store-inspect HARNESS_RUN_ID
 ordivon-harness --harness-state-root /var/lib/ordivon/harness store-events HARNESS_RUN_ID
+ordivon-harness --state-root /var/lib/ordivon/host cutover-status
 ```
 
 ## Reopen conditions
