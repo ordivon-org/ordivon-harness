@@ -224,6 +224,9 @@ The focused P0 suite proves:
 - immutable independent Run Receipt and caller-neutral CompletionProposal bound to the Contract and Trace;
 - status-preserving Recovery Assessment admission and close/reopen validation;
 - explicit CLI separation between Host state and Harness state;
+- Host request-only commit gap followed by response-loss retry to the same completed Harness Run;
+- two independently reopenable histories with one physical Harness execution and no Host Task completion;
+- caller-neutral CompletionProposal collection through the Host foreign-Run binding;
 - compatibility with the complete existing Host-backed Harness suite.
 
 Repository gates and exact revision receipts remain the stronger evidence for a particular commit.
@@ -234,7 +237,6 @@ This foundation does not yet provide:
 
 - production `HarnessRunner` selection of the independent Agent path;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
 - production `/var/lib/ordivon/harness` deployment;
 - automatic observation export.
@@ -245,9 +247,15 @@ The base wheel now depends only on the exact Protocol revision. `ordivon_harness
 
 The historical Host-backed API remains available through the exact `host` extra and is installed by the repository development group for the complete regression suite. Package-root compatibility exports resolve lazily so importing the package itself does not silently pull Host.
 
+## Host foreign-Run integration
+
+`OrdivonHarnessExternalExecutorAdapter` is duck-typed against the Host external-executor protocol so the base Harness package remains Host-free. The Adapter resolves an immutable Contract from the Host request, admits or reopens exactly one independent Run, returns Harness-native revision and evidence as an external observation, and projects the independent CompletionProposal without sharing either database.
+
+The local P0 roundtrip injects delivery loss after Harness completion but before Host binding. Host retains only its immutable request; retry calls the Adapter again, finds the same terminal Harness Run, records one foreign binding, and collects the proposal. The receipt proves one physical Harness execution, two Adapter start calls, independently healthy Host and Harness histories, Host Task state `ready`, and Harness Run state `completed`.
+
 ## Next migration slice
 
-Work now moves to the Host `ExternalExecutorAdapter`, foreign Run binding and cross-store fault matrix. The legacy Host-backed Runner remains the default until those gates pass. Final no-dual-write cutover follows; Runtime process success must still never become semantic Task acceptance.
+Work now moves to active legacy-Run inventory, explicit Store selection, the no-dual-write cutover command, production state roots, rollback receipts and the remaining fault/performance matrix. The legacy Host-backed Runner remains the default until those gates pass; Runtime or foreign Run success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

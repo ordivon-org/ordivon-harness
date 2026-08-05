@@ -17,6 +17,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - `SQLiteHarnessRuntimeBridge` for observation-only independent Runtime search, Harness-owned dispatch fencing, exact-request response-loss reconciliation and durable Tool observations;
 - explicit `StandaloneHarnessRunner` and `IndependentRunRecorder` for segmented Trace retention, caller-neutral Run Receipt, Recovery Assessment and CompletionProposal admission;
 - Host-free `ordivon_harness.core` facade, lazy compatibility exports and an optional exact `host` integration extra;
+- Host-neutral `OrdivonHarnessExternalExecutorAdapter` and a cross-repository response-loss roundtrip with separate Host and Harness histories;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
 - frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
@@ -36,6 +37,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - independent Runtime Tool tests for direct completion, response loss without redispatch, ambiguous lookup cardinality and pre-admission rejection;
 - Standalone Runner tests for terminal restart inspection, pause/resume Trace combination and status-preserving Recovery Assessment;
 - isolated base-wheel proof that `ordivon_host` is absent while a persistent Run completes and reopens, followed by optional Host-extra API verification;
+- Host request-only commit-gap acceptance proving exact retry binds the same completed Harness Run and collects a proposal without Task completion;
 - Execution Binding tests for deterministic identities, Harness-only foreign references, generic Tool lowering and exact legacy Host request compatibility;
 - complete legacy Host-backed Harness suite remains a required regression gate;
 - [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.

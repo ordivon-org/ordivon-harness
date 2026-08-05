@@ -69,6 +69,7 @@ The canonical public graph currently requires:
 | independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
 | independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
 | independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
+| Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin pending cutover |
 | Harness daemon or scheduler | not provided |
 
 ## Public interface
@@ -79,7 +80,7 @@ The canonical public graph currently requires:
 
 Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Package installation is now separated: the independent Core has no Host dependency, while the legacy production integration is available through the exact `host` extra. Until production selection and the Host foreign-Run adapter are complete, this remains a staged authority path rather than a production cutover. The semantic dependency remains intentionally non-symmetric for the legacy path:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Package installation is now separated: the independent Core has no Host dependency, while the legacy production integration is available through the exact `host` extra. A Host-neutral foreign-Run adapter now exposes the independent authority without importing Host or sharing databases. Local cross-repository acceptance proves request-only commit gaps, exact retry, one physical Harness execution, separate reopenable histories and CompletionProposal collection while the Host Task remains ready. Until production selection, exact cross-repository release pins and cutover are complete, this remains a staged authority path rather than a production cutover. The semantic dependency remains intentionally non-symmetric for the legacy path:
 
 ```text
 Harness Core ↛ Host

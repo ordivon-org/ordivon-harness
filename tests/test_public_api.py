@@ -52,6 +52,9 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(hasattr(ordivon_harness, "IndependentHarnessRunReceipt"))
         self.assertTrue(hasattr(ordivon_harness, "IndependentCompletionProposal"))
         self.assertTrue(hasattr(ordivon_harness, "StandaloneHarnessRunner"))
+        self.assertTrue(
+            hasattr(ordivon_harness, "OrdivonHarnessExternalExecutorAdapter")
+        )
 
 
 if __name__ == "__main__":

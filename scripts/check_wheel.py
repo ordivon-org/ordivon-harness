@@ -49,6 +49,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/domain_tools.py",
     "ordivon_harness/errors.py",
     "ordivon_harness/execution_binding.py",
+    "ordivon_harness/host_external_adapter.py",
     "ordivon_harness/independent_result.py",
     "ordivon_harness/runtime_port.py",
     "ordivon_harness/sqlite_store.py",
