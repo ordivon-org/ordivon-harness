@@ -9,6 +9,10 @@ from .codex_app import (
     CodexAppTurnHandle,
     CodexAppTurnResult,
 )
+from .agent_tool_observation import (
+    HarnessArtifactReference,
+    HarnessToolObservation,
+)
 from .contracts import (
     CompletionVerification,
     GrantedExecutionCheck,
@@ -109,6 +113,14 @@ from .ordivon.sqlite_agent_bridge import (
     SQLiteHarnessAgentBridge,
 )
 from .ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
+from .ordivon.sqlite_runtime_bridge import (
+    INDEPENDENT_SEARCH_TOOL_GRANT,
+    INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
+    INDEPENDENT_SEARCH_TOOL_SURFACE,
+    INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
+    SEARCH_WORKSPACE_DEFINITION,
+    SQLiteHarnessRuntimeBridge,
+)
 from .ordivon.run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
@@ -156,6 +168,13 @@ from .store import (
     HarnessRunStatus,
     HarnessStore,
     StoredHarnessObject,
+)
+from .runtime_port import (
+    HarnessRuntimeClient,
+    HarnessRuntimeClientError,
+    HarnessRuntimeErrorDetail,
+    HarnessRuntimeToolRejected,
+    find_runtime_jobs_by_client_request,
 )
 from .runtime_refs import (
     HostRuntimeReference,
@@ -211,6 +230,7 @@ __all__ = [
     "CompletionVerification",
     "GrantedExecutionCheck",
     "HARNESS_STORE_EVENT_KINDS",
+    "HarnessArtifactReference",
     "HarnessBoundReference",
     "HarnessCorrelationContext",
     "HarnessDispatchFenceV2",
@@ -231,14 +251,24 @@ __all__ = [
     "HarnessRunLease",
     "HarnessRunProjection",
     "HarnessRunStatus",
+    "HarnessRuntimeClient",
+    "HarnessRuntimeClientError",
+    "HarnessRuntimeErrorDetail",
     "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected",
     "HarnessStore",
     "HarnessStoreError",
     "HarnessTerminalConflict",
+    "HarnessToolObservation",
+    "INDEPENDENT_SEARCH_TOOL_GRANT",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
     "NO_TOOL_AGENT_SURFACE",
     "NO_TOOL_AGENT_SURFACE_DIGEST",
     "SQLiteHarnessAgentBridge",
     "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
     "SQLiteHarnessStore",
     "StoredHarnessObject",
     "backup_harness_store",
@@ -294,12 +324,14 @@ __all__ = [
     "RecordedNativeRunRecovery",
     "ReplacementScope",
     "RunHandle",
+    "SEARCH_WORKSPACE_DEFINITION",
     "TaskAttemptDescriptor",
     "TaskContract",
     "ToolGrant",
     "build_harness_workspace_exec_request",
     "build_harness_workspace_exec_request_from_binding",
     "derive_native_run_disposition",
+    "find_runtime_jobs_by_client_request",
     "harness_run_runtime_binding_digest",
     "harness_runtime_client_request_id",
     "host_runtime_references",

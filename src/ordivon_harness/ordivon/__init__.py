@@ -62,6 +62,14 @@ from .sqlite_agent_bridge import (
     SQLiteHarnessAgentBridge,
 )
 from .sqlite_run_store import SQLiteHarnessRunContinuityStore
+from .sqlite_runtime_bridge import (
+    INDEPENDENT_SEARCH_TOOL_GRANT,
+    INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
+    INDEPENDENT_SEARCH_TOOL_SURFACE,
+    INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
+    SEARCH_WORKSPACE_DEFINITION,
+    SQLiteHarnessRuntimeBridge,
+)
 from .run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
@@ -123,6 +131,10 @@ __all__ = [
     "HarnessRunState",
     "HarnessRuntimeCatalog",
     "HarnessTrace",
+    "INDEPENDENT_SEARCH_TOOL_GRANT",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
     "HostHarnessRunStore",
     "HttpClientDeepSeekTransport",
     "NativeRunTimes",
@@ -136,6 +148,8 @@ __all__ = [
     "RuntimeToolBridge",
     "SQLiteHarnessAgentBridge",
     "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SEARCH_WORKSPACE_DEFINITION",
     "ScriptedTurnAdapter",
     "static_provider_request_digest",
     "StoredHarnessRunSnapshot",

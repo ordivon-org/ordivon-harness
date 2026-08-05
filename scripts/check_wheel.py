@@ -32,11 +32,13 @@ EXPECTED_API = {
     "ToolGrant",
 }
 REQUIRED_MEMBERS = {
+    "ordivon_harness/agent_tool_observation.py",
     "ordivon_harness/api.py",
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
     "ordivon_harness/errors.py",
     "ordivon_harness/execution_binding.py",
+    "ordivon_harness/runtime_port.py",
     "ordivon_harness/sqlite_store.py",
     "ordivon_harness/store.py",
     "ordivon_harness/store_ops.py",
@@ -46,6 +48,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/ordivon/run_store_port.py",
     "ordivon_harness/ordivon/sqlite_agent_bridge.py",
     "ordivon_harness/ordivon/sqlite_run_store.py",
+    "ordivon_harness/ordivon/sqlite_runtime_bridge.py",
     "ordivon_harness/ordivon/runtime_lowering.py",
     "ordivon_harness/ordivon/tool_errors.py",
 }
