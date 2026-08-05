@@ -65,7 +65,7 @@ For the current production path, Host stores Harness extension bytes and admits 
 
 Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. Its current Runner has durable Host-backed Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
 
-The P0 independent persistence path now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, verified backup/restore, and an event-sourced Provider/Tool/Snapshot continuity implementation. It is not yet selected by the production Runner. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
+The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, verified backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, and a real no-Tool Agent Loop bridge. It is not yet selected by the production Runner and does not yet execute Runtime Tools independently. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
 
 ## What works
 
@@ -82,6 +82,7 @@ The P0 independent persistence path now has a caller-neutral Contract, SQLite Jo
 - independent Run Journal/CAS with revision and lease fencing;
 - independent Provider Call, Tool Step, Snapshot and pause continuity over the Event chain;
 - version-2 Harness-owned Runtime dispatch fences without Host Task fields;
+- real no-Tool Agent Loop execution, pause/resume and durable Provider replay without Host state;
 - verified online backup, tamper detection and restore to a fresh state root;
 - operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths, plus explicit `store-*` operations.
 

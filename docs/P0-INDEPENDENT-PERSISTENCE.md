@@ -57,6 +57,11 @@ HarnessRunContract
    ├── Tool Intent, Harness-owned Dispatch Fence and Receipt chain
    ├── Run Snapshot, pause and replay source reconstruction
    └── event-sourced continuity Doctor
+→ SQLiteHarnessAgentBridge
+   ├── canonical empty Tool surface
+   ├── real OrdivonAgentLoop Provider lifecycle
+   ├── needs-input Snapshot and resume
+   └── durable Provider result replay after response loss
 → store Doctor / backup / verification / restore
 ```
 
@@ -95,7 +100,9 @@ Normal opening does not create a missing database. Only `store-init` initializes
 
 The Provider Call and Tool Step projection tables remain reserved and non-authoritative. The independent continuity implementation reconstructs its current heads from the append-only Run Event chain and immutable CAS objects. This avoids a two-stage failure window between Event admission and projection update. A later projection migration must prove exact reconstruction before those tables may become operational accelerators.
 
-`RuntimeToolBridge` consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. Both the legacy Host Store and `SQLiteHarnessRunContinuityStore` implement the same behavioral boundary. This is a tested execution seam, but the production `HarnessRunner` still selects only the legacy Store.
+`RuntimeToolBridge` consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. Both the legacy Host Store and `SQLiteHarnessRunContinuityStore` implement the same behavioral boundary.
+
+`SQLiteHarnessAgentBridge` proves the real bounded `OrdivonAgentLoop` can execute and resume a no-Tool Agent Run using only the independent state root. It binds the canonical empty Tool surface, persists the complete Provider lifecycle, records `needs_input` Snapshot state, and replays a completed Provider result after a lost Bridge response without another physical invocation. It deliberately rejects every Tool Call and does not claim Runtime execution support. The production `HarnessRunner` still selects only the legacy Host-backed path.
 
 The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Version-1 fences project `ordivon.host` authority, while version-2 fences project `ordivon.harness` authority into Runtime foreign references. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only v2 writer.
 
@@ -189,6 +196,9 @@ The focused P0 suite proves:
 - Provider claim exclusion, expiry takeover, dispatch fencing, terminal idempotency, UNKNOWN recovery and safe retry accounting;
 - losing Provider completion cannot retain an unreferenced result object;
 - Tool Intent, version-2 Harness authority Fence, non-terminal and terminal Receipt chains, stale Fence rejection and Snapshot replay;
+- a real no-Tool Agent Loop candidate completion with no Host or Runtime access;
+- Provider result replay after a durable completion response loss with zero physical redispatch;
+- `needs_input` Snapshot close/reopen and second-turn completion;
 - explicit CLI separation between Host state and Harness state;
 - compatibility with the complete existing Host-backed Harness suite.
 
@@ -198,9 +208,10 @@ Repository gates and exact revision receipts remain the stronger evidence for a 
 
 This foundation does not yet provide:
 
-- production `HarnessRunner` selection of `SQLiteHarnessRunContinuityStore`;
+- production `HarnessRunner` selection of the independent Agent path;
+- caller-neutral Runtime Tool execution through an explicit Execution Binding;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- full Agent Loop resume and terminal Run receipt through only the independent state root;
+- terminal Trace, Run receipt, recovery and completion proposal through only the independent state root;
 - a standalone Runner package graph without the current Host dependency;
 - Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
@@ -209,9 +220,9 @@ This foundation does not yet provide:
 
 ## Next migration slice
 
-The next slice makes the bounded Agent Loop construct and resume against the independent continuity implementation in an explicit test-only Run plan. It must produce the same Provider, Tool, Snapshot, Trace and terminal evidence without reading Host Assignment state or writing either Store twice. The legacy Store remains the production default until this complete vertical path passes the existing recovery fault matrix.
+The next slice introduces a caller-neutral Execution Binding for Workspace, Tool Grant, catalog, deadline and Runtime foreign references, then makes a Tool-bearing Agent Loop use `SQLiteHarnessRunContinuityStore` without `CommittedHarnessAssignment`. It must preserve Runtime request identity, version-2 Harness dispatch authority, response-loss reconciliation, cancellation and Tool Receipt causality.
 
-The Host `ExternalExecutorAdapter` and final no-dual-write cutover follow only after the standalone Run path reconstructs Trace, terminal receipt, recovery and completion proposal from the Harness state root alone.
+Production Runner selection, the Host `ExternalExecutorAdapter`, and final no-dual-write cutover follow only after the standalone Run path reconstructs terminal Trace, Run receipt, recovery and completion proposal from the Harness state root alone.
 
 ## Stop conditions
 
