@@ -77,6 +77,12 @@ from .hermes_acp import (
     HermesACPTimeout,
 )
 from .history import HistoryValidation, validate_history
+from .independent_result import (
+    IndependentCompletionProposal,
+    IndependentHarnessRunReceipt,
+    IndependentRunRecorder,
+    StoredIndependentRunResult,
+)
 from .host import (
     CommittedHarnessAssignment,
     HarnessHost,
@@ -153,6 +159,11 @@ from .sqlite_store import (
     HarnessStoreError,
     HarnessTerminalConflict,
     SQLiteHarnessStore,
+)
+from .standalone import (
+    StandaloneHarnessExecution,
+    StandaloneHarnessRunner,
+    StandaloneToolBridge,
 )
 from .store_ops import (
     backup_harness_store,
@@ -270,6 +281,10 @@ __all__ = [
     "SQLiteHarnessRunContinuityStore",
     "SQLiteHarnessRuntimeBridge",
     "SQLiteHarnessStore",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
+    "StoredIndependentRunResult",
     "StoredHarnessObject",
     "backup_harness_store",
     "restore_harness_backup",
@@ -303,6 +318,9 @@ __all__ = [
     "HermesACPSession",
     "HermesACPTimeout",
     "HistoryValidation",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "IndependentRunRecorder",
     "HostRuntimeReference",
     "NativeHarnessRunContract",
     "NativeRunAbandonment",

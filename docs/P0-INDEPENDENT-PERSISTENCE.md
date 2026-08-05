@@ -67,6 +67,11 @@ HarnessRunContract
    ├── caller-neutral HarnessExecutionBinding
    ├── Harness-owned version-2 Runtime Dispatch Fence
    └── exact clientRequestId response-loss reconciliation
+→ StandaloneHarnessRunner / IndependentRunRecorder
+   ├── pause/resume Trace segments
+   ├── caller-neutral Run Receipt
+   ├── Recovery Assessment
+   └── immutable CompletionProposal without Task acceptance
 → store Doctor / backup / verification / restore
 ```
 
@@ -112,6 +117,8 @@ The Provider Call and Tool Step projection tables remain reserved and non-author
 `HarnessExecutionBinding` now owns the caller-neutral immutable inputs required to lower a Tool Call into a Runtime request: Harness Run identity, Workspace reference, binding identity and digest, Tool catalog and optional Tool Grant digests, deadline, Runtime binding digest, and uniquely sorted foreign references. Generic Runtime request construction and `lower_runtime_tool` no longer import Host types. The legacy `RuntimeToolBridge` adapts its current `CommittedHarnessAssignment` into the same Binding and preserves the exact existing client request identity and foreign-reference bytes.
 
 `SQLiteHarnessRuntimeBridge` proves a Tool-bearing `OrdivonAgentLoop` can execute from only the independent Harness state plus a caller-supplied Runtime client. P0 deliberately exposes only observation-only `search_workspace`, lowers it to `workspace.exec`, appends a version-2 Harness Dispatch Fence, records the Tool Intent before physical admission, and reconciles transport response loss through the original `clientRequestId` without redispatch. Zero or multiple matching Runtime Jobs become durable UNKNOWN observations; pre-admission Runtime rejection remains model-correctable and does not claim physical dispatch.
+
+`StandaloneHarnessRunner` is the explicit Host-free execution surface. `IndependentRunRecorder` retains every returned Trace segment without changing a paused Run back to active, combines those segments on terminal admission, and binds the resulting Trace to an `IndependentHarnessRunReceipt`. Candidate completion additionally creates an immutable caller-neutral `IndependentCompletionProposal`; this completes the Harness Run but does not accept a Host Task or domain outcome. Recovery Assessments use the same independent binding and remain status-preserving Journal events.
 
 The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Version-1 fences project `ordivon.host` authority, while version-2 fences project `ordivon.harness` authority into Runtime foreign references. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only v2 writer.
 
@@ -213,6 +220,9 @@ The focused P0 suite proves:
 - a Tool-bearing independent Agent Loop using Harness-owned Runtime references and Dispatch Fence authority;
 - Runtime response-loss reconciliation with one physical dispatch, plus fail-closed zero/multiple-match handling;
 - pre-admission Runtime rejection represented as a model-correctable durable Tool Observation;
+- direct and pause/resume Standalone Runner completion with combined restart-inspectable Trace segments;
+- immutable independent Run Receipt and caller-neutral CompletionProposal bound to the Contract and Trace;
+- status-preserving Recovery Assessment admission and close/reopen validation;
 - explicit CLI separation between Host state and Harness state;
 - compatibility with the complete existing Host-backed Harness suite.
 
@@ -224,7 +234,6 @@ This foundation does not yet provide:
 
 - production `HarnessRunner` selection of the independent Agent path;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- terminal Trace, Run receipt, recovery and completion proposal through only the independent state root;
 - a standalone Runner package graph without the current Host dependency;
 - Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
@@ -233,9 +242,9 @@ This foundation does not yet provide:
 
 ## Next migration slice
 
-The next slice reconstructs and admits terminal Trace, Run receipt, recovery assessment and completion proposal from the independent Harness state root alone, then wraps the path in an explicit standalone Runner. It must preserve the existing candidate-versus-verified-completion boundary and must not let Runtime process success become semantic completion.
+The next slice separates the independent package graph from the mandatory `ordivon-host` dependency and gives the production entry point an explicit, fail-closed Store selection boundary. The legacy Host-backed path remains the default until the Host `ExternalExecutorAdapter` and cross-store fault matrix pass.
 
-Production Runner selection, the Host `ExternalExecutorAdapter`, and final no-dual-write cutover follow only after that terminal path is restart-safe and inspectable without Host state.
+After package separation, work moves to the Host foreign-Run adapter and final no-dual-write cutover; Runtime process success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

@@ -15,6 +15,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - caller-neutral `HarnessExecutionBinding`, Runtime references and generic Workspace execution request builder;
 - Host-free Runtime Tool lowering with the legacy Host bridge adapted through the same binding while preserving request identity;
 - `SQLiteHarnessRuntimeBridge` for observation-only independent Runtime search, Harness-owned dispatch fencing, exact-request response-loss reconciliation and durable Tool observations;
+- explicit `StandaloneHarnessRunner` and `IndependentRunRecorder` for segmented Trace retention, caller-neutral Run Receipt, Recovery Assessment and CompletionProposal admission;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
 - frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
@@ -32,6 +33,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - independent Provider/Tool continuity tests covering claim races, stale completion privacy, UNKNOWN recovery, safe retry budgets, Harness authority fences, Receipt chains and close/reopen reconstruction;
 - real Agent Loop tests for independent candidate completion, lost-completion-response replay and `needs_input` resume without Host or Runtime access;
 - independent Runtime Tool tests for direct completion, response loss without redispatch, ambiguous lookup cardinality and pre-admission rejection;
+- Standalone Runner tests for terminal restart inspection, pause/resume Trace combination and status-preserving Recovery Assessment;
 - Execution Binding tests for deterministic identities, Harness-only foreign references, generic Tool lowering and exact legacy Host request compatibility;
 - complete legacy Host-backed Harness suite remains a required regression gate;
 - [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.

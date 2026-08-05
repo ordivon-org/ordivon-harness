@@ -68,6 +68,7 @@ The canonical public graph currently requires:
 | automatic Provider routing | not provided |
 | independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
 | independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
+| independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
 | Harness daemon or scheduler | not provided |
 
 ## Public interface
@@ -78,7 +79,7 @@ The canonical public graph currently requires:
 
 Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. Until terminal evidence migration, production selection and the Host foreign-Run adapter are complete, this is a staged authority path rather than a production cutover. The current dependency remains intentionally non-symmetric:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Until package separation, production selection and the Host foreign-Run adapter are complete, this remains a staged authority path rather than a production cutover. The current dependency remains intentionally non-symmetric:
 
 ```text
 Harness → Host
@@ -87,7 +88,7 @@ Host ↛ Harness
 
 ## Known limits
 
-- no production Agent Run selection or full terminal evidence path through the independent store yet;
+- no production Agent Run selection through the independent store yet;
 - the package still installs the exact Host dependency even though the new Store modules do not import Host;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;
