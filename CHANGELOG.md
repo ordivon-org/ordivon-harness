@@ -10,6 +10,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - independent `SQLiteHarnessStore` with append-only Run Events, caller binding, revision fencing, Run leases, immutable CAS and full-history Doctor;
 - owner-neutral `HarnessRunContinuityStore` consumed by `RuntimeToolBridge`, with shared retained Run values and lifecycle errors outside the Host-backed implementation;
 - caller-neutral Provider Call Record and Dispatch Fence v2 codecs while retaining exact v1 Host-backed decoding;
+- event-sourced `SQLiteHarnessRunContinuityStore` for Provider Call, Tool Step, Snapshot, pause and replay semantics over the independent Journal/CAS;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
 - frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
@@ -24,6 +25,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 ### Verification
 
 - focused P0 Contract, Journal/CAS, lease, idempotency, corruption, permissions, CLI, backup and restore tests;
+- independent Provider/Tool continuity tests covering claim races, stale completion privacy, UNKNOWN recovery, safe retry budgets, Harness authority fences, Receipt chains and close/reopen reconstruction;
 - complete legacy Host-backed Harness suite remains a required regression gate;
 - [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.
 

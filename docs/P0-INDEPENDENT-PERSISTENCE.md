@@ -50,8 +50,13 @@ HarnessRunContract
    ├── append-only run_events
    ├── run leases and revision fencing
    ├── caller bindings
-   ├── provider_calls and tool_steps projection tables
+   ├── reserved provider_calls and tool_steps projection tables
    └── immutable content-addressed objects
+→ SQLiteHarnessRunContinuityStore
+   ├── Provider claim, dispatch, terminal outcome and safe retry
+   ├── Tool Intent, Harness-owned Dispatch Fence and Receipt chain
+   ├── Run Snapshot, pause and replay source reconstruction
+   └── event-sourced continuity Doctor
 → store Doctor / backup / verification / restore
 ```
 
@@ -88,11 +93,11 @@ Normal opening does not create a missing database. Only `store-init` initializes
 | `tool_steps` | reserved checked Tool Step projection |
 | `object_validation` | full-object validation cache |
 
-The Provider Call and Tool Step tables exist for migration but are not yet the production Runner's write path. Their existence does not transfer current Host-backed Run authority or authorize dual writes.
+The Provider Call and Tool Step projection tables remain reserved and non-authoritative. The independent continuity implementation reconstructs its current heads from the append-only Run Event chain and immutable CAS objects. This avoids a two-stage failure window between Event admission and projection update. A later projection migration must prove exact reconstruction before those tables may become operational accelerators.
 
-`RuntimeToolBridge` now consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. The legacy Store implements the protocol and exposes only stable binding identity, clock and scalar caller revision. It no longer leaks its Host object through the Tool bridge. This is a structural prerequisite, not a persistence cutover.
+`RuntimeToolBridge` consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. Both the legacy Host Store and `SQLiteHarnessRunContinuityStore` implement the same behavioral boundary. This is a tested execution seam, but the production `HarnessRunner` still selects only the legacy Store.
 
-The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only intended v2 writer.
+The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Version-1 fences project `ordivon.host` authority, while version-2 fences project `ordivon.harness` authority into Runtime foreign references. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only v2 writer.
 
 ## Store operations
 
@@ -181,6 +186,9 @@ The focused P0 suite proves:
 - private modes and symlink rejection;
 - missing CAS failure on reopen;
 - online backup, tamper detection, verification, and independent restore;
+- Provider claim exclusion, expiry takeover, dispatch fencing, terminal idempotency, UNKNOWN recovery and safe retry accounting;
+- losing Provider completion cannot retain an unreferenced result object;
+- Tool Intent, version-2 Harness authority Fence, non-terminal and terminal Receipt chains, stale Fence rejection and Snapshot replay;
 - explicit CLI separation between Host state and Harness state;
 - compatibility with the complete existing Host-backed Harness suite.
 
@@ -190,10 +198,10 @@ Repository gates and exact revision receipts remain the stronger evidence for a 
 
 This foundation does not yet provide:
 
-- production `HarnessRunner` execution through `SQLiteHarnessStore`;
-- persisted Provider Call and Tool Step projections in the new store;
-- Run Snapshot resume through the new store;
-- a standalone Runner that installs without the current Host dependency;
+- production `HarnessRunner` selection of `SQLiteHarnessRunContinuityStore`;
+- checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
+- full Agent Loop resume and terminal Run receipt through only the independent state root;
+- a standalone Runner package graph without the current Host dependency;
 - Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
 - production `/var/lib/ordivon/harness` deployment;
@@ -201,9 +209,9 @@ This foundation does not yet provide:
 
 ## Next migration slice
 
-The next slice implements the existing Provider Call and Tool Step admission semantics against the independent Journal/CAS through `HarnessRunContinuityStore`. It must preserve current identities, claim generations, retry budgets, UNKNOWN rules, Runtime reconciliation, Snapshot causality and caller revision fencing. The legacy Host Store remains selected until the independent implementation passes the same focused fault matrix.
+The next slice makes the bounded Agent Loop construct and resume against the independent continuity implementation in an explicit test-only Run plan. It must produce the same Provider, Tool, Snapshot, Trace and terminal evidence without reading Host Assignment state or writing either Store twice. The legacy Store remains the production default until this complete vertical path passes the existing recovery fault matrix.
 
-The Host adapter and final no-dual-write cutover follow only after the standalone Run path can reconstruct Snapshot, Provider Call, Tool Step, Trace, terminal receipt, recovery, and completion proposal from the Harness state root alone.
+The Host `ExternalExecutorAdapter` and final no-dual-write cutover follow only after the standalone Run path reconstructs Trace, terminal receipt, recovery and completion proposal from the Harness state root alone.
 
 ## Stop conditions
 
