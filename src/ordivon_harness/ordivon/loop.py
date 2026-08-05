@@ -28,12 +28,8 @@ from .run_recovery import (
     _retained_tool_calls,
     _search_evidence,
 )
-from .tools import (
-    ToolBridge,
-    ToolBridgeError,
-    ToolBridgeErrorKind,
-    ToolObservation,
-)
+from .tool_bridge import ToolBridge, ToolObservation
+from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
 _OBSERVATION_ONLY_TOOLS = frozenset(
     {

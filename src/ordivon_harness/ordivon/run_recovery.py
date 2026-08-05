@@ -8,7 +8,7 @@ from anc_canonical import JsonValue, canonical_digest
 
 from ..protocol import HarnessToolStepIntent
 from .model import AgentToolCall
-from .tools import ToolObservation
+from .tool_bridge import ToolObservation
 
 
 @dataclass(frozen=True, slots=True)

@@ -26,17 +26,17 @@ class RepositoryBoundaryTests(unittest.TestCase):
 
     def test_host_dependency_and_lock_share_one_exact_revision(self) -> None:
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-        host_dependencies = [
-            value
-            for value in project["dependencies"]
-            if value.startswith("ordivon-host @ ")
-        ]
         expected = (
             "ordivon-host @ "
             "git+https://github.com/zycxfyh/ordivon-host.git@"
             f"{HOST_REQUIRED_SOURCE_REVISION}"
         )
-        self.assertEqual(host_dependencies, [expected])
+        self.assertFalse(
+            any(value.startswith("ordivon-host @ ") for value in project["dependencies"])
+        )
+        self.assertEqual(project["optional-dependencies"]["host"], [expected])
+        groups = tomllib.loads((ROOT / "pyproject.toml").read_text())["dependency-groups"]
+        self.assertEqual(groups["dev"], [expected])
         lock = (ROOT / "uv.lock").read_text()
         self.assertIn(f"rev={HOST_REQUIRED_SOURCE_REVISION}", lock)
         self.assertIn(f"#{HOST_REQUIRED_SOURCE_REVISION}", lock)

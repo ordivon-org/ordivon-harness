@@ -41,11 +41,11 @@ Pre-1.0 means public imports, owner-local object schemas, Provider adapter APIs 
 The canonical public graph currently requires:
 
 - Python 3.12;
-- `ordivon-host` at `1a4027bb26d77a2e051ca933bf664578f071a5a9`;
-- `ordivon-protocol` at `420dc356cb664d75db0f34f356156baebe5843db`;
+- base package: `ordivon-protocol` at `420dc356cb664d75db0f34f356156baebe5843db`;
+- optional `host` extra and repository development group: `ordivon-host` at `1a4027bb26d77a2e051ca933bf664578f071a5a9`;
 - `uv.lock` generated from those exact pins;
 - Linux for trusted-local live operation;
-- Ordivon Runtime for physical Tool execution.
+- Ordivon Runtime only when physical Tool execution is requested.
 
 ## Capability status
 
@@ -67,27 +67,30 @@ The canonical public graph currently requires:
 | parallel Tools and subagents | unsupported |
 | automatic Provider routing | not provided |
 | independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
+| independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
+| independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
 | Harness daemon or scheduler | not provided |
 
 ## Public interface
 
-`ordivon_harness.api` is the recommended application facade. Historical package-root exports remain during the pre-1.0 compatibility window, but low-level persistence and Provider-driver objects are not newly promised as stable.
+`ordivon_harness.core` is the Host-free facade for caller-neutral contracts, independent Journal/CAS persistence, Runtime bridging and Standalone execution. `ordivon_harness.api` remains the Host-backed application facade and requires the `host` extra. Historical package-root exports resolve lazily during the pre-1.0 compatibility window; low-level persistence and Provider-driver objects are not newly promised as stable.
 
 ## Host relationship
 
 Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, and caller-neutral Runtime execution bindings. Until an independent Runtime Tool Bridge, terminal evidence migration, production selection and the Host foreign-Run adapter are complete, this is a staged authority path rather than a production cutover. The current dependency remains intentionally non-symmetric:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, caller-neutral Runtime execution bindings, and an observation-only Runtime Tool path with Harness-owned dispatch fencing and exact-request reconciliation. The independent path now retains segmented Trace evidence across pause/resume, records a caller-neutral Run Receipt and CompletionProposal, and admits Recovery Assessments without Host state. Package installation is now separated: the independent Core has no Host dependency, while the legacy production integration is available through the exact `host` extra. Until production selection and the Host foreign-Run adapter are complete, this remains a staged authority path rather than a production cutover. The semantic dependency remains intentionally non-symmetric for the legacy path:
 
 ```text
-Harness → Host
+Harness Core ↛ Host
+Harness Host integration → Host
 Host ↛ Harness
 ```
 
 ## Known limits
 
-- no production Agent Run selection or full terminal evidence path through the independent store yet;
-- the package still installs the exact Host dependency even though the new Store modules do not import Host;
+- no production Agent Run selection through the independent store yet;
+- the legacy production Runner still requires the optional exact Host integration and remains the default Host-backed entry point;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;
 - no hostile multi-tenant isolation;

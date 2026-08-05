@@ -1024,6 +1024,14 @@ class SQLiteHarnessRunContinuityStore:
             if "snapshotObjectDigest" in event.data:
                 self._load_snapshot_from_event(event)
                 snapshots += 1
+        from ..independent_result import IndependentRunRecorder
+
+        independent = IndependentRunRecorder(
+            self.store,
+            self.contract,
+            self.binding,
+            clock_ms=self.clock_ms,
+        ).doctor()
         return {
             "schemaVersion": 1,
             "kind": "ordivon.harness-continuity-doctor",
@@ -1033,6 +1041,7 @@ class SQLiteHarnessRunContinuityStore:
             "providerRecords": provider_records,
             "toolRecords": tool_records,
             "snapshots": snapshots,
+            "independentResult": independent,
             "store": base,
         }
 

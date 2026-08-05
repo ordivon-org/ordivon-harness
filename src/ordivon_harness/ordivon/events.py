@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
@@ -52,6 +53,25 @@ class HarnessRunEvent:
             "payload": self.payload,
         }
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> HarnessRunEvent:
+        if set(value) != {"sequence", "kind", "occurredAtMs", "payload"}:
+            raise ValueError("HarnessRunEvent fields differ")
+        if (
+            type(value["sequence"]) is not int
+            or not isinstance(value["kind"], str)
+            or type(value["occurredAtMs"]) is not int
+            or not isinstance(value["payload"], dict)
+        ):
+            raise ValueError("HarnessRunEvent fields are invalid")
+        validate_json_value(value["payload"])
+        return cls(
+            sequence=value["sequence"],
+            kind=value["kind"],
+            occurred_at_ms=value["occurredAtMs"],
+            payload=dict(value["payload"]),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class HarnessTrace:
@@ -80,6 +100,22 @@ class HarnessTrace:
             "harnessRunId": self.harness_run_id,
             "events": [event.to_dict() for event in self.events],
         }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> HarnessTrace:
+        if set(value) != {"schemaVersion", "kind", "harnessRunId", "events"}:
+            raise ValueError("HarnessTrace fields differ")
+        if value["schemaVersion"] != 1 or value["kind"] != "ordivon.harness-trace":
+            raise ValueError("HarnessTrace version or kind is invalid")
+        if not isinstance(value["harnessRunId"], str):
+            raise ValueError("HarnessTrace Run identity must be a string")
+        events = value["events"]
+        if not isinstance(events, list) or any(not isinstance(item, dict) for item in events):
+            raise ValueError("HarnessTrace events must be objects")
+        return cls(
+            harness_run_id=value["harnessRunId"],
+            events=tuple(HarnessRunEvent.from_dict(item) for item in events),
+        )
 
 
 class TraceRecorder:

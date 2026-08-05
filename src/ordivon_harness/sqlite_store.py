@@ -549,7 +549,6 @@ class SQLiteHarnessStore:
                 raise HarnessObjectCorrupt(
                     f"Harness referenced object metadata differs: {item.digest}"
                 )
-        new_status = self._status_after(event_kind)
         with self._transaction():
             existing = self.connection.execute(
                 "SELECT event_id FROM run_events WHERE event_id = ?",
@@ -583,6 +582,7 @@ class SQLiteHarnessStore:
                 )
             if current.status.terminal:
                 raise HarnessTerminalConflict("terminal Harness Run cannot admit another event")
+            new_status = self._status_after(event_kind, current.status)
             if recorded_at_ms < current.updated_at_ms:
                 raise ValueError("Harness event time precedes the current Run head")
             self._validate_exact_lease(lease, checked_at_ms=lease_checked_at_ms)
@@ -864,7 +864,7 @@ class SQLiteHarnessStore:
                     f"Harness Run Event time regressed: {harness_run_id}"
                 )
             previous_time = event.recorded_at_ms
-            status = self._status_after(event.event_kind)
+            status = self._status_after(event.event_kind, status)
             if terminal_event_id is not None:
                 raise HarnessJournalCorruption(
                     f"Harness Run has Events after terminal state: {harness_run_id}"
@@ -1047,7 +1047,9 @@ class SQLiteHarnessStore:
             ) from error
 
     @staticmethod
-    def _status_after(event_kind: str) -> HarnessRunStatus:
+    def _status_after(
+        event_kind: str, current_status: HarnessRunStatus | None = None
+    ) -> HarnessRunStatus:
         if event_kind == "harness.run-created":
             return HarnessRunStatus.CREATED
         if event_kind == "harness.run-paused":
@@ -1060,6 +1062,10 @@ class SQLiteHarnessStore:
             return HarnessRunStatus.FAILED
         if event_kind == "harness.run-abandoned":
             return HarnessRunStatus.ABANDONED
+        if event_kind in {"harness.trace-recorded", "harness.run-recovery-recorded"}:
+            if current_status is None:
+                raise ValueError("status-preserving Harness Event requires current status")
+            return current_status
         return HarnessRunStatus.ACTIVE
 
     @staticmethod

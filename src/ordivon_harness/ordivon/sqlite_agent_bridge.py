@@ -61,14 +61,15 @@ class SQLiteHarnessAgentBridge:
         *,
         provider_source: HarnessProviderCallSourceRef | None = None,
         provider_holder_id: str | None = None,
+        expected_tool_catalog_digest: str = NO_TOOL_AGENT_SURFACE_DIGEST,
     ) -> None:
         if contract.harness_run_id != run_store.harness_run_id:
             raise ValueError("Harness Run Contract differs from its continuity Store")
         if run_store.binding.harness_run_id != contract.harness_run_id:
             raise ValueError("Harness Run binding differs from its Contract")
-        if contract.tool_catalog_digest != NO_TOOL_AGENT_SURFACE_DIGEST:
+        if contract.tool_catalog_digest != expected_tool_catalog_digest:
             raise ValueError(
-                "SQLiteHarnessAgentBridge requires the canonical no-Tool Agent surface"
+                "SQLiteHarnessAgentBridge no-Tool or expected Tool surface differs"
             )
         self.contract = contract
         self.run_store = run_store

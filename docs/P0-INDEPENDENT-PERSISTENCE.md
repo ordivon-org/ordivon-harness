@@ -62,6 +62,16 @@ HarnessRunContract
    ├── real OrdivonAgentLoop Provider lifecycle
    ├── needs-input Snapshot and resume
    └── durable Provider result replay after response loss
+→ SQLiteHarnessRuntimeBridge
+   ├── observation-only search_workspace surface
+   ├── caller-neutral HarnessExecutionBinding
+   ├── Harness-owned version-2 Runtime Dispatch Fence
+   └── exact clientRequestId response-loss reconciliation
+→ StandaloneHarnessRunner / IndependentRunRecorder
+   ├── pause/resume Trace segments
+   ├── caller-neutral Run Receipt
+   ├── Recovery Assessment
+   └── immutable CompletionProposal without Task acceptance
 → store Doctor / backup / verification / restore
 ```
 
@@ -105,6 +115,10 @@ The Provider Call and Tool Step projection tables remain reserved and non-author
 `SQLiteHarnessAgentBridge` proves the real bounded `OrdivonAgentLoop` can execute and resume a no-Tool Agent Run using only the independent state root. It binds the canonical empty Tool surface, persists the complete Provider lifecycle, records `needs_input` Snapshot state, and replays a completed Provider result after a lost Bridge response without another physical invocation. It deliberately rejects every Tool Call. The production `HarnessRunner` still selects only the legacy Host-backed path.
 
 `HarnessExecutionBinding` now owns the caller-neutral immutable inputs required to lower a Tool Call into a Runtime request: Harness Run identity, Workspace reference, binding identity and digest, Tool catalog and optional Tool Grant digests, deadline, Runtime binding digest, and uniquely sorted foreign references. Generic Runtime request construction and `lower_runtime_tool` no longer import Host types. The legacy `RuntimeToolBridge` adapts its current `CommittedHarnessAssignment` into the same Binding and preserves the exact existing client request identity and foreign-reference bytes.
+
+`SQLiteHarnessRuntimeBridge` proves a Tool-bearing `OrdivonAgentLoop` can execute from only the independent Harness state plus a caller-supplied Runtime client. P0 deliberately exposes only observation-only `search_workspace`, lowers it to `workspace.exec`, appends a version-2 Harness Dispatch Fence, records the Tool Intent before physical admission, and reconciles transport response loss through the original `clientRequestId` without redispatch. Zero or multiple matching Runtime Jobs become durable UNKNOWN observations; pre-admission Runtime rejection remains model-correctable and does not claim physical dispatch.
+
+`StandaloneHarnessRunner` is the explicit Host-free execution surface. `IndependentRunRecorder` retains every returned Trace segment without changing a paused Run back to active, combines those segments on terminal admission, and binds the resulting Trace to an `IndependentHarnessRunReceipt`. Candidate completion additionally creates an immutable caller-neutral `IndependentCompletionProposal`; this completes the Harness Run but does not accept a Host Task or domain outcome. Recovery Assessments use the same independent binding and remain status-preserving Journal events.
 
 The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Version-1 fences project `ordivon.host` authority, while version-2 fences project `ordivon.harness` authority into Runtime foreign references. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only v2 writer.
 
@@ -203,6 +217,12 @@ The focused P0 suite proves:
 - `needs_input` Snapshot close/reopen and second-turn completion;
 - caller-neutral Execution Binding round-trip, deterministic request and patch identities, and Host-free Tool lowering;
 - exact compatibility of legacy Host Runtime request identity and foreign references through the Host adapter;
+- a Tool-bearing independent Agent Loop using Harness-owned Runtime references and Dispatch Fence authority;
+- Runtime response-loss reconciliation with one physical dispatch, plus fail-closed zero/multiple-match handling;
+- pre-admission Runtime rejection represented as a model-correctable durable Tool Observation;
+- direct and pause/resume Standalone Runner completion with combined restart-inspectable Trace segments;
+- immutable independent Run Receipt and caller-neutral CompletionProposal bound to the Contract and Trace;
+- status-preserving Recovery Assessment admission and close/reopen validation;
 - explicit CLI separation between Host state and Harness state;
 - compatibility with the complete existing Host-backed Harness suite.
 
@@ -213,20 +233,21 @@ Repository gates and exact revision receipts remain the stronger evidence for a 
 This foundation does not yet provide:
 
 - production `HarnessRunner` selection of the independent Agent path;
-- an independent Runtime Tool Bridge that combines `HarnessExecutionBinding` with `SQLiteHarnessRunContinuityStore`;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- terminal Trace, Run receipt, recovery and completion proposal through only the independent state root;
-- a standalone Runner package graph without the current Host dependency;
 - Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
 - production `/var/lib/ordivon/harness` deployment;
 - automatic observation export.
 
+## Package boundary
+
+The base wheel now depends only on the exact Protocol revision. `ordivon_harness.core`, package-root discovery, independent CLI commands, SQLite Journal/CAS operations and the Standalone Runner import and execute without `ordivon-host`. The isolated wheel gate proves a candidate-completed Run can be persisted, closed, reopened, inspected and fully doctored in an environment where `ordivon_host` is absent.
+
+The historical Host-backed API remains available through the exact `host` extra and is installed by the repository development group for the complete regression suite. Package-root compatibility exports resolve lazily so importing the package itself does not silently pull Host.
+
 ## Next migration slice
 
-The next slice builds an independent Runtime Tool Bridge from `HarnessExecutionBinding`, a caller-supplied Runtime client, Tool Grant/catalog objects, and `SQLiteHarnessRunContinuityStore`. It must run a Tool-bearing Agent Loop without `CommittedHarnessAssignment` while preserving version-2 Harness dispatch authority, response-loss reconciliation, cancellation and Tool Receipt causality.
-
-Production Runner selection, the Host `ExternalExecutorAdapter`, and final no-dual-write cutover follow only after the standalone Run path reconstructs terminal Trace, Run receipt, recovery and completion proposal from the Harness state root alone.
+Work now moves to the Host `ExternalExecutorAdapter`, foreign Run binding and cross-store fault matrix. The legacy Host-backed Runner remains the default until those gates pass. Final no-dual-write cutover follows; Runtime process success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

@@ -23,7 +23,7 @@ from .ordivon.model import (
     AgentTurnAdapter,
 )
 from .ordivon.tool_errors import ToolBridgeError, ToolBridgeErrorKind
-from .ordivon.tools import ToolObservation
+from .ordivon.tool_bridge import ToolObservation
 from .version import package_version
 
 

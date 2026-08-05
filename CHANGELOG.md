@@ -14,6 +14,9 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - `SQLiteHarnessAgentBridge` and canonical no-Tool surface for real Host-free Agent Loop completion, pause/resume and durable Provider replay;
 - caller-neutral `HarnessExecutionBinding`, Runtime references and generic Workspace execution request builder;
 - Host-free Runtime Tool lowering with the legacy Host bridge adapted through the same binding while preserving request identity;
+- `SQLiteHarnessRuntimeBridge` for observation-only independent Runtime search, Harness-owned dispatch fencing, exact-request response-loss reconciliation and durable Tool observations;
+- explicit `StandaloneHarnessRunner` and `IndependentRunRecorder` for segmented Trace retention, caller-neutral Run Receipt, Recovery Assessment and CompletionProposal admission;
+- Host-free `ordivon_harness.core` facade, lazy compatibility exports and an optional exact `host` integration extra;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
 - frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
@@ -23,13 +26,16 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - the production `HarnessRunner`, Provider Call, Tool Step, Snapshot, recovery and completion paths remain Host-backed;
 - no new Run is dual-written and no retained Host history is rewritten;
 - the stable `ordivon_harness.api` facade is unchanged; P0 types are transitional package-root exports;
-- the exact Host and Protocol dependency graph remains required until standalone package extraction is separately completed.
+- the base wheel requires only the exact Protocol revision; Host-backed APIs require the exact `host` extra, while the repository dev group keeps the complete regression graph.
 
 ### Verification
 
 - focused P0 Contract, Journal/CAS, lease, idempotency, corruption, permissions, CLI, backup and restore tests;
 - independent Provider/Tool continuity tests covering claim races, stale completion privacy, UNKNOWN recovery, safe retry budgets, Harness authority fences, Receipt chains and close/reopen reconstruction;
 - real Agent Loop tests for independent candidate completion, lost-completion-response replay and `needs_input` resume without Host or Runtime access;
+- independent Runtime Tool tests for direct completion, response loss without redispatch, ambiguous lookup cardinality and pre-admission rejection;
+- Standalone Runner tests for terminal restart inspection, pause/resume Trace combination and status-preserving Recovery Assessment;
+- isolated base-wheel proof that `ordivon_host` is absent while a persistent Run completes and reopens, followed by optional Host-extra API verification;
 - Execution Binding tests for deterministic identities, Harness-only foreign references, generic Tool lowering and exact legacy Host request compatibility;
 - complete legacy Host-backed Harness suite remains a required regression gate;
 - [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.
