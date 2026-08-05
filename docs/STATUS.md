@@ -77,7 +77,7 @@ The canonical public graph currently requires:
 
 Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, and a real no-Tool Agent Loop path. Until Runtime Tool execution, terminal evidence migration, production selection and the Host foreign-Run adapter are complete, this is a staged authority path rather than a production cutover. The current dependency remains intentionally non-symmetric:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, operational backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop path, and caller-neutral Runtime execution bindings. Until an independent Runtime Tool Bridge, terminal evidence migration, production selection and the Host foreign-Run adapter are complete, this is a staged authority path rather than a production cutover. The current dependency remains intentionally non-symmetric:
 
 ```text
 Harness → Host
