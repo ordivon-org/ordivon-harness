@@ -98,6 +98,7 @@ from .protocol import (
     HarnessProviderCallSource,
     HarnessProviderCallStatus,
 )
+from .ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
 from .ordivon.run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
@@ -222,6 +223,7 @@ __all__ = [
     "HarnessStore",
     "HarnessStoreError",
     "HarnessTerminalConflict",
+    "SQLiteHarnessRunContinuityStore",
     "SQLiteHarnessStore",
     "StoredHarnessObject",
     "backup_harness_store",

@@ -70,6 +70,12 @@ class HarnessDispatchFenceView(Protocol):
     expires_at_ms: int
 
     @property
+    def authority_namespace(self) -> str: ...
+
+    @property
+    def authority_type(self) -> str: ...
+
+    @property
     def authority_generation(self) -> int: ...
 
     @property
@@ -239,7 +245,7 @@ class HarnessRunContinuityStore(Protocol):
         additional_messages: tuple[dict[str, JsonValue], ...],
         adapter_id: str,
         requested_model_id: str,
-    ) -> HarnessRunState: ...
+    ) -> HarnessRunState | None: ...
 
     def prepare_tool_step(self, intent: HarnessToolStepIntent) -> StoredHarnessRunSnapshot: ...
 
@@ -254,7 +260,7 @@ class HarnessRunContinuityStore(Protocol):
         self,
         receipt: HarnessToolStepReceipt,
         observation: dict[str, JsonValue],
-    ) -> StoredHarnessRunSnapshot: ...
+    ) -> None: ...
 
     def load_current_tool_step(self) -> StoredHarnessToolStep: ...
 

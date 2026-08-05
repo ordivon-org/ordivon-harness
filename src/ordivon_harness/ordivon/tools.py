@@ -21,7 +21,6 @@ from .._host_compat.runtime import (
     find_jobs_by_client_request,
 )
 from ..protocol import (
-    HarnessDispatchFence,
     HarnessProviderCallFailureReceipt,
     HarnessProviderCallStatus,
     HarnessRecoveryConsequence,
@@ -48,6 +47,7 @@ from .model import (
 )
 from ..run_state import HarnessRunState
 from .run_store_port import (
+    HarnessDispatchFenceView,
     HarnessProviderCallRecoveryRequired,
     HarnessProviderCallSourceRef,
     HarnessRunContinuityStore,
@@ -1404,7 +1404,7 @@ class RuntimeToolBridge:
                 arguments["waitMs"] = desired_wait_ms
 
         intent: HarnessToolStepIntent | None = None
-        fence: HarnessDispatchFence | None = None
+        fence: HarnessDispatchFenceView | None = None
         if self.run_store is not None:
             if operation == "workspace.mutate":
                 raise ToolBridgeError(
@@ -1540,7 +1540,7 @@ class RuntimeToolBridge:
 
     @staticmethod
     def _with_dispatch_fence(
-        arguments: dict[str, JsonValue], fence: HarnessDispatchFence
+        arguments: dict[str, JsonValue], fence: HarnessDispatchFenceView
     ) -> dict[str, JsonValue]:
         retained = dict(arguments)
         execution = retained.get("execution")
@@ -1555,8 +1555,8 @@ class RuntimeToolBridge:
         references = [dict(item) for item in raw_references]
         references.append(
             {
-                "namespace": "ordivon.host",
-                "type": "dispatch_fence",
+                "namespace": fence.authority_namespace,
+                "type": fence.authority_type,
                 "id": fence.fence_id,
                 "generation": str(fence.authority_generation),
                 "digest": fence.digest,
@@ -1641,7 +1641,7 @@ class RuntimeToolBridge:
         operation: str,
         arguments: dict[str, JsonValue],
         client_request_id: str,
-    ) -> tuple[HarnessToolStepIntent, HarnessDispatchFence]:
+    ) -> tuple[HarnessToolStepIntent, HarnessDispatchFenceView]:
         assert self.run_store is not None
         token = canonical_digest(
             {

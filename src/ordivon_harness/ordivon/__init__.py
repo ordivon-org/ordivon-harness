@@ -56,6 +56,7 @@ from .result import (
 )
 from ..run_state import HarnessRunState
 from .run_store import HostHarnessRunStore
+from .sqlite_run_store import SQLiteHarnessRunContinuityStore
 from .run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
@@ -126,6 +127,7 @@ __all__ = [
     "RunDeadline",
     "RunStopCode",
     "RuntimeToolBridge",
+    "SQLiteHarnessRunContinuityStore",
     "ScriptedTurnAdapter",
     "static_provider_request_digest",
     "StoredHarnessRunSnapshot",

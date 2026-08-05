@@ -280,6 +280,14 @@ class HarnessDispatchFenceV2:
             raise HarnessProtocolError("Dispatch Fence expiry must follow issue time")
 
     @property
+    def authority_namespace(self) -> str:
+        return "ordivon.harness"
+
+    @property
+    def authority_type(self) -> str:
+        return "dispatch_fence"
+
+    @property
     def authority_generation(self) -> int:
         return self.run_revision
 

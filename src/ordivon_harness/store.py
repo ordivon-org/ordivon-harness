@@ -40,6 +40,7 @@ HARNESS_STORE_EVENT_KINDS = frozenset(
         "harness.run-resumed",
         "harness.snapshot-recorded",
         "harness.provider-call-claimed",
+        "harness.provider-call-superseded",
         "harness.provider-call-dispatching",
         "harness.provider-call-completed",
         "harness.provider-call-failed",
