@@ -94,10 +94,12 @@ from .protocol import (
     HarnessProviderCallSource,
     HarnessProviderCallStatus,
 )
-from .ordivon.run_store import (
+from .ordivon.run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
     HarnessProviderCallRequestMismatch,
+    HarnessRunContinuityStore,
+    HarnessRunStoreBinding,
 )
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
 from .recovery_controller import (
@@ -205,7 +207,9 @@ __all__ = [
     "HarnessObjectMissing",
     "HarnessPrivacyPolicy",
     "HarnessRevisionConflict",
+    "HarnessRunContinuityStore",
     "HarnessRunContract",
+    "HarnessRunStoreBinding",
     "HarnessRunEventRecord",
     "HarnessRunLease",
     "HarnessRunProjection",

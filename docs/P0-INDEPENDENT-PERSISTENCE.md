@@ -40,6 +40,11 @@ The independent path consists of:
 
 ```text
 HarnessRunContract
+→ HarnessRunContinuityStore protocol
+   ├── owner-neutral Provider Call, Tool Step and Snapshot values
+   ├── stable Run/Assignment binding identity
+   ├── scalar caller revision compatibility
+   └── no Host store, Journal, CAS or projection types
 → SQLiteHarnessStore
    ├── runs projection
    ├── append-only run_events
@@ -84,6 +89,8 @@ Normal opening does not create a missing database. Only `store-init` initializes
 | `object_validation` | full-object validation cache |
 
 The Provider Call and Tool Step tables exist for migration but are not yet the production Runner's write path. Their existence does not transfer current Host-backed Run authority or authorize dual writes.
+
+`RuntimeToolBridge` now consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. The legacy Store implements the protocol and exposes only stable binding identity, clock and scalar caller revision. It no longer leaks its Host object through the Tool bridge. This is a structural prerequisite, not a persistence cutover.
 
 ## Store operations
 
@@ -192,7 +199,7 @@ This foundation does not yet provide:
 
 ## Next migration slice
 
-The next slice moves the existing Provider Call and Tool Step admission semantics behind the `HarnessStore` boundary while preserving their current identities, UNKNOWN rules, Runtime reconciliation, and restart behavior. It must pass focused fault tests before the main Runner is allowed to select the independent store.
+The next slice implements the existing Provider Call and Tool Step admission semantics against the independent Journal/CAS through `HarnessRunContinuityStore`. It must preserve current identities, claim generations, retry budgets, UNKNOWN rules, Runtime reconciliation, Snapshot causality and caller revision fencing. The legacy Host Store remains selected until the independent implementation passes the same focused fault matrix.
 
 The Host adapter and final no-dual-write cutover follow only after the standalone Run path can reconstruct Snapshot, Provider Call, Tool Step, Trace, terminal receipt, recovery, and completion proposal from the Harness state root alone.
 

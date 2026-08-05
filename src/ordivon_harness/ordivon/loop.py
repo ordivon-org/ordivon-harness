@@ -20,7 +20,7 @@ from .model import (
     AgentTurnFailureCode,
     AgentTurnRequest,
 )
-from .run_store import StoredHarnessRunSnapshot
+from .run_store_port import StoredHarnessRunSnapshot
 from .run_recovery import (
     _observation_evidence_signature,
     _path_subsumes,

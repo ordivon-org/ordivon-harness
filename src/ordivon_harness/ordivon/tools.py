@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Protocol
 
 from anc_canonical import (
@@ -46,11 +46,11 @@ from .model import (
     AgentTurnRequest,
     AgentTurnResult,
 )
-from .run_store import (
+from ..run_state import HarnessRunState
+from .run_store_port import (
     HarnessProviderCallRecoveryRequired,
     HarnessProviderCallSourceRef,
-    HarnessRunState,
-    HostHarnessRunStore,
+    HarnessRunContinuityStore,
     StoredHarnessProviderCall,
     StoredHarnessRunSnapshot,
 )
@@ -507,7 +507,7 @@ class RuntimeToolBridge:
         *,
         harness_run_id: str,
         runtime: RuntimeClient,
-        run_store: HostHarnessRunStore | None = None,
+        run_store: HarnessRunContinuityStore | None = None,
         provider_source: HarnessProviderCallSourceRef | None = None,
         provider_holder_id: str | None = None,
         defer_runtime_catalog_validation: bool = False,
@@ -520,11 +520,16 @@ class RuntimeToolBridge:
         self.harness_run_id = harness_run_id
         self.runtime = runtime
         self.run_store = run_store
-        if run_store is not None and (
-            run_store.harness_run_id != harness_run_id
-            or run_store.committed.assignment != committed.assignment
-        ):
-            raise ValueError("Harness Run Store differs from the Runtime bridge")
+        if run_store is not None:
+            binding = run_store.binding
+            assignment = committed.assignment
+            if (
+                binding.harness_run_id != harness_run_id
+                or binding.assignment_id != assignment.assignment_id
+                or binding.assignment_generation != assignment.generation
+                or binding.assignment_digest != assignment.digest
+            ):
+                raise ValueError("Harness Run Store differs from the Runtime bridge")
         if provider_source is not None and run_store is None:
             raise ValueError("Provider Call source requires a Harness Run Store")
         if run_store is not None and provider_source is None:
@@ -542,7 +547,7 @@ class RuntimeToolBridge:
         self._provider_requested_model_id: str | None = None
         self._active_provider_call: StoredHarnessProviderCall | None = None
         self.clock_ms = (
-            run_store.host.kernel.clock_ms
+            run_store.clock_ms
             if run_store is not None
             else lambda: time.time_ns() // 1_000_000
         )
@@ -648,6 +653,13 @@ class RuntimeToolBridge:
             )
         )
 
+    def _refresh_caller_revision(self) -> None:
+        if self.run_store is not None:
+            self.committed = replace(
+                self.committed,
+                task_revision=self.run_store.caller_revision,
+            )
+
     def restore_provider_replay_state(
         self,
         *,
@@ -664,7 +676,7 @@ class RuntimeToolBridge:
             adapter_id=adapter_id,
             requested_model_id=requested_model_id,
         )
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         return state
 
     def begin_provider_call(
@@ -692,7 +704,7 @@ class RuntimeToolBridge:
             holder_id=self._provider_holder_id,
             ttl_ms=self._provider_claim_ttl_ms(request),
         )
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         self._active_provider_call = retained
         if retained.result is not None:
             return retained.result
@@ -714,7 +726,7 @@ class RuntimeToolBridge:
             return False
         retained = self.run_store.mark_provider_call_dispatching(retained)
         self._active_provider_call = retained
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         if self._execution_control_stopped(control):
             self._record_pre_dispatch_stop(request, retained)
             return False
@@ -750,7 +762,7 @@ class RuntimeToolBridge:
             retained,
             result,
         )
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         if self.run_store.provider_outcome_requires_resume:
             raise HarnessProviderCallRecoveryRequired(
                 "Provider outcome was admitted after Recovery; explicit resume is required"
@@ -784,7 +796,7 @@ class RuntimeToolBridge:
             retained,
             failure=failure,
         )
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         if self.run_store.provider_outcome_requires_resume:
             raise HarnessProviderCallRecoveryRequired(
                 "Provider outcome was admitted after Recovery; explicit resume is required"
@@ -800,7 +812,7 @@ class RuntimeToolBridge:
             ttl_ms=self._provider_claim_ttl_ms(request),
         )
         self._active_provider_call = retained
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
 
     def _record_pre_dispatch_stop(
         self,
@@ -834,7 +846,7 @@ class RuntimeToolBridge:
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
         self._active_provider_call = retained
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
 
     def _execution_control_stopped(
         self,
@@ -986,7 +998,7 @@ class RuntimeToolBridge:
                 f"unsupported Harness pause reason: {reason}"
             ) from error
         self.run_store.record_pause(pause_reason)
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         self._active_provider_call = None
 
     def current_tool_step_intent(self) -> HarnessToolStepIntent:
@@ -1662,7 +1674,7 @@ class RuntimeToolBridge:
             created_at_ms=self.clock_ms(),
         )
         snapshot = self.run_store.prepare_tool_step(intent)
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
         self._provider_source = self.run_store.snapshot_provider_source(snapshot)
         self._active_provider_call = None
         retained = self.run_store.load_current_tool_step()
@@ -1707,7 +1719,7 @@ class RuntimeToolBridge:
             previous_receipt_digest=previous_receipt_digest,
         )
         self.run_store.record_tool_step_receipt(receipt, observation.to_dict())
-        self.committed = self.run_store.committed
+        self._refresh_caller_revision()
 
     def _cancelled_observation(
         self, call: AgentToolCall, payload: dict[str, JsonValue]

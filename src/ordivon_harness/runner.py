@@ -37,7 +37,8 @@ from .ordivon.loop import AgentLoopResult, OrdivonAgentLoop, RunBudget, RunStopC
 from .ordivon.manifest import ordivon_harness_manifest
 from .ordivon.model import AgentTurnAdapter
 from .ordivon.result import NativeRunTimes, record_native_run_result
-from .ordivon.run_store import HostHarnessRunStore, StoredHarnessRunSnapshot
+from .ordivon.run_store import HostHarnessRunStore
+from .ordivon.run_store_port import StoredHarnessRunSnapshot
 from .ordivon.tools import (
     RuntimeToolBridge,
     discover_harness_runtime_catalog,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from .._host_compat.extensions import (
@@ -34,18 +34,24 @@ from ..event_kinds import (
     HARNESS_TOOL_STEP_PREPARED,
     HARNESS_TOOL_STEP_RECORDED,
 )
-from ..host import (
-    CommittedHarnessAssignment,
-    HarnessHost,
-    HarnessLifecycleError,
-    HarnessSuperseded,
-)
+from ..errors import HarnessLifecycleError, HarnessSuperseded
+from ..host import CommittedHarnessAssignment, HarnessHost
 from ..run_state import (
     HarnessRunState,
     build_state_delta,
     load_state_object,
 )
 from .model import AgentTurnResult
+from .run_store_port import (
+    HarnessProviderCallClaimHeld,
+    HarnessProviderCallRecoveryRequired,
+    HarnessProviderCallRequestMismatch,
+    HarnessProviderCallSourceRef,
+    HarnessRunStoreBinding,
+    StoredHarnessProviderCall,
+    StoredHarnessRunSnapshot,
+    StoredHarnessToolStep,
+)
 
 _DISPATCH_FENCE_TTL_MS = 30_000
 _PROVIDER_CALL_FIELDS = (
@@ -62,59 +68,6 @@ _RECEIPT_FIELDS = (
     "harnessToolStepObservationObjectDigest",
     "harnessToolStepPreviousReceiptObjectDigest",
 )
-
-
-@dataclass(frozen=True, slots=True)
-class StoredHarnessRunSnapshot:
-    snapshot: HarnessRunSnapshot
-    snapshot_object: StoredObject
-    state: HarnessRunState
-    state_object: StoredObject
-
-
-@dataclass(frozen=True, slots=True)
-class HarnessProviderCallSourceRef:
-    kind: HarnessProviderCallSource
-    digest: str
-    object_digest: str
-
-
-@dataclass(frozen=True, slots=True)
-class StoredHarnessProviderCall:
-    record: HarnessProviderCallRecord
-    record_object: StoredObject
-    state: HarnessRunState
-    state_object: StoredObject
-    result: AgentTurnResult | None
-    result_object: StoredObject | None
-    failure: HarnessProviderCallFailureReceipt | None
-    failure_object: StoredObject | None
-
-
-class HarnessProviderCallClaimHeld(HarnessLifecycleError):
-    pass
-
-
-class HarnessProviderCallRecoveryRequired(HarnessLifecycleError):
-    pass
-
-
-class HarnessProviderCallRequestMismatch(HarnessLifecycleError):
-    pass
-
-
-@dataclass(frozen=True, slots=True)
-class StoredHarnessToolStep:
-    intent: HarnessToolStepIntent
-    intent_object: StoredObject
-    fence: HarnessDispatchFence | None
-    fence_object: StoredObject | None
-    receipt: HarnessToolStepReceipt | None
-    receipt_object: StoredObject | None
-    previous_receipt: HarnessToolStepReceipt | None
-    previous_receipt_object: StoredObject | None
-    observation: dict[str, JsonValue] | None
-    observation_object: StoredObject | None
 
 
 class HostHarnessRunStore:
@@ -135,6 +88,23 @@ class HostHarnessRunStore:
         self._bound_state: HarnessRunState | None = None
         self._provider_outcome_requires_resume = False
         self._snapshot_sequence = self._current_snapshot_sequence()
+
+    @property
+    def binding(self) -> HarnessRunStoreBinding:
+        assignment = self.committed.assignment
+        return HarnessRunStoreBinding(
+            harness_run_id=self.harness_run_id,
+            assignment_id=assignment.assignment_id,
+            assignment_generation=assignment.generation,
+            assignment_digest=assignment.digest,
+        )
+
+    @property
+    def caller_revision(self) -> int:
+        return self.committed.task_revision
+
+    def clock_ms(self) -> int:
+        return self.host.kernel.clock_ms()
 
     def bind_state(self, state: HarnessRunState) -> None:
         self._require_active_time_budget_consistent(state)

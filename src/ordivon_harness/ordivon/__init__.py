@@ -50,13 +50,15 @@ from .result import (
     build_native_run_receipt,
     record_native_run_result,
 )
-from .run_store import (
+from ..run_state import HarnessRunState
+from .run_store import HostHarnessRunStore
+from .run_store_port import (
     HarnessProviderCallClaimHeld,
     HarnessProviderCallRecoveryRequired,
     HarnessProviderCallRequestMismatch,
     HarnessProviderCallSourceRef,
-    HarnessRunState,
-    HostHarnessRunStore,
+    HarnessRunContinuityStore,
+    HarnessRunStoreBinding,
     StoredHarnessProviderCall,
     StoredHarnessRunSnapshot,
     StoredHarnessToolStep,
@@ -103,7 +105,9 @@ __all__ = [
     "HarnessProviderCallRecoveryRequired",
     "HarnessProviderCallRequestMismatch",
     "HarnessProviderCallSourceRef",
+    "HarnessRunContinuityStore",
     "HarnessRunEvent",
+    "HarnessRunStoreBinding",
     "HarnessRunState",
     "HarnessRuntimeCatalog",
     "HarnessTrace",

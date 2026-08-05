@@ -26,6 +26,7 @@ from .contracts import (
     TaskContract,
     ToolGrant,
 )
+from .errors import HarnessLifecycleError, HarnessSuperseded
 from .disposition import (
     CompletionRoute,
     NativeRunDisposition,
@@ -73,14 +74,6 @@ from .tool_semantics import (
     NativeToolRecoveryConsequence,
     legacy_grant_recovery_consequence,
 )
-
-
-class HarnessLifecycleError(RuntimeError):
-    pass
-
-
-class HarnessSuperseded(HarnessLifecycleError):
-    pass
 
 
 @dataclass(frozen=True, slots=True)
