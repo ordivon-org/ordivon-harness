@@ -40,6 +40,8 @@ class PublicApiTests(unittest.TestCase):
     def test_historical_root_exports_remain_during_transition(self) -> None:
         self.assertIs(ordivon_harness.HarnessRunner, api.HarnessRunner)
         self.assertTrue(hasattr(ordivon_harness, "HarnessProviderCallRecord"))
+        self.assertTrue(hasattr(ordivon_harness, "HarnessRunContract"))
+        self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessStore"))
 
 
 if __name__ == "__main__":

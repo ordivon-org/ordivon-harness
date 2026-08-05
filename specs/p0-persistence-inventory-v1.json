@@ -1,0 +1,559 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-p0-persistence-inventory",
+  "inventoryId": "HHO-P0-A-001",
+  "status": "frozen_before_migration",
+  "observedHarnessRevision": "796e9f07899a250ea4d87ae3e96f38c7172ff674",
+  "purpose": "Freeze the durable Host-backed Harness objects and extension events before any authority or storage cutover.",
+  "objects": [
+    {
+      "id": "task-contract",
+      "casKind": "task-contract",
+      "semanticKind": "ordivon.task-contract",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/contracts.py",
+      "sourceLiteral": "ordivon.task-contract",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_authority"
+    },
+    {
+      "id": "task-attempt-descriptor",
+      "casKind": "task-attempt-descriptor",
+      "semanticKind": "ordivon.task-attempt-descriptor",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.task-attempt-descriptor",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_authority"
+    },
+    {
+      "id": "harness-capability-manifest",
+      "casKind": "harness-capability-manifest",
+      "semanticKind": "ordivon.harness-capability-manifest",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate_configuration_reference",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.harness-capability-manifest",
+      "privacyClass": "private_metadata",
+      "causalRole": "run_configuration"
+    },
+    {
+      "id": "harness-assignment",
+      "casKind": "harness-assignment",
+      "semanticKind": "ordivon.harness-assignment",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "host",
+      "disposition": "replace_with_external_run_binding",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.harness-assignment",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_commitment"
+    },
+    {
+      "id": "tool-grant",
+      "casKind": "tool-grant",
+      "semanticKind": "ordivon.tool-grant",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "caller",
+      "disposition": "bind_digest_into_run_contract",
+      "sourcePath": "src/ordivon_harness/contracts.py",
+      "sourceLiteral": "ordivon.tool-grant",
+      "privacyClass": "private_metadata",
+      "causalRole": "effect_authority"
+    },
+    {
+      "id": "harness-runtime-catalog",
+      "casKind": "harness-runtime-catalog",
+      "semanticKind": "ordivon.harness-runtime-catalog",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate_configuration_reference",
+      "sourcePath": "src/ordivon_harness/tool_semantics.py",
+      "sourceLiteral": "ordivon.harness-runtime-catalog",
+      "privacyClass": "private_metadata",
+      "causalRole": "tool_semantics"
+    },
+    {
+      "id": "native-harness-run-contract",
+      "casKind": "native-harness-run-contract",
+      "semanticKind": "ordivon.native-harness-run-contract",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "legacy_reader",
+      "disposition": "supersede_with_caller_neutral_contract",
+      "sourcePath": "src/ordivon_harness/contracts.py",
+      "sourceLiteral": "ordivon.native-harness-run-contract",
+      "privacyClass": "private_metadata",
+      "causalRole": "legacy_run_contract"
+    },
+    {
+      "id": "compiled-context",
+      "casKind": "compiled-context",
+      "semanticKind": "ordivon.harness-compiled-context",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "caller_or_harness",
+      "disposition": "reference_from_run_contract",
+      "sourcePath": "src/ordivon_harness/ordivon/input.py",
+      "sourceLiteral": "ordivon.harness-compiled-context",
+      "privacyClass": "private_content_ref",
+      "causalRole": "run_input"
+    },
+    {
+      "id": "harness-run-state",
+      "casKind": "harness-run-state",
+      "semanticKind": "ordivon.harness-run-state",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/ordivon/run_store.py",
+      "sourceLiteral": "harness-run-state",
+      "privacyClass": "private_content_ref",
+      "causalRole": "restart_state"
+    },
+    {
+      "id": "harness-run-state-delta",
+      "casKind": "harness-run-state-delta",
+      "semanticKind": "ordivon.harness-run-state-delta",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/ordivon/run_store.py",
+      "sourceLiteral": "harness-run-state-delta",
+      "privacyClass": "private_content_ref",
+      "causalRole": "restart_state_delta"
+    },
+    {
+      "id": "harness-provider-call-record",
+      "casKind": "harness-provider-call-record",
+      "semanticKind": "ordivon.harness-provider-call-record",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-provider-call-record",
+      "privacyClass": "private_metadata",
+      "causalRole": "provider_effect_checkpoint"
+    },
+    {
+      "id": "agent-turn-result",
+      "casKind": "agent-turn-result",
+      "semanticKind": "ordivon.agent-turn-result",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/ordivon/model.py",
+      "sourceLiteral": "ordivon.agent-turn-result",
+      "privacyClass": "private_content_ref",
+      "causalRole": "provider_result"
+    },
+    {
+      "id": "harness-provider-call-failure",
+      "casKind": "harness-provider-call-failure",
+      "semanticKind": "ordivon.harness-provider-call-failure",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-provider-call-failure",
+      "privacyClass": "private_metadata",
+      "causalRole": "provider_failure"
+    },
+    {
+      "id": "harness-tool-step-intent",
+      "casKind": "harness-tool-step-intent",
+      "semanticKind": "ordivon.harness-tool-step-intent",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-tool-step-intent",
+      "privacyClass": "private_content_ref",
+      "causalRole": "tool_effect_intent"
+    },
+    {
+      "id": "harness-dispatch-fence",
+      "casKind": "harness-dispatch-fence",
+      "semanticKind": "ordivon.harness-dispatch-fence",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-dispatch-fence",
+      "privacyClass": "private_metadata",
+      "causalRole": "physical_dispatch_fence"
+    },
+    {
+      "id": "harness-tool-step-receipt",
+      "casKind": "harness-tool-step-receipt",
+      "semanticKind": "ordivon.harness-tool-step-receipt",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-tool-step-receipt",
+      "privacyClass": "private_metadata",
+      "causalRole": "tool_effect_receipt"
+    },
+    {
+      "id": "harness-tool-observation",
+      "casKind": "harness-tool-observation",
+      "semanticKind": "ordivon.tool-observation",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/ordivon/tools.py",
+      "sourceLiteral": "ordivon.tool-observation",
+      "privacyClass": "private_content_ref",
+      "causalRole": "tool_result"
+    },
+    {
+      "id": "harness-run-snapshot",
+      "casKind": "harness-run-snapshot",
+      "semanticKind": "ordivon.harness-run-snapshot",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/protocol.py",
+      "sourceLiteral": "ordivon.harness-run-snapshot",
+      "privacyClass": "private_content_ref",
+      "causalRole": "restart_checkpoint"
+    },
+    {
+      "id": "harness-trace",
+      "casKind": "harness-trace",
+      "semanticKind": "ordivon.harness-trace",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/ordivon/events.py",
+      "sourceLiteral": "ordivon.harness-trace",
+      "privacyClass": "private_metadata",
+      "causalRole": "run_evidence"
+    },
+    {
+      "id": "agent-run-conclusion",
+      "casKind": "agent-run-conclusion",
+      "semanticKind": "ordivon.agent-run-conclusion",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/host.py",
+      "sourceLiteral": "ordivon.agent-run-conclusion",
+      "privacyClass": "private_content_ref",
+      "causalRole": "run_conclusion"
+    },
+    {
+      "id": "harness-run-receipt",
+      "casKind": "harness-run-receipt",
+      "semanticKind": "ordivon.harness-run-receipt",
+      "schemaVersions": [
+        1,
+        2
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.harness-run-receipt",
+      "privacyClass": "private_metadata",
+      "causalRole": "terminal_run_evidence"
+    },
+    {
+      "id": "native-run-recovery-assessment",
+      "casKind": "native-run-recovery-assessment",
+      "semanticKind": "ordivon.native-run-recovery-assessment",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/recovery.py",
+      "sourceLiteral": "ordivon.native-run-recovery-assessment",
+      "privacyClass": "private_metadata",
+      "causalRole": "recovery_decision"
+    },
+    {
+      "id": "native-run-abandonment",
+      "casKind": "native-run-abandonment",
+      "semanticKind": "ordivon.native-run-abandonment",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/recovery.py",
+      "sourceLiteral": "ordivon.native-run-abandonment",
+      "privacyClass": "private_metadata",
+      "causalRole": "terminal_recovery_evidence"
+    },
+    {
+      "id": "completion-proposal",
+      "casKind": "completion-proposal",
+      "semanticKind": "ordivon.completion-proposal",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate_and_reference_from_host",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.completion-proposal",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_proposal"
+    },
+    {
+      "id": "completion-verification",
+      "casKind": "completion-verification",
+      "semanticKind": "ordivon.completion-verification",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/contracts.py",
+      "sourceLiteral": "ordivon.completion-verification",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_verification"
+    },
+    {
+      "id": "completion-decision",
+      "casKind": "completion-decision",
+      "semanticKind": "ordivon.completion-decision",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/models.py",
+      "sourceLiteral": "ordivon.completion-decision",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_decision"
+    },
+    {
+      "id": "task-outcome",
+      "casKind": "task-outcome",
+      "semanticKind": "ordivon.task-outcome",
+      "schemaVersions": [
+        1
+      ],
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/host.py",
+      "sourceLiteral": "kind=\"task-outcome\"",
+      "privacyClass": "private_metadata",
+      "causalRole": "caller_outcome"
+    }
+  ],
+  "events": [
+    {
+      "eventKind": "harness.assignment-committed",
+      "currentOwner": "host_extension",
+      "p0Owner": "host",
+      "disposition": "replace_with_external_run_binding",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.run-recovery-recorded",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.run-abandoned",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.run-recorded",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "split_into_terminal_run_and_foreign_observation",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-claimed",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-dispatching",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-completed",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-failed",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-superseded",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.provider-call-unknown",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.tool-step-prepared",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.tool-step-recorded",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "split_terminal_and_reconciliation_events",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "harness.run-snapshot-recorded",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "completion.proposed",
+      "currentOwner": "host_extension",
+      "p0Owner": "harness",
+      "disposition": "migrate_and_reference_from_host",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    },
+    {
+      "eventKind": "completion.decided",
+      "currentOwner": "host",
+      "p0Owner": "host",
+      "disposition": "retain_host_authority",
+      "sourcePath": "src/ordivon_harness/event_kinds.py"
+    }
+  ],
+  "externalReferences": [
+    {
+      "kind": "effect",
+      "owner": "host_or_domain",
+      "disposition": "reference_only"
+    },
+    {
+      "kind": "effect-binding",
+      "owner": "host_or_domain",
+      "disposition": "reference_only"
+    },
+    {
+      "kind": "capability-decision",
+      "owner": "host_or_domain",
+      "disposition": "reference_only"
+    },
+    {
+      "kind": "workspace-job-attempt-artifact",
+      "owner": "ordivon-runtime",
+      "disposition": "reference_only"
+    }
+  ],
+  "cutoverRules": {
+    "newRunDualWriteAllowed": false,
+    "bulkRewriteHistoricalBytes": false,
+    "activeLegacyRunAllowedAtDefaultCutover": false,
+    "legacyReaderRequired": true
+  },
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:f0ed427bef5a0c4c3465c34381af5188ac7b583d430d22e218d78c916fd3239e"
+  }
+}

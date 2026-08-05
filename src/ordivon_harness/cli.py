@@ -25,12 +25,23 @@ from .ordivon import (
 )
 from .recovery import NATIVE_RUN_RECOVERY_TRIGGERS
 from .runner import CompletionMode, HarnessRunner
+from .sqlite_store import SQLiteHarnessStore
+from .store_ops import (
+    backup_harness_store,
+    restore_harness_backup,
+    verify_harness_backup,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="ordivon-harness")
     parser.add_argument("--config", type=Path)
     parser.add_argument("--state-root", type=Path)
+    parser.add_argument(
+        "--harness-state-root",
+        type=Path,
+        help="independent P0 Harness state root used only by store-* commands",
+    )
     parser.add_argument("--runtime-endpoint")
     parser.add_argument("--runtime-token-file", type=Path)
     parser.add_argument(
@@ -40,6 +51,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("doctor")
+    commands.add_parser("store-init")
+    commands.add_parser("store-doctor")
+
+    store_backup = commands.add_parser("store-backup")
+    store_backup.add_argument("destination", type=Path)
+
+    store_verify_backup = commands.add_parser("store-verify-backup")
+    store_verify_backup.add_argument("backup", type=Path)
+
+    store_restore = commands.add_parser("store-restore")
+    store_restore.add_argument("backup", type=Path)
+    store_restore.add_argument("destination", type=Path)
+
+    store_inspect = commands.add_parser("store-inspect")
+    store_inspect.add_argument("harness_run_id")
+
+    store_events = commands.add_parser("store-events")
+    store_events.add_argument("harness_run_id")
+    store_events.add_argument("--after-sequence", type=int, default=0)
 
     status = commands.add_parser("status")
     status.add_argument("task_id")
@@ -104,8 +134,11 @@ def _add_execution_options(parser: argparse.ArgumentParser) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        config = _config(args)
-        result = _dispatch(config, args)
+        if args.command.startswith("store-"):
+            result = _dispatch_store(args)
+        else:
+            config = _config(args)
+            result = _dispatch(config, args)
     except (
         FileNotFoundError,
         KeyError,
@@ -123,6 +156,56 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     print(json.dumps(result, sort_keys=True, indent=2))
     return 0 if result.get("ok", True) is True else 1
+
+
+def _dispatch_store(args: argparse.Namespace) -> dict[str, object]:
+    if args.command == "store-verify-backup":
+        return {"ok": True, "backup": verify_harness_backup(args.backup.expanduser())}
+    if args.command == "store-restore":
+        return {
+            "ok": True,
+            "restore": restore_harness_backup(
+                args.backup.expanduser(),
+                args.destination.expanduser(),
+            ),
+        }
+    root = args.harness_state_root
+    if root is None:
+        raise ValueError("this store command requires --harness-state-root")
+    root = root.expanduser()
+    if args.command == "store-init":
+        with SQLiteHarnessStore.initialize(root) as store:
+            report = store.doctor(full=True)
+        return {"ok": True, "stateRoot": str(root), "store": report}
+    if args.command == "store-backup":
+        return {
+            "ok": True,
+            "backup": backup_harness_store(root, args.destination.expanduser()),
+        }
+    with SQLiteHarnessStore(root) as store:
+        if args.command == "store-doctor":
+            return {
+                "ok": True,
+                "stateRoot": str(root),
+                "store": store.doctor(full=True),
+            }
+        if args.command == "store-inspect":
+            return {
+                "ok": True,
+                "stateRoot": str(root),
+                "run": store.load_run(args.harness_run_id).to_dict(),
+            }
+        if args.command == "store-events":
+            events = store.list_run_events(
+                args.harness_run_id,
+                after_sequence=args.after_sequence,
+            )
+            return {
+                "ok": True,
+                "stateRoot": str(root),
+                "events": [event.to_dict() for event in events],
+            }
+    raise ValueError("unsupported Harness store command")
 
 
 def _config(args: argparse.Namespace) -> HostConfig:
@@ -184,15 +267,11 @@ def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]
                 "safeToReplace": result.safe_to_replace,
                 "recovery": result.recovery.assessment.to_dict(),
                 "abandonment": (
-                    None
-                    if result.abandonment is None
-                    else result.abandonment.abandonment.to_dict()
+                    None if result.abandonment is None else result.abandonment.abandonment.to_dict()
                 ),
             }
 
-        adapter = DeepSeekTurnAdapter(
-            DeepSeekSettings.from_secret_file(args.deepseek_secret)
-        )
+        adapter = DeepSeekTurnAdapter(DeepSeekSettings.from_secret_file(args.deepseek_secret))
         runner = HarnessRunner(host, runtime=runtime, adapter=adapter)
         budget = _budget(args, host)
         completion_mode = CompletionMode(args.completion_mode)
@@ -212,9 +291,7 @@ def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]
                     completion_mode=completion_mode,
                 )
         elif args.command == "resume":
-            messages = tuple(
-                {"role": "user", "content": message} for message in args.message
-            )
+            messages = tuple({"role": "user", "content": message} for message in args.message)
             if args.events_jsonl:
                 handle = runner.start_resume(
                     args.task_id,

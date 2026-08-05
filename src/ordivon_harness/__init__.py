@@ -16,6 +16,12 @@ from .contracts import (
     TaskContract,
     ToolGrant,
 )
+from .core_contracts import (
+    HarnessBoundReference,
+    HarnessCorrelationContext,
+    HarnessPrivacyPolicy,
+    HarnessRunContract,
+)
 from .domain_tools import (
     DomainToolBridge,
     DomainToolCatalog,
@@ -107,6 +113,33 @@ from .runner import (
     HarnessStatus,
     RunHandle,
 )
+from .sqlite_store import (
+    HarnessEventConflict,
+    HarnessJournalCorruption,
+    HarnessLeaseConflict,
+    HarnessLeaseHeld,
+    HarnessObjectCorrupt,
+    HarnessObjectMissing,
+    HarnessRevisionConflict,
+    HarnessStoreError,
+    HarnessTerminalConflict,
+    SQLiteHarnessStore,
+)
+from .store_ops import (
+    backup_harness_store,
+    restore_harness_backup,
+    verify_harness_backup,
+)
+from .store import (
+    HARNESS_STORE_EVENT_KINDS,
+    HarnessEventAdmission,
+    HarnessRunEventRecord,
+    HarnessRunLease,
+    HarnessRunProjection,
+    HarnessRunStatus,
+    HarnessStore,
+    StoredHarnessObject,
+)
 from .runtime_refs import (
     HostRuntimeReference,
     build_harness_workspace_exec_request,
@@ -160,6 +193,31 @@ __all__ = [
     "CompletionRoute",
     "CompletionVerification",
     "GrantedExecutionCheck",
+    "HARNESS_STORE_EVENT_KINDS",
+    "HarnessBoundReference",
+    "HarnessCorrelationContext",
+    "HarnessEventAdmission",
+    "HarnessEventConflict",
+    "HarnessJournalCorruption",
+    "HarnessLeaseConflict",
+    "HarnessLeaseHeld",
+    "HarnessObjectCorrupt",
+    "HarnessObjectMissing",
+    "HarnessPrivacyPolicy",
+    "HarnessRevisionConflict",
+    "HarnessRunContract",
+    "HarnessRunEventRecord",
+    "HarnessRunLease",
+    "HarnessRunProjection",
+    "HarnessRunStatus",
+    "HarnessStore",
+    "HarnessStoreError",
+    "HarnessTerminalConflict",
+    "SQLiteHarnessStore",
+    "StoredHarnessObject",
+    "backup_harness_store",
+    "restore_harness_backup",
+    "verify_harness_backup",
     "HarnessAssignment",
     "HarnessCancellationResult",
     "HarnessCapabilityManifest",

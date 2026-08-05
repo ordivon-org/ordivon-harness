@@ -33,7 +33,11 @@ EXPECTED_API = {
 }
 REQUIRED_MEMBERS = {
     "ordivon_harness/api.py",
+    "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
+    "ordivon_harness/sqlite_store.py",
+    "ordivon_harness/store.py",
+    "ordivon_harness/store_ops.py",
     "ordivon_harness/version.py",
     "ordivon_harness/ordivon/run_recovery.py",
     "ordivon_harness/ordivon/runtime_lowering.py",
@@ -70,9 +74,7 @@ def run_checked(arguments: list[str]) -> subprocess.CompletedProcess[str]:
 
 
 def validate_metadata(wheel: Path) -> tuple[str, tuple[str, ...]]:
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
-        "project"
-    ]
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     version = project["version"]
     with ZipFile(wheel) as archive:
         names = set(archive.namelist())
@@ -84,9 +86,7 @@ def validate_metadata(wheel: Path) -> tuple[str, tuple[str, ...]]:
         missing = sorted(REQUIRED_MEMBERS - names)
         if missing:
             fail("wheel lacks required modules: " + ", ".join(missing))
-        metadata = BytesParser(policy=policy.default).parsebytes(
-            archive.read(metadata_names[0])
-        )
+        metadata = BytesParser(policy=policy.default).parsebytes(archive.read(metadata_names[0]))
         entries = archive.read(entry_names[0]).decode("utf-8")
 
     if metadata.get("Name") != project["name"]:
@@ -158,13 +158,30 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
         if set(observed.get("api", [])) != EXPECTED_API:
             fail("installed public API differs from the repository contract")
         help_text = run_checked([str(cli), "--help"]).stdout
-        for command in ("doctor", "status", "inspect", "handoff", "run", "resume", "cancel", "recover"):
+        commands = (
+            "doctor",
+            "status",
+            "inspect",
+            "handoff",
+            "run",
+            "resume",
+            "cancel",
+            "recover",
+            "store-init",
+            "store-doctor",
+            "store-inspect",
+            "store-events",
+            "store-backup",
+            "store-verify-backup",
+            "store-restore",
+        )
+        for command in commands:
             if command not in help_text:
                 fail(f"installed CLI help lacks command: {command}")
         return {
             "installedVersion": observed["version"],
             "publicApi": observed["api"],
-            "cliCommandsVerified": 8,
+            "cliCommandsVerified": len(commands),
         }
 
 
