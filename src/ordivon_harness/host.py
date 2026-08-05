@@ -469,8 +469,9 @@ class HarnessHost:
             assignment_object,
             context_object,
         )
+        if prepared.task_contract_object is not None:
+            references += (prepared.task_contract_object,)
         if native_contract is not None:
-            assert prepared.task_contract_object is not None
             assert tool_grant_object is not None
             assert tool_catalog_object is not None
             assert native_contract_object is not None
@@ -485,7 +486,6 @@ class HarnessHost:
                 }
             )
             references += (
-                prepared.task_contract_object,
                 tool_grant_object,
                 tool_catalog_object,
                 native_contract_object,
