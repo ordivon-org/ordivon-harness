@@ -13,7 +13,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-04
+updated: 2026-08-05
 summary: Minimal path from a clean checkout to deterministic verification, operator inspection and live read-only acceptance.
 evidence_status: verified
 readiness: READY
@@ -37,7 +37,9 @@ uv sync --locked
 uv lock --check
 ```
 
-The package uses exact Git revisions for Host and Protocol. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree. A plain editable `pip install` is not the canonical repository setup because it does not validate `uv.lock`.
+The base package uses the exact Protocol revision. The exact Host revision is an optional `host` extra and a repository development dependency, so `uv sync --locked` still installs the complete legacy regression graph. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree. A plain editable `pip install` is not the canonical repository setup because it does not validate `uv.lock`.
+
+For a built wheel, the base installation exposes `ordivon_harness.core` and independent `store-*` commands without Host. Install the `host` extra only for `ordivon_harness.api`, Host-backed Runner commands and current production compatibility.
 
 ## Run the portable contract
 
@@ -54,7 +56,7 @@ uv build --wheel --out-dir /tmp/ordivon-harness-wheel
 uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 ```
 
-This proves deterministic lifecycle, compatibility, repository contracts, wheel metadata and isolated wheel installation. It does not prove a reachable Runtime or external Provider.
+This proves deterministic lifecycle, compatibility, repository contracts, wheel metadata, a Host-free persistent Run in an isolated base installation, and the optional Host integration. It does not prove a reachable Runtime or external Provider.
 
 ## Deterministic Agent loop
 

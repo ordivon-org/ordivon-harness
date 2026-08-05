@@ -234,17 +234,20 @@ This foundation does not yet provide:
 
 - production `HarnessRunner` selection of the independent Agent path;
 - checked Provider Call and Tool Step accelerator projections; the Event chain remains authoritative;
-- a standalone Runner package graph without the current Host dependency;
 - Host `ExternalExecutorAdapter` and foreign Run binding;
 - legacy active-Run inventory and cutover command;
 - production `/var/lib/ordivon/harness` deployment;
 - automatic observation export.
 
+## Package boundary
+
+The base wheel now depends only on the exact Protocol revision. `ordivon_harness.core`, package-root discovery, independent CLI commands, SQLite Journal/CAS operations and the Standalone Runner import and execute without `ordivon-host`. The isolated wheel gate proves a candidate-completed Run can be persisted, closed, reopened, inspected and fully doctored in an environment where `ordivon_host` is absent.
+
+The historical Host-backed API remains available through the exact `host` extra and is installed by the repository development group for the complete regression suite. Package-root compatibility exports resolve lazily so importing the package itself does not silently pull Host.
+
 ## Next migration slice
 
-The next slice separates the independent package graph from the mandatory `ordivon-host` dependency and gives the production entry point an explicit, fail-closed Store selection boundary. The legacy Host-backed path remains the default until the Host `ExternalExecutorAdapter` and cross-store fault matrix pass.
-
-After package separation, work moves to the Host foreign-Run adapter and final no-dual-write cutover; Runtime process success must still never become semantic Task acceptance.
+Work now moves to the Host `ExternalExecutorAdapter`, foreign Run binding and cross-store fault matrix. The legacy Host-backed Runner remains the default until those gates pass. Final no-dual-write cutover follows; Runtime process success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

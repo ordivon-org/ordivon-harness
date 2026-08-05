@@ -9,22 +9,9 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
-from ._host_compat.config import HostConfig, load_config, read_token_file
-from ._host_compat.runtime import McpRuntimeClient
-from ._host_compat.storage import HostStorage
-
-from .handoff import operator_handoff
-from .history import validate_history
 from .version import package_version
-from .host import HarnessHost
-from .ordivon import (
-    DEFAULT_DEEPSEEK_SECRET_PATH,
-    DeepSeekSettings,
-    DeepSeekTurnAdapter,
-    RunBudget,
-)
+from .ordivon.deepseek import DEFAULT_DEEPSEEK_SECRET_PATH
 from .recovery import NATIVE_RUN_RECOVERY_TRIGGERS
-from .runner import CompletionMode, HarnessRunner
 from .sqlite_store import SQLiteHarnessStore
 from .store_ops import (
     backup_harness_store,
@@ -111,8 +98,8 @@ def build_parser() -> argparse.ArgumentParser:
 def _add_execution_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--completion-mode",
-        choices=(CompletionMode.RECORD.value, CompletionMode.PROPOSE.value),
-        default=CompletionMode.RECORD.value,
+        choices=("record", "propose"),
+        default="record",
     )
     parser.add_argument("--max-model-calls", type=int)
     parser.add_argument("--max-tool-calls", type=int)
@@ -140,6 +127,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             config = _config(args)
             result = _dispatch(config, args)
     except (
+        ImportError,
         FileNotFoundError,
         KeyError,
         PermissionError,
@@ -208,7 +196,9 @@ def _dispatch_store(args: argparse.Namespace) -> dict[str, object]:
     raise ValueError("unsupported Harness store command")
 
 
-def _config(args: argparse.Namespace) -> HostConfig:
+def _config(args: argparse.Namespace):
+    from ._host_compat.config import load_config
+
     config = load_config(args.config)
     if args.state_root is not None:
         state_root = args.state_root.expanduser().resolve()
@@ -228,7 +218,14 @@ def _config(args: argparse.Namespace) -> HostConfig:
     return replace(config, runtime=runtime)
 
 
-def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]:
+def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
+    from ._host_compat.storage import HostStorage
+    from .handoff import operator_handoff
+    from .history import validate_history
+    from .host import HarnessHost
+    from .ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
+    from .runner import CompletionMode, HarnessRunner
+
     if args.command == "doctor":
         with HostStorage(config.state_root, validation_mode="full") as storage:
             report = validate_history(storage).to_dict()
@@ -313,7 +310,10 @@ def _dispatch(config: HostConfig, args: argparse.Namespace) -> dict[str, object]
         return {"ok": True, **result.to_dict()}
 
 
-def _runtime(config: HostConfig) -> McpRuntimeClient:
+def _runtime(config):
+    from ._host_compat.config import read_token_file
+    from ._host_compat.runtime import McpRuntimeClient
+
     token = os.environ.get("ORDIVON_BEARER_TOKEN")
     if token is None:
         token = read_token_file(config.runtime.token_file)
@@ -327,7 +327,9 @@ def _runtime(config: HostConfig) -> McpRuntimeClient:
     )
 
 
-def _budget(args: argparse.Namespace, host: HarnessHost) -> RunBudget | None:
+def _budget(args: argparse.Namespace, host):
+    from .ordivon.loop import RunBudget
+
     values = (
         args.max_model_calls,
         args.max_tool_calls,

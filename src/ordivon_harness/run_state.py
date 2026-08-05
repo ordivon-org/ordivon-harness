@@ -9,7 +9,6 @@ from anc_canonical import (
     canonical_digest,
     validate_json_value,
 )
-from ._host_compat.storage import StoredObject
 
 _FULL_KIND = "ordivon.harness-run-state"
 _DELTA_KIND = "ordivon.harness-run-state-delta"
@@ -18,8 +17,12 @@ _DELTA_OBJECT_KIND = "harness-run-state-delta"
 _MAX_DELTA_DEPTH = 64
 
 
+class RunStateStoredObject(Protocol):
+    kind: str
+
+
 class RunStateObjects(Protocol):
-    def inspect(self, digest: str) -> StoredObject: ...
+    def inspect(self, digest: str) -> RunStateStoredObject: ...
 
     def get(self, digest: str, *, expected_kind: str | None = None) -> JsonValue: ...
 

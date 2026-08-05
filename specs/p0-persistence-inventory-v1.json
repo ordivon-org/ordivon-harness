@@ -259,7 +259,7 @@
       "currentOwner": "host_extension",
       "p0Owner": "harness",
       "disposition": "migrate",
-      "sourcePath": "src/ordivon_harness/ordivon/tools.py",
+      "sourcePath": "src/ordivon_harness/agent_tool_observation.py",
       "sourceLiteral": "ordivon.tool-observation",
       "privacyClass": "private_content_ref",
       "causalRole": "tool_result"
@@ -554,6 +554,6 @@
   "integrity": {
     "algorithm": "sha256",
     "canonicalization": "ordivon-evidence-json-v1",
-    "payloadDigest": "sha256:f0ed427bef5a0c4c3465c34381af5188ac7b583d430d22e218d78c916fd3239e"
+    "payloadDigest": "sha256:836453f35e93173abd1539255e8663acbd3100b3a73339221a023101aa6e8db1"
   }
 }

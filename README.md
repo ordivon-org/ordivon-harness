@@ -106,18 +106,25 @@ The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, r
 - Python 3.12;
 - `uv` for exact graph installation, lock validation, isolated tooling and wheel smoke tests;
 - Linux for the canonical trusted-local operational path;
-- exact `ordivon-host` and `ordivon-protocol` revisions pinned in `pyproject.toml` and `uv.lock` for the current production package graph;
+- exact `ordivon-protocol` revision in the base package and exact `ordivon-host` revision in the optional `host` integration extra;
 - Ordivon Runtime for real Tool execution;
 - an explicit Provider adapter for model inference.
 
 ## Quick start
 
-Install the pinned dependency graph:
+Install the repository development graph, including the pinned Host integration used by the legacy production suite:
 
 ```bash
 uv python install 3.12
 uv sync --locked
 uv lock --check
+```
+
+A consumer that only needs caller-neutral contracts, independent persistence and the Standalone Runner installs the base wheel. Host-backed APIs require the explicit extra:
+
+```bash
+pip install ./ordivon_harness-0.6.0-py3-none-any.whl
+pip install "ordivon-harness[host] @ file:///path/to/ordivon_harness-0.6.0-py3-none-any.whl"
 ```
 
 Run the portable contract and verify the built distribution:
@@ -135,7 +142,7 @@ uv build --wheel --out-dir /tmp/ordivon-harness-wheel
 uv run python scripts/check_wheel.py /tmp/ordivon-harness-wheel
 ```
 
-The wheel check validates metadata, exact dependency pins, the CLI entry point and an isolated installation. The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+The wheel check validates metadata, exact dependency pins, a Host-free base installation that completes and reopens a persistent Run, the optional Host integration, and the CLI entry point. The first deterministic and live journeys are documented in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
 
 ## Domain-owned Tool loops
 
@@ -153,7 +160,17 @@ A domain supplies immutable Tool definitions, a Bridge implementation, a per-loo
 
 ## Public API
 
-New application integrations should import from the stable facade:
+Host-free integrations should import the independent facade:
+
+```python
+from ordivon_harness.core import (
+    HarnessRunContract,
+    SQLiteHarnessStore,
+    StandaloneHarnessRunner,
+)
+```
+
+Host-backed application integrations should import from the stable facade after installing the `host` extra:
 
 ```python
 from ordivon_harness.api import (

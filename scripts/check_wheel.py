@@ -31,8 +31,19 @@ EXPECTED_API = {
     "TaskContract",
     "ToolGrant",
 }
+REQUIRED_CORE_API = {
+    "HarnessRunContract",
+    "SQLiteHarnessStore",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessAgentBridge",
+    "SQLiteHarnessRuntimeBridge",
+    "StandaloneHarnessRunner",
+    "IndependentHarnessRunReceipt",
+    "IndependentCompletionProposal",
+}
 REQUIRED_MEMBERS = {
     "ordivon_harness/agent_tool_observation.py",
+    "ordivon_harness/core.py",
     "ordivon_harness/api.py",
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
@@ -52,6 +63,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/ordivon/sqlite_run_store.py",
     "ordivon_harness/ordivon/sqlite_runtime_bridge.py",
     "ordivon_harness/ordivon/runtime_lowering.py",
+    "ordivon_harness/ordivon/tool_bridge.py",
     "ordivon_harness/ordivon/tool_errors.py",
 }
 
@@ -118,13 +130,26 @@ def validate_metadata(wheel: Path) -> tuple[str, tuple[str, ...]]:
         fail("wheel license expression differs from pyproject")
     requirements = tuple(metadata.get_all("Requires-Dist", []))
     if len(requirements) != 2:
-        fail(f"wheel must contain exactly two internal requirements, observed {len(requirements)}")
+        fail(f"wheel must contain Protocol plus optional Host, observed {len(requirements)}")
     joined = "\n".join(requirements)
-    for dependency in project["dependencies"]:
-        name = dependency.split(" @ ", 1)[0]
-        revision = dependency.rsplit("@", 1)[-1].split("#", 1)[0]
-        if name not in joined or revision not in joined:
-            fail(f"wheel metadata lacks exact dependency identity for {name}")
+    protocol = project["dependencies"][0]
+    protocol_name = protocol.split(" @ ", 1)[0]
+    protocol_revision = protocol.rsplit("@", 1)[-1].split("#", 1)[0]
+    if protocol_name not in joined or protocol_revision not in joined:
+        fail("wheel metadata lacks the exact base Protocol dependency")
+    host = project["optional-dependencies"]["host"][0]
+    host_name = host.split(" @ ", 1)[0]
+    host_revision = host.rsplit("@", 1)[-1].split("#", 1)[0]
+    host_requirements = [item for item in requirements if host_name in item]
+    if (
+        len(host_requirements) != 1
+        or host_revision not in host_requirements[0]
+        or not any(
+            marker in host_requirements[0]
+            for marker in ("extra == 'host'", 'extra == "host"')
+        )
+    ):
+        fail("wheel metadata lacks the exact optional Host integration dependency")
     if "ordivon-harness = ordivon_harness.cli:entrypoint" not in entries:
         fail("wheel entry point differs from the public CLI contract")
     return version, requirements
@@ -151,47 +176,74 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
                 str(wheel),
             ]
         )
-        probe = run_checked(
+        core_probe = run_checked(
             [
                 str(python),
                 "-c",
                 (
-                    "import importlib.metadata as m,json; "
-                    "import ordivon_harness.api as api; "
+                    "import importlib.metadata as m,importlib.util,json; "
+                    "import ordivon_harness.core as core; "
                     "print(json.dumps({'version':m.version('ordivon-harness'),"
-                    "'api':sorted(api.__all__)}))"
+                    "'core':sorted(core.__all__),"
+                    "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
                 ),
             ]
         )
-        observed = json.loads(probe.stdout)
-        if observed.get("version") != version:
-            fail("installed distribution version differs from wheel metadata")
-        if set(observed.get("api", [])) != EXPECTED_API:
-            fail("installed public API differs from the repository contract")
+        observed_core = json.loads(core_probe.stdout)
+        if observed_core.get("version") != version:
+            fail("installed Core distribution version differs from wheel metadata")
+        if not REQUIRED_CORE_API.issubset(set(observed_core.get("core", []))):
+            fail("installed Core API lacks required independent symbols")
+        if observed_core.get("hostInstalled") is not False:
+            fail("base wheel installation unexpectedly installed Host")
+        run_checked([str(python), str(ROOT / "scripts/check_core_without_host.py")])
         help_text = run_checked([str(cli), "--help"]).stdout
+        for command in ("store-init", "store-doctor", "store-inspect", "store-events"):
+            if command not in help_text:
+                fail(f"Host-free CLI help lacks independent command: {command}")
+
+        run_checked(
+            [
+                uv,
+                "pip",
+                "install",
+                "--link-mode",
+                "copy",
+                "--python",
+                str(python),
+                f"ordivon-harness[host] @ {wheel.as_uri()}",
+            ]
+        )
+        host_probe = run_checked(
+            [
+                str(python),
+                "-c",
+                (
+                    "import importlib.util,json; import ordivon_harness.api as api; "
+                    "print(json.dumps({'api':sorted(api.__all__),"
+                    "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
+                ),
+            ]
+        )
+        observed_host = json.loads(host_probe.stdout)
+        if set(observed_host.get("api", [])) != EXPECTED_API:
+            fail("installed Host public API differs from the repository contract")
+        if observed_host.get("hostInstalled") is not True:
+            fail("Host extra did not install ordivon-host")
         commands = (
-            "doctor",
-            "status",
-            "inspect",
-            "handoff",
-            "run",
-            "resume",
-            "cancel",
-            "recover",
-            "store-init",
-            "store-doctor",
-            "store-inspect",
-            "store-events",
-            "store-backup",
-            "store-verify-backup",
-            "store-restore",
+            "doctor", "status", "inspect", "handoff", "run", "resume", "cancel",
+            "recover", "store-init", "store-doctor", "store-inspect", "store-events",
+            "store-backup", "store-verify-backup", "store-restore",
         )
         for command in commands:
             if command not in help_text:
                 fail(f"installed CLI help lacks command: {command}")
         return {
-            "installedVersion": observed["version"],
-            "publicApi": observed["api"],
+            "installedVersion": observed_core["version"],
+            "coreApiRequired": sorted(REQUIRED_CORE_API),
+            "hostApi": observed_host["api"],
+            "hostFreeCoreVerified": True,
+            "hostExtraVerified": True,
             "cliCommandsVerified": len(commands),
         }
 

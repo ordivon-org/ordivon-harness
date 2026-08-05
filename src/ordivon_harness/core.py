@@ -1,0 +1,198 @@
+"""Host-independent Ordivon Harness public facade.
+
+This module is the supported import surface for caller-neutral Run contracts,
+independent Journal/CAS persistence, standalone execution and Runtime Tool
+bridging. Importing it never requires ``ordivon-host``.
+"""
+
+from .agent_tool_observation import HarnessArtifactReference, HarnessToolObservation
+from .core_contracts import (
+    HarnessBoundReference,
+    HarnessCorrelationContext,
+    HarnessPrivacyPolicy,
+    HarnessRunContract,
+)
+from .execution_binding import (
+    HarnessExecutionBinding,
+    HarnessRuntimeReference,
+    build_harness_workspace_exec_request_from_binding,
+)
+from .independent_result import (
+    IndependentCompletionProposal,
+    IndependentHarnessRunReceipt,
+    IndependentRunRecorder,
+    StoredIndependentRunResult,
+)
+from .ordivon.continuity_records import (
+    HarnessDispatchFenceV2,
+    HarnessProviderCallRecordV2,
+)
+from .ordivon.deepseek import (
+    DEFAULT_DEEPSEEK_BASE_URL,
+    DEFAULT_DEEPSEEK_SECRET_PATH,
+    SUPPORTED_DEEPSEEK_MODELS,
+    DeepSeekSettings,
+    DeepSeekTurnAdapter,
+)
+from .ordivon.loop import (
+    AgentLoopResult,
+    CancellationToken,
+    OrdivonAgentLoop,
+    RunBudget,
+    RunStopCode,
+)
+from .ordivon.model import (
+    AgentRunConclusion,
+    AgentToolCall,
+    AgentToolDefinition,
+    AgentTurnAdapter,
+    AgentTurnAdapterError,
+    AgentTurnRequest,
+    AgentTurnResult,
+    ScriptedTurnAdapter,
+)
+from .ordivon.run_store_port import (
+    HarnessProviderCallClaimHeld,
+    HarnessProviderCallRecoveryRequired,
+    HarnessProviderCallRequestMismatch,
+    HarnessRunContinuityStore,
+    HarnessRunStoreBinding,
+)
+from .ordivon.sqlite_agent_bridge import (
+    NO_TOOL_AGENT_SURFACE,
+    NO_TOOL_AGENT_SURFACE_DIGEST,
+    SQLiteHarnessAgentBridge,
+)
+from .ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
+from .ordivon.sqlite_runtime_bridge import (
+    INDEPENDENT_SEARCH_TOOL_GRANT,
+    INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
+    INDEPENDENT_SEARCH_TOOL_SURFACE,
+    INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
+    SEARCH_WORKSPACE_DEFINITION,
+    SQLiteHarnessRuntimeBridge,
+)
+from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
+from .runtime_port import (
+    HarnessRuntimeClient,
+    HarnessRuntimeClientError,
+    HarnessRuntimeErrorDetail,
+    HarnessRuntimeToolRejected,
+    find_runtime_jobs_by_client_request,
+)
+from .sqlite_store import (
+    HarnessEventConflict,
+    HarnessJournalCorruption,
+    HarnessLeaseConflict,
+    HarnessLeaseHeld,
+    HarnessObjectCorrupt,
+    HarnessObjectMissing,
+    HarnessRevisionConflict,
+    HarnessStoreError,
+    HarnessTerminalConflict,
+    SQLiteHarnessStore,
+)
+from .standalone import (
+    StandaloneHarnessExecution,
+    StandaloneHarnessRunner,
+    StandaloneToolBridge,
+)
+from .store import (
+    HARNESS_STORE_EVENT_KINDS,
+    HarnessEventAdmission,
+    HarnessRunEventRecord,
+    HarnessRunLease,
+    HarnessRunProjection,
+    HarnessRunStatus,
+    HarnessStore,
+    StoredHarnessObject,
+)
+from .store_ops import (
+    backup_harness_store,
+    restore_harness_backup,
+    verify_harness_backup,
+)
+from .version import package_version
+
+__all__ = [
+    "DEFAULT_DEEPSEEK_BASE_URL",
+    "DEFAULT_DEEPSEEK_SECRET_PATH",
+    "HARNESS_STORE_EVENT_KINDS",
+    "INDEPENDENT_SEARCH_TOOL_GRANT",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
+    "NO_TOOL_AGENT_SURFACE",
+    "NO_TOOL_AGENT_SURFACE_DIGEST",
+    "SEARCH_WORKSPACE_DEFINITION",
+    "SUPPORTED_DEEPSEEK_MODELS",
+    "AgentLoopResult",
+    "AgentRunConclusion",
+    "AgentToolCall",
+    "AgentToolDefinition",
+    "AgentTurnAdapter",
+    "AgentTurnAdapterError",
+    "AgentTurnRequest",
+    "AgentTurnResult",
+    "CancellationToken",
+    "DeepSeekSettings",
+    "DeepSeekTurnAdapter",
+    "HarnessArtifactReference",
+    "HarnessBoundReference",
+    "HarnessCorrelationContext",
+    "HarnessDispatchFenceV2",
+    "HarnessEventAdmission",
+    "HarnessEventConflict",
+    "HarnessExecutionBinding",
+    "HarnessJournalCorruption",
+    "HarnessLeaseConflict",
+    "HarnessLeaseHeld",
+    "HarnessObjectCorrupt",
+    "HarnessObjectMissing",
+    "HarnessPrivacyPolicy",
+    "HarnessProviderCallClaimHeld",
+    "HarnessProviderCallRecordV2",
+    "HarnessProviderCallRecoveryRequired",
+    "HarnessProviderCallRequestMismatch",
+    "HarnessRevisionConflict",
+    "HarnessRunContinuityStore",
+    "HarnessRunContract",
+    "HarnessRunEventRecord",
+    "HarnessRunLease",
+    "HarnessRunProjection",
+    "HarnessRunStatus",
+    "HarnessRunStoreBinding",
+    "HarnessRuntimeClient",
+    "HarnessRuntimeClientError",
+    "HarnessRuntimeErrorDetail",
+    "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected",
+    "HarnessStore",
+    "HarnessStoreError",
+    "HarnessTerminalConflict",
+    "HarnessToolObservation",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "IndependentRunRecorder",
+    "NativeRunAbandonment",
+    "NativeRunRecoveryAssessment",
+    "OrdivonAgentLoop",
+    "RunBudget",
+    "RunStopCode",
+    "SQLiteHarnessAgentBridge",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SQLiteHarnessStore",
+    "ScriptedTurnAdapter",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
+    "StoredHarnessObject",
+    "StoredIndependentRunResult",
+    "backup_harness_store",
+    "build_harness_workspace_exec_request_from_binding",
+    "find_runtime_jobs_by_client_request",
+    "package_version",
+    "restore_harness_backup",
+    "verify_harness_backup",
+]

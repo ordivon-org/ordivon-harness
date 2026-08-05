@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from anc_canonical import JsonValue, validate_json_value
+from typing import Protocol
 
-from ..contracts import ToolGrant
+from anc_canonical import JsonValue, validate_json_value
 from ..execution_binding import (
     HarnessExecutionBinding,
     build_harness_workspace_exec_request_from_binding,
@@ -13,12 +13,30 @@ from .model import AgentToolCall
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
 
+class RuntimeExecutionCheckView(Protocol):
+    executable: str
+    args: tuple[str, ...]
+    cwd_relative: str
+    env: tuple[tuple[str, str], ...]
+    timeout_ms: int
+    stdout_limit_bytes: int
+    stderr_limit_bytes: int
+
+
+class RuntimeToolGrantView(Protocol):
+    allow_opaque_exec: bool
+
+    def allows_path(self, name: str, relative_path: str) -> bool: ...
+
+    def execution_check(self, check_id: str) -> RuntimeExecutionCheckView: ...
+
+
 def lower_runtime_tool(
     call: AgentToolCall,
     *,
     step_id: str,
     execution_binding: HarnessExecutionBinding,
-    tool_grant: ToolGrant | None,
+    tool_grant: RuntimeToolGrantView | None,
     known_job_ids: frozenset[str],
     known_artifacts: frozenset[tuple[str, str]],
 ) -> tuple[str, dict[str, JsonValue], str | None]:
@@ -457,4 +475,4 @@ def _read_workspace_byte_offset(arguments: dict[str, JsonValue]) -> int:
     return _optional_int(arguments, field, 0)
 
 
-__all__ = ["lower_runtime_tool"]
+__all__ = ["RuntimeExecutionCheckView", "RuntimeToolGrantView", "lower_runtime_tool"]

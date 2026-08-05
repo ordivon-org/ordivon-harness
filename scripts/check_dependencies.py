@@ -34,8 +34,16 @@ def main() -> int:
         + PROTOCOL_REVISION
         + "#subdirectory=packages/ordivon-protocol"
     )
-    if dependencies != [expected_host, expected_protocol]:
-        fail("pyproject dependencies differ from the canonical exact graph")
+    if dependencies != [expected_protocol]:
+        fail("base dependencies must contain only the exact Protocol graph")
+    optional = project.get("optional-dependencies")
+    if not isinstance(optional, dict) or optional.get("host") != [expected_host]:
+        fail("Host integration extra differs from the canonical exact graph")
+    groups = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8")).get(
+        "dependency-groups"
+    )
+    if not isinstance(groups, dict) or groups.get("dev") != [expected_host]:
+        fail("development dependency group must install the exact Host graph")
 
     lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
     for revision, label in (
@@ -74,7 +82,8 @@ def main() -> int:
         fail("package version and source-checkout fallback differ")
 
     print(
-        f"dependency contract: valid host={HOST_REVISION} protocol={PROTOCOL_REVISION}"
+        f"dependency contract: valid base=protocol@{PROTOCOL_REVISION} "
+        f"host-extra={HOST_REVISION}"
     )
     return 0
 
