@@ -98,6 +98,11 @@ from .protocol import (
     HarnessProviderCallSource,
     HarnessProviderCallStatus,
 )
+from .ordivon.sqlite_agent_bridge import (
+    NO_TOOL_AGENT_SURFACE,
+    NO_TOOL_AGENT_SURFACE_DIGEST,
+    SQLiteHarnessAgentBridge,
+)
 from .ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
 from .ordivon.run_store_port import (
     HarnessProviderCallClaimHeld,
@@ -223,6 +228,9 @@ __all__ = [
     "HarnessStore",
     "HarnessStoreError",
     "HarnessTerminalConflict",
+    "NO_TOOL_AGENT_SURFACE",
+    "NO_TOOL_AGENT_SURFACE_DIGEST",
+    "SQLiteHarnessAgentBridge",
     "SQLiteHarnessRunContinuityStore",
     "SQLiteHarnessStore",
     "StoredHarnessObject",

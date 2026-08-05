@@ -43,6 +43,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/ordivon/continuity_records.py",
     "ordivon_harness/ordivon/run_recovery.py",
     "ordivon_harness/ordivon/run_store_port.py",
+    "ordivon_harness/ordivon/sqlite_agent_bridge.py",
     "ordivon_harness/ordivon/sqlite_run_store.py",
     "ordivon_harness/ordivon/runtime_lowering.py",
     "ordivon_harness/ordivon/tool_errors.py",

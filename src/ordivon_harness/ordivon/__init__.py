@@ -56,6 +56,11 @@ from .result import (
 )
 from ..run_state import HarnessRunState
 from .run_store import HostHarnessRunStore
+from .sqlite_agent_bridge import (
+    NO_TOOL_AGENT_SURFACE,
+    NO_TOOL_AGENT_SURFACE_DIGEST,
+    SQLiteHarnessAgentBridge,
+)
 from .sqlite_run_store import SQLiteHarnessRunContinuityStore
 from .run_store_port import (
     HarnessProviderCallClaimHeld,
@@ -126,7 +131,10 @@ __all__ = [
     "RunBudget",
     "RunDeadline",
     "RunStopCode",
+    "NO_TOOL_AGENT_SURFACE",
+    "NO_TOOL_AGENT_SURFACE_DIGEST",
     "RuntimeToolBridge",
+    "SQLiteHarnessAgentBridge",
     "SQLiteHarnessRunContinuityStore",
     "ScriptedTurnAdapter",
     "static_provider_request_digest",
