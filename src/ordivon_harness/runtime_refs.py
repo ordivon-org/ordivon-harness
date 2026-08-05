@@ -3,8 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from anc_canonical import JsonValue, canonical_digest
 
+from .execution_binding import (
+    HarnessExecutionBinding,
+    HarnessRuntimeReference,
+    build_harness_workspace_exec_request_from_binding,
+)
 from .host import CommittedHarnessAssignment
 
 _NAMESPACE = "ordivon.host"
@@ -201,27 +206,45 @@ def host_runtime_references(
     return tuple(sorted(references, key=lambda value: value.sort_key))
 
 
+def host_execution_binding(
+    committed: CommittedHarnessAssignment,
+    harness_run_id: str,
+) -> HarnessExecutionBinding:
+    assignment = committed.assignment
+    if assignment.workspace_ref is None:
+        raise ValueError("Harness Assignment has no Runtime Workspace reference")
+    references = tuple(
+        HarnessRuntimeReference.from_dict(reference.to_dict())
+        for reference in host_runtime_references(committed, harness_run_id)
+    )
+    tool_grant_digest = (
+        None if committed.tool_grant is None else committed.tool_grant.digest
+    )
+    return HarnessExecutionBinding(
+        harness_run_id=harness_run_id,
+        workspace_ref=assignment.workspace_ref,
+        assignment_id=assignment.assignment_id,
+        assignment_generation=assignment.generation,
+        assignment_digest=assignment.digest,
+        runtime_binding_digest=harness_run_runtime_binding_digest(
+            committed, harness_run_id
+        ),
+        tool_catalog_digest=assignment.tool_catalog_digest,
+        tool_grant_digest=tool_grant_digest,
+        deadline_ms=assignment.deadline_ms,
+        runtime_references=references,
+    )
+
+
 def harness_runtime_client_request_id(
     committed: CommittedHarnessAssignment,
     harness_run_id: str,
     step_id: str,
 ) -> str:
-    _text(step_id, "Harness Runtime step identity", max_bytes=200)
-    digest = canonical_digest(
-        {
-            "schemaVersion": 1,
-            "kind": "ordivon.harness-runtime-request-identity",
-            "assignmentId": committed.assignment.assignment_id,
-            "assignmentGeneration": committed.assignment.generation,
-            "assignmentDigest": committed.assignment.digest,
-            "harnessRunId": harness_run_id,
-            "harnessRunBindingDigest": harness_run_runtime_binding_digest(
-                committed, harness_run_id
-            ),
-            "stepId": step_id,
-        }
-    )
-    return f"request:harness:g{committed.assignment.generation}:{digest[7:39]}"
+    return host_execution_binding(
+        committed, harness_run_id
+    ).client_request_id(step_id)
+
 
 
 def build_harness_workspace_exec_request(
@@ -240,56 +263,18 @@ def build_harness_workspace_exec_request(
     stdout_tail_bytes: int = 8_192,
     stderr_tail_bytes: int = 8_192,
 ) -> dict[str, JsonValue]:
-    assignment = committed.assignment
-    if assignment.workspace_ref is None:
-        raise ValueError("Harness Assignment has no Runtime Workspace reference")
-    _text(executable, "Runtime executable")
-    if not executable.startswith("/"):
-        raise ValueError("Runtime executable must be absolute")
-    _text(cwd_relative, "Runtime working directory")
-    for argument in args:
-        if not isinstance(argument, str):
-            raise ValueError("Runtime arguments must be strings")
-    environment = {} if env is None else dict(env)
-    if any(
-        not isinstance(key, str)
-        or not isinstance(value, str)
-        or not key
-        or key != key.strip()
-        for key, value in environment.items()
-    ):
-        raise ValueError("Runtime environment must contain trimmed string keys and values")
-    if timeout_ms < 0:
-        raise ValueError("Runtime timeout must be non-negative")
-    if stdout_limit_bytes < 0 or stderr_limit_bytes < 0:
-        raise ValueError("Runtime output limits must be non-negative")
-    if wait_ms < 0 or wait_ms > 30_000:
-        raise ValueError("Runtime wait must be between 0 and 30000 milliseconds")
-    if not 0 <= stdout_tail_bytes <= 65_536 or not 0 <= stderr_tail_bytes <= 65_536:
-        raise ValueError("Runtime tail limits must be between 0 and 65536 bytes")
-    references = [
-        reference.to_dict()
-        for reference in host_runtime_references(committed, harness_run_id)
-    ]
-    request: dict[str, JsonValue] = {
-        "schemaVersion": 1,
-        "clientRequestId": harness_runtime_client_request_id(
-            committed, harness_run_id, step_id
-        ),
-        "execution": {
-            "workspaceId": assignment.workspace_ref,
-            "executable": executable,
-            "args": list(args),
-            "cwdRelative": cwd_relative,
-            "env": environment,
-            "timeoutMs": timeout_ms,
-            "stdoutLimitBytes": stdout_limit_bytes,
-            "stderrLimitBytes": stderr_limit_bytes,
-            "foreignReferences": references,
-        },
-        "waitMs": wait_ms,
-        "stdoutTailBytes": stdout_tail_bytes,
-        "stderrTailBytes": stderr_tail_bytes,
-    }
-    validate_json_value(request)
-    return request
+    binding = host_execution_binding(committed, harness_run_id)
+    return build_harness_workspace_exec_request_from_binding(
+        binding,
+        step_id=step_id,
+        executable=executable,
+        args=args,
+        cwd_relative=cwd_relative,
+        env=env,
+        timeout_ms=timeout_ms,
+        stdout_limit_bytes=stdout_limit_bytes,
+        stderr_limit_bytes=stderr_limit_bytes,
+        wait_ms=wait_ms,
+        stdout_tail_bytes=stdout_tail_bytes,
+        stderr_tail_bytes=stderr_tail_bytes,
+    )

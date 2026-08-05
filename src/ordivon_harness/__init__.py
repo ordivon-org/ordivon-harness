@@ -37,6 +37,11 @@ from .disposition import (
     ReplacementScope,
     derive_native_run_disposition,
 )
+from .execution_binding import (
+    HarnessExecutionBinding,
+    HarnessRuntimeReference,
+    build_harness_workspace_exec_request_from_binding,
+)
 from .event_kinds import (
     COMPLETION_DECIDED,
     COMPLETION_PROPOSED,
@@ -210,6 +215,7 @@ __all__ = [
     "HarnessCorrelationContext",
     "HarnessDispatchFenceV2",
     "HarnessEventAdmission",
+    "HarnessExecutionBinding",
     "HarnessEventConflict",
     "HarnessJournalCorruption",
     "HarnessLeaseConflict",
@@ -225,6 +231,7 @@ __all__ = [
     "HarnessRunLease",
     "HarnessRunProjection",
     "HarnessRunStatus",
+    "HarnessRuntimeReference",
     "HarnessStore",
     "HarnessStoreError",
     "HarnessTerminalConflict",
@@ -291,6 +298,7 @@ __all__ = [
     "TaskContract",
     "ToolGrant",
     "build_harness_workspace_exec_request",
+    "build_harness_workspace_exec_request_from_binding",
     "derive_native_run_disposition",
     "harness_run_runtime_binding_digest",
     "harness_runtime_client_request_id",

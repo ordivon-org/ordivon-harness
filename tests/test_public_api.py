@@ -44,6 +44,8 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessStore"))
         self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessRunContinuityStore"))
         self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessAgentBridge"))
+        self.assertTrue(hasattr(ordivon_harness, "HarnessExecutionBinding"))
+        self.assertTrue(hasattr(ordivon_harness, "HarnessRuntimeReference"))
 
 
 if __name__ == "__main__":

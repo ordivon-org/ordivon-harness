@@ -36,6 +36,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
     "ordivon_harness/errors.py",
+    "ordivon_harness/execution_binding.py",
     "ordivon_harness/sqlite_store.py",
     "ordivon_harness/store.py",
     "ordivon_harness/store_ops.py",

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from anc_canonical import JsonValue, validate_json_value
 
 from ..contracts import ToolGrant
-from ..host import CommittedHarnessAssignment
-from ..runtime_refs import build_harness_workspace_exec_request
+from ..execution_binding import (
+    HarnessExecutionBinding,
+    build_harness_workspace_exec_request_from_binding,
+)
 from .model import AgentToolCall
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
@@ -15,15 +17,13 @@ def lower_runtime_tool(
     call: AgentToolCall,
     *,
     step_id: str,
-    committed: CommittedHarnessAssignment,
-    harness_run_id: str,
+    execution_binding: HarnessExecutionBinding,
     tool_grant: ToolGrant | None,
     known_job_ids: frozenset[str],
     known_artifacts: frozenset[tuple[str, str]],
 ) -> tuple[str, dict[str, JsonValue], str | None]:
     arguments = dict(call.arguments)
-    workspace_id = committed.assignment.workspace_ref
-    assert workspace_id is not None
+    workspace_id = execution_binding.workspace_ref
     if call.name == "read_workspace":
         _only(
             arguments,
@@ -91,9 +91,8 @@ def lower_runtime_tool(
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
             )
         try:
-            request = build_harness_workspace_exec_request(
-                committed,
-                harness_run_id=harness_run_id,
+            request = build_harness_workspace_exec_request_from_binding(
+                execution_binding,
                 step_id=step_id,
                 executable="/usr/bin/rg",
                 args=(
@@ -201,19 +200,9 @@ def lower_runtime_tool(
                         f"patch_workspace path is outside the Tool Grant: {relative_path}",
                         kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                     )
-        assignment = committed.assignment
-        request_token = canonical_digest(
-            {
-                "assignmentId": assignment.assignment_id,
-                "assignmentGeneration": assignment.generation,
-                "assignmentDigest": assignment.digest,
-                "harnessRunId": harness_run_id,
-                "stepId": step_id,
-                "toolCallDigest": call.digest,
-            }
-        )[7:39]
-        client_request_id = (
-            f"request:harness-patch:g{assignment.generation}:{request_token}"
+        client_request_id = execution_binding.patch_request_id(
+            step_id,
+            call.digest,
         )
         request: dict[str, JsonValue] = {
             "schemaVersion": 1,
@@ -256,9 +245,8 @@ def lower_runtime_tool(
         except KeyError as error:
             raise ToolBridgeError(str(error)) from error
         try:
-            request = build_harness_workspace_exec_request(
-                committed,
-                harness_run_id=harness_run_id,
+            request = build_harness_workspace_exec_request_from_binding(
+                execution_binding,
                 step_id=step_id,
                 executable=check.executable,
                 args=check.args,
@@ -322,9 +310,8 @@ def lower_runtime_tool(
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
             )
         try:
-            request = build_harness_workspace_exec_request(
-                committed,
-                harness_run_id=harness_run_id,
+            request = build_harness_workspace_exec_request_from_binding(
+                execution_binding,
                 step_id=step_id,
                 executable=executable,
                 args=tuple(raw_args),

@@ -46,6 +46,7 @@ from .model import (
     AgentTurnResult,
 )
 from ..run_state import HarnessRunState
+from ..runtime_refs import host_execution_binding
 from .run_store_port import (
     HarnessDispatchFenceView,
     HarnessProviderCallRecoveryRequired,
@@ -518,6 +519,7 @@ class RuntimeToolBridge:
             raise ValueError("Ordivon Harness requires an Assignment Workspace")
         self.committed = committed
         self.harness_run_id = harness_run_id
+        self.execution_binding = host_execution_binding(committed, harness_run_id)
         self.runtime = runtime
         self.run_store = run_store
         if run_store is not None:
@@ -1812,8 +1814,7 @@ class RuntimeToolBridge:
         return lower_runtime_tool(
             call,
             step_id=step_id,
-            committed=self.committed,
-            harness_run_id=self.harness_run_id,
+            execution_binding=self.execution_binding,
             tool_grant=self.tool_grant,
             known_job_ids=frozenset(self._known_job_ids),
             known_artifacts=frozenset(self._known_artifacts),
