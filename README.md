@@ -14,8 +14,8 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-04
-summary: Public entry to Host-native Agent Run execution, Provider adaptation, Tool checkpointing, evidence, resume, and recovery.
+updated: 2026-08-05
+summary: Public entry to current Host-backed Agent Run execution and the staged independent Harness persistence foundation.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -35,7 +35,7 @@ related:
 
 Ordivon Harness keeps one Agent Run understandable and recoverable when a model, Provider process, Tool response, or local process fails.
 
-It binds execution to a durable Host Assignment, adapts replaceable Providers, constrains and records Tool use, checkpoints public Run state, and produces evidence that Host or a domain verifier can evaluate.
+The current production Runner binds execution to a durable Host Assignment, adapts replaceable Providers, constrains and records Tool use, checkpoints public Run state, and produces evidence that Host or a domain verifier can evaluate. P0 now also provides a separate caller-neutral Run Contract and independent Journal/CAS foundation; the production Runner has not cut over to it.
 
 ```text
 Host Task and Assignment
@@ -53,19 +53,19 @@ Host Task and Assignment
 
 | Concern | Canonical owner | Harness relationship |
 | --- | --- | --- |
-| Task identity, revision fencing, Journal/CAS admission, commitments, verification admission, outcome | `ordivon-host` | required Host-native authority |
-| Assignment, Provider Call, Tool Step, Run Snapshot, resume/recovery and completion-proposal semantics | `ordivon-harness` | owned here |
+| Task identity, Task Attempt, commitments, verification admission and Task outcome | `ordivon-host` | required authority for the current production path and future foreign-Run admission |
+| Harness Run, Provider Call, Tool Step, Run Snapshot, resume/recovery and completion-proposal semantics | `ordivon-harness` | owned here; current bytes remain Host-backed while P0 migration is incomplete |
 | Workspace, Job, process tree, Artifact and physical side-effect truth | `ordivon-runtime` | invoked and observed through Host Runtime client |
 | authoritative world state and semantic completion | domain system or verifier | Harness only proposes completion |
 | model inference and hidden Provider session | DeepSeek, Codex App Server, Hermes ACP or another adapter | replaceable execution source, not durable Task truth |
 
-Host stores Harness extension bytes and admits their events; Harness owns their schemas and lifecycle meaning. Storage does not transfer semantic ownership.
+For the current production path, Host stores Harness extension bytes and admits their events while Harness owns their schemas and lifecycle meaning. The P0 independent store is an explicit additive surface and is not dual-written by that path. Storage location does not transfer semantic ownership.
 
 ## Status
 
-Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. It has durable Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
+Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. Its current Runner has durable Host-backed Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
 
-It is not a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, or independent Task database. See [`docs/STATUS.md`](docs/STATUS.md).
+The P0 independent persistence foundation now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, and verified backup/restore. It is not yet the production Runner write path. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
 
 ## What works
 
@@ -77,13 +77,16 @@ It is not a general workflow engine, Provider router, multi-Agent scheduler, hos
 - ToolGrant filtering and Runtime catalog binding;
 - DeepSeek turn adapter, Codex App Server adapter and Hermes ACP adapter;
 - independent completion proposal, verification admission and outcome handling;
-- semantic Doctor over Harness history;
-- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths.
+- semantic Doctor over current Host-backed Harness history;
+- caller-neutral `HarnessRunContract` and independent `SQLiteHarnessStore`;
+- independent Run Journal/CAS with revision and lease fencing;
+- verified online backup, tamper detection and restore to a fresh state root;
+- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths, plus explicit `store-*` operations.
 
 ## What it does not do
 
 - own Task or Goal truth;
-- create another Journal, database or scheduler;
+- cut the production Runner over to the independent Journal before Provider Call, Tool Step, Snapshot, recovery and Host-adapter gates pass;
 - treat Provider hidden state as authoritative continuity;
 - infer semantic completion from Runtime success;
 - provide hostile multi-tenant isolation;
@@ -97,7 +100,7 @@ It is not a general workflow engine, Provider router, multi-Agent scheduler, hos
 - Python 3.12;
 - `uv` for exact graph installation, lock validation, isolated tooling and wheel smoke tests;
 - Linux for the canonical trusted-local operational path;
-- exact `ordivon-host` and `ordivon-protocol` revisions pinned in `pyproject.toml` and `uv.lock`;
+- exact `ordivon-host` and `ordivon-protocol` revisions pinned in `pyproject.toml` and `uv.lock` for the current production package graph;
 - Ordivon Runtime for real Tool execution;
 - an explicit Provider adapter for model inference.
 
@@ -160,6 +163,8 @@ The package root retains historical pre-1.0 exports for compatibility. Provider 
 
 ## Operator interface
 
+Current Host-backed operations:
+
 ```bash
 ordivon-harness --state-root /var/lib/ordivon/host status TASK_ID
 ordivon-harness --state-root /var/lib/ordivon/host inspect TASK_ID
@@ -168,7 +173,19 @@ ordivon-harness --state-root /var/lib/ordivon/host cancel TASK_ID
 ordivon-harness --state-root /var/lib/ordivon/host recover TASK_ID
 ```
 
-`inspect` and `handoff` require neither Runtime nor Provider access. Recovery never authorizes blind redispatch of an uncertain Provider or Tool effect.
+Independent P0 Store operations:
+
+```bash
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-init
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-doctor
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-inspect HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-events HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-backup BACKUP_DIR
+ordivon-harness store-verify-backup BACKUP_DIR
+ordivon-harness store-restore BACKUP_DIR NEW_STATE_ROOT
+```
+
+`inspect` and `handoff` require neither Runtime nor Provider access. Recovery never authorizes blind redispatch of an uncertain Provider or Tool effect. The `store-*` surface does not execute or resume the current production Agent loop.
 
 ## Documentation map
 
@@ -180,6 +197,7 @@ ordivon-harness --state-root /var/lib/ordivon/host recover TASK_ID
 | dependency, object and upgrade compatibility | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) |
 | claim-to-evidence map | [`docs/VERIFICATION.md`](docs/VERIFICATION.md) |
 | configuration and operations | [`docs/OPERATIONS.md`](docs/OPERATIONS.md) |
+| independent P0 Journal/CAS and cutover status | [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) |
 | sensitive data, retention and deletion | [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md) |
 | release and deprecation gates | [`docs/RELEASES.md`](docs/RELEASES.md) |
 | canonical document ownership | [`docs/authority.md`](docs/authority.md) |
@@ -190,7 +208,7 @@ Historical phase reports and `evidence/` receipts preserve earlier dependency gr
 
 ## Security and data
 
-Harness may send bounded Context and Tool observations to external Providers and persist prompts, model output, Tool arguments, Runtime references, traces and receipts in Host CAS. It does not automatically redact sensitive content. Read [`SECURITY.md`](SECURITY.md) and [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md).
+Harness may send bounded Context and Tool observations to external Providers and persist prompts, model output, Tool arguments, Runtime references, traces and receipts in Host CAS. Future migrated Runs may retain the same classes in the independent Harness CAS according to their privacy policy. It does not automatically redact sensitive content. Read [`SECURITY.md`](SECURITY.md) and [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md).
 
 ## License
 

@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-04
+updated: 2026-08-05
 summary: Decision identifying the documents and machine sources allowed to define current Harness behavior, compatibility, evidence and operation.
 evidence_status: not_applicable
 readiness: READY
@@ -28,6 +28,7 @@ related:
   - harness.compatibility
   - harness.verification
   - harness.operations
+  - harness.p0-independent-persistence
   - harness.data-privacy
   - harness.releases
 ---
@@ -46,13 +47,14 @@ Harness contains current architecture, extraction history, OH/H/P/R closeouts, P
 | maturity, support graph and known limits | [`STATUS.md`](STATUS.md) |
 | architecture and semantic ownership | [`../ARCHITECTURE.md`](../ARCHITECTURE.md) |
 | dependency-inverted domain Tool Loop boundary | [`DOMAIN-TOOL-BRIDGE-P0.md`](DOMAIN-TOOL-BRIDGE-P0.md) |
+| independent Harness Journal/CAS implementation and cutover boundary | [`P0-INDEPENDENT-PERSISTENCE.md`](P0-INDEPENDENT-PERSISTENCE.md) |
 | dependency, Host API, durable object and upgrade compatibility | [`COMPATIBILITY.md`](COMPATIBILITY.md) |
 | evidence classes and claim interpretation | [`VERIFICATION.md`](VERIFICATION.md) |
 | operation, cancellation, recovery, Doctor and escalation | [`OPERATIONS.md`](OPERATIONS.md) |
 | sensitive data, Provider disclosure, retention and deletion | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) |
 | versions, release gates and deprecation | [`RELEASES.md`](RELEASES.md) |
 
-Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, Host Journal/CAS inspection, canonical Traces and digest-bound receipts remain stronger owners for exact fields, transitions and observed results.
+Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, current Host Journal/CAS inspection, independent Harness Journal/CAS Doctor checks, canonical Traces and digest-bound receipts remain stronger owners for exact fields, transitions and observed results.
 
 `evidence/index.json` classifies repository receipts. Historical stage reports and closeouts preserve provenance but do not override current contracts. `CHANGELOG.md` records change and does not redefine current behavior.
 

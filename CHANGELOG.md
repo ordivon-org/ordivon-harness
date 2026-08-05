@@ -4,7 +4,26 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
-No user-visible changes recorded after `0.6.0`.
+### Added
+
+- caller-neutral `HarnessRunContract`, bounded references, W3C correlation context and metadata-first privacy policy;
+- independent `SQLiteHarnessStore` with append-only Run Events, caller binding, revision fencing, Run leases, immutable CAS and full-history Doctor;
+- explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
+- online Store backup, exact verification, tamper detection and restore to a fresh destination;
+- frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
+
+### Compatibility
+
+- the production `HarnessRunner`, Provider Call, Tool Step, Snapshot, recovery and completion paths remain Host-backed;
+- no new Run is dual-written and no retained Host history is rewritten;
+- the stable `ordivon_harness.api` facade is unchanged; P0 types are transitional package-root exports;
+- the exact Host and Protocol dependency graph remains required until standalone package extraction is separately completed.
+
+### Verification
+
+- focused P0 Contract, Journal/CAS, lease, idempotency, corruption, permissions, CLI, backup and restore tests;
+- complete legacy Host-backed Harness suite remains a required regression gate;
+- [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.
 
 ## 0.6.0 — 2026-08-04
 

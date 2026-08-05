@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-04
+updated: 2026-08-05
 summary: Stable maturity claim, proven capabilities, support boundary and known limits for Ordivon Harness.
 evidence_status: verified
 readiness: READY
@@ -32,7 +32,7 @@ related:
 
 Ordivon Harness is an **operational engineering prototype for owner-trusted local work** and **pre-1.0 as a public package**.
 
-Operational means the repository has Host-backed Assignment and Run persistence, durable Provider Call and Tool Step state, explicit UNKNOWN handling, cancellation, bounded budgets, Run Snapshot resume, semantic-history validation, recovery controllers, Provider adapters and real receipts.
+Operational means the repository has Host-backed production Assignment and Run persistence, durable Provider Call and Tool Step state, explicit UNKNOWN handling, cancellation, bounded budgets, Run Snapshot resume, semantic-history validation, recovery controllers, Provider adapters and real receipts. It also has an independently operational P0 Journal/CAS foundation, but that foundation is not yet the production Runner write path.
 
 Pre-1.0 means public imports, owner-local object schemas, Provider adapter APIs and operational packaging may change. Supported retained state still requires decoders, migration or an explicit cutover; pre-1.0 does not permit silent reinterpretation.
 
@@ -66,7 +66,8 @@ The canonical public graph currently requires:
 | hidden-state migration during an active Provider Call | unsupported |
 | parallel Tools and subagents | unsupported |
 | automatic Provider routing | not provided |
-| Harness daemon or independent database | not provided |
+| independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
+| Harness daemon or scheduler | not provided |
 
 ## Public interface
 
@@ -74,9 +75,9 @@ The canonical public graph currently requires:
 
 ## Host relationship
 
-Harness is repository-independent and semantically owns its Agent Run objects, but it remains implementation-bound to a pinned Host source API. Host owns persistence, revision fencing, leases and event admission; Harness owns schema and lifecycle semantics.
+Harness is repository-independent and semantically owns its Agent Run objects, but the current production Runner remains implementation-bound to a pinned Host source API. Host currently owns persistence, revision fencing, leases and event admission for that legacy path; Harness owns schema and lifecycle semantics.
 
-This is intentional non-symmetric coupling:
+P0 adds a separate Harness Run Journal/CAS, caller binding, revision and lease fencing, and operational backup/restore. Until the Runner migration and Host foreign-Run adapter are complete, this is a staged authority foundation rather than a production cutover. The current dependency remains intentionally non-symmetric:
 
 ```text
 Harness → Host
@@ -85,7 +86,8 @@ Host ↛ Harness
 
 ## Known limits
 
-- no independent persistence or operation without a Host authority;
+- no production Agent Run execution, Snapshot resume or Provider/Tool recovery through the independent store yet;
+- the package still installs the exact Host dependency even though the new Store modules do not import Host;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;
 - no hostile multi-tenant isolation;
@@ -99,11 +101,21 @@ Host ↛ Harness
 
 Current Task/Run state must be queried:
 
+Current production state:
+
 ```bash
 ordivon-harness --state-root /var/lib/ordivon/host status TASK_ID
 ordivon-harness --state-root /var/lib/ordivon/host inspect TASK_ID
 ordivon-harness --state-root /var/lib/ordivon/host handoff TASK_ID
 ordivon-harness --state-root /var/lib/ordivon/host doctor
+```
+
+Independent P0 state:
+
+```bash
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-doctor
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-inspect HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-events HARNESS_RUN_ID
 ```
 
 ## Reopen conditions
