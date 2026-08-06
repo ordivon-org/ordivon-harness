@@ -50,6 +50,13 @@
       "status": "historical",
       "implementationRevision": "264d96cb2325e4a418c98459e05c74d482001fd8",
       "scope": "lost-process assessment, abandonment, replacement and stale-result fencing"
+    },
+    {
+      "claimId": "harness.persistence.hho-p0-scale",
+      "file": "hho-p0-scale-1000x100-50cb9b5.json",
+      "status": "verified",
+      "implementationRevision": "50cb9b587d53dd24fc40655145fbcb18f24d5b0d",
+      "scope": "Atomic bounded Event admission, 1,000 Runs, 100,000 Events, full-history reopen Doctor and sampled Run inspection"
     }
   ]
 }
