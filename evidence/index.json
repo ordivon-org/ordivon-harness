@@ -108,11 +108,18 @@
       "scope": "Read-only global Harness Journal export with caller, Runtime request and Runtime Job correlation"
     },
     {
-      "claimId": "harness.repository-repair-runtime-bridge.b4-b5",
+      "claimId": "harness.repository-repair-runtime-bridge.pre-conclusion-gate",
       "file": "repository-repair-runtime-bridge-7664240.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "7664240791dfb984338aa72e4c74ce8459ec7c98",
-      "scope": "Independent frozen repository-repair read, digest-fenced patch, visible Check and diff surface with one Runtime Job and closed Workspace"
+      "scope": "Historical independent repository-repair Tool surface before candidate conclusion evidence gating"
+    },
+    {
+      "claimId": "harness.repository-repair-runtime-bridge.b4-b5",
+      "file": "repository-repair-conclusion-gate-b23d5fa.json",
+      "status": "verified",
+      "implementationRevision": "b23d5fa6c820c10f937f48cc16c2d8e03d3e18ae",
+      "scope": "Independent repository-repair evidence gate: premature conclusion correction, five bounded Tool steps, one Runtime Job, durable receipts and closed Workspace"
     }
   ]
 }
