@@ -89,16 +89,23 @@
     {
       "claimId": "harness.persistence.hho-p0-scale",
       "file": "hho-p0-scale-1000x100-f7e03aa.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
       "scope": "Exact Host-pinned release graph: atomic bounded Event admission, 1,000 Runs, 100,000 Events, full-history reopen Doctor and sampled Run inspection"
     },
     {
       "claimId": "harness.persistence.hho-p0-release-h2",
       "file": "hho-p0-release-h2-f7e03aa.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
       "scope": "Exact remote Host pin with live Host→Harness→Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
+    },
+    {
+      "claimId": "harness.observation.exporter.b2-a",
+      "file": "observation-exporter-e3cb34b.json",
+      "status": "verified",
+      "implementationRevision": "e3cb34b4991b5f52e1c0ed0151ea17b067e88e16",
+      "scope": "Read-only global Harness Journal export with caller, Runtime request and Runtime Job correlation"
     }
   ]
 }
