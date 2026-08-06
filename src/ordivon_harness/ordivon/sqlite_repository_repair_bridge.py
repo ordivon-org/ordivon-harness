@@ -18,7 +18,7 @@ from ..runtime_port import (
     runtime_error_value,
 )
 from .control import ExecutionControl
-from .model import AgentToolCall, AgentToolDefinition
+from .model import AgentRunConclusion, AgentToolCall, AgentToolDefinition
 from .runtime_lowering import lower_runtime_tool
 from .run_store_port import HarnessRunContinuityStore
 from .sqlite_agent_bridge import SQLiteHarnessAgentBridge
@@ -319,6 +319,71 @@ class SQLiteHarnessRepositoryRepairRuntimeBridge(SQLiteHarnessRuntimeBridge):
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]:
         return INDEPENDENT_REPOSITORY_REPAIR_TOOL_DEFINITIONS
+
+    def validate_conclusion(self, conclusion: AgentRunConclusion) -> None:
+        if conclusion.status != "candidate_completed":
+            return
+        try:
+            retained = self.run_store.load_current_snapshot()
+        except KeyError:
+            observations: list[HarnessToolObservation] = []
+        else:
+            observations = [
+                HarnessToolObservation.from_dict(value)
+                for value in retained.state.observations
+            ]
+        try:
+            current = self.run_store.load_current_tool_step()
+        except KeyError:
+            current = None
+        if (
+            current is not None
+            and current.receipt is not None
+            and current.receipt.terminal
+            and current.observation is not None
+        ):
+            latest = HarnessToolObservation.from_dict(current.observation)
+            if latest.digest not in {item.digest for item in observations}:
+                observations.append(latest)
+        observed = tuple(item for item in observations if item.status == "observed")
+        read_paths = [
+            item.structured_content.get("relativePath")
+            for item in observed
+            if item.tool_name == "read_workspace"
+        ]
+        patch_paths = [
+            item.structured_content.get("relativePath")
+            for item in observed
+            if item.tool_name == "patch_workspace"
+        ]
+        check_passed = any(
+            item.tool_name == "run_check"
+            and item.structured_content.get("status") == "succeeded"
+            for item in observed
+        )
+        diff_observed = any(
+            item.tool_name == "diff_workspace" for item in observed
+        )
+        expected_artifact_ref = (
+            f"workspace-artifact:{self.execution_binding.workspace_ref}:"
+            "artifacts/completion.json"
+        )
+        missing: list[str] = []
+        if read_paths.count("allocation.py") < 2:
+            missing.append("allocation.py must be read before and after mutation")
+        if "allocation.py" not in patch_paths:
+            missing.append("allocation.py patch is not observed")
+        if not check_passed:
+            missing.append("visible-tests has no successful Runtime receipt")
+        if not diff_observed:
+            missing.append("final Workspace diff is not observed")
+        if expected_artifact_ref not in conclusion.artifact_refs:
+            missing.append("required completion Artifact reference is absent")
+        if missing:
+            raise ToolBridgeError(
+                "; ".join(missing),
+                kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+            )
 
     def validate_runtime_catalog(self) -> None:
         if (

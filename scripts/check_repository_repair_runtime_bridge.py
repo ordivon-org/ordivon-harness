@@ -162,8 +162,8 @@ def _contract(created_at_ms: int) -> HarnessRunContract:
         tool_catalog_digest=INDEPENDENT_REPOSITORY_REPAIR_TOOL_SURFACE_DIGEST,
         tool_grant_digest=INDEPENDENT_REPOSITORY_REPAIR_TOOL_GRANT_DIGEST,
         budget={
-            "maxModelCalls": 6,
-            "maxToolCalls": 4,
+            "maxModelCalls": 7,
+            "maxToolCalls": 5,
             "maxWallTimeMs": 120_000,
         },
         completion_contract={"mode": "record"},
@@ -242,15 +242,34 @@ def _turn(
     )
 
 
-def _completion_turn() -> AgentTurnResult:
+def _premature_completion_turn() -> AgentTurnResult:
     return AgentTurnResult(
-        model_call_id="model-call:repository-repair-acceptance:5",
+        model_call_id="model-call:repository-repair-acceptance:premature",
+        model_id=ScriptedTurnAdapter.model_id,
+        content="premature repository repair completion",
+        tool_calls=(),
+        conclusion=AgentRunConclusion(
+            status="candidate_completed",
+            summary="Attempted completion before collecting required evidence.",
+        ),
+        usage={"inputTokens": 10, "outputTokens": 5},
+        finish_reason="stop",
+        raw_response_digest=canonical_digest({"prematureCompletion": True}),
+    )
+
+
+def _completion_turn(workspace_id: str) -> AgentTurnResult:
+    return AgentTurnResult(
+        model_call_id="model-call:repository-repair-acceptance:7",
         model_id=ScriptedTurnAdapter.model_id,
         content="repository repair completed",
         tool_calls=(),
         conclusion=AgentRunConclusion(
             status="candidate_completed",
             summary="Patched allocation.py and passed the visible Check.",
+            artifact_refs=(
+                f"workspace-artifact:{workspace_id}:artifacts/completion.json",
+            ),
         ),
         usage={"inputTokens": 10, "outputTokens": 5},
         finish_reason="stop",
@@ -304,6 +323,32 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         state = root / "harness"
         source_revision = _initialize_source(source)
         source_digest = _file_digest(source / "allocation.py")
+        initial_source = (source / "allocation.py").read_text(encoding="utf-8")
+        final_source = initial_source.replace(ORIGINAL_FRAGMENT, REPLACEMENT_FRAGMENT)
+        if final_source == initial_source:
+            raise RuntimeError("reference repair fragment was not found")
+        final_source_digest = "sha256:" + hashlib.sha256(
+            final_source.encode("utf-8")
+        ).hexdigest()
+        completion_text = json.dumps(
+            {
+                "schemaVersion": 1,
+                "kind": "ordivon.evaluation-completion-artifact",
+                "taskId": "HARNESS-REPO-REPAIR-001",
+                "taskVersion": 1,
+                "sourceRevision": source_revision,
+                "changedPaths": ["allocation.py"],
+                "visibleCheck": {
+                    "checkId": "visible-tests",
+                    "status": "passed",
+                },
+                "finalSourceDigest": final_source_digest,
+                "summary": "Applied largest-remainder allocation with stable tie-breaking.",
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ) + "\n"
         opened = client.call_tool(
             "workspace.open",
             {
@@ -361,7 +406,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                                             "replacement": REPLACEMENT_FRAGMENT,
                                         }
                                     ],
-                                }
+                                },
+                                {
+                                    "relativePath": "artifacts/completion.json",
+                                    "expectedDigest": None,
+                                    "edits": [
+                                        {
+                                            "range": {
+                                                "start": {"line": 1, "column": 0},
+                                                "end": {"line": 1, "column": 0},
+                                            },
+                                            "expectedText": "",
+                                            "replacement": completion_text,
+                                        }
+                                    ],
+                                },
                             ],
                             "maxDiffBytes": 65_536,
                         },
@@ -381,17 +440,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         "diff_workspace",
                         {"maxBytes": 65_536},
                     ),
+                    AgentToolCall(
+                        "tool-call:repository-repair-acceptance:reread",
+                        "read_workspace",
+                        {"relativePath": "allocation.py", "mode": "FULL"},
+                    ),
                 )
-                turns = tuple(
+                turns = (_premature_completion_turn(),) + tuple(
                     _turn(sequence, call)
-                    for sequence, call in enumerate(calls, start=1)
-                ) + (_completion_turn(),)
+                    for sequence, call in enumerate(calls, start=2)
+                ) + (_completion_turn(workspace_id),)
                 result = OrdivonAgentLoop(
                     ScriptedTurnAdapter(turns),
                     bridge,
                     budget=RunBudget(
-                        max_model_calls=6,
-                        max_tool_calls=4,
+                        max_model_calls=7,
+                        max_tool_calls=5,
                         max_observation_bytes=262_144,
                         max_wall_time_ms=120_000,
                         max_total_tokens=100_000,
@@ -418,8 +482,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 observations = {item.tool_name: item for item in result.observations}
                 checks = {
                     "candidateCompleted": result.candidate_completed,
-                    "fourToolCalls": result.tool_calls == 4,
-                    "fiveModelCalls": result.model_calls == 5,
+                    "fiveToolCalls": result.tool_calls == 5,
+                    "sevenModelCalls": result.model_calls == 7,
+                    "prematureConclusionCorrected": (
+                        result.usage.get("toolCorrections") == 1
+                        and "conclusion_rejected"
+                        in {event.kind for event in result.trace.events}
+                    ),
                     "allToolObservationsObserved": all(
                         item.status == "observed" for item in result.observations
                     ),
@@ -442,6 +511,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "workspace.patch",
                             "workspace.exec",
                             "workspace.diff",
+                            "workspace.read",
                         ],
                         [
                             "workspace.read",
@@ -449,6 +519,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             "workspace.exec",
                             "task.observe",
                             "workspace.diff",
+                            "workspace.read",
                         ],
                     ),
                 }

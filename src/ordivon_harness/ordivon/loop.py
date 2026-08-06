@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 
-from anc_canonical import JsonValue, canonical_bytes
+from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
 from .control import CancellationToken, ExecutionControl, RunDeadline
@@ -1620,6 +1620,78 @@ class OrdivonAgentLoop:
                 )
             seen_model_call_ids.add(result.model_call_id)
             if result.conclusion is not None:
+                conclusion_validator = getattr(
+                    self.tool_bridge, "validate_conclusion", None
+                )
+                if callable(conclusion_validator):
+                    try:
+                        conclusion_validator(result.conclusion)
+                    except ToolBridgeError as error:
+                        if not error.recoverable_by_model:
+                            return stop(
+                                RunStopCode.INVALID_MODEL_OUTPUT,
+                                detail=f"Conclusion rejected: {error}",
+                            )
+                        if tool_corrections >= self.budget.max_tool_corrections:
+                            return stop(
+                                RunStopCode.INVALID_MODEL_OUTPUT,
+                                detail=(
+                                    "Conclusion correction budget exhausted after "
+                                    f"local rejection: {error}"
+                                ),
+                            )
+                        tool_corrections += 1
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": result.content,
+                                "conclusion": result.conclusion.to_dict(),
+                            }
+                        )
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": (
+                                    "Harness conclusion gate rejected this candidate "
+                                    "conclusion as incomplete. Continue with the available "
+                                    f"tools and correct the missing evidence: {str(error)[:1_500]}"
+                                ),
+                            }
+                        )
+                        recorder.record(
+                            "conclusion_rejected",
+                            {
+                                "conclusionDigest": canonical_digest(
+                                    result.conclusion.to_dict()
+                                ),
+                                "errorKind": error.kind.value,
+                                "correction": tool_corrections,
+                                "safeToCorrect": True,
+                            },
+                        )
+                        try:
+                            bind_run_state()
+                        except ToolBridgeError as state_error:
+                            return stop(
+                                RunStopCode.RUNTIME_UNKNOWN,
+                                detail=str(state_error),
+                            )
+                        except Exception as state_error:  # noqa: BLE001
+                            return stop(
+                                RunStopCode.HARNESS_FAILED,
+                                detail=(
+                                    f"{type(state_error).__name__}: {state_error}"
+                                ),
+                            )
+                        continue
+                    except Exception as error:  # noqa: BLE001
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                "Conclusion validation failed: "
+                                f"{type(error).__name__}: {error}"
+                            ),
+                        )
                 messages.append(
                     {
                         "role": "assistant",

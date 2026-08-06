@@ -181,8 +181,8 @@ def contract(suffix: str) -> HarnessRunContract:
         tool_catalog_digest=INDEPENDENT_REPOSITORY_REPAIR_TOOL_SURFACE_DIGEST,
         tool_grant_digest=INDEPENDENT_REPOSITORY_REPAIR_TOOL_GRANT_DIGEST,
         budget={
-            "maxModelCalls": 6,
-            "maxToolCalls": 4,
+            "maxModelCalls": 7,
+            "maxToolCalls": 5,
             "maxWallTimeMs": 60_000,
         },
         completion_contract={"mode": "record"},
@@ -247,9 +247,9 @@ def bound_state() -> HarnessRunState:
         messages=({"role": "user", "content": "repair allocation.py"},),
         observations=(),
         remaining_budget={
-            "modelCalls": 6,
+            "modelCalls": 7,
             "modelRetries": 1,
-            "toolCalls": 4,
+            "toolCalls": 5,
             "wallTimeMs": 60_000,
             "observationOnlyTurns": 6,
             "noProgressTurns": 6,
@@ -262,8 +262,8 @@ def bound_state() -> HarnessRunState:
 
 def budget() -> RunBudget:
     return RunBudget(
-        max_model_calls=6,
-        max_tool_calls=4,
+        max_model_calls=7,
+        max_tool_calls=5,
         max_observation_bytes=262_144,
         max_wall_time_ms=60_000,
         max_total_tokens=100_000,
@@ -286,15 +286,37 @@ def tool_turn(suffix: str, sequence: int, call: AgentToolCall) -> AgentTurnResul
     )
 
 
+def premature_turn(suffix: str) -> AgentTurnResult:
+    return AgentTurnResult(
+        model_call_id=f"model-call:p1-repair-{suffix}-premature",
+        model_id=ScriptedTurnAdapter.model_id,
+        content="premature completion",
+        tool_calls=(),
+        conclusion=AgentRunConclusion(
+            status="candidate_completed",
+            summary="Attempted completion without evidence.",
+        ),
+        usage={"inputTokens": 10, "outputTokens": 5},
+        finish_reason="stop",
+        raw_response_digest=canonical_digest(
+            {"suffix": suffix, "premature": True}
+        ),
+    )
+
+
 def complete_turn(suffix: str) -> AgentTurnResult:
     return AgentTurnResult(
-        model_call_id=f"model-call:p1-repair-{suffix}-5",
+        model_call_id=f"model-call:p1-repair-{suffix}-7",
         model_id=ScriptedTurnAdapter.model_id,
         content="repository repair completed",
         tool_calls=(),
         conclusion=AgentRunConclusion(
             status="candidate_completed",
             summary="Patched allocation.py and passed the visible Check.",
+            artifact_refs=(
+                f"workspace-artifact:workspace:p1-repair-{suffix}:"
+                "artifacts/completion.json",
+            ),
         ),
         usage={"inputTokens": 10, "outputTokens": 5},
         finish_reason="stop",
@@ -321,7 +343,7 @@ class RepositoryRepairRuntimeBridgeTests(unittest.TestCase):
         )
         return store, clock, run_contract, continuity, bridge
 
-    def test_scripted_agent_uses_the_four_tool_surface_and_completes(self) -> None:
+    def test_premature_conclusion_is_corrected_before_five_tool_completion(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             runtime = FakeRuntime()
             store, clock, run_contract, continuity, bridge = self.initialize(
@@ -367,10 +389,15 @@ class RepositoryRepairRuntimeBridgeTests(unittest.TestCase):
                     "diff_workspace",
                     {"maxBytes": 65_536},
                 ),
+                AgentToolCall(
+                    "tool-call:p1-repair:reread",
+                    "read_workspace",
+                    {"relativePath": "allocation.py", "mode": "FULL"},
+                ),
             )
-            turns = tuple(
+            turns = (premature_turn("loop"),) + tuple(
                 tool_turn("loop", sequence, call)
-                for sequence, call in enumerate(calls, start=1)
+                for sequence, call in enumerate(calls, start=2)
             ) + (complete_turn("loop"),)
             result = OrdivonAgentLoop(
                 ScriptedTurnAdapter(turns),
@@ -386,10 +413,22 @@ class RepositoryRepairRuntimeBridgeTests(unittest.TestCase):
             )
             self.assertTrue(result.candidate_completed)
             self.assertEqual(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
-            self.assertEqual(result.tool_calls, 4)
+            self.assertEqual(result.model_calls, 7)
+            self.assertEqual(result.tool_calls, 5)
+            self.assertEqual(result.usage["toolCorrections"], 1)
+            self.assertIn(
+                "conclusion_rejected",
+                {event.kind for event in result.trace.events},
+            )
             self.assertEqual(
                 [name for name, _ in runtime.calls],
-                ["workspace.read", "workspace.patch", "workspace.exec", "workspace.diff"],
+                [
+                    "workspace.read",
+                    "workspace.patch",
+                    "workspace.exec",
+                    "workspace.diff",
+                    "workspace.read",
+                ],
             )
             self.assertEqual(
                 continuity.load_current_tool_step().receipt.status,

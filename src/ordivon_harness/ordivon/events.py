@@ -25,6 +25,7 @@ _EVENT_KINDS = {
     "tool_call_cancel_requested",
     "tool_call_cancelled",
     "tool_call_reconciled",
+    "conclusion_rejected",
     "run_stopped",
 }
 
