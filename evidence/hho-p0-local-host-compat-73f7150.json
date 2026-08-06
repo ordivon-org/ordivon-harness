@@ -1,0 +1,38 @@
+{
+  "claims": [
+    "current_local_Host_can_bind_and_recover_one_independent_Harness_Run_after_delivery_loss",
+    "current_local_Host_and_Harness_preserve_cutover_blockers_writer_guard_tamper_detection_and_rollback_fencing"
+  ],
+  "execution": {
+    "attemptId": "attempt-019fd5ad-11d2-7733-b704-4248a4baf684",
+    "jobId": "job-019fd5ad-11d2-7733-b704-4235b7767641",
+    "tests": {
+      "cutover": {
+        "count": 10,
+        "status": "passed"
+      },
+      "externalAdapter": {
+        "count": 2,
+        "status": "passed"
+      }
+    }
+  },
+  "hostImportPath": "/root/projects/ordivon-host/src/ordivon_host/__init__.py",
+  "hostRevision": "7b17807784cc52f0be4f1786719f6dc20deb92c8",
+  "implementationRevision": "73f715073b0f3a659fe9f8ec1296e6ba9fa447ee",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:5dd64ec3dade2cd15f547938acd31fa561761ed10f4cf3a0e48728fdb240a110"
+  },
+  "kind": "ordivon.harness-p0-local-host-compatibility",
+  "limitations": [
+    "Host_and_Harness_revisions_are_not_yet_remote_reachable",
+    "pyproject_and_uv_lock_still_pin_the_older_reachable_Host_revision",
+    "no_production_state_root_or_cutover_write_was_performed"
+  ],
+  "observedAtMs": 1785996364167,
+  "passed": true,
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
