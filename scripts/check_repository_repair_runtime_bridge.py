@@ -472,6 +472,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             {
                 "schemaVersion": 1,
                 "kind": "ordivon.harness-repository-repair-runtime-acceptance",
+                "implementationRevision": revision,
                 "harnessRevision": revision,
                 "harnessClean": not dirty,
                 "toolSurfaceDigest": (
