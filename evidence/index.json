@@ -103,9 +103,16 @@
     {
       "claimId": "harness.observation.exporter.b2-a",
       "file": "observation-exporter-e3cb34b.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "e3cb34b4991b5f52e1c0ed0151ea17b067e88e16",
       "scope": "Read-only global Harness Journal export with caller, Runtime request and Runtime Job correlation"
+    },
+    {
+      "claimId": "harness.repository-repair-runtime-bridge.b4-b5",
+      "file": "repository-repair-runtime-bridge-7664240.json",
+      "status": "verified",
+      "implementationRevision": "7664240791dfb984338aa72e4c74ce8459ec7c98",
+      "scope": "Independent frozen repository-repair read, digest-fenced patch, visible Check and diff surface with one Runtime Job and closed Workspace"
     }
   ]
 }

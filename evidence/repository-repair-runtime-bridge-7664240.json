@@ -1,0 +1,41 @@
+{
+  "b6Implemented": false,
+  "checks": {
+    "allToolObservationsObserved": true,
+    "candidateCompleted": true,
+    "diffObserved": true,
+    "fiveModelCalls": true,
+    "fourToolCalls": true,
+    "harnessDoctorHealthy": true,
+    "oneRuntimeJob": true,
+    "patchApplied": true,
+    "runtimeOperationsExact": true,
+    "visibleCheckSucceeded": true
+  },
+  "harnessClean": true,
+  "harnessEventCount": 24,
+  "harnessRevision": "7664240791dfb984338aa72e4c74ce8459ec7c98",
+  "implementationRevision": "7664240791dfb984338aa72e4c74ce8459ec7c98",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:bf86a6c6c35d03379aa136ed7917a41d563ef9e0f3562f67ca863271d9739514"
+  },
+  "kind": "ordivon.harness-repository-repair-runtime-acceptance",
+  "knownLimits": [
+    "This acceptance proves only the frozen repository-repair Tool surface",
+    "The Provider is scripted and the acceptance does not claim model capability",
+    "Hidden verification and Host semantic acceptance remain B4 responsibilities"
+  ],
+  "modelCalls": 5,
+  "productionActivated": false,
+  "runtimeJobCount": 1,
+  "schemaVersion": 1,
+  "sourceAllocationDigest": "sha256:8440bc4569e8283686ba91bc24bddc297131c52f00bcdae0998116ce1f190c31",
+  "sourceRevision": "d3b5b01d0f786bc1a11c51988ceb29f74e725bbc",
+  "toolCalls": 4,
+  "toolGrantDigest": "sha256:8f1ba6554fa72f450bd3d880784bc965c516948f26c62688cbf6fe85a113ad65",
+  "toolSurfaceDigest": "sha256:3e2f2db6f5d8f453dff92ff0c7846002df3d4adfa73073693e4bb5c036deb8b7",
+  "traceDigest": "sha256:0a8eaca650881ae0fb045829fb7e764e70e4a5e904ba1e6bae167c28acef8d0c",
+  "workspaceClosed": true
+}
