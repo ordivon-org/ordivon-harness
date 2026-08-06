@@ -33,6 +33,18 @@ class HarnessEventAdmission(StrEnum):
     EXISTING = "existing"
 
 
+@dataclass(frozen=True, slots=True)
+class HarnessEventWrite:
+    """One event in an atomic bounded Harness Journal admission batch."""
+
+    event_id: str
+    event_kind: str
+    data: dict[str, JsonValue]
+    recorded_at_ms: int
+    caused_by_event_id: str | None = None
+    referenced_objects: tuple[StoredHarnessObject, ...] = ()
+
+
 HARNESS_STORE_EVENT_KINDS = frozenset(
     {
         "harness.run-created",
@@ -171,6 +183,16 @@ class HarnessStore(Protocol):
         lease_checked_at_ms: int,
         caused_by_event_id: str | None = None,
         referenced_objects: tuple[StoredHarnessObject, ...] = (),
+    ) -> HarnessEventAdmission: ...
+
+    def append_events(
+        self,
+        *,
+        harness_run_id: str,
+        events: tuple[HarnessEventWrite, ...],
+        expected_revision: int,
+        lease: HarnessRunLease,
+        lease_checked_at_ms: int,
     ) -> HarnessEventAdmission: ...
 
     def list_run_events(

@@ -13,7 +13,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-05
+updated: 2026-08-06
 summary: Current implementation boundary, contracts, operations, evidence, and remaining cutover work for the independent Harness Journal and CAS.
 evidence_status: verified
 readiness: EXPERIMENTAL
@@ -166,6 +166,14 @@ ordivon-harness \
 
 A backup contains an online SQLite snapshot, every object referenced by `object_refs`, and a canonical manifest binding the database digest, object file digests, content addresses, kinds, lengths, creation time, and source Doctor summary. Verification compares the manifest, SQLite integrity, object envelopes, content addresses, and exact database object-reference set. Restore opens the copied state and runs a full Doctor before publication.
 
+## Bounded atomic Event batches
+
+`SQLiteHarnessStore.append_events()` admits up to 256 contiguous Events for one Run under one exact lease and one SQLite transaction. The batch advances the checked Run projection once to the final revision, inserts every Event and object edge, and consumes the lease only after the complete commit. A complete exact replay after response loss returns the existing batch; a partial replay, same identity with different bytes, later-in-batch cause, Event after a terminal transition, stale revision, or stale lease fails without advancing the Run.
+
+Single-Event `append_event()` uses the same path, so batching does not introduce a second admission semantics. The batch is a storage optimization for already ordered Harness-owned Events, not a parallel Tool scheduler, distributed transaction, or permission to hide intermediate causal records.
+
+The repository-owned `scripts/harness_p0_scale_acceptance.py` constructs the accepted 1,000-Run / 100,000-Event workload, reopens the Store, runs full Doctor reconstruction, samples current Run inspection, and emits an integrity-bound receipt. `scripts/local-acceptance run` includes a small deterministic smoke; the full scale receipt remains a deliberate release/closeout action.
+
 ## Admission semantics
 
 - one caller identity and caller Run reference bind at most one Harness Run;
@@ -268,7 +276,7 @@ Activation does not migrate or rewrite historical bytes. It disables only the le
 
 ## Next migration slice
 
-Work now moves to production state-root deployment, exact cross-repository release pins, backup/rollback receipts, the complete fault matrix, and the 1,000 Run / 100,000 Event performance acceptance. Runtime or foreign Run success must still never become semantic Task acceptance.
+Work now moves to the committed 1,000 Run / 100,000 Event performance receipt, production state-root deployment, exact cross-repository release pins, backup/rollback receipts, the complete fault matrix, and final no-dual-write cutover disposition. Runtime or foreign Run success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

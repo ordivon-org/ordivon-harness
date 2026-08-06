@@ -100,6 +100,7 @@ from .standalone import (
 from .store import (
     HARNESS_STORE_EVENT_KINDS,
     HarnessEventAdmission,
+    HarnessEventWrite,
     HarnessRunEventRecord,
     HarnessRunLease,
     HarnessRunProjection,
@@ -142,6 +143,7 @@ __all__ = [
     "HarnessCorrelationContext",
     "HarnessDispatchFenceV2",
     "HarnessEventAdmission",
+    "HarnessEventWrite",
     "HarnessEventConflict",
     "HarnessExecutionBinding",
     "HarnessJournalCorruption",

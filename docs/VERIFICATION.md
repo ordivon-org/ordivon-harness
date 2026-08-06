@@ -14,7 +14,7 @@ audience:
   - operator
   - researcher
   - agent
-updated: 2026-08-04
+updated: 2026-08-06
 summary: Claim classes, evidence strength, historical receipt interpretation and current release gates.
 evidence_status: verified
 readiness: READY
@@ -49,7 +49,23 @@ The current release gate includes:
 - stable API contract tests;
 - semantic-history validation tests;
 - documentation and evidence-index validation;
-- wheel metadata validation, isolated installation, CLI smoke testing and dependency audit.
+- wheel metadata validation, isolated installation, CLI smoke testing and dependency audit;
+- bounded atomic Event-batch replay/rollback tests and the deterministic scale smoke.
+
+
+## P0 scale acceptance
+
+The full P0 persistence closeout uses:
+
+```bash
+uv run python scripts/harness_p0_scale_acceptance.py \
+  --runs 1000 \
+  --events-per-run 100 \
+  --batch-size 99 \
+  --output evidence/hho-p0-scale-1000x100-<revision>.json
+```
+
+The receipt must bind the exact implementation revision and prove 1,000 Runs, 100,000 Events, a healthy full-history Doctor after reopen, exact object-reference/file agreement, and sampled current-Run inspection below the recorded one-second gate. Thresholds and machine measurements remain in the receipt rather than becoming timeless prose.
 
 ## Historical live receipts
 

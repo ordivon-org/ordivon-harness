@@ -15,6 +15,7 @@ from .core_contracts import HarnessRunContract
 from .store import (
     HARNESS_STORE_EVENT_KINDS,
     HarnessEventAdmission,
+    HarnessEventWrite,
     HarnessRunEventRecord,
     HarnessRunLease,
     HarnessRunProjection,
@@ -25,6 +26,7 @@ from .store import (
 _SCHEMA_VERSION = 1
 _EVENT_PAYLOAD_KIND = "ordivon.harness-run-event-payload"
 _CONTRACT_OBJECT_KIND = "harness-run-contract"
+_MAX_EVENT_BATCH = 256
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_info(
@@ -547,35 +549,105 @@ class SQLiteHarnessStore:
         caused_by_event_id: str | None = None,
         referenced_objects: tuple[StoredHarnessObject, ...] = (),
     ) -> HarnessEventAdmission:
-        self._validate_event_identity(event_id)
-        if event_kind not in HARNESS_STORE_EVENT_KINDS or event_kind == "harness.run-created":
-            raise ValueError(f"unsupported Harness store event kind: {event_kind}")
-        if recorded_at_ms < 0 or lease_checked_at_ms < 0:
-            raise ValueError("Harness event and lease check times must be non-negative")
-        event_payload = self._event_payload(event_kind=event_kind, data=data)
-        payload_object = self.objects.put(event_payload, kind=_EVENT_PAYLOAD_KIND)
-        for item in referenced_objects:
-            actual = self.objects.inspect(item.digest)
-            if actual != item:
-                raise HarnessObjectCorrupt(
-                    f"Harness referenced object metadata differs: {item.digest}"
-                )
-        with self._transaction():
-            existing = self.connection.execute(
-                "SELECT event_id FROM run_events WHERE event_id = ?",
-                (event_id,),
-            ).fetchone()
-            if existing is not None:
-                self._require_exact_event(
+        return self.append_events(
+            harness_run_id=harness_run_id,
+            events=(
+                HarnessEventWrite(
                     event_id=event_id,
-                    harness_run_id=harness_run_id,
-                    run_revision=expected_revision + 1,
                     event_kind=event_kind,
-                    payload_object=payload_object,
-                    caused_by_event_id=caused_by_event_id,
+                    data=data,
                     recorded_at_ms=recorded_at_ms,
+                    caused_by_event_id=caused_by_event_id,
                     referenced_objects=referenced_objects,
+                ),
+            ),
+            expected_revision=expected_revision,
+            lease=lease,
+            lease_checked_at_ms=lease_checked_at_ms,
+        )
+
+    def append_events(
+        self,
+        *,
+        harness_run_id: str,
+        events: tuple[HarnessEventWrite, ...],
+        expected_revision: int,
+        lease: HarnessRunLease,
+        lease_checked_at_ms: int,
+    ) -> HarnessEventAdmission:
+        """Atomically append a bounded contiguous event sequence under one exact lease.
+
+        Exact replay of the complete batch is idempotent after response loss. A partial
+        replay is rejected because it cannot prove that the caller is repeating the same
+        atomic admission. One lease fences the complete revision interval and is consumed
+        only after every event and the final Run projection commit together.
+        """
+
+        if not events:
+            raise ValueError("Harness Event batch must be non-empty")
+        if len(events) > _MAX_EVENT_BATCH:
+            raise ValueError(
+                f"Harness Event batch exceeds the {_MAX_EVENT_BATCH}-event bound"
+            )
+        if expected_revision < 1:
+            raise ValueError("Harness expected revision must be positive")
+        if lease_checked_at_ms < 0:
+            raise ValueError("Harness lease check time must be non-negative")
+
+        event_ids = [event.event_id for event in events]
+        if len(event_ids) != len(set(event_ids)):
+            raise ValueError("Harness Event batch identities must be unique")
+
+        prepared: list[tuple[HarnessEventWrite, StoredHarnessObject]] = []
+        for event in events:
+            self._validate_event_identity(event.event_id)
+            if (
+                event.event_kind not in HARNESS_STORE_EVENT_KINDS
+                or event.event_kind == "harness.run-created"
+            ):
+                raise ValueError(
+                    f"unsupported Harness store event kind: {event.event_kind}"
                 )
+            if event.recorded_at_ms < 0:
+                raise ValueError("Harness event time must be non-negative")
+            payload = self._event_payload(
+                event_kind=event.event_kind,
+                data=event.data,
+            )
+            payload_object = self.objects.put(payload, kind=_EVENT_PAYLOAD_KIND)
+            for item in event.referenced_objects:
+                actual = self.objects.inspect(item.digest)
+                if actual != item:
+                    raise HarnessObjectCorrupt(
+                        f"Harness referenced object metadata differs: {item.digest}"
+                    )
+            prepared.append((event, payload_object))
+
+        with self._transaction():
+            placeholders = ",".join("?" for _ in event_ids)
+            existing_ids = {
+                row["event_id"]
+                for row in self.connection.execute(
+                    f"SELECT event_id FROM run_events WHERE event_id IN ({placeholders})",
+                    tuple(event_ids),
+                )
+            }
+            if existing_ids:
+                if existing_ids != set(event_ids):
+                    raise HarnessEventConflict(
+                        "Harness Event batch is only partially admitted"
+                    )
+                for offset, (event, payload_object) in enumerate(prepared, start=1):
+                    self._require_exact_event(
+                        event_id=event.event_id,
+                        harness_run_id=harness_run_id,
+                        run_revision=expected_revision + offset,
+                        event_kind=event.event_kind,
+                        payload_object=payload_object,
+                        caused_by_event_id=event.caused_by_event_id,
+                        recorded_at_ms=event.recorded_at_ms,
+                        referenced_objects=event.referenced_objects,
+                    )
                 return HarnessEventAdmission.EXISTING
 
             row = self.connection.execute(
@@ -592,59 +664,91 @@ class SQLiteHarnessStore:
                     f"Harness Run revision is {current.revision}, expected {expected_revision}"
                 )
             if current.status.terminal:
-                raise HarnessTerminalConflict("terminal Harness Run cannot admit another event")
-            new_status = self._status_after(event_kind, current.status)
-            if recorded_at_ms < current.updated_at_ms:
-                raise ValueError("Harness event time precedes the current Run head")
+                raise HarnessTerminalConflict(
+                    "terminal Harness Run cannot admit another event"
+                )
             self._validate_exact_lease(lease, checked_at_ms=lease_checked_at_ms)
             if lease.harness_run_id != harness_run_id or lease.run_revision != expected_revision:
-                raise HarnessLeaseConflict("Harness Run lease is bound to another revision")
-            if caused_by_event_id is not None:
-                cause = self.connection.execute(
-                    "SELECT harness_run_id FROM run_events WHERE event_id = ?",
-                    (caused_by_event_id,),
-                ).fetchone()
-                if cause is None or cause["harness_run_id"] != harness_run_id:
-                    raise HarnessEventConflict(
-                        "Harness caused-by Event is absent or belongs to another Run"
+                raise HarnessLeaseConflict(
+                    "Harness Run lease is bound to another revision"
+                )
+
+            status = current.status
+            previous_time = current.updated_at_ms
+            preceding_batch_ids: set[str] = set()
+            terminal_event_id: str | None = None
+            for index, (event, _) in enumerate(prepared):
+                if status.terminal:
+                    raise HarnessTerminalConflict(
+                        "Harness Event batch contains an Event after terminal state"
                     )
-            self._admit_object(payload_object, recorded_at_ms)
-            for item in referenced_objects:
-                self._admit_object(item, recorded_at_ms)
-            terminal_event_id = event_id if new_status.terminal else None
+                if event.recorded_at_ms < previous_time:
+                    raise ValueError(
+                        "Harness Event batch time precedes the current Run head"
+                    )
+                cause_id = event.caused_by_event_id
+                if cause_id is not None and cause_id not in preceding_batch_ids:
+                    cause = self.connection.execute(
+                        "SELECT harness_run_id FROM run_events WHERE event_id = ?",
+                        (cause_id,),
+                    ).fetchone()
+                    if cause is None or cause["harness_run_id"] != harness_run_id:
+                        raise HarnessEventConflict(
+                            "Harness caused-by Event is absent, later in the batch, "
+                            "or belongs to another Run"
+                        )
+                status = self._status_after(event.event_kind, status)
+                if status.terminal:
+                    terminal_event_id = event.event_id
+                    if index != len(prepared) - 1:
+                        raise HarnessTerminalConflict(
+                            "terminal Harness Event must be last in its batch"
+                        )
+                previous_time = event.recorded_at_ms
+                preceding_batch_ids.add(event.event_id)
+
+            final_revision = expected_revision + len(prepared)
             changed = self.connection.execute(
                 "UPDATE runs SET status = ?, revision = ?, updated_at_ms = ?, "
                 "terminal_event_id = ? WHERE harness_run_id = ? AND revision = ?",
                 (
-                    new_status.value,
-                    expected_revision + 1,
-                    recorded_at_ms,
+                    status.value,
+                    final_revision,
+                    previous_time,
                     terminal_event_id,
                     harness_run_id,
                     expected_revision,
                 ),
             ).rowcount
             if changed != 1:
-                raise HarnessRevisionConflict("Harness Run revision changed during admission")
-            self.connection.execute(
-                "INSERT INTO run_events(event_id, harness_run_id, run_revision, event_kind, "
-                "payload_digest, caused_by_event_id, recorded_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (
-                    event_id,
+                raise HarnessRevisionConflict(
+                    "Harness Run revision changed during batch admission"
+                )
+
+            for offset, (event, payload_object) in enumerate(prepared, start=1):
+                self._admit_object(payload_object, event.recorded_at_ms)
+                for item in event.referenced_objects:
+                    self._admit_object(item, event.recorded_at_ms)
+                self.connection.execute(
+                    "INSERT INTO run_events(event_id, harness_run_id, run_revision, "
+                    "event_kind, payload_digest, caused_by_event_id, recorded_at_ms) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        event.event_id,
+                        harness_run_id,
+                        expected_revision + offset,
+                        event.event_kind,
+                        payload_object.digest,
+                        event.caused_by_event_id,
+                        event.recorded_at_ms,
+                    ),
+                )
+                self._insert_event_refs(
                     harness_run_id,
-                    expected_revision + 1,
-                    event_kind,
-                    payload_object.digest,
-                    caused_by_event_id,
-                    recorded_at_ms,
-                ),
-            )
-            self._insert_event_refs(
-                harness_run_id,
-                event_id,
-                payload_object,
-                referenced_objects,
-            )
+                    event.event_id,
+                    payload_object,
+                    event.referenced_objects,
+                )
             self._consume_exact_lease(lease)
         return HarnessEventAdmission.CREATED
 

@@ -21,7 +21,9 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - active legacy/independent Run inventory, append-only cutover and rollback receipts, tamper detection, and a legacy writer gate;
 - explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
 - online Store backup, exact verification, tamper detection and restore to a fresh destination;
-- frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds.
+- frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds;
+- bounded atomic Harness Event batches with complete replay idempotency, partial-replay rejection, same-batch causality checks, and one-lease projection commit;
+- repository-owned 1,000-Run / 100,000-Event scale acceptance and integrity-bound receipt generation.
 
 ### Compatibility
 
@@ -42,6 +44,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - cutover acceptance for active legacy blockers, terminal legacy admission, nonterminal independent blockers, safe rollback, post-activation rollback refusal, CLI selection and receipt tampering;
 - Execution Binding tests for deterministic identities, Harness-only foreign references, generic Tool lowering and exact legacy Host request compatibility;
 - complete legacy Host-backed Harness suite remains a required regression gate;
+- atomic Event-batch rollback/replay tests and deterministic scale-receipt smoke are part of the current gate;
 - [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.
 
 ## 0.6.0 — 2026-08-04

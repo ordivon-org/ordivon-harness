@@ -31,6 +31,7 @@ case "$mode" in
     test -f "$repo/scripts/check_docs.py"
     test -f "$repo/scripts/check_evidence.py"
     test -f "$repo/scripts/check_wheel.py"
+    test -f "$repo/scripts/harness_p0_scale_acceptance.py"
     "$python_bin" "$repo/scripts/check_dependencies.py"
     "$python_bin" "$repo/scripts/check_docs.py"
     "$python_bin" "$repo/scripts/check_evidence.py"
@@ -49,6 +50,10 @@ case "$mode" in
     "$python_bin" scripts/check_evidence.py
     "$uv_bin" lock --check
     "$python_bin" scripts/demo_deterministic_run.py
+    "$uv_bin" run python scripts/harness_p0_scale_acceptance.py \
+      --runs 8 --events-per-run 12 --batch-size 11 --inspect-samples 4 \
+      --max-write-ms 30000 --max-reopen-ms 30000 --max-inspect-p95-ms 1000 \
+      >/dev/null
     wheel_dir=$(mktemp -d)
     trap 'rm -rf "$wheel_dir"' EXIT
     "$uv_bin" build --wheel --out-dir "$wheel_dir"

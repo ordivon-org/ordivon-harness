@@ -68,6 +68,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'HarnessCorrelationContext': ('.core_contracts', 'HarnessCorrelationContext'),
     'HarnessDispatchFenceV2': ('.ordivon.continuity_records', 'HarnessDispatchFenceV2'),
     'HarnessEventAdmission': ('.store', 'HarnessEventAdmission'),
+    'HarnessEventWrite': ('.store', 'HarnessEventWrite'),
     'HarnessExecutionBinding': ('.execution_binding', 'HarnessExecutionBinding'),
     'HarnessEventConflict': ('.sqlite_store', 'HarnessEventConflict'),
     'HarnessJournalCorruption': ('.sqlite_store', 'HarnessJournalCorruption'),

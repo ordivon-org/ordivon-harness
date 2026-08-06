@@ -18,7 +18,11 @@ from ordivon_harness.sqlite_store import (
     HarnessTerminalConflict,
     SQLiteHarnessStore,
 )
-from ordivon_harness.store import HarnessEventAdmission, HarnessRunStatus
+from ordivon_harness.store import (
+    HarnessEventAdmission,
+    HarnessEventWrite,
+    HarnessRunStatus,
+)
 
 DIGEST_A = "sha256:" + "a" * 64
 DIGEST_B = "sha256:" + "b" * 64
@@ -144,6 +148,128 @@ class SQLiteHarnessStoreTests(unittest.TestCase):
                         ttl_ms=100,
                         now_ms=2_000,
                     )
+
+    def test_atomic_bounded_event_batch_and_exact_replay(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with SQLiteHarnessStore.initialize(directory) as store:
+                contract = run_contract(
+                    run_id="harness-run:p0-batch-001",
+                    caller_ref="trial:p0-batch-001",
+                )
+                store.create_run(contract)
+                evidence = store.put_object(
+                    {"receipt": "runtime-job:batch"}, kind="runtime-job-reference"
+                )
+                lease = store.acquire_run_lease(
+                    contract.harness_run_id,
+                    owner_id="worker:p0-batch",
+                    ttl_ms=1_000,
+                    now_ms=1_001,
+                )
+                events = (
+                    HarnessEventWrite(
+                        event_id="event:p0-batch:started",
+                        event_kind="harness.run-started",
+                        data={"phase": "started"},
+                        recorded_at_ms=1_002,
+                    ),
+                    HarnessEventWrite(
+                        event_id="event:p0-batch:trace",
+                        event_kind="harness.trace-recorded",
+                        data={"segment": 1},
+                        recorded_at_ms=1_003,
+                        caused_by_event_id="event:p0-batch:started",
+                        referenced_objects=(evidence,),
+                    ),
+                    HarnessEventWrite(
+                        event_id="event:p0-batch:completed",
+                        event_kind="harness.run-completed",
+                        data={"proposalRef": "completion-proposal:p0-batch-001"},
+                        recorded_at_ms=1_004,
+                        caused_by_event_id="event:p0-batch:trace",
+                    ),
+                )
+                self.assertEqual(
+                    store.append_events(
+                        harness_run_id=contract.harness_run_id,
+                        events=events,
+                        expected_revision=1,
+                        lease=lease,
+                        lease_checked_at_ms=1_002,
+                    ),
+                    HarnessEventAdmission.CREATED,
+                )
+                terminal = store.load_run(contract.harness_run_id)
+                self.assertEqual(terminal.revision, 4)
+                self.assertEqual(terminal.status, HarnessRunStatus.COMPLETED)
+                self.assertEqual(
+                    store.append_events(
+                        harness_run_id=contract.harness_run_id,
+                        events=events,
+                        expected_revision=1,
+                        lease=lease,
+                        lease_checked_at_ms=1_002,
+                    ),
+                    HarnessEventAdmission.EXISTING,
+                )
+                with self.assertRaises(HarnessEventConflict):
+                    store.append_events(
+                        harness_run_id=contract.harness_run_id,
+                        events=(
+                            events[0],
+                            HarnessEventWrite(
+                                event_id="event:p0-batch:new",
+                                event_kind="harness.trace-recorded",
+                                data={"segment": 2},
+                                recorded_at_ms=1_005,
+                            ),
+                        ),
+                        expected_revision=1,
+                        lease=lease,
+                        lease_checked_at_ms=1_002,
+                    )
+
+    def test_batch_rejects_events_after_terminal_without_partial_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with SQLiteHarnessStore.initialize(directory) as store:
+                contract = run_contract(
+                    run_id="harness-run:p0-batch-terminal",
+                    caller_ref="trial:p0-batch-terminal",
+                )
+                store.create_run(contract)
+                lease = store.acquire_run_lease(
+                    contract.harness_run_id,
+                    owner_id="worker:p0-batch-terminal",
+                    ttl_ms=1_000,
+                    now_ms=1_001,
+                )
+                with self.assertRaises(HarnessTerminalConflict):
+                    store.append_events(
+                        harness_run_id=contract.harness_run_id,
+                        events=(
+                            HarnessEventWrite(
+                                event_id="event:p0-batch-terminal:completed",
+                                event_kind="harness.run-completed",
+                                data={"done": True},
+                                recorded_at_ms=1_002,
+                            ),
+                            HarnessEventWrite(
+                                event_id="event:p0-batch-terminal:late",
+                                event_kind="harness.trace-recorded",
+                                data={"late": True},
+                                recorded_at_ms=1_003,
+                            ),
+                        ),
+                        expected_revision=1,
+                        lease=lease,
+                        lease_checked_at_ms=1_002,
+                    )
+                projection = store.load_run(contract.harness_run_id)
+                self.assertEqual(projection.revision, 1)
+                self.assertEqual(
+                    len(store.list_run_events(contract.harness_run_id)), 1
+                )
+                self.assertTrue(store.release_run_lease(lease))
 
     def test_event_identity_conflict_and_revision_fencing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
