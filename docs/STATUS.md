@@ -66,7 +66,7 @@ The canonical public graph currently requires:
 | hidden-state migration during an active Provider Call | unsupported |
 | parallel Tools and subagents | unsupported |
 | automatic Provider routing | not provided |
-| independent Harness Journal/CAS kernel | P0 foundation operational; production Runner not cut over |
+| independent Harness Journal/CAS kernel | P0 foundation operational; atomic batch and 1,000-Run/100,000-Event scale gate passed; production Runner not cut over |
 | independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
 | independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
 | Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin pending deployment |
@@ -91,7 +91,8 @@ Host ↛ Harness
 
 ## Known limits
 
-- the production service roots have not yet been activated by a cutover receipt;
+- the production Host and Harness roots do not yet exist and have not been activated by a cutover receipt;
+- local Host, Harness and Computing mains are ahead of their remote release heads, and the Harness Host-extra pin still selects the older reachable Host revision;
 - the legacy production Runner still requires the optional exact Host integration and remains the default Host-backed entry point;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;

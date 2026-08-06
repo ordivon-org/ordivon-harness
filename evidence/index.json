@@ -57,6 +57,20 @@
       "status": "verified",
       "implementationRevision": "50cb9b587d53dd24fc40655145fbcb18f24d5b0d",
       "scope": "Atomic bounded Event admission, 1,000 Runs, 100,000 Events, full-history reopen Doctor and sampled Run inspection"
+    },
+    {
+      "claimId": "harness.persistence.hho-p0-fault-matrix",
+      "file": "hho-p0-fault-matrix-50cb9b5.json",
+      "status": "historical",
+      "implementationRevision": "50cb9b587d53dd24fc40655145fbcb18f24d5b0d",
+      "scope": "Independent persistence, response-loss, UNKNOWN, batch atomicity, lease, backup, cutover and rollback fault gates"
+    },
+    {
+      "claimId": "harness.persistence.hho-p0-production-preflight",
+      "file": "hho-p0-production-preflight-43d7820.json",
+      "status": "historical",
+      "implementationRevision": "43d782082beae2921ad4dcea635b93e2aab2b0fc",
+      "scope": "Read-only production root, release reachability, dependency pin and cutover readiness observation"
     }
   ]
 }

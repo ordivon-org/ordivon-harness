@@ -1,0 +1,144 @@
+{
+  "faults": [
+    {
+      "evidence": [
+        "tests.test_p0_host_external_adapter.HostExternalAdapterTests.test_real_host_harness_roundtrip_with_response_loss"
+      ],
+      "expected": "one independent Harness Run; exact retry; no Host Task completion",
+      "id": "host_request_delivery_loss",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_agent_loop.SQLiteHarnessAgentBridgeTests.test_durable_completion_replays_after_bridge_response_loss"
+      ],
+      "expected": "completed Provider result replays without second physical invocation",
+      "id": "provider_completion_response_loss",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_runtime_bridge.SQLiteHarnessRuntimeBridgeTests.test_transport_response_loss_reconciles_without_redispatch"
+      ],
+      "expected": "original Runtime Job reconciles by exact request identity without redispatch",
+      "id": "runtime_transport_response_loss",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_runtime_bridge.SQLiteHarnessRuntimeBridgeTests.test_zero_or_multiple_reconciliation_matches_are_unknown"
+      ],
+      "expected": "zero or multiple Job matches remain durable UNKNOWN",
+      "id": "runtime_reconciliation_cardinality_unknown",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_runtime_bridge.SQLiteHarnessRuntimeBridgeTests.test_precommit_runtime_rejection_is_model_correctable_observation"
+      ],
+      "expected": "model-correctable observation; no physical dispatch claim",
+      "id": "precommit_runtime_rejection",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_store.SQLiteHarnessStoreTests.test_atomic_bounded_event_batch_and_exact_replay"
+      ],
+      "expected": "complete exact Event batch replay is idempotent; partial replay rejected",
+      "id": "batch_response_loss",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_store.SQLiteHarnessStoreTests.test_batch_rejects_events_after_terminal_without_partial_commit"
+      ],
+      "expected": "Event after terminal transition rejects complete batch and leaves revision unchanged",
+      "id": "batch_terminal_partial_commit",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_store.SQLiteHarnessStoreTests.test_event_identity_conflict_and_revision_fencing"
+      ],
+      "expected": "stale revision and same identity with different bytes fail closed",
+      "id": "stale_revision_or_event_identity",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_sqlite_store.SQLiteHarnessStoreTests.test_live_lease_excludes_another_owner_and_expiry_allows_recovery"
+      ],
+      "expected": "live lease excludes another owner; expired lease can be replaced at same Run revision",
+      "id": "lease_contention_and_expiry",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_store_ops.HarnessStoreOperationsTests.test_tampered_database_and_object_fail_verification",
+        "tests.test_p0_store_ops.HarnessStoreOperationsTests.test_manifest_object_set_must_equal_database_refs"
+      ],
+      "expected": "database, object, and manifest drift fail verification",
+      "id": "backup_tamper_or_incomplete_object_set",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_cutover.HarnessCutoverTests.test_active_legacy_run_blocks_activation",
+        "tests.test_p0_cutover.HarnessCutoverTests.test_nonterminal_independent_run_blocks_initial_activation"
+      ],
+      "expected": "activation rejected with exact blocker identities",
+      "id": "cutover_with_active_legacy_or_independent_run",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_cutover.HarnessCutoverTests.test_terminal_legacy_run_allows_activation_and_disables_legacy_writer",
+        "tests.test_p0_cutover.HarnessCutoverTests.test_cli_cutover_commands_and_legacy_writer_guard"
+      ],
+      "expected": "legacy writer rejected before Runtime access",
+      "id": "legacy_writer_after_activation",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_cutover.HarnessCutoverTests.test_rollback_refuses_any_post_activation_independent_run"
+      ],
+      "expected": "rollback rejected after any post-activation independent work",
+      "id": "rollback_after_independent_work",
+      "status": "passed"
+    },
+    {
+      "evidence": [
+        "tests.test_p0_cutover.HarnessCutoverTests.test_inventory_tampering_fails_closed",
+        "tests.test_p0_cutover.HarnessCutoverTests.test_receipt_tampering_fails_closed"
+      ],
+      "expected": "tampering and receipt-chain drift fail closed",
+      "id": "cutover_receipt_or_inventory_tamper",
+      "status": "passed"
+    }
+  ],
+  "implementationRevision": "50cb9b587d53dd24fc40655145fbcb18f24d5b0d",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:6c2df2926d92b12a624082889b9e6d3ffd51918ecb412a0dbcfecd61716e3981"
+  },
+  "kind": "ordivon.harness-p0-fault-matrix",
+  "passed": true,
+  "regression": {
+    "attemptId": "attempt-019fd59e-7f04-74b0-854f-a42fbf1df36a",
+    "gates": [
+      "compileall",
+      "complete_unittest_discovery_with_resource_warning_errors",
+      "ruff",
+      "dependency_contract",
+      "documentation_contract",
+      "evidence_contract",
+      "uv_lock_check"
+    ],
+    "jobId": "job-019fd59e-7f04-74b0-854f-a416049987f1",
+    "status": "passed"
+  },
+  "repositoryEvidenceRevision": "43d782082beae2921ad4dcea635b93e2aab2b0fc",
+  "schemaVersion": 1
+}

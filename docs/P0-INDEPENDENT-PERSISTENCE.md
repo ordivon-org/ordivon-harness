@@ -276,7 +276,7 @@ Activation does not migrate or rewrite historical bytes. It disables only the le
 
 ## Next migration slice
 
-Work now moves to the committed 1,000 Run / 100,000 Event performance receipt, production state-root deployment, exact cross-repository release pins, backup/rollback receipts, the complete fault matrix, and final no-dual-write cutover disposition. Runtime or foreign Run success must still never become semantic Task acceptance.
+The atomic batch implementation, complete regression gate, 1,000 Run / 100,000 Event receipt, and bounded fault matrix now pass. Work moves to reachable exact cross-repository release pins, production state-root initialization, backup/rollback receipts, and final no-dual-write cutover disposition. Runtime or foreign Run success must still never become semantic Task acceptance.
 
 ## Stop conditions
 

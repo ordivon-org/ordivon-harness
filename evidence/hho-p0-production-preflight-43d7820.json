@@ -1,0 +1,65 @@
+{
+  "blockers": [
+    "local_Host_Harness_and_Computing_revisions_are_not_remote_reachable",
+    "Harness_host_extra_pin_does_not_select_current_local_Host",
+    "production_Host_and_Harness_state_roots_are_not_initialized",
+    "production_backup_restore_and_cutover_receipts_do_not_exist"
+  ],
+  "branchAheadCounts": {
+    "computing": 21,
+    "harness": 18,
+    "host": 2
+  },
+  "dependencyPins": {
+    "host": "1a4027bb26d77a2e051ca933bf664578f071a5a9",
+    "hostPinMatchesRequiredLocalHost": false,
+    "protocol": "420dc356cb664d75db0f34f356156baebe5843db",
+    "requiredLocalHost": "7b17807784cc52f0be4f1786719f6dc20deb92c8"
+  },
+  "disposition": "blocked_before_production_cutover",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:a7e8fed34ffd68aff3b043b39c78479dd8c3f65c802cc643de738fdc23935de7"
+  },
+  "kind": "ordivon.harness-p0-production-preflight",
+  "localRevisions": {
+    "computing": "93e7959ed7bc978271f785d4fa6b72f91174b4a5",
+    "harness": "43d782082beae2921ad4dcea635b93e2aab2b0fc",
+    "host": "7b17807784cc52f0be4f1786719f6dc20deb92c8",
+    "protocol": "420dc356cb664d75db0f34f356156baebe5843db"
+  },
+  "observedAtMs": 1785996085734,
+  "passedChecks": [
+    "runtime_service_active",
+    "no_existing_host_root_to_overwrite",
+    "no_existing_harness_root_to_overwrite",
+    "scale_acceptance_passed",
+    "fault_matrix_passed"
+  ],
+  "productionState": {
+    "cutoverActivated": false,
+    "harnessRoot": "/var/lib/ordivon/harness",
+    "harnessRootExists": false,
+    "hostRoot": "/var/lib/ordivon/host",
+    "hostRootExists": false,
+    "runtimeService": "active",
+    "writesPerformedByPreflight": false
+  },
+  "remoteHeads": {
+    "computing": "67076892dfde6f032ff5fe8636ed07bfd73b782c",
+    "harness": "be75959018344c9aa2e1122692a1ae2de223b461",
+    "host": "1a4027bb26d77a2e051ca933bf664578f071a5a9"
+  },
+  "safeNextActions": [
+    "land_and_review_local_commits_on_each_main_branch",
+    "publish_or_otherwise_make_exact_release_revisions_reachable",
+    "update_Harness_host_extra_pin_and_lock_to_the_reachable_Host_revision",
+    "rerun_complete_Harness_and_cross_repository_acceptance",
+    "initialize_private_production_roots_only_after_exact_pins_pass",
+    "create_and_verify_backups_before_cutover_activation",
+    "run_cutover_inventory_then_activate_only_with_zero_nonterminal_work"
+  ],
+  "schemaVersion": 1,
+  "sourceRevision": "43d782082beae2921ad4dcea635b93e2aab2b0fc"
+}
