@@ -80,11 +80,11 @@
       "scope": "Current local Host external-Run response-loss and cutover compatibility before reachable release pin update"
     },
     {
-      "claimId": "harness.persistence.hho-p0-scale",
+      "claimId": "harness.persistence.hho-p0-scale-pre-host-pin",
       "file": "hho-p0-scale-1000x100-73f7150.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "73f715073b0f3a659fe9f8ec1296e6ba9fa447ee",
-      "scope": "Current-main atomic bounded Event admission, 1,000 Runs, 100,000 Events, full-history reopen Doctor and sampled Run inspection"
+      "scope": "Historical current-main scale proof before the exact Host integration pin advanced to 7b17807784cc52f0be4f1786719f6dc20deb92c8"
     }
   ]
 }

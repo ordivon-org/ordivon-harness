@@ -42,7 +42,7 @@ The canonical public graph currently requires:
 
 - Python 3.12;
 - base package: `ordivon-protocol` at `420dc356cb664d75db0f34f356156baebe5843db`;
-- optional `host` extra and repository development group: `ordivon-host` at `1a4027bb26d77a2e051ca933bf664578f071a5a9`;
+- optional `host` extra and repository development group: `ordivon-host` at `7b17807784cc52f0be4f1786719f6dc20deb92c8`;
 - `uv.lock` generated from those exact pins;
 - Linux for trusted-local live operation;
 - Ordivon Runtime only when physical Tool execution is requested.

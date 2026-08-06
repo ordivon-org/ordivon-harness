@@ -9,7 +9,7 @@ from pathlib import Path
 import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
-HOST_REVISION = "1a4027bb26d77a2e051ca933bf664578f071a5a9"
+HOST_REVISION = "7b17807784cc52f0be4f1786719f6dc20deb92c8"
 PROTOCOL_REVISION = "420dc356cb664d75db0f34f356156baebe5843db"
 
 

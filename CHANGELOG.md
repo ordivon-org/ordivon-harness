@@ -27,6 +27,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Compatibility
 
+- the optional Host integration and development graph now pin remote-reachable Host `7b17807784cc52f0be4f1786719f6dc20deb92c8`;
 - the production `HarnessRunner`, Provider Call, Tool Step, Snapshot, recovery and completion paths remain Host-backed;
 - no new Run is dual-written and no retained Host history is rewritten;
 - the stable `ordivon_harness.api` facade is unchanged; P0 types are transitional package-root exports;
