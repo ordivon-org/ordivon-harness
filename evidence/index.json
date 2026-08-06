@@ -117,9 +117,16 @@
     {
       "claimId": "harness.repository-repair-runtime-bridge.b4-b5",
       "file": "repository-repair-conclusion-gate-b23d5fa.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "b23d5fa6c820c10f937f48cc16c2d8e03d3e18ae",
-      "scope": "Independent repository-repair evidence gate: premature conclusion correction, five bounded Tool steps, one Runtime Job, durable receipts and closed Workspace"
+      "scope": "Historical frozen B4/B5 evidence gate at b23d5fa: premature conclusion correction, five bounded V1 Tool steps, one Runtime Job, durable receipts and closed Workspace; superseded only as current Harness verification by the separate V2 edit implementation"
+    },
+    {
+      "claimId": "harness.repository-repair-edit-runtime-bridge.v2",
+      "file": "repository-repair-edit-runtime-bridge-dd50136.json",
+      "status": "verified",
+      "implementationRevision": "dd50136ef722b9df3dfb0fef195fcc1a137fd8ed",
+      "scope": "Separate Agent-friendly exact-replace and completion-file creation surface over durable Runtime Patch identity, reconciliation, visible Check, diff, reread and closed Workspace; does not resume frozen B5"
     }
   ]
 }
