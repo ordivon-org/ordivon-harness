@@ -85,6 +85,20 @@
       "status": "historical",
       "implementationRevision": "73f715073b0f3a659fe9f8ec1296e6ba9fa447ee",
       "scope": "Historical current-main scale proof before the exact Host integration pin advanced to 7b17807784cc52f0be4f1786719f6dc20deb92c8"
+    },
+    {
+      "claimId": "harness.persistence.hho-p0-scale",
+      "file": "hho-p0-scale-1000x100-f7e03aa.json",
+      "status": "verified",
+      "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+      "scope": "Exact Host-pinned release graph: atomic bounded Event admission, 1,000 Runs, 100,000 Events, full-history reopen Doctor and sampled Run inspection"
+    },
+    {
+      "claimId": "harness.persistence.hho-p0-release-h2",
+      "file": "hho-p0-release-h2-f7e03aa.json",
+      "status": "verified",
+      "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+      "scope": "Exact remote Host pin with live Host→Harness→Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
     }
   ]
 }

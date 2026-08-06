@@ -1,0 +1,222 @@
+{
+  "assignmentGeneration": 1,
+  "assignmentId": "assignment:live-harness-h2-1785998315366-eec68de430e4:attempt-1:g1",
+  "capturedAt": "2026-08-06T06:38:36.175839+00:00",
+  "checks": {
+    "assignmentDigestConflict": true,
+    "assignmentGenerationConflict": true,
+    "exactReplayReturnedOriginalJob": true,
+    "freshClientRecoveredOriginalJob": true,
+    "handoffProjectsHarnessRun": true,
+    "hostRecordedRuntimeJob": true,
+    "noSemanticCompletionClaim": true,
+    "oneRuntimeJob": true,
+    "terminalEvidenceBoundAttempt": true,
+    "terminalEvidenceBoundJob": true,
+    "terminalEvidenceBoundSource": true,
+    "terminalEvidenceBoundWorkspace": true,
+    "terminalEvidenceRetainedExactReferences": true
+  },
+  "goalId": "goal:live-harness-h2-1785998315366-eec68de430e4",
+  "harnessRunId": "harness-run:live-harness-h2-1785998315366-eec68de430e4:1",
+  "host": {
+    "handoff": {
+      "assignmentGeneration": 1,
+      "assignmentId": "assignment:live-harness-h2-1785998315366-eec68de430e4:attempt-1:g1",
+      "backendJobId": null,
+      "childTaskId": null,
+      "completionDecisionId": null,
+      "completionProposalId": null,
+      "decisionRequestId": null,
+      "descriptorDigest": null,
+      "dispatchObjectDigest": null,
+      "eventKind": "harness.run-recorded",
+      "eventPayloadDigest": "sha256:2ae0911d87690138c1d2a9c9e5e7f91bf89a8d59de0fff4921ec6adc9bb89e93",
+      "goalId": "goal:live-harness-h2-1785998315366-eec68de430e4",
+      "harnessRunId": "harness-run:live-harness-h2-1785998315366-eec68de430e4:1",
+      "kind": "ordivon.operator-handoff-capsule",
+      "mustNotRepeatObjectDigests": [],
+      "nextAdmissible": [
+        "replace-harness-assignment"
+      ],
+      "outcomeObjectDigest": null,
+      "proposalDigest": null,
+      "readyFrontier": [
+        "node:live-harness-h2-1785998315366-eec68de430e4:run"
+      ],
+      "schemaVersion": 2,
+      "taskAttemptId": "task-attempt:live-harness-h2-1785998315366-eec68de430e4:1",
+      "taskId": "task:live-harness-h2-1785998315366-eec68de430e4",
+      "taskRevision": 3,
+      "taskState": "waiting"
+    },
+    "recordedRunDigest": "sha256:9cd4a66ab17add44ee32c6436ce11c1c8afd28e1e474c9969680167c0ae2221c",
+    "recordedRunRevision": 3
+  },
+  "implementationSourceRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-canonical-json-v1",
+    "payloadDigest": "sha256:e08adf1d0d2da5403a1f13efd77c8354d6a220abc15f826b6f75f667a10f3a86"
+  },
+  "kind": "ordivon.host-h2-runtime-r2-live-receipt",
+  "request": {
+    "clientRequestId": "request:harness:g1:8d3f01814fe55dc23810531ca1daf429",
+    "execution": {
+      "args": [
+        "-c",
+        "import json; print(json.dumps({'h2': True, 'probe': 'runtime-correlation'}, sort_keys=True))"
+      ],
+      "cwdRelative": ".",
+      "env": {},
+      "executable": "/usr/bin/python3",
+      "foreignReferences": [
+        {
+          "digest": "sha256:a190261ce32884ee1aba6e27bf172ca24da317a9580e80608c33d90e4154424f",
+          "generation": "1",
+          "id": "assignment:live-harness-h2-1785998315366-eec68de430e4:attempt-1:g1",
+          "namespace": "ordivon.host",
+          "type": "assignment"
+        },
+        {
+          "digest": "sha256:d22ba82bc0d8a5f250c5956a1609798874437cea6897a1e9ecd905872574cd61",
+          "id": "harness-run:live-harness-h2-1785998315366-eec68de430e4:1",
+          "namespace": "ordivon.host",
+          "type": "harness_run"
+        },
+        {
+          "digest": "sha256:6e44b75eb89312e088e1db4dc882abe24db9499abb2f7b87a32f52cd287776c7",
+          "generation": "1",
+          "id": "task:live-harness-h2-1785998315366-eec68de430e4",
+          "namespace": "ordivon.host",
+          "type": "task"
+        },
+        {
+          "digest": "sha256:7bb95c6faa05b3dd776c5d55c0113af8d14b473c43cc4eaa6acc39102d554b5b",
+          "id": "task-attempt:live-harness-h2-1785998315366-eec68de430e4:1",
+          "namespace": "ordivon.host",
+          "type": "task_attempt"
+        }
+      ],
+      "stderrLimitBytes": 262144,
+      "stdoutLimitBytes": 262144,
+      "timeoutMs": 30000,
+      "workspaceId": "host-live-harness-h2-1785998315366-eec68de430e4"
+    },
+    "schemaVersion": 1,
+    "stderrTailBytes": 8192,
+    "stdoutTailBytes": 8192,
+    "waitMs": 30000
+  },
+  "runtime": {
+    "attemptId": "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648",
+    "firstStatus": "succeeded",
+    "jobId": "job-019fd5cb-9005-7bf2-ae4e-808e96d7dc26",
+    "matchingJobs": [
+      {
+        "artifactCount": 4,
+        "artifactsAvailable": true,
+        "attemptId": "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648",
+        "clientRequestId": "request:harness:g1:8d3f01814fe55dc23810531ca1daf429",
+        "createdAtMs": 1785998315525,
+        "cwdRelative": ".",
+        "durationMs": 106,
+        "executableName": "python3.14",
+        "exitCode": 0,
+        "finishedAtMs": 1785998315759,
+        "jobId": "job-019fd5cb-9005-7bf2-ae4e-808e96d7dc26",
+        "resultAvailable": true,
+        "sourceRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+        "startedAtMs": 1785998315653,
+        "status": "succeeded",
+        "workspaceId": "host-live-harness-h2-1785998315366-eec68de430e4"
+      }
+    ],
+    "terminalArtifact": {
+      "artifactId": "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.terminal-evidence.aa35d4f03e4f412205d6ded38a87c549c5fc100b0f1a070c740118d343ef4a8f",
+      "digest": "sha256:aa35d4f03e4f412205d6ded38a87c549c5fc100b0f1a070c740118d343ef4a8f",
+      "kind": "terminal_evidence",
+      "retainedBytes": 2561,
+      "truncated": false
+    },
+    "terminalEvidence": {
+      "args": [
+        "-c",
+        "import json; print(json.dumps({'h2': True, 'probe': 'runtime-correlation'}, sort_keys=True))"
+      ],
+      "attemptId": "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648",
+      "cancellationDisposition": "not_requested",
+      "cwd": "/var/lib/ordivon/runtime/workspaces/host-live-harness-h2-1785998315366-eec68de430e4",
+      "deliveryDisposition": "committed",
+      "executable": "/usr/bin/python3.14",
+      "executionDisposition": "succeeded",
+      "executionProfile": "trusted_local",
+      "foreignReferences": [
+        {
+          "digest": "sha256:a190261ce32884ee1aba6e27bf172ca24da317a9580e80608c33d90e4154424f",
+          "generation": "1",
+          "id": "assignment:live-harness-h2-1785998315366-eec68de430e4:attempt-1:g1",
+          "namespace": "ordivon.host",
+          "type": "assignment"
+        },
+        {
+          "digest": "sha256:d22ba82bc0d8a5f250c5956a1609798874437cea6897a1e9ecd905872574cd61",
+          "id": "harness-run:live-harness-h2-1785998315366-eec68de430e4:1",
+          "namespace": "ordivon.host",
+          "type": "harness_run"
+        },
+        {
+          "digest": "sha256:6e44b75eb89312e088e1db4dc882abe24db9499abb2f7b87a32f52cd287776c7",
+          "generation": "1",
+          "id": "task:live-harness-h2-1785998315366-eec68de430e4",
+          "namespace": "ordivon.host",
+          "type": "task"
+        },
+        {
+          "digest": "sha256:7bb95c6faa05b3dd776c5d55c0113af8d14b473c43cc4eaa6acc39102d554b5b",
+          "id": "task-attempt:live-harness-h2-1785998315366-eec68de430e4:1",
+          "namespace": "ordivon.host",
+          "type": "task_attempt"
+        }
+      ],
+      "jobId": "job-019fd5cb-9005-7bf2-ae4e-808e96d7dc26",
+      "observedAtMs": 1785998315759,
+      "processTreeDisposition": "terminal_clean",
+      "reasonCode": "PROCESS_EXIT_ZERO",
+      "schemaVersion": 1,
+      "sourceRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+      "startDisposition": "identity_bound",
+      "supervisor": {
+        "bootId": "4e18a90c-3a84-48ba-b433-a45f6494659e",
+        "controlGroup": "/system.slice/ordivon-attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.service",
+        "invocationId": "a935d3e9bacc4cc8beeea1d0c5191a3e",
+        "mainPid": 57606,
+        "processStartIdentity": "905874",
+        "runnerStartDigest": "sha256:cff77f24fce4768a2153879c2397cd5530e95f6ee94ee463377d1b9c6308f9dd",
+        "unitName": "ordivon-attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.service"
+      },
+      "terminalArtifactIds": [
+        "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.stdout",
+        "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.stderr",
+        "attempt-019fd5cb-9005-7bf2-ae4e-8099d04a6648.result"
+      ],
+      "workspaceId": "host-live-harness-h2-1785998315366-eec68de430e4"
+    },
+    "terminalStatus": "succeeded",
+    "workspaceClose": {
+      "removed": true,
+      "sourceStateDigest": "sha256:93fb0d831b2253afa13b66e998395ce1d0d7366060d6568336cf6bdc1548836d",
+      "workspaceId": "host-live-harness-h2-1785998315366-eec68de430e4"
+    },
+    "workspaceClosed": true
+  },
+  "runtimeCatalogDigest": "sha256:34f90ff0c4984e8d9346022e7320ef0462ff025fb442c4b2b7cf1e16fc0306cb",
+  "schemaVersion": 1,
+  "stateRoot": null,
+  "taskAttemptId": "task-attempt:live-harness-h2-1785998315366-eec68de430e4:1",
+  "taskId": "task:live-harness-h2-1785998315366-eec68de430e4",
+  "workspace": {
+    "sourceRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+    "workspaceId": "host-live-harness-h2-1785998315366-eec68de430e4"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "doctorCountsExact": true,
+    "doctorHealthy": true,
+    "eventCountExact": true,
+    "inspectP95UnderBound": true,
+    "objectReferenceCountMatchesFiles": true,
+    "reopenAndFullDoctorWithinBound": true,
+    "runCountExact": true,
+    "writeWithinBound": true
+  },
+  "configuration": {
+    "batchSize": 99,
+    "eventsPerRun": 100,
+    "expectedEventCount": 100000,
+    "inspectSamples": 100,
+    "maxInspectP95Ms": 1000,
+    "maxReopenMs": 120000,
+    "maxWriteMs": 180000,
+    "runCount": 1000,
+    "sqliteJournalMode": "WAL",
+    "sqliteSynchronous": "FULL"
+  },
+  "counts": {
+    "events": 100000,
+    "objects": 2001,
+    "runs": 1000
+  },
+  "finishedAtMs": 1785998374159,
+  "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:7cf8d0e7bbd0be7e9a969c3b22db3ff8ee410bf275811baa10c3548d846dd483"
+  },
+  "kind": "ordivon.harness-p0-scale-acceptance",
+  "measurements": {
+    "databaseBytes": 56782848,
+    "inspectP50Ms": 5.668,
+    "inspectP95Ms": 6.016,
+    "objectFiles": 2001,
+    "objectReferenceRows": 2001,
+    "reopenAndFullDoctorElapsedMs": 12959.051,
+    "writeElapsedMs": 44805.18
+  },
+  "passed": true,
+  "schemaVersion": 1,
+  "startedAtMs": 1785998316387
+}
