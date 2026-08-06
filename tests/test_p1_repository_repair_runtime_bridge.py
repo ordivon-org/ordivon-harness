@@ -66,6 +66,15 @@ class FakeRuntime:
         self.exec_request_id: str | None = None
         self.job_id = "job:p1-repository-repair-check"
 
+    @staticmethod
+    def assert_task_list_arguments(arguments: dict[str, JsonValue]) -> None:
+        if set(arguments) - {"limit", "clientRequestId", "cursor"}:
+            raise AssertionError(f"task.list received unsupported fields: {arguments}")
+        if arguments.get("limit") != 100:
+            raise AssertionError("task.list limit differs")
+        if not isinstance(arguments.get("clientRequestId"), str):
+            raise AssertionError("task.list clientRequestId differs")
+
     def call_tool(
         self,
         name: str,
@@ -115,6 +124,7 @@ class FakeRuntime:
                 )
             return self.terminal()
         if name == "task.list":
+            self.assert_task_list_arguments(arguments)
             assert arguments.get("clientRequestId") == self.exec_request_id
             return {
                 "schemaVersion": 1,

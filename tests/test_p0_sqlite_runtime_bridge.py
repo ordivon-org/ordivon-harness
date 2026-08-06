@@ -77,6 +77,15 @@ class FakeRuntime:
             "stderrTail": "",
         }
 
+    @staticmethod
+    def assert_task_list_arguments(arguments: dict[str, JsonValue]) -> None:
+        if set(arguments) - {"limit", "clientRequestId", "cursor"}:
+            raise AssertionError(f"task.list received unsupported fields: {arguments}")
+        if arguments.get("limit") != 100:
+            raise AssertionError("task.list limit differs")
+        if not isinstance(arguments.get("clientRequestId"), str):
+            raise AssertionError("task.list clientRequestId differs")
+
     def call_tool(
         self,
         name: str,
@@ -105,6 +114,7 @@ class FakeRuntime:
                 )
             return self.terminal()
         if name == "task.list":
+            self.assert_task_list_arguments(arguments)
             request_id = arguments.get("clientRequestId")
             assert isinstance(request_id, str)
             if self.mode == "zero":

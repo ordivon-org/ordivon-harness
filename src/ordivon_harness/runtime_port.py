@@ -80,7 +80,6 @@ def find_runtime_jobs_by_client_request(
     matches: list[dict[str, JsonValue]] = []
     for _ in range(max_pages):
         arguments: dict[str, JsonValue] = {
-            "schemaVersion": 1,
             "limit": 100,
             "clientRequestId": client_request_id,
         }
