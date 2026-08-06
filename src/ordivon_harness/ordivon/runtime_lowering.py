@@ -261,7 +261,10 @@ def lower_runtime_tool(
         try:
             check = tool_grant.execution_check(check_id)
         except KeyError as error:
-            raise ToolBridgeError(str(error)) from error
+            raise ToolBridgeError(
+                str(error),
+                kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
+            ) from error
         try:
             request = build_harness_workspace_exec_request_from_binding(
                 execution_binding,
