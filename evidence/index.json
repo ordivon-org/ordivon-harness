@@ -131,16 +131,23 @@
     {
       "claimId": "harness.repository-repair-edit-runtime-bridge.v2",
       "file": "repository-repair-edit-runtime-bridge-e625671.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "e6256714f92fff9b66c998328da870e8ac3b50e9",
-      "scope": "Current Agent-friendly exact-replace and completion-file creation surface reverified after A0-U1 token normalization and terminal Observation measurement projection; one Runtime Job, reconciliation, visible Check, diff, reread and closed Workspace"
+      "scope": "Historical verified V2 edit Runtime bridge after A0-U1 normalization; superseded only as current verification by I0 source integration, while the exact retained receipt remains unchanged"
     },
     {
       "claimId": "harness.api.c3-agent-first",
       "file": "harness-c3-agent-first-api-be7200a.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "be7200ab54033f82d587ae5451c3c6c88dc65866",
-      "scope": "Current caller-neutral Host-free recommended API, explicit Host compatibility facade, full regression, deterministic demo and isolated wheel smoke without production Run-state cutover"
+      "scope": "Historical C3 caller-neutral Host-free API acceptance before A0-U1 and I0 source-line reconciliation; retained unchanged as exact C3 evidence"
+    },
+    {
+      "claimId": "harness.integration.i0-source-lines",
+      "file": "harness-i0-source-integration-0ec4f1b.json",
+      "status": "verified",
+      "implementationRevision": "0ec4f1b3b91eafb74db624d5914a0a15e61d834d",
+      "scope": "Current merged C3 Agent-first API plus A0-U1 Harness line, aligned to Host C3 pin and revalidated as one source graph without production cutover"
     }
   ]
 }

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-i0-source-integration-acceptance",
+  "implementationRevision": "0ec4f1b3b91eafb74db624d5914a0a15e61d834d",
+  "mergeRevision": "8e5fa7eece27b8e097a9b6cc8d62de29ff58883e",
+  "integratedParents": [
+    "0d1e825e37b139d6b0b31a307fdc8bf904eeb722",
+    "22fbbcd84d0a5fe5a4fcef7d2f1b920cd7736a26"
+  ],
+  "hostRequiredSourceRevision": "428a6f2f90b4050535507c9be078c450552177e5",
+  "checks": {
+    "c3AgentFirstApiMerged": true,
+    "a0UsageAndObservationChangesRetained": true,
+    "hostCompatibilityPinAligned": true,
+    "publicApiRegressionPassed": true,
+    "repositoryRepairBridgeRegressionPassed": true,
+    "fullRegressionPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "evidenceContractPassed": true,
+    "wheelSmokePassed": true,
+    "productionCutoverActivated": false,
+    "providerCapabilityClaimed": false
+  },
+  "testSummary": {
+    "unitTestsRun": 369,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "knownLimits": [
+    "I0 proves source-line integration and package compatibility, not a production Harness state cutover",
+    "The independent durable real-model Runtime E2E remains unproven and belongs to the next evaluation step",
+    "The integration commit is local until published; historical receipts remain bound to their original implementation revisions"
+  ],
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:784abe23069026d939b097c46c3c5991dadaffd35b1a83c01307e3a3b63b6fba"
+  }
+}
