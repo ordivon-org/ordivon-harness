@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-h1-independent-cli-acceptance",
+  "implementationRevision": "e9612fa1d62592e2cf8e01c780ce2ec920560a91",
+  "hostRequiredSourceRevision": "428a6f2f90b4050535507c9be078c450552177e5",
+  "protocolRequiredSourceRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "checks": {
+    "independentCliDefault": true,
+    "hostCompatibilityNamespace": true,
+    "contractInAuthority": true,
+    "budgetAuthorityMaterializedFromContract": true,
+    "canonicalNoToolGrantBound": true,
+    "toolBearingCliFailsClosedBeforeProvider": true,
+    "rootCapabilityDiscoveryHostFree": true,
+    "foreignRecoveryUnknownIsConservative": true,
+    "fullRegressionPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "lockContractPassed": true,
+    "wheelSmokePassed": true,
+    "baseWheelHostFree": true,
+    "hostExtraVerified": true,
+    "realDeepSeekCliRunPassed": true,
+    "restartInspectionPassed": true,
+    "productionCutoverActivated": false,
+    "dualWriteActivated": false
+  },
+  "testSummary": {
+    "unitTestsRun": 378,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "wheelAcceptance": {
+    "cliCommandsVerified": 19,
+    "hostCliCommandsVerified": 8,
+    "hostFreeCoreVerified": true,
+    "hostExtraVerified": true,
+    "packageVersion": "0.6.0"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "toolProfile": "canonical-no-tool",
+    "modelCalls": 1,
+    "totalTokens": 608,
+    "stopCode": "candidate_completed",
+    "runStatus": "completed",
+    "runReceiptPresent": true,
+    "completionProposalPresent": true,
+    "reopenStatus": "completed",
+    "recoverAction": "none",
+    "doctorOk": true
+  },
+  "knownLimits": [
+    "H1 changes the default operational CLI semantics but does not migrate or activate retained production state roots",
+    "Tool-bearing independent CLI execution remains disabled until a caller supplies HarnessRuntimeClient through the Host-free Python API; no Host Runtime transport is copied into Harness",
+    "Historical Host-backed HarnessRunner, durable decoders, cutover controls and package-root lazy aliases remain for pre-1.0 compatibility",
+    "This H1 acceptance proves a real no-Tool DeepSeek Provider path; it does not claim a live independent Runtime Tool E2E through the CLI"
+  ],
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:145cf1da248cdb74b29f943c07fce7c161113442ddda25174adc87c10b4be4da"
+  }
+}
