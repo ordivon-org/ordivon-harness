@@ -2,11 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import os
 from typing import Protocol, runtime_checkable
+import uuid
 
 from anc_canonical import JsonValue
 
 from .core_contracts import HarnessRunContract
+
+
+def new_execution_owner_id(component: str) -> str:
+    """Return one process-instance execution owner, never a durable logical identity."""
+    if not component or component != component.strip():
+        raise ValueError("Harness execution-owner component must be non-empty and trimmed")
+    return f"{component}:{os.getpid()}:{uuid.uuid4().hex}"
 
 
 class HarnessRunStatus(StrEnum):

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tempfile
+import threading
+import time
 import unittest
 
 from ordivon_harness.independent_result import IndependentRunRecorder
@@ -46,6 +49,64 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
             clock_ms=clock,
             monotonic_ms=clock,
         )
+
+    def test_concurrent_workers_dispatch_one_physical_provider_call(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            run_contract = contract("same-run-race")
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(run_contract)
+
+            workers = 12
+            barrier = threading.Barrier(workers)
+            physical_calls: list[int] = []
+            physical_lock = threading.Lock()
+
+            class CountingAdapter(ScriptedTurnAdapter):
+                def __init__(self, worker: int) -> None:
+                    super().__init__((completed_result("same-run-race"),))
+                    self.worker = worker
+
+                def invoke(self, request):
+                    with physical_lock:
+                        physical_calls.append(self.worker)
+                    time.sleep(0.03)
+                    return super().invoke(request)
+
+            def execute(worker: int) -> str:
+                clock = FixedClock()
+                try:
+                    with SQLiteHarnessStore(root) as store:
+                        continuity = SQLiteHarnessRunContinuityStore.open(
+                            store, run_contract.harness_run_id, clock_ms=clock
+                        )
+                        adapter = CountingAdapter(worker)
+                        bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
+                        runner = self.runner(
+                            run_contract, continuity, adapter, bridge, clock
+                        )
+                        barrier.wait()
+                        runner.run(({"role": "user", "content": "complete"},))
+                    return "ok"
+                except Exception as error:  # concurrency losers must not reach Provider
+                    return type(error).__name__
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                outcomes = list(pool.map(execute, range(workers)))
+
+            self.assertEqual(len(physical_calls), 1)
+            self.assertEqual(outcomes.count("ok"), 1)
+            with SQLiteHarnessStore(root) as store:
+                report = store.doctor(full=True)
+                projection = store.load_run(run_contract.harness_run_id)
+                events = store.list_run_events(run_contract.harness_run_id)
+                event_kinds = [event.event_kind for event in events]
+                self.assertTrue(report["healthy"] )
+                self.assertEqual(projection.status, HarnessRunStatus.COMPLETED)
+                self.assertEqual(event_kinds.count("harness.provider-call-claimed"), 1)
+                self.assertEqual(event_kinds.count("harness.provider-call-dispatching"), 1)
+                self.assertEqual(event_kinds.count("harness.provider-call-completed"), 1)
+                self.assertEqual(event_kinds.count("harness.run-completed"), 1)
 
     def test_candidate_completion_is_terminal_and_restart_inspectable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

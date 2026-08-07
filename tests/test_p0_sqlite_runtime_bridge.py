@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tempfile
+import threading
 import unittest
 
 from anc_canonical import JsonValue, canonical_digest
@@ -313,6 +315,74 @@ class SQLiteHarnessRuntimeBridgeTests(unittest.TestCase):
             runtime,
         )
         return store, clock, run_contract, continuity, bridge
+
+    def test_concurrent_workers_dispatch_one_physical_runtime_call(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            run_contract = contract("tool-race")
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(run_contract)
+
+            class CountingRuntime(FakeRuntime):
+                def __init__(self) -> None:
+                    super().__init__("direct")
+                    self.lock = threading.Lock()
+
+                def call_tool(self, name, arguments):
+                    if name == "workspace.exec":
+                        with self.lock:
+                            return super().call_tool(name, arguments)
+                    return super().call_tool(name, arguments)
+
+            runtime = CountingRuntime()
+            workers = 12
+            barrier = threading.Barrier(workers)
+
+            def execute(worker: int) -> str:
+                try:
+                    with SQLiteHarnessStore(root) as store:
+                        clock = FixedClock()
+                        continuity = SQLiteHarnessRunContinuityStore.open(
+                            store, run_contract.harness_run_id, clock_ms=clock
+                        )
+                        bridge = SQLiteHarnessRuntimeBridge(
+                            run_contract,
+                            continuity,
+                            execution_binding(run_contract, continuity),
+                            runtime,
+                        )
+                        state = bound_state()
+                        bridge.bind_run_state(
+                            messages=state.messages,
+                            observations=(),
+                            remaining_budget=state.remaining_budget,
+                            requested_model_id=state.requested_model_id,
+                            effective_model_id=None,
+                            active_elapsed_ms=0,
+                        )
+                        barrier.wait()
+                        bridge.execute(
+                            tool_turn("tool-race").tool_calls[0],
+                            step_id="turn-1-tool-race",
+                        )
+                    return "ok"
+                except Exception as error:
+                    return type(error).__name__
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                outcomes = list(pool.map(execute, range(workers)))
+
+            self.assertEqual(runtime.workspace_exec_count, 1)
+            self.assertEqual(outcomes.count("ok"), 1)
+            with SQLiteHarnessStore(root) as store:
+                report = store.doctor(full=True)
+                event_kinds = [
+                    event.event_kind
+                    for event in store.list_run_events(run_contract.harness_run_id)
+                ]
+                self.assertTrue(report["healthy"])
+                self.assertEqual(event_kinds.count("harness.tool-step-prepared"), 1)
+                self.assertEqual(event_kinds.count("harness.tool-step-recorded"), 1)
 
     def test_real_agent_loop_searches_runtime_and_completes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -13,8 +13,8 @@ audience:
   - operator
   - builder
   - agent
-updated: 2026-08-05
-summary: Canonical operational contract for Harness Run execution, cancellation, resume, recovery, semantic Doctor, and escalation to Host or Runtime.
+updated: 2026-08-08
+summary: Canonical operational contract for Harness Run execution, concurrent worker fencing, targeted reopen validation, Doctor, recovery, and escalation.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -49,9 +49,13 @@ ordivon-harness store-restore /path/to/backup /new/state/root
 
 Only `store-init` creates an authority root. Backup/restore refuse unsafe destination reuse and verification checks both database and retained CAS object truth.
 
+Ordinary Store open performs global schema/SQLite/CAS validation. It deliberately does not replay every Run history. A Run is semantically replay-validated when its Continuity Store is opened, before Provider or Tool execution can resume. `doctor` / `store-doctor` remains the explicit authority-wide check that replays all Run histories.
+
 ## Run handling
 
 A CREATED Run is executed with `run`. A PAUSED Run requires `resume`. A terminal Run is inspected rather than executed again. Contract digest conflicts fail closed.
+
+Multiple workers may open the same authority root, but execution leases and Provider claim holders are instance-unique. Competing workers must lose before physical Provider/Runtime delivery; deterministic event identity is for replay/idempotency, not permission for multiple workers to execute the same dispatch.
 
 ## Provider recovery
 

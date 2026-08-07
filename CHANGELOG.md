@@ -25,6 +25,13 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - bounded Agent loop, pause/resume snapshots, Trace, Run Receipt, Recovery Assessment and CompletionProposal;
 - repository-repair read/edit bridges and the Host-free duck-typed `host_external_adapter` integration module.
 
+### Fixed
+
+- concurrent same-digest CAS publication now preserves one immutable published inode and tolerates publication-only `ctime` movement without weakening canonical digest, inode, size, mtime, mode, or no-follow checks;
+- SQLite database/WAL/SHM hardening now happens outside active SQLite lock ownership, preventing hardening descriptors from disturbing process-scoped locks under multi-process Store use;
+- Continuity, Provider-claim, and terminal-recording execution owners are process-instance unique, so idempotent durable dispatch admission cannot be consumed as duplicate physical Provider or Runtime execution;
+- ordinary Store open validates global physical state without replaying every unrelated Run; the target Run is fully history-validated when Continuity opens and full Doctor remains authority-wide.
+
 ### Verification
 
 - current deterministic suite runs only the independent product line and preserves Provider/Tool response-loss, fencing, recovery and restart coverage;

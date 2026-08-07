@@ -16,6 +16,7 @@ from .store import (
     HarnessEventAdmission,
     HarnessStore,
     StoredHarnessObject,
+    new_execution_owner_id,
 )
 
 _STORE_LEASE_TTL_MS = 30_000
@@ -329,6 +330,7 @@ class IndependentRunRecorder:
         self.contract = contract
         self.binding = binding
         self.clock_ms = clock_ms
+        self._execution_owner_id = new_execution_owner_id("independent-result")
 
     def record_trace_segment(self, trace: HarnessTrace) -> HarnessEventAdmission:
         if trace.harness_run_id != self.contract.harness_run_id:
@@ -849,7 +851,7 @@ class IndependentRunRecorder:
         )[7:31]
         return self.store.acquire_run_lease(
             self.contract.harness_run_id,
-            owner_id=f"independent-result:{operation}:{owner}",
+            owner_id=f"{self._execution_owner_id}:{operation}:{owner}",
             ttl_ms=_STORE_LEASE_TTL_MS,
             now_ms=now_ms,
         )

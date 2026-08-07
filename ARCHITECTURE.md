@@ -13,8 +13,8 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-07
-summary: Canonical architecture for caller-neutral independent Harness Runs and the retained Host-backed compatibility boundary.
+updated: 2026-08-08
+summary: Canonical architecture for caller-neutral independent Harness Runs, execution-instance fencing, and targeted durable-state validation.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -77,6 +77,10 @@ The independent Store is the only current Harness writer. It owns:
 - Trace, Run Receipt and CompletionProposal objects.
 
 There is no Host-backed Store, Assignment writer, dual write or cutover selector.
+
+Ordinary Store open validates global physical authority: schema, SQLite `quick_check`, and retained CAS object identity/content. It does **not** replay every unrelated Run. Opening a Run continuity boundary validates that Run's complete semantic history before execution; explicit full Doctor remains the authority-wide history replay. This keeps fail-closed semantics local to the Run being executed instead of making every worker pay an all-Runs startup cost.
+
+Durable event and request identities remain deterministic for idempotent replay. Execution ownership does not: Continuity Stores, Agent Bridges, and terminal recorders use process-instance owner identities for leases and Provider claims so two workers cannot consume one durable dispatch admission as two physical executions.
 
 ## Provider lifecycle
 

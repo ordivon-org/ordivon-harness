@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-07
+updated: 2026-08-08
 summary: Stable maturity claim, proven capabilities, support boundary and known limits for Ordivon Harness.
 evidence_status: verified
 readiness: READY
@@ -52,6 +52,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 ## Known limits
 
 - primary CLI does not construct Tool-bearing Runtime clients;
+- the current Host-free external-executor adapter covers generic foreign Runs, not a direct `CognitionWorkRequest` → structured `ActionSelection`/`ActionProposal` bridge for Host cognition;
 - CompletionProposal is not caller/domain completion authority;
 - Provider/Tool UNKNOWN may require external reconciliation;
 - public API and owner-local schemas remain pre-1.0;

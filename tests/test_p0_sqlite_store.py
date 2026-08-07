@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import stat
 import tempfile
+import threading
 import unittest
 
 from ordivon_harness.core_contracts import (
@@ -17,6 +19,7 @@ from ordivon_harness.sqlite_store import (
     HarnessRevisionConflict,
     HarnessTerminalConflict,
     SQLiteHarnessStore,
+    _ContentAddressedStore,
 )
 from ordivon_harness.store import (
     HarnessEventAdmission,
@@ -361,6 +364,60 @@ class SQLiteHarnessStoreTests(unittest.TestCase):
                         )
                     )
 
+    def test_concurrent_store_open_and_unique_run_creation_preserves_journal(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            with SQLiteHarnessStore.initialize(root):
+                pass
+            workers = 24
+
+            def create(worker: int) -> int:
+                with SQLiteHarnessStore(root) as store:
+                    store.create_run(
+                        run_contract(
+                            run_id=f"harness-run:concurrent-open-{worker}",
+                            caller_ref=f"trial:concurrent-open-{worker}",
+                        )
+                    )
+                return worker
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                self.assertEqual(sorted(pool.map(create, range(workers))), list(range(workers)))
+
+            with SQLiteHarnessStore(root) as store:
+                report = store.doctor(full=True)
+                self.assertTrue(report["healthy"] )
+                self.assertEqual(report["runs"], workers)
+
+    def test_concurrent_same_digest_publish_preserves_one_object_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "objects"
+            workers = 32
+            barrier = threading.Barrier(workers)
+
+            def publish(worker: int):
+                store = _ContentAddressedStore(root)
+                barrier.wait()
+                return store.put(
+                    {"shared": "immutable", "workerIndependent": True},
+                    kind="concurrent-cas-object",
+                )
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                first = list(pool.map(publish, range(workers)))
+            self.assertEqual(len({item.digest for item in first}), 1)
+            self.assertEqual(len(tuple(root.glob("*.json"))), 1)
+            store = _ContentAddressedStore(root)
+            before, before_identity = store.inspect_with_identity(first[0].digest)
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                second = list(pool.map(publish, range(workers)))
+            after, after_identity = store.inspect_with_identity(first[0].digest)
+            self.assertEqual(first[0], before)
+            self.assertEqual({item.digest for item in second}, {first[0].digest})
+            self.assertEqual(after, before)
+            self.assertEqual(after_identity, before_identity)
+
     def test_private_modes_and_required_schema(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
@@ -392,6 +449,39 @@ class SQLiteHarnessStoreTests(unittest.TestCase):
                         "tool_steps",
                     },
                 )
+
+    def test_operational_open_defers_unrelated_history_but_target_run_fails_closed(self) -> None:
+        from ordivon_harness.ordivon.sqlite_run_store import (
+            SQLiteHarnessRunContinuityStore,
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            contract_value = run_contract(
+                run_id="harness-run:targeted-history",
+                caller_ref="trial:targeted-history",
+            )
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(contract_value)
+                store.connection.execute(
+                    "UPDATE run_events SET event_kind = 'harness.run-completed' "
+                    "WHERE harness_run_id = ? AND run_revision = 1",
+                    (contract_value.harness_run_id,),
+                )
+
+            with SQLiteHarnessStore(root) as reopened:
+                self.assertEqual(
+                    reopened.load_run(contract_value.harness_run_id).status,
+                    HarnessRunStatus.CREATED,
+                )
+                with self.assertRaises(HarnessJournalCorruption):
+                    reopened.validate_run_history(contract_value.harness_run_id)
+                with self.assertRaises(HarnessJournalCorruption):
+                    SQLiteHarnessRunContinuityStore.open(
+                        reopened, contract_value.harness_run_id
+                    )
+                with self.assertRaises(HarnessJournalCorruption):
+                    reopened.doctor(full=True)
 
     def test_missing_cas_object_fails_reopen_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

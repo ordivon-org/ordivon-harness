@@ -205,6 +205,17 @@ class _ObjectFileIdentity:
             self.mode,
         )
 
+    def stable_read_identity(self) -> tuple[int, int, int, int, int]:
+        # ctime changes when an already-published inode loses a temporary hard-link.
+        # Content address, inode, size, mtime and mode are the stable read facts.
+        return (
+            self.device,
+            self.inode,
+            self.byte_length,
+            self.modified_at_ns,
+            self.mode,
+        )
+
 
 class _ContentAddressedStore:
     def __init__(self, root: Path) -> None:
@@ -216,11 +227,25 @@ class _ContentAddressedStore:
         os.chmod(root, 0o700)
         self.root = root
         for path in self.root.glob("*.json"):
-            if path.is_symlink() or not path.is_file():
+            flags = os.O_RDONLY | os.O_NONBLOCK
+            flags |= getattr(os, "O_CLOEXEC", 0)
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            try:
+                descriptor = os.open(path, flags)
+            except OSError as error:
                 raise HarnessObjectCorrupt(
-                    f"Harness object path is not a regular file: {path.name}"
-                )
-            os.chmod(path, 0o600)
+                    f"Harness object path cannot be safely opened: {path.name}"
+                ) from error
+            try:
+                file_stat = os.fstat(descriptor)
+                if not stat.S_ISREG(file_stat.st_mode):
+                    raise HarnessObjectCorrupt(
+                        f"Harness object path is not a regular file: {path.name}"
+                    )
+                if stat.S_IMODE(file_stat.st_mode) != 0o600:
+                    os.fchmod(descriptor, 0o600)
+            finally:
+                os.close(descriptor)
 
     def put(self, value: JsonValue, *, kind: str) -> StoredHarnessObject:
         if not kind or kind != kind.strip():
@@ -233,13 +258,17 @@ class _ContentAddressedStore:
         encoded = canonical_bytes(envelope)
         digest = canonical_digest(envelope)
         path = self._path(digest)
-        if path.exists():
-            if path.is_symlink() or not path.is_file():
-                raise HarnessObjectCorrupt("Harness content-addressed object is not a regular file")
-            os.chmod(path, 0o600)
-            if path.read_bytes() != encoded:
-                raise HarnessObjectCorrupt("Harness content address maps to different bytes")
-            return StoredHarnessObject(digest, len(encoded), kind)
+        try:
+            existing_envelope, existing, _ = self._load(digest)
+        except HarnessObjectMissing:
+            pass
+        else:
+            if canonical_bytes(existing_envelope) != encoded:
+                raise HarnessObjectCorrupt(
+                    "Harness content address maps to different bytes"
+                )
+            return existing
+
         temporary = path.with_suffix(f".tmp-{os.getpid()}-{uuid.uuid4().hex}")
         directory_fd: int | None = None
         try:
@@ -248,8 +277,16 @@ class _ContentAddressedStore:
                 handle.write(encoded)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
-            os.chmod(path, 0o600)
+            try:
+                os.link(temporary, path, follow_symlinks=False)
+            except FileExistsError:
+                existing_envelope, existing, _ = self._load(digest)
+                if canonical_bytes(existing_envelope) != encoded:
+                    raise HarnessObjectCorrupt(
+                        "Harness content address maps to different bytes"
+                    )
+                return existing
+            temporary.unlink()
             directory_fd = os.open(
                 self.root,
                 os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
@@ -281,18 +318,28 @@ class _ContentAddressedStore:
         self, digest: str
     ) -> tuple[dict[str, JsonValue], StoredHarnessObject, _ObjectFileIdentity]:
         path = self._path(digest)
+        flags = os.O_RDONLY | os.O_NONBLOCK
+        flags |= getattr(os, "O_CLOEXEC", 0)
+        flags |= getattr(os, "O_NOFOLLOW", 0)
         try:
-            if path.is_symlink():
-                raise HarnessObjectCorrupt("Harness object cannot be a symlink")
-            with path.open("rb") as handle:
-                before = _ObjectFileIdentity.from_stat(os.fstat(handle.fileno()))
-                encoded = handle.read()
-                after = _ObjectFileIdentity.from_stat(os.fstat(handle.fileno()))
+            descriptor = os.open(path, flags)
         except FileNotFoundError as error:
             raise HarnessObjectMissing(f"Harness object is missing: {digest}") from error
         except OSError as error:
             raise HarnessObjectCorrupt(f"Harness object cannot be read: {digest}") from error
-        if before != after or before.byte_length != len(encoded):
+        try:
+            before = _ObjectFileIdentity.from_stat(os.fstat(descriptor))
+            with os.fdopen(descriptor, "rb", closefd=False) as handle:
+                encoded = handle.read()
+            after = _ObjectFileIdentity.from_stat(os.fstat(descriptor))
+        except OSError as error:
+            raise HarnessObjectCorrupt(f"Harness object cannot be read: {digest}") from error
+        finally:
+            os.close(descriptor)
+        if (
+            before.stable_read_identity() != after.stable_read_identity()
+            or before.byte_length != len(encoded)
+        ):
             raise HarnessObjectCorrupt(f"Harness object changed while read: {digest}")
         if before.mode != 0o600:
             raise HarnessObjectCorrupt(f"Harness object mode is not private: {digest}")
@@ -370,6 +417,10 @@ class SQLiteHarnessStore:
         if self.database_path.is_symlink() or not self.database_path.is_file():
             raise HarnessJournalCorruption("Harness Journal must be a regular file")
         self.objects = _ContentAddressedStore(self.root / "objects")
+        # Never open/close WAL or SHM sidecars after this process holds SQLite
+        # locks: POSIX fcntl locks are process-associated, and closing another fd
+        # for the same inode can release locks owned by the SQLite connection.
+        self._harden_database_files()
         self.connection = sqlite3.connect(self.database_path, isolation_level=None)
         try:
             self.connection.row_factory = sqlite3.Row
@@ -377,9 +428,8 @@ class SQLiteHarnessStore:
             self.connection.execute("PRAGMA busy_timeout = 5000")
             self.connection.execute("PRAGMA journal_mode = WAL")
             self.connection.execute("PRAGMA synchronous = FULL")
-            self._harden_database_files()
             self._validate_schema()
-            self.doctor(full=True)
+            self._validate_open()
         except BaseException:
             self.connection.close()
             raise
@@ -877,6 +927,28 @@ class SQLiteHarnessStore:
             ).rowcount
         return changed == 1
 
+    def _validate_open(self) -> None:
+        """Validate global physical authority without replaying unrelated Run histories."""
+        quick = tuple(str(row[0]) for row in self.connection.execute("PRAGMA quick_check"))
+        if quick != ("ok",):
+            raise HarnessJournalCorruption(f"Harness Journal quick_check failed: {quick}")
+        rows = self.connection.execute(
+            "SELECT digest, kind, byte_length FROM object_refs ORDER BY digest"
+        ).fetchall()
+        for row in rows:
+            actual, _ = self.objects.inspect_with_identity(row["digest"])
+            expected = StoredHarnessObject(
+                row["digest"], int(row["byte_length"]), row["kind"]
+            )
+            if actual != expected:
+                raise HarnessJournalCorruption(
+                    f"Harness object metadata differs from Journal: {row['digest']}"
+                )
+
+    def validate_run_history(self, harness_run_id: str) -> None:
+        """Fail closed on the semantic history of one Run before execution resumes."""
+        self._validate_run_history(harness_run_id)
+
     def doctor(self, *, full: bool = True) -> dict[str, JsonValue]:
         quick = tuple(str(row[0]) for row in self.connection.execute("PRAGMA quick_check"))
         if quick != ("ok",):
@@ -1205,14 +1277,33 @@ class SQLiteHarnessStore:
             self.connection.execute("COMMIT")
 
     def _harden_database_files(self) -> None:
-        for path in (
-            self.database_path,
-            Path(str(self.database_path) + "-wal"),
-            Path(str(self.database_path) + "-shm"),
+        for path, required in (
+            (self.database_path, True),
+            (Path(str(self.database_path) + "-wal"), False),
+            (Path(str(self.database_path) + "-shm"), False),
         ):
-            if path.exists():
-                if path.is_symlink() or not path.is_file():
+            flags = os.O_RDONLY | os.O_NONBLOCK
+            flags |= getattr(os, "O_CLOEXEC", 0)
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            try:
+                descriptor = os.open(path, flags)
+            except FileNotFoundError:
+                if required:
+                    raise HarnessJournalCorruption(
+                        f"Harness Journal file disappeared: {path.name}"
+                    )
+                continue
+            except OSError as error:
+                raise HarnessJournalCorruption(
+                    f"Harness Journal file cannot be safely opened: {path.name}"
+                ) from error
+            try:
+                file_stat = os.fstat(descriptor)
+                if not stat.S_ISREG(file_stat.st_mode):
                     raise HarnessJournalCorruption(
                         f"Harness Journal file is not regular: {path.name}"
                     )
-                os.chmod(path, 0o600)
+                if stat.S_IMODE(file_stat.st_mode) != 0o600:
+                    os.fchmod(descriptor, 0o600)
+            finally:
+                os.close(descriptor)

@@ -11,6 +11,7 @@ from ..protocol import (
     HarnessRunPauseReason,
 )
 from ..run_state import HarnessRunState
+from ..store import new_execution_owner_id
 from .control import ExecutionControl
 from .model import (
     AgentToolCall,
@@ -86,8 +87,8 @@ class SQLiteHarnessAgentBridge:
         self.run_store = run_store
         self.catalog_digest = contract.tool_catalog_digest
         self._provider_source = provider_source or run_store.assignment_provider_source()
-        self._provider_holder_id = provider_holder_id or (
-            f"agent-bridge:{contract.harness_run_id.removeprefix('harness-run:')}"
+        self._provider_holder_id = provider_holder_id or new_execution_owner_id(
+            "agent-bridge"
         )
         self._provider_adapter_id: str | None = None
         self._provider_requested_model_id: str | None = None

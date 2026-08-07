@@ -27,7 +27,12 @@ from ..sqlite_store import (
     HarnessRevisionConflict,
     SQLiteHarnessStore,
 )
-from ..store import HarnessRunEventRecord, HarnessRunLease, StoredHarnessObject
+from ..store import (
+    HarnessRunEventRecord,
+    HarnessRunLease,
+    StoredHarnessObject,
+    new_execution_owner_id,
+)
 from .continuity_records import HarnessDispatchFenceV2, HarnessProviderCallRecordV2
 from .model import AgentTurnResult
 from .run_store_port import (
@@ -109,6 +114,7 @@ class SQLiteHarnessRunContinuityStore:
         *,
         clock_ms: Callable[[], int] | None = None,
     ) -> None:
+        store.validate_run_history(contract.harness_run_id)
         projection = store.load_run(contract.harness_run_id)
         if (
             projection.contract_digest != contract.digest
@@ -127,6 +133,7 @@ class SQLiteHarnessRunContinuityStore:
             assignment_digest=contract.digest,
         )
         self._clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
+        self._execution_owner_id = new_execution_owner_id("continuity")
         self._bound_state: HarnessRunState | None = None
         self._provider_outcome_requires_resume = False
         self._snapshot_sequence = self._current_snapshot_sequence()
@@ -1119,7 +1126,7 @@ class SQLiteHarnessRunContinuityStore:
         )[7:31]
         return self.store.acquire_run_lease(
             self.harness_run_id,
-            owner_id=f"continuity:{operation}:{owner_token}",
+            owner_id=f"{self._execution_owner_id}:{operation}:{owner_token}",
             ttl_ms=_STORE_LEASE_TTL_MS,
             now_ms=now_ms,
         )
