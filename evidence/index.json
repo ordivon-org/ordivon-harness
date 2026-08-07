@@ -98,7 +98,7 @@
       "file": "hho-p0-release-h2-f7e03aa.json",
       "status": "historical",
       "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
-      "scope": "Exact remote Host pin with live Host→Harness→Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
+      "scope": "Exact remote Host pin with live Host\u2192Harness\u2192Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
     },
     {
       "claimId": "harness.observation.exporter.b2-a",
@@ -152,9 +152,16 @@
     {
       "claimId": "harness.operational.h1-independent-cli",
       "file": "harness-h1-independent-cli-e9612fa.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "e9612fa1d62592e2cf8e01c780ce2ec920560a91",
-      "scope": "Current independent-first operational CLI: caller-supplied Contract, no-Tool DeepSeek run/resume/status/inspect/recover, Host-free base wheel, explicit Host compatibility namespace, durable Receipt/CompletionProposal and restart reopening without production cutover"
+      "scope": "Historical H1 independent-first transition; superseded by H3 removal of the Host-backed product line while the exact H1 receipt remains unchanged"
+    },
+    {
+      "claimId": "harness.operational.h3-independent-product",
+      "file": "harness-h3-independent-product-1577610.json",
+      "implementationRevision": "1577610e3aa3cf28d09c89aeab64833c6fd6c628",
+      "scope": "Current H3 single independent Harness product line: Protocol-only dependency graph, one Harness state root, 14-command CLI, durable Provider/Tool continuity, Host-free wheel and real DeepSeek restart acceptance",
+      "status": "verified"
     }
   ]
 }

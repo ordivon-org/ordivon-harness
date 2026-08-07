@@ -117,6 +117,7 @@ def main() -> int:
         if isinstance(integrity, dict) and receipt.get("kind") in {
             "ordivon.harness-p0-scale-acceptance",
             "ordivon.harness-c3-agent-first-api-acceptance",
+            "ordivon.harness-h3-independent-product-acceptance",
         }:
             if integrity.get("payloadDigest") != _canonical_payload_digest(receipt):
                 errors.append(f"integrity mismatch: {filename}")

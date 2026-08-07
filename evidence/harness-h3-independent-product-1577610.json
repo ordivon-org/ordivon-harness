@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-h3-independent-product-acceptance",
+  "implementationRevision": "1577610e3aa3cf28d09c89aeab64833c6fd6c628",
+  "protocolRequiredSourceRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "checks": {
+    "singleIndependentProductLine": true,
+    "hostDependencyRemoved": true,
+    "hostCompatibilityProductRemoved": true,
+    "hostBackedModulesRemoved": true,
+    "singleStateRootCli": true,
+    "independentCliOnly": true,
+    "sourceTreeHostImportsAbsent": true,
+    "providerDurabilityRetained": true,
+    "toolDurabilityRetained": true,
+    "hostExternalAdapterHostFree": true,
+    "fullRegressionPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "lockContractPassed": true,
+    "wheelSmokePassed": true,
+    "baseWheelHostFree": true,
+    "realDeepSeekCliRunPassed": true,
+    "restartInspectionPassed": true,
+    "cutoverCompatibilityPresent": false,
+    "dualWritePresent": false,
+    "hostExtraPresent": false
+  },
+  "testSummary": {
+    "unitTestsRun": 146,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0
+  },
+  "wheelAcceptance": {
+    "cliCommandsVerified": 14,
+    "hostFreeCoreVerified": true,
+    "hostInstalled": false,
+    "hostLoaded": false,
+    "runtimeDependencyCount": 1,
+    "packageVersion": "0.6.0"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "toolProfile": "canonical-no-tool",
+    "modelCalls": 1,
+    "totalTokens": 605,
+    "stopCode": "candidate_completed",
+    "runStatus": "completed",
+    "runReceiptPresent": true,
+    "completionProposalPresent": true,
+    "reopenStatus": "completed",
+    "inspectReceiptPresent": true,
+    "inspectProposalPresent": true,
+    "recoverAction": "none",
+    "doctorHealthy": true,
+    "doctorRuns": 1
+  },
+  "knownLimits": [
+    "The primary CLI executes only the canonical no-Tool DeepSeek profile; Tool-bearing applications supply HarnessRuntimeClient through the Host-free Python API",
+    "Pre-H3 Host-backed Assignment/Runner/cutover state is intentionally not a current compatibility or decoder obligation",
+    "This live acceptance proves the real no-Tool Provider path; Runtime Tool response-loss and recovery are covered by deterministic independent Runtime bridge tests rather than this live Provider receipt",
+    "host_external_adapter remains a duck-typed Host-free integration helper; H3 does not make Host a Harness package dependency"
+  ],
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:f3254b024566de2f9d8282130c6ad08a27068ae77224c5b4981c59e78293e361"
+  }
+}
