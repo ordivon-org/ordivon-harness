@@ -160,7 +160,14 @@
       "claimId": "harness.operational.h3-independent-product",
       "file": "harness-h3-independent-product-1577610.json",
       "implementationRevision": "1577610e3aa3cf28d09c89aeab64833c6fd6c628",
-      "scope": "Current H3 single independent Harness product line: Protocol-only dependency graph, one Harness state root, 14-command CLI, durable Provider/Tool continuity, Host-free wheel and real DeepSeek restart acceptance",
+      "scope": "Historical H3 single independent-product acceptance; superseded as current verification by H4 concurrency, physical-dispatch fencing, CAS publication and targeted-reopen hardening while the exact H3 receipt remains unchanged",
+      "status": "historical"
+    },
+    {
+      "claimId": "harness.operational.h4-stress-hardening",
+      "file": "harness-h4-stress-ce7e861.json",
+      "implementationRevision": "ce7e861f59cccb43bcb78b3d7aa05dacf90ebe73",
+      "scope": "Current H4 high-intensity acceptance: multi-process shared-root Runs, exactly-once physical Provider/Tool fencing under worker races, immutable concurrent CAS publication, targeted Run history validation, scale/open-cost pressure and four concurrent real DeepSeek Runs",
       "status": "verified"
     }
   ]

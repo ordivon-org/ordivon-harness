@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-h4-stress-acceptance",
+  "implementationRevision": "ce7e861f59cccb43bcb78b3d7aa05dacf90ebe73",
+  "protocolRequiredSourceRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "checks": {
+    "fullRegressionPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "lockContractPassed": true,
+    "wheelSmokePassed": true,
+    "baseWheelHostFree": true,
+    "sameDigestConcurrentCasStable": true,
+    "multiProcessStoreHealthy": true,
+    "multiProcessFullRunsHealthy": true,
+    "sameRunPhysicalProviderExactlyOnce": true,
+    "sameToolPhysicalRuntimeExactlyOnce": true,
+    "executionOwnersInstanceUnique": true,
+    "targetRunHistoryFailsClosed": true,
+    "fullDoctorStillAuthorityWide": true,
+    "realConcurrentDeepSeekPassed": true
+  },
+  "testSummary": {
+    "unitTestsRun": 151,
+    "skipped": 3,
+    "failures": 0,
+    "errors": 0,
+    "highRiskRepeatIterations": 10,
+    "casRaceRepeatIterations": 100
+  },
+  "concurrencyAcceptance": {
+    "sameDigestCasWorkers": 32,
+    "sameDigestCasWavesPerRegression": 2,
+    "sharedRootScriptedRuns": 64,
+    "sharedRootScriptedProcessConcurrency": 16,
+    "sharedRootScriptedEvents": 384,
+    "sharedRootScriptedReceipts": 64,
+    "sharedRootScriptedCompletionProposals": 64,
+    "sameRunProviderRaceWorkersObserved": 16,
+    "sameRunProviderPhysicalInvocations": 1,
+    "sameToolRaceWorkersObserved": 12,
+    "sameToolRuntimePhysicalInvocations": 1
+  },
+  "scaleAcceptance": {
+    "runs": 400,
+    "eventsPerRun": 150,
+    "events": 60000,
+    "objects": 801,
+    "preTargetedValidationStoreOpenMeanMs": 3494.225551999989,
+    "finalStoreOpenMeanMs": 142.82847439462785,
+    "finalTargetRunValidationMeanMs": 7.9403029987588525
+  },
+  "wheelAcceptance": {
+    "cliCommandsVerified": 14,
+    "hostFreeCoreVerified": true,
+    "runtimeDependencyCount": 1,
+    "packageVersion": "0.6.0"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "concurrentRuns": 4,
+    "completedRuns": 4,
+    "modelCallsPerRun": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "totalTokensPerRun": [
+      589,
+      589,
+      594,
+      591
+    ],
+    "stopCodes": [
+      "candidate_completed",
+      "candidate_completed",
+      "candidate_completed",
+      "candidate_completed"
+    ],
+    "runReceiptPresent": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "completionProposalPresent": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "doctorHealthy": true,
+    "providerClaimedEvents": 4,
+    "providerCompletedEvents": 4
+  },
+  "fixedFailureModes": [
+    "Host/Harness SQLite WAL-SHM hardening must not open and close sidecar descriptors while the process owns active SQLite locks",
+    "Harness CAS same-digest publication must never replace an already-published inode or treat hard-link publication ctime movement as content mutation",
+    "Harness durable event idempotency must not substitute for process-instance execution ownership at Provider or Tool physical dispatch boundaries",
+    "Harness ordinary Store reopen must not replay every unrelated Run history before one Agent worker can start useful work"
+  ],
+  "knownLimits": [
+    "The primary CLI still executes only the canonical no-Tool DeepSeek profile; Tool-bearing applications supply HarnessRuntimeClient through the Host-free Python API",
+    "The Host-free external-executor adapter covers generic foreign Runs but there is not yet a direct CognitionWorkRequest to structured ActionSelection/ActionProposal bridge for Host cognition",
+    "CompletionProposal remains a proposal to the caller rather than caller/domain completion authority"
+  ],
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:7d4e0183f397fd472ea3689cf35348f7915a8c78506aeb89751f234b67d77f73"
+  }
+}
