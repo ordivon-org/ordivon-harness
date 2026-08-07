@@ -925,18 +925,7 @@ class HarnessRunner:
 
     @staticmethod
     def _budget_to_assignment(budget: RunBudget) -> dict[str, JsonValue]:
-        return {
-            "maxModelCalls": budget.max_model_calls,
-            "maxToolCalls": budget.max_tool_calls,
-            "maxObservationBytes": budget.max_observation_bytes,
-            "maxWallTimeMs": budget.max_wall_time_ms,
-            "maxTotalTokens": budget.max_total_tokens,
-            "maxModelRetries": budget.max_model_retries,
-            "maxToolCorrections": budget.max_tool_corrections,
-            "maxObservationOnlyTurns": budget.max_observation_only_turns,
-            "maxNoProgressTurns": budget.max_no_progress_turns,
-            "maxModelObservationBytes": budget.max_model_observation_bytes,
-        }
+        return budget.to_contract_dict()
 
     def _require_runtime(self) -> RuntimeClient:
         if self.runtime is None:

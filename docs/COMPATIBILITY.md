@@ -80,7 +80,7 @@ Historical root exports remain temporarily available. New code should not add de
 Current state includes versioned forms of:
 
 - TaskContract and ToolGrant;
-- NativeHarnessRunContract;
+- caller-neutral HarnessRunContract and Host-backed NativeHarnessRunContract;
 - HarnessRunReceipt and HarnessRunState;
 - ProviderCallRecord and failure receipt;
 - ToolStep intent, dispatch fence and receipt;
@@ -89,6 +89,8 @@ Current state includes versioned forms of:
 - recovery assessment and abandonment.
 
 New writers may use newer schemas only when readers preserve supported older versions or migration/cutover is explicit. History is never rewritten merely to normalize format.
+
+Schema-v1 caller-neutral `HarnessRunContract` records may contain only a subset of the current `RunBudget` fields. Those present fields remain authoritative and must exactly match execution; absent fields retain their historical unbound/default meaning. New Contract writers should persist the complete `RunBudget.to_contract_dict()` projection. An executing Standalone Runner rejects unknown budget fields rather than silently treating them as unenforced authority.
 
 ## Upgrade rules for active work
 

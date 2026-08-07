@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -104,6 +104,44 @@ class RunBudget:
             raise ValueError("Ordivon Harness secondary budgets must be non-negative")
         if self.max_model_observation_bytes < 1:
             raise ValueError("Ordivon Harness Observation message bound must be positive")
+
+    def to_contract_dict(self) -> dict[str, JsonValue]:
+        """Return the complete durable budget projection for a new Run Contract."""
+        return {
+            "maxModelCalls": self.max_model_calls,
+            "maxToolCalls": self.max_tool_calls,
+            "maxObservationBytes": self.max_observation_bytes,
+            "maxWallTimeMs": self.max_wall_time_ms,
+            "maxTotalTokens": self.max_total_tokens,
+            "maxModelRetries": self.max_model_retries,
+            "maxToolCorrections": self.max_tool_corrections,
+            "maxObservationOnlyTurns": self.max_observation_only_turns,
+            "maxNoProgressTurns": self.max_no_progress_turns,
+            "maxModelObservationBytes": self.max_model_observation_bytes,
+        }
+
+    def require_contract_match(self, contract_budget: Mapping[str, JsonValue]) -> None:
+        """Require every budget bound claimed by a Contract to match execution.
+
+        Early schema-v1 independent Contracts bound only a subset of RunBudget.
+        Missing known fields therefore retain their historical unbound/default
+        meaning. A claimed known field is authoritative and must match exactly;
+        an unknown field cannot be silently ignored by an executing Runner.
+        """
+        execution = self.to_contract_dict()
+        unknown = set(contract_budget) - set(execution)
+        if unknown:
+            raise ValueError(
+                "Standalone Runner Contract budget has unsupported fields: "
+                + ", ".join(sorted(unknown))
+            )
+        for field, claimed in contract_budget.items():
+            if type(claimed) is not int:
+                raise ValueError(
+                    f"Standalone Runner Contract budget {field} must be an integer"
+                )
+            if claimed != execution[field]:
+                raise ValueError(f"Standalone Runner budget differs at {field}")
 
     def remaining(
         self,

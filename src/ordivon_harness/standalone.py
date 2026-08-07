@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Mapping
 from typing import Callable, Protocol
 
 from anc_canonical import JsonValue
@@ -160,15 +161,8 @@ class StandaloneHarnessRunner:
         )
 
     @staticmethod
-    def _validate_budget(contract: dict[str, JsonValue], budget: RunBudget) -> None:
-        expected = {
-            "maxModelCalls": budget.max_model_calls,
-            "maxToolCalls": budget.max_tool_calls,
-            "maxWallTimeMs": budget.max_wall_time_ms,
-        }
-        for field, value in expected.items():
-            if field in contract and contract[field] != value:
-                raise ValueError(f"Standalone Runner budget differs at {field}")
+    def _validate_budget(contract: Mapping[str, JsonValue], budget: RunBudget) -> None:
+        budget.require_contract_match(contract)
 
 
 __all__ = [

@@ -201,18 +201,7 @@ class DomainToolLoopRunner:
                 "allowedTools": [tool.name for tool in granted],
                 "bridgeIdentity": self.bridge.bridge_identity,
             },
-            "budget": {
-                "maxModelCalls": plan.budget.max_model_calls,
-                "maxToolCalls": plan.budget.max_tool_calls,
-                "maxObservationBytes": plan.budget.max_observation_bytes,
-                "maxWallTimeMs": plan.budget.max_wall_time_ms,
-                "maxTotalTokens": plan.budget.max_total_tokens,
-                "maxModelRetries": plan.budget.max_model_retries,
-                "maxToolCorrections": plan.budget.max_tool_corrections,
-                "maxObservationOnlyTurns": plan.budget.max_observation_only_turns,
-                "maxNoProgressTurns": plan.budget.max_no_progress_turns,
-                "maxModelObservationBytes": plan.budget.max_model_observation_bytes,
-            },
+            "budget": plan.budget.to_contract_dict(),
         }
         validate_json_value(identity)
         return identity

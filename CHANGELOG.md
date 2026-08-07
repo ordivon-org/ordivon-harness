@@ -25,9 +25,14 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - bounded atomic Harness Event batches with complete replay idempotency, partial-replay rejection, same-batch causality checks, and one-lease projection commit;
 - repository-owned 1,000-Run / 100,000-Event scale acceptance and integrity-bound receipt generation.
 
+### Fixed
+
+- independent `StandaloneHarnessRunner` now enforces every `RunBudget` field explicitly claimed by `HarnessRunContract`; unsupported budget fields fail closed instead of being silently ignored;
+- `HarnessRunContract` snapshots and exposes read-only top-level budget/completion authority maps so caller-side mutation cannot change the durable Contract digest after construction.
+
 ### Compatibility
 
-- the optional Host integration and development graph now pin remote-reachable Host `7b17807784cc52f0be4f1786719f6dc20deb92c8`;
+- the optional Host integration and development graph now pin remote-reachable Host `428a6f2f90b4050535507c9be078c450552177e5`;
 - the production `HarnessRunner`, Provider Call, Tool Step, Snapshot, recovery and completion paths remain Host-backed;
 - no new Run is dual-written and no retained Host history is rewritten;
 - `ordivon_harness.api` is now the recommended Host-free application facade; the former Host-backed facade is preserved explicitly as `ordivon_harness.host_api`, while historical package-root aliases remain during the pre-1.0 window;

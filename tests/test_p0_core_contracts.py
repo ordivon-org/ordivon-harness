@@ -64,6 +64,43 @@ class HarnessCoreContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, rendered)
 
+    def test_authority_maps_are_snapshotted_and_top_level_immutable(self) -> None:
+        original_budget = {"maxModelCalls": 2, "maxToolCalls": 1}
+        original_completion = {"mode": "record"}
+        run_contract = HarnessRunContract(
+            harness_run_id="harness-run:p0-core-immutable",
+            harness_implementation_id="ordivon-harness@test",
+            caller_id="caller:p0-core",
+            caller_run_ref="trial:p0-core-immutable",
+            objective_ref=HarnessBoundReference("objective:p0-core-immutable", "objective", DIGEST_A),
+            context_refs=(HarnessBoundReference("context:p0-core-immutable", "context", DIGEST_B),),
+            provider_id="provider:fixture",
+            adapter_id="adapter:fixture",
+            requested_model_id="model:fixture",
+            tool_catalog_digest=DIGEST_A,
+            tool_grant_digest=DIGEST_B,
+            budget=original_budget,
+            completion_contract=original_completion,
+            system_manifest_ref=HarnessBoundReference(
+                "system-manifest:p0-core-immutable", "system-manifest", DIGEST_A
+            ),
+            created_at_ms=1,
+        )
+        digest = run_contract.digest
+        original_budget["maxModelCalls"] = 99
+        original_completion["mode"] = "changed"
+        self.assertEqual(run_contract.budget["maxModelCalls"], 2)
+        self.assertEqual(run_contract.completion_contract["mode"], "record")
+        self.assertEqual(run_contract.digest, digest)
+        with self.assertRaises(TypeError):
+            run_contract.budget["maxModelCalls"] = 99  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            run_contract.completion_contract["mode"] = "changed"  # type: ignore[index]
+        exported = run_contract.to_dict()
+        exported["budget"]["maxModelCalls"] = 77
+        exported["completionContract"]["mode"] = "export-mutated"
+        self.assertEqual(run_contract.digest, digest)
+
     def test_exact_decode_rejects_host_projection_injection(self) -> None:
         value = contract().to_dict()
         value["taskProjection"] = {"revision": 9}

@@ -168,6 +168,42 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
                 )
                 self.assertEqual(recorder.doctor()["traceSegments"], 2)
 
+    def test_contract_budget_claims_exactly_bind_every_execution_limit(self) -> None:
+        execution = budget()
+        complete = execution.to_contract_dict()
+        StandaloneHarnessRunner._validate_budget(complete, execution)
+
+        for field, value in complete.items():
+            with self.subTest(field=field):
+                drifted = dict(complete)
+                drifted[field] = value + 1
+                with self.assertRaisesRegex(ValueError, field):
+                    StandaloneHarnessRunner._validate_budget(drifted, execution)
+
+        with self.assertRaisesRegex(ValueError, "unsupported fields"):
+            StandaloneHarnessRunner._validate_budget(
+                {**complete, "futureUnimplementedBudget": 1},
+                execution,
+            )
+        with self.assertRaisesRegex(ValueError, "must be an integer"):
+            StandaloneHarnessRunner._validate_budget(
+                {"maxModelCalls": True},
+                execution,
+            )
+
+    def test_schema_v1_partial_budget_remains_compatible_but_bound(self) -> None:
+        execution = budget()
+        historical = {
+            "maxModelCalls": execution.max_model_calls,
+            "maxToolCalls": execution.max_tool_calls,
+            "maxWallTimeMs": execution.max_wall_time_ms,
+        }
+        StandaloneHarnessRunner._validate_budget(historical, execution)
+        drifted = dict(historical)
+        drifted["maxToolCalls"] += 1
+        with self.assertRaisesRegex(ValueError, "maxToolCalls"):
+            StandaloneHarnessRunner._validate_budget(drifted, execution)
+
     def test_recovery_assessment_is_authoritative_and_status_preserving(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"

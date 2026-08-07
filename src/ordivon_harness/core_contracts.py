@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import re
+from collections.abc import Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
@@ -38,11 +40,14 @@ def _digest(value: str, label: str) -> str:
 
 
 def _json_object(
-    value: dict[str, JsonValue], label: str, *, require_non_empty: bool = True
+    value: Mapping[str, JsonValue], label: str, *, require_non_empty: bool = True
 ) -> None:
     if require_non_empty and not value:
         raise ValueError(f"{label} must be non-empty")
-    validate_json_value(value)
+    # ``dataclasses.replace`` may feed an already-frozen MappingProxyType back
+    # through the constructor. Validate the canonical JSON projection rather
+    # than the container implementation used to prevent post-construction drift.
+    validate_json_value(dict(value))
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,8 +181,8 @@ class HarnessRunContract:
     requested_model_id: str
     tool_catalog_digest: str
     tool_grant_digest: str
-    budget: dict[str, JsonValue]
-    completion_contract: dict[str, JsonValue]
+    budget: Mapping[str, JsonValue]
+    completion_contract: Mapping[str, JsonValue]
     system_manifest_ref: HarnessBoundReference
     created_at_ms: int
     source_refs: tuple[HarnessBoundReference, ...] = ()
@@ -203,6 +208,12 @@ class HarnessRunContract:
         _digest(self.tool_grant_digest, "Harness Tool grant digest")
         _json_object(self.budget, "Harness budget")
         _json_object(self.completion_contract, "Harness completion contract")
+        object.__setattr__(self, "budget", MappingProxyType(dict(self.budget)))
+        object.__setattr__(
+            self,
+            "completion_contract",
+            MappingProxyType(dict(self.completion_contract)),
+        )
         if self.created_at_ms < 0:
             raise ValueError("Harness Run creation time must be non-negative")
         if self.deadline_ms is not None:
@@ -234,8 +245,8 @@ class HarnessRunContract:
             "requestedModelId": self.requested_model_id,
             "toolCatalogDigest": self.tool_catalog_digest,
             "toolGrantDigest": self.tool_grant_digest,
-            "budget": self.budget,
-            "completionContract": self.completion_contract,
+            "budget": dict(self.budget),
+            "completionContract": dict(self.completion_contract),
             "systemManifestRef": self.system_manifest_ref.to_dict(),
             "createdAtMs": self.created_at_ms,
             "sourceRefs": [item.to_dict() for item in self.source_refs],
