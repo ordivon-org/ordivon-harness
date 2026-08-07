@@ -33,7 +33,7 @@ The supported public graph is exact, not a floating version range:
 
 | Component | Required identity |
 | --- | --- |
-| Harness package | `0.5.0` plus exact Git commit |
+| Harness package | `0.6.0` plus exact Git commit |
 | Host | `428a6f2f90b4050535507c9be078c450552177e5` |
 | Protocol | `420dc356cb664d75db0f34f356156baebe5843db` |
 | Python | `>=3.12,<3.13` |
