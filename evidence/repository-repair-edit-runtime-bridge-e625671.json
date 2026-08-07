@@ -1,0 +1,44 @@
+{
+  "b6Implemented": false,
+  "checks": {
+    "allToolObservationsObserved": true,
+    "candidateCompleted": true,
+    "completionFileCreated": true,
+    "diffObserved": true,
+    "eightModelCalls": true,
+    "harnessDoctorHealthy": true,
+    "oneRuntimeJob": true,
+    "prematureConclusionCorrected": true,
+    "runtimeOperationsExact": true,
+    "sixToolCalls": true,
+    "sourceReplacementApplied": true,
+    "visibleCheckSucceeded": true
+  },
+  "harnessClean": true,
+  "harnessEventCount": 37,
+  "harnessRevision": "e6256714f92fff9b66c998328da870e8ac3b50e9",
+  "implementationRevision": "e6256714f92fff9b66c998328da870e8ac3b50e9",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:62e8f5b6ecabbc56952218a0b4f4b9d691d0ed2e1aa583b138999dcbc3ee4646"
+  },
+  "kind": "ordivon.harness-repository-repair-edit-runtime-acceptance",
+  "knownLimits": [
+    "This acceptance proves only the separate repository-repair edit V2 Tool surface",
+    "The Provider is scripted and the acceptance does not claim model capability",
+    "This V2 receipt does not resume or alter the frozen B5 comparison campaign",
+    "Hidden verification and Host semantic acceptance remain separate responsibilities"
+  ],
+  "modelCalls": 8,
+  "productionActivated": false,
+  "runtimeJobCount": 1,
+  "schemaVersion": 1,
+  "sourceAllocationDigest": "sha256:8440bc4569e8283686ba91bc24bddc297131c52f00bcdae0998116ce1f190c31",
+  "sourceRevision": "a8dfbed124ec0d5e77e0189e8e000d4bd7726e48",
+  "toolCalls": 6,
+  "toolGrantDigest": "sha256:6c3a0a889c6082448b9e685f3388845e28e1b9ce226e95ad6404835324b37bec",
+  "toolSurfaceDigest": "sha256:fc2daeee2a95ff5d83d4efbc17a003788c52277ec582be3a14c34662cf1d51eb",
+  "traceDigest": "sha256:5fce9f8c5db3315d06ea362a0c75e3c0ddea1547e835d9b3563c92f42ed6d530",
+  "workspaceClosed": true
+}
