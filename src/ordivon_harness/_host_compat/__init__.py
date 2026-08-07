@@ -5,7 +5,7 @@ Host-native: this boundary centralizes the exact API dependency without pretendi
 there is a second Host implementation or a generic remote plugin protocol.
 """
 
-HOST_REQUIRED_SOURCE_REVISION = "7b17807784cc52f0be4f1786719f6dc20deb92c8"
+HOST_REQUIRED_SOURCE_REVISION = "428a6f2f90b4050535507c9be078c450552177e5"
 PROTOCOL_REQUIRED_SOURCE_REVISION = "420dc356cb664d75db0f34f356156baebe5843db"
 
 __all__ = [

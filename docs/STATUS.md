@@ -42,7 +42,7 @@ The canonical public graph currently requires:
 
 - Python 3.12;
 - base package: `ordivon-protocol` at `420dc356cb664d75db0f34f356156baebe5843db`;
-- optional `host` extra and repository development group: `ordivon-host` at `7b17807784cc52f0be4f1786719f6dc20deb92c8`;
+- optional `host` extra and repository development group: `ordivon-host` at `428a6f2f90b4050535507c9be078c450552177e5`;
 - `uv.lock` generated from those exact pins;
 - Linux for trusted-local live operation;
 - Ordivon Runtime only when physical Tool execution is requested.
@@ -69,13 +69,13 @@ The canonical public graph currently requires:
 | independent Harness Journal/CAS kernel | P0 foundation operational; atomic batch and 1,000-Run/100,000-Event scale gate passed; production Runner not cut over |
 | independent observation-only Runtime Tool path | operational P0 vertical slice; not production-selected |
 | independent terminal Trace, Receipt, Recovery and CompletionProposal | operational through explicit Standalone Runner |
-| Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin pending deployment |
+| Host foreign-Run adapter over independent Harness authority | operational local P0 acceptance; exact Host release pin aligned, deployment pending |
 | active legacy-Run inventory and append-only cutover receipts | operational; activation disables legacy write commands before Runtime access |
 | Harness daemon or scheduler | not provided |
 
 ## Public interface
 
-`ordivon_harness.core` is the Host-free facade for caller-neutral contracts, independent Journal/CAS persistence, Runtime bridging and Standalone execution. `ordivon_harness.api` remains the Host-backed application facade and requires the `host` extra. Historical package-root exports resolve lazily during the pre-1.0 compatibility window; low-level persistence and Provider-driver objects are not newly promised as stable.
+`ordivon_harness.api` is the recommended small Host-free application facade for bounded Agent runs and domain-owned Tool loops. `ordivon_harness.core` remains the wider Host-free integration surface for persistence, Provider, Runtime, recovery and advanced composition. Historical Host-backed application behavior is explicit in `ordivon_harness.host_api` and requires the `host` extra; package-root exports remain transitional compatibility aliases.
 
 ## Host relationship
 
@@ -92,7 +92,7 @@ Host ↛ Harness
 ## Known limits
 
 - the production Host and Harness roots do not yet exist and have not been activated by a cutover receipt;
-- local Host, Harness and Computing mains are ahead of their remote release heads, and the Harness Host-extra pin still selects the older reachable Host revision;
+- local Harness and Computing integration mains remain ahead of their remote release heads until I0 is published; Host is aligned to its current remote C3 revision;
 - the legacy production Runner still requires the optional exact Host integration and remains the default Host-backed entry point;
 - no cross-machine distributed consensus;
 - no automatic redaction of prompts, model output or Tool observations;

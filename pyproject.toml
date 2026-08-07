@@ -21,12 +21,12 @@ dependencies = [
 
 [project.optional-dependencies]
 host = [
-  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@7b17807784cc52f0be4f1786719f6dc20deb92c8",
+  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@428a6f2f90b4050535507c9be078c450552177e5",
 ]
 
 [dependency-groups]
 dev = [
-  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@7b17807784cc52f0be4f1786719f6dc20deb92c8",
+  "ordivon-host @ git+https://github.com/zycxfyh/ordivon-host.git@428a6f2f90b4050535507c9be078c450552177e5",
 ]
 
 [project.scripts]
