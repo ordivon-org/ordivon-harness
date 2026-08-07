@@ -76,6 +76,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/execution_binding.py",
     "ordivon_harness/host_external_adapter.py",
     "ordivon_harness/independent_result.py",
+    "ordivon_harness/independent_cli.py",
     "ordivon_harness/runtime_port.py",
     "ordivon_harness/sqlite_store.py",
     "ordivon_harness/standalone.py",
@@ -229,9 +230,25 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
             fail("base wheel installation unexpectedly installed Host")
         run_checked([str(python), str(ROOT / "scripts/check_core_without_host.py")])
         help_text = run_checked([str(cli), "--help"]).stdout
-        for command in ("store-init", "store-doctor", "store-inspect", "store-events"):
+        independent_commands = (
+            "capabilities", "doctor", "status", "inspect", "run", "resume",
+            "recover", "host", "store-init", "store-doctor", "store-inspect",
+            "store-events", "store-backup", "store-verify-backup", "store-restore",
+            "cutover-status", "cutover-inventory", "cutover-activate", "cutover-rollback",
+        )
+        for command in independent_commands:
             if command not in help_text:
-                fail(f"Host-free CLI help lacks independent command: {command}")
+                fail(f"Host-free CLI help lacks primary command: {command}")
+        for legacy_top_level in ("handoff", "cancel"):
+            if f"    {legacy_top_level}" in help_text:
+                fail(f"Host-free CLI still advertises legacy top-level command: {legacy_top_level}")
+        capability_value = json.loads(run_checked([str(cli), "capabilities"]).stdout)
+        if (
+            capability_value.get("defaultAuthority") != "independent-harness-run"
+            or capability_value.get("hostCompatibilityCommand") != "host"
+            or capability_value.get("toolBearingCliExecution") is not False
+        ):
+            fail("installed CLI capability discovery differs from the independent contract")
 
         run_checked(
             [
@@ -261,22 +278,21 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
             fail("installed Host compatibility API differs from the repository contract")
         if observed_host.get("hostInstalled") is not True:
             fail("Host extra did not install ordivon-host")
-        commands = (
-            "doctor", "status", "inspect", "handoff", "run", "resume", "cancel",
-            "recover", "cutover-status", "cutover-inventory", "cutover-activate",
-            "cutover-rollback", "store-init", "store-doctor", "store-inspect",
-            "store-events", "store-backup", "store-verify-backup", "store-restore",
+        host_help = run_checked([str(cli), "host", "--help"]).stdout
+        host_commands = (
+            "doctor", "status", "inspect", "handoff", "run", "resume", "cancel", "recover"
         )
-        for command in commands:
-            if command not in help_text:
-                fail(f"installed CLI help lacks command: {command}")
+        for command in host_commands:
+            if command not in host_help:
+                fail(f"installed Host compatibility CLI lacks command: {command}")
         return {
             "installedVersion": observed_core["version"],
             "coreApiRequired": sorted(REQUIRED_CORE_API),
             "hostApi": observed_host["api"],
             "hostFreeCoreVerified": True,
             "hostExtraVerified": True,
-            "cliCommandsVerified": len(commands),
+            "cliCommandsVerified": len(independent_commands),
+            "hostCliCommandsVerified": len(host_commands),
         }
 
 

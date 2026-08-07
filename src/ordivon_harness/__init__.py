@@ -104,6 +104,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST': ('.ordivon.sqlite_runtime_bridge', 'INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST'),
     'INDEPENDENT_SEARCH_TOOL_SURFACE': ('.ordivon.sqlite_runtime_bridge', 'INDEPENDENT_SEARCH_TOOL_SURFACE'),
     'INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST': ('.ordivon.sqlite_runtime_bridge', 'INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST'),
+    'NO_TOOL_AGENT_GRANT': ('.ordivon.sqlite_agent_bridge', 'NO_TOOL_AGENT_GRANT'),
+    'NO_TOOL_AGENT_GRANT_DIGEST': ('.ordivon.sqlite_agent_bridge', 'NO_TOOL_AGENT_GRANT_DIGEST'),
     'NO_TOOL_AGENT_SURFACE': ('.ordivon.sqlite_agent_bridge', 'NO_TOOL_AGENT_SURFACE'),
     'NO_TOOL_AGENT_SURFACE_DIGEST': ('.ordivon.sqlite_agent_bridge', 'NO_TOOL_AGENT_SURFACE_DIGEST'),
     'SQLiteHarnessAgentBridge': ('.ordivon.sqlite_agent_bridge', 'SQLiteHarnessAgentBridge'),
@@ -214,4 +216,8 @@ def __getattr__(name: str) -> Any:
     return value
 
 def __dir__() -> list[str]:
-    return sorted(set(globals()) | set(__all__))
+    # Root getattr remains a historical compatibility path, but capability
+    # discovery should advertise the recommended Host-free facade rather than
+    # optional Host-backed symbols that may fail on a base installation.
+    api = import_module(".api", __name__)
+    return sorted(set(globals()) | set(api.__all__) | {"api", "core", "host_api"})

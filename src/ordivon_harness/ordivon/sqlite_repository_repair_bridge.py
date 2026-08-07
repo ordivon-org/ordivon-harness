@@ -380,6 +380,7 @@ class SQLiteHarnessRepositoryRepairRuntimeBridge(SQLiteHarnessRuntimeBridge):
             provider_source=provider_source,
             provider_holder_id=provider_holder_id,
             expected_tool_catalog_digest=self.tool_surface_digest,
+            expected_tool_grant_digest=self.tool_grant_digest,
         )
         binding = run_store.binding
         if (

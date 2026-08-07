@@ -53,19 +53,19 @@ caller or domain-owned work
 
 | Concern | Canonical owner | Harness relationship |
 | --- | --- | --- |
-| Task identity, Task Attempt, commitments, verification admission and Task outcome | `ordivon-host` | required authority for the current production path and future foreign-Run admission |
-| Harness Run, Provider Call, Tool Step, Run Snapshot, resume/recovery and completion-proposal semantics | `ordivon-harness` | owned here; current bytes remain Host-backed while P0 migration is incomplete |
-| Workspace, Job, process tree, Artifact and physical side-effect truth | `ordivon-runtime` | invoked and observed through Host Runtime client |
+| Task identity, Task Attempt, commitments, verification admission and Task outcome | `ordivon-host` | optional higher-level authority for Host-bound work; not required by the default independent CLI |
+| Harness Run, Provider Call, Tool Step, Run Snapshot, resume/recovery and completion-proposal semantics | `ordivon-harness` | owned and durably writable in the independent Journal/CAS; legacy Host-backed bytes remain readable |
+| Workspace, Job, process tree, Artifact and physical side-effect truth | `ordivon-runtime` | consumed through a caller-supplied Runtime client on Tool-bearing independent paths |
 | authoritative world state and semantic completion | domain system or verifier | Harness only proposes completion |
 | model inference and hidden Provider session | DeepSeek, Codex App Server, Hermes ACP or another adapter | replaceable execution source, not durable Task truth |
 
-For the current production path, Host stores Harness extension bytes and admits their events while Harness owns their schemas and lifecycle meaning. The P0 independent store is an explicit additive surface and is not dual-written by that path. Storage location does not transfer semantic ownership.
+For retained Host-backed work, Host stores Harness extension bytes and admits their events while Harness owns their schemas and lifecycle meaning. New default CLI operations target the independent Harness Journal/CAS; they do not migrate, dual-write, or reinterpret retained Host state. Storage location does not transfer semantic ownership.
 
 ## Status
 
-Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. Its current Runner has durable Host-backed Provider Call and Tool Step recovery, semantic-history validation, DeepSeek/Codex/Hermes adapters, cancellation, bounded budgets, and real evidence across several pinned dependency graphs.
+Harness is an operational engineering prototype for owner-trusted local work and pre-1.0 as a public package. The default CLI now operates caller-neutral independent Runs directly: Contract-in no-Tool DeepSeek execution, durable pause/resume, status/inspection, conservative recovery, Trace, Run Receipt and CompletionProposal all use the Harness Journal/CAS without Host. The historical `HarnessRunner` and its Host-backed Task/Assignment lifecycle remain an explicit compatibility path under `ordivon-harness host ...`.
 
-The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, revision and lease fencing, full Doctor, verified backup/restore, an event-sourced Provider/Tool/Snapshot continuity implementation, a real no-Tool Agent Loop bridge, and a Host-free observation-only Runtime Tool bridge with response-loss reconciliation. It owns restart-inspectable Trace segments, an independent Run Receipt, Recovery Assessment and caller-neutral CompletionProposal through an explicit Standalone Runner. A Host-neutral external-executor adapter proves Host and Harness can retain separate histories across response loss. Cutover inventory and append-only receipts now exist, but the repository does not activate them against production state automatically. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
+The independent Tool-bearing path is also implemented in the Python API through caller-supplied `HarnessRuntimeClient` bridges, including observation-only Runtime search and repository-repair trials with response-loss reconciliation. The CLI deliberately does not invent or copy a concrete Runtime transport: Tool-bearing Contract execution fails closed there until the caller supplies the Runtime boundary through `ordivon_harness.api` or `ordivon_harness.core`. A Host-neutral external-executor adapter proves Host and Harness can retain separate histories across response loss. Cutover inventory and append-only receipts still govern migration of retained deployment state; H1 changes the operational entry point, not production roots. Harness remains neither a general workflow engine, Provider router, multi-Agent scheduler, hosted sandbox, nor independent Task database. See [`docs/STATUS.md`](docs/STATUS.md) and [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md).
 
 ## What works
 
@@ -89,7 +89,8 @@ The P0 independent path now has a caller-neutral Contract, SQLite Journal/CAS, r
 - active legacy-Run inventory, append-only cutover/rollback receipts, and a fail-closed legacy writer gate;
 - caller-neutral `HarnessExecutionBinding` and Host-free Runtime request lowering;
 - verified online backup, tamper detection and restore to a fresh state root;
-- operator `status`, `inspect`, `handoff`, `cancel` and `recover` paths, plus explicit `store-*` and `cutover-*` operations.
+- first-class independent CLI `capabilities`, `run`, `resume`, `status`, `inspect`, `recover` and `doctor` operations;
+- explicit `host ...` compatibility commands for retained Task/Assignment-backed operation, plus `store-*` and `cutover-*` controls.
 
 ## What it does not do
 
@@ -190,29 +191,32 @@ The package root retains historical pre-1.0 exports for compatibility. No produc
 
 ## Operator interface
 
-Current Host-backed operations:
+Discover and operate the default Host-free surface:
 
 ```bash
-ordivon-harness --state-root /var/lib/ordivon/host status TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host inspect TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host handoff TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host cancel TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host recover TASK_ID
-```
-
-Independent P0 Store operations:
-
-```bash
+ordivon-harness capabilities
 ordivon-harness --harness-state-root /var/lib/ordivon/harness store-init
-ordivon-harness --harness-state-root /var/lib/ordivon/harness store-doctor
-ordivon-harness --harness-state-root /var/lib/ordivon/harness store-inspect HARNESS_RUN_ID
-ordivon-harness --harness-state-root /var/lib/ordivon/harness store-events HARNESS_RUN_ID
-ordivon-harness --harness-state-root /var/lib/ordivon/harness store-backup BACKUP_DIR
-ordivon-harness store-verify-backup BACKUP_DIR
-ordivon-harness store-restore BACKUP_DIR NEW_STATE_ROOT
+ordivon-harness --harness-state-root /var/lib/ordivon/harness run RUN_CONTRACT.json --message 'Start the bounded Run'
+ordivon-harness --harness-state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness resume HARNESS_RUN_ID --message 'Additional caller input'
+ordivon-harness --harness-state-root /var/lib/ordivon/harness recover HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness doctor
 ```
 
-`inspect` and `handoff` require neither Runtime nor Provider access. Recovery never authorizes blind redispatch of an uncertain Provider or Tool effect. The `store-*` surface does not execute or resume the current production Agent loop.
+`run` consumes a caller-authored `HarnessRunContract`; the CLI never synthesizes Objective, Context, Tool Grant, caller identity, or budget authority. Its executable profile is currently the canonical no-Tool DeepSeek surface. Tool-bearing Contracts must use the Host-free Python API with an application-supplied `HarnessRuntimeClient`.
+
+Retained Host-backed work remains explicit compatibility state:
+
+```bash
+ordivon-harness --state-root /var/lib/ordivon/host host status TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host inspect TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host handoff TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host cancel TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host recover TASK_ID
+```
+
+Store backup/restore and cutover commands remain separate administrative surfaces. Independent `status` and `inspect` require neither Runtime nor Provider access. Recovery never authorizes blind redispatch of an uncertain Provider or Tool effect.
 
 ## Documentation map
 

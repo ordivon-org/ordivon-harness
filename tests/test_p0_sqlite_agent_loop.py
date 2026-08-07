@@ -339,6 +339,24 @@ class SQLiteHarnessAgentLoopTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "no-Tool"):
                     SQLiteHarnessAgentBridge(wrong, continuity)
 
+    def test_bridge_rejects_noncanonical_no_tool_grant(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            run_contract = contract("wrong-grant")
+            value = run_contract.to_dict()
+            value["toolGrantDigest"] = DIGEST_A
+            wrong = HarnessRunContract.from_dict(value)
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(wrong)
+                continuity = SQLiteHarnessRunContinuityStore(
+                    store,
+                    wrong,
+                    clock_ms=clock,
+                )
+                with self.assertRaisesRegex(ValueError, "Tool Grant"):
+                    SQLiteHarnessAgentBridge(wrong, continuity)
+
     def test_independent_agent_bridge_has_no_host_or_runtime_imports(self) -> None:
         source = (
             Path(__file__).resolve().parents[1]

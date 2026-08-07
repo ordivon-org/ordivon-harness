@@ -384,6 +384,7 @@ class HarnessCutoverTests(unittest.TestCase):
                     [
                         "--state-root",
                         str(fixture.host_root),
+                        "host",
                         "cancel",
                         "task:cutover:missing",
                     ]

@@ -120,6 +120,56 @@ class RunBudget:
             "maxModelObservationBytes": self.max_model_observation_bytes,
         }
 
+    @classmethod
+    def from_contract_dict(
+        cls, contract_budget: Mapping[str, JsonValue]
+    ) -> RunBudget:
+        """Materialize schema-v1 Contract budget authority for execution.
+
+        Early caller-neutral Contracts may omit fields that predate the complete
+        ten-field projection. Missing fields use the historical Harness defaults;
+        every field that is present remains exact authority and unknown fields
+        fail closed through ``require_contract_match``.
+        """
+        defaults = cls(
+            max_model_calls=8,
+            max_tool_calls=16,
+            max_observation_bytes=1_048_576,
+            max_wall_time_ms=600_000,
+            max_total_tokens=131_072,
+            max_model_retries=2,
+            max_tool_corrections=3,
+            max_observation_only_turns=6,
+            max_no_progress_turns=3,
+            max_model_observation_bytes=32_768,
+        )
+        names = {
+            "maxModelCalls": "max_model_calls",
+            "maxToolCalls": "max_tool_calls",
+            "maxObservationBytes": "max_observation_bytes",
+            "maxWallTimeMs": "max_wall_time_ms",
+            "maxTotalTokens": "max_total_tokens",
+            "maxModelRetries": "max_model_retries",
+            "maxToolCorrections": "max_tool_corrections",
+            "maxObservationOnlyTurns": "max_observation_only_turns",
+            "maxNoProgressTurns": "max_no_progress_turns",
+            "maxModelObservationBytes": "max_model_observation_bytes",
+        }
+        unknown = set(contract_budget) - set(names)
+        if unknown:
+            raise ValueError(
+                "Harness Run Contract budget has unsupported fields: "
+                + ", ".join(sorted(unknown))
+            )
+        values = {name: getattr(defaults, name) for name in names.values()}
+        for field, value in contract_budget.items():
+            if type(value) is not int:
+                raise ValueError(f"Harness Run Contract budget {field} must be an integer")
+            values[names[field]] = value
+        materialized = cls(**values)
+        materialized.require_contract_match(contract_budget)
+        return materialized
+
     def require_contract_match(self, contract_budget: Mapping[str, JsonValue]) -> None:
         """Require every budget bound claimed by a Contract to match execution.
 

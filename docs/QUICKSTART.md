@@ -39,7 +39,7 @@ uv lock --check
 
 The base package uses the exact Protocol revision. The exact Host revision is an optional `host` extra and a repository development dependency, so `uv sync --locked` still installs the complete legacy regression graph. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree. A plain editable `pip install` is not the canonical repository setup because it does not validate `uv.lock`.
 
-For a built wheel, the base installation exposes the recommended `ordivon_harness.api`, the wider `ordivon_harness.core`, and independent `store-*` commands without Host. Install the `host` extra only for `ordivon_harness.host_api`, Host-backed Runner commands, and current production compatibility.
+For a built wheel, the base installation exposes the recommended `ordivon_harness.api`, the wider `ordivon_harness.core`, the primary independent Run CLI, and `store-*` operations without Host. Install the `host` extra only for `ordivon_harness.host_api`, the explicit `ordivon-harness host ...` compatibility commands, and retained Host-backed deployment state.
 
 ## Run the portable contract
 
@@ -79,17 +79,32 @@ Provider turn
 
 It proves Harness loop semantics, not Host persistence or Runtime execution.
 
-## Inspect existing Host-backed work
+## Operate an independent Run
 
-These commands require only the Host state root:
+Initialize the Harness root once, then pass a caller-authored Contract to the default CLI:
 
 ```bash
-ordivon-harness --state-root /var/lib/ordivon/host status TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host inspect TASK_ID
-ordivon-harness --state-root /var/lib/ordivon/host handoff TASK_ID
+ordivon-harness capabilities
+ordivon-harness --harness-state-root /var/lib/ordivon/harness store-init
+ordivon-harness --harness-state-root /var/lib/ordivon/harness \
+  run RUN_CONTRACT.json --message 'Start the bounded Run'
+ordivon-harness --harness-state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
+ordivon-harness --harness-state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
 ```
 
-`inspect` combines Harness status with an operator handoff capsule. It does not contact a Provider or Runtime.
+`RUN_CONTRACT.json` is an exact `HarnessRunContract`; the CLI does not invent caller, Objective, Context, Tool Grant, completion, or budget authority. The current CLI execution profile is canonical no-Tool DeepSeek. Tool-bearing independent work uses `ordivon_harness.api` or `ordivon_harness.core` with a caller-supplied `HarnessRuntimeClient`.
+
+## Inspect retained Host-backed work
+
+These compatibility commands require only the Host state root:
+
+```bash
+ordivon-harness --state-root /var/lib/ordivon/host host status TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host inspect TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host handoff TASK_ID
+```
+
+`host inspect` combines legacy Harness status with an operator handoff capsule. It does not contact a Provider or Runtime.
 
 ## Inspect and activate the independent writer
 
@@ -109,11 +124,11 @@ ordivon-harness --state-root /var/lib/ordivon/host \
   --harness-state-root /var/lib/ordivon/harness cutover-activate
 ```
 
-After activation, legacy write commands are disabled. Historical `status`, `inspect`, `handoff`, and Doctor remain read-only. Rollback is permitted only before any post-activation independent work exists.
+After activation, legacy `host run`, `host resume`, `host cancel`, and `host recover` writes are disabled. Historical `host status`, `host inspect`, `host handoff`, and `host doctor` remain read-only. Rollback is permitted only before any post-activation independent work exists.
 
 ## Configure live execution
 
-Harness reuses Host configuration for Runtime endpoint and token location. DeepSeek uses a private secret file; Codex and Hermes use explicit local adapter configuration. Follow [`OPERATIONS.md`](OPERATIONS.md) and [`../SECURITY.md`](../SECURITY.md).
+The independent no-Tool CLI needs only the caller-authored Contract and DeepSeek private secret file. Tool-bearing independent applications supply a `HarnessRuntimeClient` explicitly through the Host-free Python API. The retained Host compatibility path continues to use Host configuration for Runtime endpoint and token location. Codex and Hermes use explicit adapter configuration. Follow [`OPERATIONS.md`](OPERATIONS.md) and [`../SECURITY.md`](../SECURITY.md).
 
 ## Read-only live acceptance
 
@@ -128,9 +143,14 @@ The gate runs the complete portable suite and an existing bounded read-only Host
 ## Resume and recover
 
 ```bash
-ordivon-harness --state-root /var/lib/ordivon/host resume TASK_ID \
+ordivon-harness --harness-state-root /var/lib/ordivon/harness resume HARNESS_RUN_ID \
+  --message 'Additional caller context'
+ordivon-harness --harness-state-root /var/lib/ordivon/harness recover HARNESS_RUN_ID
+
+# retained Host-backed work
+ordivon-harness --state-root /var/lib/ordivon/host host resume TASK_ID \
   --message 'Additional operator context'
-ordivon-harness --state-root /var/lib/ordivon/host recover TASK_ID
+ordivon-harness --state-root /var/lib/ordivon/host host recover TASK_ID
 ```
 
 Resume continues from durable public state. Recover first reconciles the current Provider Call and Tool Step identities; it never treats lost delivery as permission to create a new effect.

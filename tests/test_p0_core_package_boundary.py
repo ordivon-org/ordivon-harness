@@ -53,6 +53,7 @@ class HarnessCorePackageBoundaryTests(unittest.TestCase):
             "run_state.py",
             "standalone.py",
             "independent_result.py",
+            "independent_cli.py",
             "ordivon/tool_bridge.py",
             "ordivon/loop.py",
             "ordivon/run_recovery.py",

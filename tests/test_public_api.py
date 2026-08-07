@@ -86,6 +86,28 @@ class PublicApiTests(unittest.TestCase):
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
         self.assertEqual(package_version(), project["version"])
 
+    def test_package_root_dir_advertises_recommended_capabilities_not_host_compat(self) -> None:
+        probe = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import json,sys,ordivon_harness; names=dir(ordivon_harness); "
+                "print(json.dumps({'hasRunContract':'HarnessRunContract' in names,"
+                "'hasHostRunner':'HarnessRunner' in names,"
+                "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules)}))",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        import json
+
+        observed = json.loads(probe.stdout)
+        self.assertTrue(observed["hasRunContract"])
+        self.assertFalse(observed["hasHostRunner"])
+        self.assertFalse(observed["hostLoaded"])
+
     def test_historical_root_exports_remain_during_transition(self) -> None:
         self.assertTrue(hasattr(ordivon_harness, "HarnessRunner"))
         self.assertTrue(hasattr(ordivon_harness, "HarnessProviderCallRecord"))

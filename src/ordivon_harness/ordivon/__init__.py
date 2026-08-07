@@ -75,6 +75,8 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'RunBudget': ('.loop', 'RunBudget'),
     'RunDeadline': ('.control', 'RunDeadline'),
     'RunStopCode': ('.loop', 'RunStopCode'),
+    'NO_TOOL_AGENT_GRANT': ('.sqlite_agent_bridge', 'NO_TOOL_AGENT_GRANT'),
+    'NO_TOOL_AGENT_GRANT_DIGEST': ('.sqlite_agent_bridge', 'NO_TOOL_AGENT_GRANT_DIGEST'),
     'NO_TOOL_AGENT_SURFACE': ('.sqlite_agent_bridge', 'NO_TOOL_AGENT_SURFACE'),
     'NO_TOOL_AGENT_SURFACE_DIGEST': ('.sqlite_agent_bridge', 'NO_TOOL_AGENT_SURFACE_DIGEST'),
     'RuntimeToolBridge': ('.tools', 'RuntimeToolBridge'),

@@ -21,23 +21,114 @@ from .store_ops import (
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="ordivon-harness")
-    parser.add_argument("--config", type=Path)
-    parser.add_argument("--state-root", type=Path)
+    parser = argparse.ArgumentParser(
+        prog="ordivon-harness",
+        description=(
+            "Host-free Harness Run operations are the default CLI. "
+            "Historical Host-backed operations live under the explicit `host` namespace."
+        ),
+    )
+    parser.add_argument("--config", type=Path, help="legacy Host compatibility config")
+    parser.add_argument(
+        "--state-root",
+        type=Path,
+        help="legacy Host state root used by `host` and cutover-* operations",
+    )
     parser.add_argument(
         "--harness-state-root",
         type=Path,
-        help="independent Harness state root used by store-* and cutover commands",
+        help="independent Harness Journal/CAS root",
     )
-    parser.add_argument("--runtime-endpoint")
-    parser.add_argument("--runtime-token-file", type=Path)
+    parser.add_argument("--runtime-endpoint", help="legacy Host Runtime override")
+    parser.add_argument(
+        "--runtime-token-file", type=Path, help="legacy Host Runtime token override"
+    )
     parser.add_argument(
         "--deepseek-secret",
         type=Path,
         default=DEFAULT_DEEPSEEK_SECRET_PATH,
+        help="DeepSeek settings used by independent or Host-backed execution",
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("doctor")
+
+    commands.add_parser(
+        "capabilities",
+        help="describe exact Host-free CLI execution capabilities and Contract identities",
+    )
+    commands.add_parser("doctor", help="validate the independent Harness Journal/CAS")
+
+    status = commands.add_parser("status", help="read one independent Harness Run projection")
+    status.add_argument("harness_run_id")
+
+    inspect = commands.add_parser(
+        "inspect", help="inspect independent Contract, continuity and terminal evidence"
+    )
+    inspect.add_argument("harness_run_id")
+
+    run = commands.add_parser(
+        "run",
+        help="execute one caller-supplied Host-free HarnessRunContract",
+    )
+    run.add_argument("contract", type=Path, help="HarnessRunContract JSON file")
+    _add_independent_input_options(run)
+
+    resume = commands.add_parser("resume", help="resume one paused independent Harness Run")
+    resume.add_argument("harness_run_id")
+    _add_independent_input_options(resume)
+
+    recover = commands.add_parser(
+        "recover", help="assess independent recovery without blind redispatch"
+    )
+    recover.add_argument("harness_run_id")
+    recover.add_argument(
+        "--trigger",
+        choices=NATIVE_RUN_RECOVERY_TRIGGERS,
+        default="process_lost",
+    )
+
+    host = commands.add_parser(
+        "host",
+        help="historical Host-backed compatibility operations",
+        description="Explicit compatibility surface for the legacy Host-backed Harness Runner.",
+    )
+    host_commands = host.add_subparsers(dest="host_command", required=True)
+    host_commands.add_parser("doctor")
+
+    host_status = host_commands.add_parser("status")
+    host_status.add_argument("task_id")
+
+    host_inspect = host_commands.add_parser("inspect")
+    host_inspect.add_argument("task_id")
+
+    host_handoff = host_commands.add_parser("handoff")
+    host_handoff.add_argument("task_id")
+
+    host_run = host_commands.add_parser("run")
+    host_run.add_argument("task_id")
+    _add_execution_options(host_run)
+
+    host_resume = host_commands.add_parser("resume")
+    host_resume.add_argument("task_id")
+    host_resume.add_argument(
+        "--message",
+        action="append",
+        default=[],
+        help="additional user message; may be repeated",
+    )
+    _add_execution_options(host_resume)
+
+    host_cancel = host_commands.add_parser("cancel")
+    host_cancel.add_argument("task_id")
+
+    host_recover = host_commands.add_parser("recover")
+    host_recover.add_argument("task_id")
+    host_recover.add_argument(
+        "--trigger",
+        choices=NATIVE_RUN_RECOVERY_TRIGGERS,
+        default="host_restart",
+    )
+    host_recover.add_argument("--no-auto-abandon", action="store_true")
+
     commands.add_parser("cutover-status")
     commands.add_parser("cutover-inventory")
     commands.add_parser("cutover-activate")
@@ -61,43 +152,21 @@ def build_parser() -> argparse.ArgumentParser:
     store_events = commands.add_parser("store-events")
     store_events.add_argument("harness_run_id")
     store_events.add_argument("--after-sequence", type=int, default=0)
+    return parser
 
-    status = commands.add_parser("status")
-    status.add_argument("task_id")
 
-    inspect = commands.add_parser("inspect")
-    inspect.add_argument("task_id")
-
-    handoff = commands.add_parser("handoff")
-    handoff.add_argument("task_id")
-
-    run = commands.add_parser("run")
-    run.add_argument("task_id")
-    _add_execution_options(run)
-
-    resume = commands.add_parser("resume")
-    resume.add_argument("task_id")
-    resume.add_argument(
+def _add_independent_input_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
         "--message",
         action="append",
         default=[],
-        help="additional user message; may be repeated",
+        help="append one user message; may be repeated",
     )
-    _add_execution_options(resume)
-
-    cancel = commands.add_parser("cancel")
-    cancel.add_argument("task_id")
-
-    recover = commands.add_parser("recover")
-    recover.add_argument("task_id")
-    recover.add_argument(
-        "--trigger",
-        choices=NATIVE_RUN_RECOVERY_TRIGGERS,
-        default="host_restart",
+    parser.add_argument(
+        "--messages-json",
+        type=Path,
+        help="JSON array of exact model message objects",
     )
-    recover.add_argument("--no-auto-abandon", action="store_true")
-    return parser
-
 
 def _add_execution_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
@@ -129,9 +198,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = _dispatch_store(args)
         elif args.command.startswith("cutover-"):
             result = _dispatch_cutover(args)
-        else:
+        elif args.command == "host":
             config = _config(args)
-            result = _dispatch(config, args)
+            result = _dispatch_host(config, args)
+        else:
+            from .independent_cli import dispatch as dispatch_independent
+
+            result = dispatch_independent(args, clock_ms=_wall_clock_ms)
     except (
         ImportError,
         FileNotFoundError,
@@ -275,7 +348,7 @@ def _config(args: argparse.Namespace):
     return replace(config, runtime=runtime)
 
 
-def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
+def _dispatch_host(config, args: argparse.Namespace) -> dict[str, object]:
     from ._host_compat.storage import HostStorage
     from .handoff import operator_handoff
     from .history import validate_history
@@ -283,7 +356,7 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
     from .ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
     from .runner import CompletionMode, HarnessRunner
 
-    if args.command == "doctor":
+    if args.host_command == "doctor":
         from .cutover import cutover_status
 
         with HostStorage(config.state_root, validation_mode="full") as storage:
@@ -298,11 +371,11 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
 
     with HostStorage(config.state_root) as storage:
         host = HarnessHost(storage, clock_ms=_wall_clock_ms)
-        if args.command == "status":
+        if args.host_command == "status":
             return {"ok": True, **HarnessRunner(host).status(args.task_id).to_dict()}
-        if args.command == "handoff":
+        if args.host_command == "handoff":
             return {"ok": True, "handoff": operator_handoff(storage, args.task_id).to_dict()}
-        if args.command == "inspect":
+        if args.host_command == "inspect":
             return {
                 "ok": True,
                 "status": HarnessRunner(host).status(args.task_id).to_dict(),
@@ -313,10 +386,10 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
 
         assert_legacy_writer_allowed(config.state_root)
         runtime = _runtime(config)
-        if args.command == "cancel":
+        if args.host_command == "cancel":
             result = HarnessRunner(host, runtime=runtime).cancel(args.task_id)
             return {"ok": True, **result.to_dict()}
-        if args.command == "recover":
+        if args.host_command == "recover":
             result = HarnessRunner(host, runtime=runtime).recover(
                 args.task_id,
                 trigger=args.trigger,
@@ -335,7 +408,7 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
         runner = HarnessRunner(host, runtime=runtime, adapter=adapter)
         budget = _budget(args, host)
         completion_mode = CompletionMode(args.completion_mode)
-        if args.command == "run":
+        if args.host_command == "run":
             if args.events_jsonl:
                 handle = runner.start_current(
                     args.task_id,
@@ -350,7 +423,7 @@ def _dispatch(config, args: argparse.Namespace) -> dict[str, object]:
                     budget=budget,
                     completion_mode=completion_mode,
                 )
-        elif args.command == "resume":
+        elif args.host_command == "resume":
             messages = tuple({"role": "user", "content": message} for message in args.message)
             if args.events_jsonl:
                 handle = runner.start_resume(

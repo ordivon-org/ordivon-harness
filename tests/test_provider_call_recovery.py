@@ -454,12 +454,12 @@ class ProviderCallRecoveryTests(unittest.TestCase):
 
     def test_cli_recover_default_and_choices_use_protocol_triggers(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(("recover", TASK_ID))
+        args = parser.parse_args(("host", "recover", TASK_ID))
         self.assertEqual(args.trigger, "host_restart")
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):
                 parser.parse_args(
-                    ("recover", TASK_ID, "--trigger", "operator_recover")
+                    ("host", "recover", TASK_ID, "--trigger", "operator_recover")
                 )
 
 

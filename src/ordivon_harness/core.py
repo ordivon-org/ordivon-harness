@@ -59,6 +59,8 @@ from .ordivon.run_store_port import (
     HarnessRunStoreBinding,
 )
 from .ordivon.sqlite_agent_bridge import (
+    NO_TOOL_AGENT_GRANT,
+    NO_TOOL_AGENT_GRANT_DIGEST,
     NO_TOOL_AGENT_SURFACE,
     NO_TOOL_AGENT_SURFACE_DIGEST,
     SQLiteHarnessAgentBridge,
@@ -123,6 +125,8 @@ __all__ = [
     "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
     "INDEPENDENT_SEARCH_TOOL_SURFACE",
     "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
+    "NO_TOOL_AGENT_GRANT",
+    "NO_TOOL_AGENT_GRANT_DIGEST",
     "NO_TOOL_AGENT_SURFACE",
     "NO_TOOL_AGENT_SURFACE_DIGEST",
     "SEARCH_WORKSPACE_DEFINITION",

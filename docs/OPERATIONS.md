@@ -28,24 +28,38 @@ related:
 
 ## Scope
 
-This document owns operation of current Assignment-bound Harness Runs, the independent Store surface, and the explicit P0 cutover control. Current Run execution covers status, run, resume, cancellation, active Tool-step reconciliation, lost-process recovery and semantic Doctor through Host-backed state. Independent operation covers initialization, inspection, full Doctor, backup verification and restore. Cutover operation inventories both histories, selects one writer through append-only receipts, and disables legacy writes after activation. It does not own Host backup/restore or Runtime service repair.
+This document owns the primary independent Harness Run CLI, retained Assignment-bound Host compatibility, the independent Store surface, and explicit cutover control. Independent operation covers Contract-in no-Tool DeepSeek run/resume, status, inspection, conservative recovery, Doctor, initialization, backup verification and restore. Tool-bearing independent execution is a Host-free Python API surface that requires a caller-supplied Runtime client. Cutover inventories retained Host and Harness histories and governs migration of existing deployment state. It does not own Host backup/restore or Runtime service repair.
 
 ## Normal operation
 
-Operate through `HarnessRunner` or the thin CLI against an existing Host state root and a current committed Assignment. `run` does not synthesize Task authority. A durable Snapshot forces `resume`; a recorded Run cannot be executed again and requires a replacement Assignment admitted through current Host revision fencing.
+The primary CLI consumes an existing caller-authored `HarnessRunContract` and writes only Harness-owned state. `run` does not synthesize Task, Objective, Context, Tool Grant, completion, caller, or budget authority. A durable Snapshot forces `resume`; a terminal Run is inspected rather than executed again.
 
 ```bash
-ordivon-harness --state-root /path/to/host-state status TASK_ID
-ordivon-harness --state-root /path/to/host-state inspect TASK_ID
-ordivon-harness --state-root /path/to/host-state handoff TASK_ID
-ordivon-harness --state-root /path/to/host-state run TASK_ID
-ordivon-harness --state-root /path/to/host-state resume TASK_ID --message 'operator input'
-ordivon-harness --state-root /path/to/host-state cancel TASK_ID
-ordivon-harness --state-root /path/to/host-state recover TASK_ID
-ordivon-harness --state-root /path/to/host-state doctor
+ordivon-harness capabilities
+ordivon-harness --harness-state-root /path/to/harness-state run RUN_CONTRACT.json --message 'caller input'
+ordivon-harness --harness-state-root /path/to/harness-state status HARNESS_RUN_ID
+ordivon-harness --harness-state-root /path/to/harness-state inspect HARNESS_RUN_ID
+ordivon-harness --harness-state-root /path/to/harness-state resume HARNESS_RUN_ID --message 'caller input'
+ordivon-harness --harness-state-root /path/to/harness-state recover HARNESS_RUN_ID
+ordivon-harness --harness-state-root /path/to/harness-state doctor
 ```
 
-The current production Runner creates no daemon, scheduler or process registry. Its durable Harness objects remain in Host CAS and are admitted through the Host Journal. P0 separately provides an independent Harness SQLite Journal/CAS, but the current Runner does not write to it and no Run is dual-written. `inspect` and `handoff` are read-only and require neither Runtime nor Provider access.
+The executable CLI profile is currently canonical no-Tool DeepSeek. A Tool-bearing Contract fails before Provider construction because the CLI has no authority to invent a Runtime transport. Applications that need Tools construct the corresponding independent Bridge and supply `HarnessRuntimeClient` through `ordivon_harness.api` or `ordivon_harness.core`.
+
+Retained Assignment-bound behavior is explicit:
+
+```bash
+ordivon-harness --state-root /path/to/host-state host status TASK_ID
+ordivon-harness --state-root /path/to/host-state host inspect TASK_ID
+ordivon-harness --state-root /path/to/host-state host handoff TASK_ID
+ordivon-harness --state-root /path/to/host-state host run TASK_ID
+ordivon-harness --state-root /path/to/host-state host resume TASK_ID --message 'operator input'
+ordivon-harness --state-root /path/to/host-state host cancel TASK_ID
+ordivon-harness --state-root /path/to/host-state host recover TASK_ID
+ordivon-harness --state-root /path/to/host-state host doctor
+```
+
+This legacy `HarnessRunner` path continues to persist through Host CAS and Journal until retained deployment state is explicitly migrated. No Run is dual-written. `host inspect` and `host handoff` are read-only and require neither Runtime nor Provider access.
 
 Initialize and operate the independent Store explicitly:
 
@@ -69,7 +83,7 @@ ordivon-harness --state-root /var/lib/ordivon/host \
   --harness-state-root /var/lib/ordivon/harness cutover-activate
 ```
 
-Activation requires zero nonterminal legacy Runs and zero nonterminal independent Runs. Its inventory and receipt are immutable files under the Host state root's `harness-cutover/` directory. After activation, legacy `run`, `resume`, `cancel`, and `recover` commands fail before Runtime or Provider access. `status`, `inspect`, `handoff`, Doctor and historical decoding remain available. Rollback is accepted only before any independent Run or Ordivon Harness external request created at or after activation. [`P0-INDEPENDENT-PERSISTENCE.md`](P0-INDEPENDENT-PERSISTENCE.md) owns the migration boundary.
+Activation requires zero nonterminal legacy Runs and zero nonterminal independent Runs. Its inventory and receipt are immutable files under the Host state root's `harness-cutover/` directory. After activation, legacy `host run`, `host resume`, `host cancel`, and `host recover` commands fail before Runtime or Provider access. `host status`, `host inspect`, `host handoff`, `host doctor` and historical decoding remain available. Rollback is accepted only before any independent Run or Ordivon Harness external request created at or after activation. [`P0-INDEPENDENT-PERSISTENCE.md`](P0-INDEPENDENT-PERSISTENCE.md) owns the migration boundary.
 
 Before operation or upgrade, verify the exact dependency graph:
 
@@ -108,7 +122,8 @@ A same-process `RunHandle` may close an active Provider connection. A separate C
 | Host SQLite, CAS, lease, Task projection, backup, or restore problem | `ordivon-host` Doctor or operations |
 | independent Harness Journal, CAS, Run lease, Store backup, or Store restore problem | `ordivon-harness store-doctor` or `store-verify-backup` |
 | cutover receipt, inventory, selected writer, or rollback refusal | `cutover-status`, `cutover-inventory`, and the immutable receipt chain under the Host state root |
-| current Assignment, Run, Trace, Tool-step, recovery, abandonment, or Harness completion problem | Host-backed `ordivon-harness doctor`, `status`, `resume`, or `recover` |
+| independent Run, Trace, Provider continuity, recovery, or CompletionProposal problem | `ordivon-harness doctor`, `status`, `inspect`, `resume`, or `recover` against the Harness root |
+| retained Host Assignment or legacy Harness extension problem | `ordivon-harness host doctor`, `host status`, `host inspect`, `host resume`, or `host recover` |
 | Workspace, Job, Attempt, process tree, Artifact, cancellation, or Runtime Registry problem | `ordivon-runtime` inspection and recovery |
 | domain acceptance or world-state uncertainty | the integrating domain application or participant |
 
@@ -116,9 +131,9 @@ Harness recovery may read Host-backed objects and Runtime evidence, but it does 
 
 ## Doctor
 
-Run Host Doctor first when current production state integrity is uncertain. `ordivon-harness doctor` then decodes and validates Harness-specific Assignment, Run, Recovery, Completion, Tool catalog, Intent, Fence, Receipt, Snapshot, delta, Trace, and provenance relationships preserved through the generic Host extension boundary.
+Run `ordivon-harness --harness-state-root ... doctor` when independent Run integrity is uncertain. It performs the full independent Store Doctor over SQLite integrity, admitted CAS objects, contiguous Run revisions, projection reconstruction, terminal closure, Event payload binding and caller-neutral Contract identity. `store-doctor` remains the explicit administrative spelling for the same root.
 
-For independent P0 state, run `store-doctor`. It verifies SQLite integrity, every admitted CAS object, contiguous Run revisions, projection reconstruction, terminal closure, Event payload binding and caller-neutral Contract identity.
+For retained Host-backed state, run `ordivon-harness --state-root ... host doctor`. It decodes and validates Harness-specific Assignment, Run, Recovery, Completion, Tool catalog, Intent, Fence, Receipt, Snapshot, delta, Trace and provenance relationships preserved through the generic Host extension boundary.
 
 Both Doctor surfaces are read-only with respect to Run semantics. They do not invoke a Provider, redispatch a Tool, repair Host storage, cancel Runtime work, or adjudicate domain truth. Full Store Doctor may update only the trusted-local object-validation cache.
 

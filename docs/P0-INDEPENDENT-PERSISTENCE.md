@@ -30,9 +30,9 @@ related:
 
 ## Result before phase detail
 
-Ordivon Harness now has a Host-independent persistence kernel for caller-neutral Run contracts, an append-only Run Journal, immutable CAS objects, revision and lease fencing, full-history Doctor checks, and verified backup and restore. This foundation is operational as an explicit `store-*` surface.
+Ordivon Harness has a Host-independent persistence kernel for caller-neutral Run contracts, an append-only Run Journal, immutable CAS objects, revision and lease fencing, full-history Doctor checks, and verified backup and restore. H1 promotes that authority into the default CLI for canonical no-Tool DeepSeek `run`, `resume`, `status`, `inspect`, `recover` and `doctor` operations.
 
-The production Agent Runner has **not** cut over. Existing `run`, `resume`, `recover`, `status`, `inspect`, `handoff`, and legacy `doctor` operations still use Host Assignment state, Host CAS, and Host extension events. No Run is dual-written.
+This operational promotion does **not** migrate retained production roots. Historical Host Task/Assignment work remains available only through the explicit `host ...` compatibility namespace, and cutover receipts still govern migration of existing deployment state. No Run is dual-written.
 
 ## Implemented boundary
 
@@ -112,13 +112,13 @@ The Provider Call and Tool Step projection tables remain reserved and non-author
 
 `RuntimeToolBridge` consumes `HarnessRunContinuityStore` rather than the concrete `HostHarnessRunStore`. Common retained Provider Call, Tool Step, Snapshot, object-view and lifecycle-error values live outside the Host implementation. Both the legacy Host Store and `SQLiteHarnessRunContinuityStore` implement the same behavioral boundary.
 
-`SQLiteHarnessAgentBridge` proves the real bounded `OrdivonAgentLoop` can execute and resume a no-Tool Agent Run using only the independent state root. It binds the canonical empty Tool surface, persists the complete Provider lifecycle, records `needs_input` Snapshot state, and replays a completed Provider result after a lost Bridge response without another physical invocation. It deliberately rejects every Tool Call. The production `HarnessRunner` still selects only the legacy Host-backed path.
+`SQLiteHarnessAgentBridge` executes and resumes a no-Tool Agent Run using only the independent state root. It now binds both the canonical empty Tool surface and canonical empty Tool Grant, persists the complete Provider lifecycle, records `needs_input` Snapshot state, and replays a completed Provider result after a lost Bridge response without another physical invocation. It deliberately rejects every Tool Call. The primary CLI uses this path; the historical `HarnessRunner` continues to select only the legacy Host-backed path when invoked through `host ...`.
 
 `HarnessExecutionBinding` now owns the caller-neutral immutable inputs required to lower a Tool Call into a Runtime request: Harness Run identity, Workspace reference, binding identity and digest, Tool catalog and optional Tool Grant digests, deadline, Runtime binding digest, and uniquely sorted foreign references. Generic Runtime request construction and `lower_runtime_tool` no longer import Host types. The legacy `RuntimeToolBridge` adapts its current `CommittedHarnessAssignment` into the same Binding and preserves the exact existing client request identity and foreign-reference bytes.
 
 `SQLiteHarnessRuntimeBridge` proves a Tool-bearing `OrdivonAgentLoop` can execute from only the independent Harness state plus a caller-supplied Runtime client. P0 deliberately exposes only observation-only `search_workspace`, lowers it to `workspace.exec`, appends a version-2 Harness Dispatch Fence, records the Tool Intent before physical admission, and reconciles transport response loss through the original `clientRequestId` without redispatch. Zero or multiple matching Runtime Jobs become durable UNKNOWN observations; pre-admission Runtime rejection remains model-correctable and does not claim physical dispatch.
 
-`StandaloneHarnessRunner` is the explicit Host-free execution surface. `IndependentRunRecorder` retains every returned Trace segment without changing a paused Run back to active, combines those segments on terminal admission, and binds the resulting Trace to an `IndependentHarnessRunReceipt`. Candidate completion additionally creates an immutable caller-neutral `IndependentCompletionProposal`; this completes the Harness Run but does not accept a Host Task or domain outcome. Recovery Assessments use the same independent binding and remain status-preserving Journal events.
+`StandaloneHarnessRunner` is the Host-free execution surface underneath the primary CLI and Python API. `IndependentRunRecorder` retains every returned Trace segment without changing a paused Run back to active, combines those segments on terminal admission, and binds the resulting Trace to an `IndependentHarnessRunReceipt`. Candidate completion additionally creates an immutable caller-neutral `IndependentCompletionProposal`; this completes the Harness Run but does not accept a Host Task or domain outcome. Recovery Assessments use the same independent binding and remain status-preserving Journal events. H1 `recover` records a safe assessment only when the CLI can prove a no-Tool Run has no active ambiguous Provider state; Tool-bearing or ambiguous work remains UNKNOWN and requires external reconciliation.
 
 The retained Host-backed Provider Call Record and Dispatch Fence remain exact version-1 codecs. Caller-neutral version-2 records bind to a `HarnessRunStoreBinding` digest and independent Run revision; they contain no Host Task identity or Task revision. Version-1 fences project `ordivon.host` authority, while version-2 fences project `ordivon.harness` authority into Runtime foreign references. Execution consumes structural Provider Call and Dispatch Fence views, so v1 and v2 remain usable without rewriting history. The independent Store is the only v2 writer.
 
@@ -272,7 +272,7 @@ The local P0 roundtrip injects delivery loss after Harness completion but before
 
 The cutover journal lives under the Host state root because the legacy writer always knows that root and must be unable to bypass the selected mode. It is operational deployment authority, not Task or Harness Run authority. Inventories and receipts are immutable private files; receipts form a contiguous previous-digest chain. The independent adapter continues to write only the Harness Journal/CAS, while legacy reads remain available from Host history.
 
-Activation does not migrate or rewrite historical bytes. It disables only the legacy write commands; new independent work enters through the Host external-executor boundary. A rollback receipt can restore legacy selection only while no independent Run or Host external request has been created since activation.
+Activation does not migrate or rewrite historical bytes. It disables only legacy Host-backed write commands. Independent work may enter directly through the primary Harness CLI/Python API or through the Host external-executor boundary; both write only the Harness Journal/CAS. A rollback receipt can restore legacy selection only while no independent Run or Host external request has been created since activation.
 
 ## Next migration slice
 

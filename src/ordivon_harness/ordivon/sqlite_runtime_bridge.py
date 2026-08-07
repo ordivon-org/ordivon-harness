@@ -98,6 +98,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             provider_source=provider_source,
             provider_holder_id=provider_holder_id,
             expected_tool_catalog_digest=INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
+            expected_tool_grant_digest=INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
         )
         binding = run_store.binding
         if (

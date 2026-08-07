@@ -411,7 +411,7 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
                 _create_task(storage, _clock())
             output = StringIO()
             with redirect_stdout(output):
-                exit_code = cli_main(["--state-root", directory, "status", TASK_ID])
+                exit_code = cli_main(["--state-root", directory, "host", "status", TASK_ID])
 
             self.assertEqual(exit_code, 0)
             value = json.loads(output.getvalue())
@@ -427,7 +427,7 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
             inspect_output = StringIO()
             with redirect_stdout(inspect_output):
                 inspect_code = cli_main(
-                    ["--state-root", directory, "inspect", TASK_ID]
+                    ["--state-root", directory, "host", "inspect", TASK_ID]
                 )
             inspect_value = json.loads(inspect_output.getvalue())
             self.assertEqual(inspect_code, 0)
@@ -440,7 +440,7 @@ class HarnessRunnerR0R1Tests(unittest.TestCase):
             handoff_output = StringIO()
             with redirect_stdout(handoff_output):
                 handoff_code = cli_main(
-                    ["--state-root", directory, "handoff", TASK_ID]
+                    ["--state-root", directory, "host", "handoff", TASK_ID]
                 )
             handoff_value = json.loads(handoff_output.getvalue())
             self.assertEqual(handoff_code, 0)

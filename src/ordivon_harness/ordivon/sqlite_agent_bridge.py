@@ -38,6 +38,12 @@ NO_TOOL_AGENT_SURFACE: dict[str, JsonValue] = {
     "tools": [],
 }
 NO_TOOL_AGENT_SURFACE_DIGEST = canonical_digest(NO_TOOL_AGENT_SURFACE)
+NO_TOOL_AGENT_GRANT: dict[str, JsonValue] = {
+    "schemaVersion": 1,
+    "kind": "ordivon.no-tool-grant",
+    "tools": [],
+}
+NO_TOOL_AGENT_GRANT_DIGEST = canonical_digest(NO_TOOL_AGENT_GRANT)
 
 
 class _ToolObservationView(Protocol):
@@ -62,6 +68,7 @@ class SQLiteHarnessAgentBridge:
         provider_source: HarnessProviderCallSourceRef | None = None,
         provider_holder_id: str | None = None,
         expected_tool_catalog_digest: str = NO_TOOL_AGENT_SURFACE_DIGEST,
+        expected_tool_grant_digest: str = NO_TOOL_AGENT_GRANT_DIGEST,
     ) -> None:
         if contract.harness_run_id != run_store.harness_run_id:
             raise ValueError("Harness Run Contract differs from its continuity Store")
@@ -70,6 +77,10 @@ class SQLiteHarnessAgentBridge:
         if contract.tool_catalog_digest != expected_tool_catalog_digest:
             raise ValueError(
                 "SQLiteHarnessAgentBridge no-Tool or expected Tool surface differs"
+            )
+        if contract.tool_grant_digest != expected_tool_grant_digest:
+            raise ValueError(
+                "SQLiteHarnessAgentBridge no-Tool or expected Tool Grant differs"
             )
         self.contract = contract
         self.run_store = run_store

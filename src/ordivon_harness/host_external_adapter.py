@@ -273,7 +273,9 @@ class OrdivonHarnessExternalExecutorAdapter:
                         "hostRequestId": request.request_id,
                         "foreignRunRef": foreign_run_ref,
                     },
-                    unresolved_unknowns=(),
+                    unresolved_unknowns=(
+                        "foreign Run recovery has not reconciled Provider, Tool, or Workspace state",
+                    ),
                 )
                 projection = store.load_run(contract.harness_run_id)
                 observation = self._observation(store, projection)
