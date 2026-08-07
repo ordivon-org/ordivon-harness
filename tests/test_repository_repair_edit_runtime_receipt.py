@@ -47,7 +47,13 @@ class RepositoryRepairEditRuntimeReceiptTests(unittest.TestCase):
         self.assertFalse(receipt["productionActivated"])
         self.assertFalse(receipt["b6Implemented"])
         index = json.loads(INDEX.read_text(encoding="utf-8"))
-        entry = next(
+        pre_a0_entry = next(
+            item
+            for item in index["entries"]
+            if item["claimId"]
+            == "harness.repository-repair-edit-runtime-bridge.v2-pre-a0-u1"
+        )
+        post_a0_entry = next(
             item
             for item in index["entries"]
             if item["claimId"]
@@ -65,22 +71,23 @@ class RepositoryRepairEditRuntimeReceiptTests(unittest.TestCase):
             "b23d5fa6c820c10f937f48cc16c2d8e03d3e18ae",
         )
         self.assertIn("Historical frozen B4/B5", old_entry["scope"])
+        self.assertEqual(pre_a0_entry["status"], "historical")
         self.assertEqual(
-            entry,
-            {
-                "claimId": "harness.repository-repair-edit-runtime-bridge.v2",
-                "file": "repository-repair-edit-runtime-bridge-dd50136.json",
-                "status": "verified",
-                "implementationRevision": (
-                    "dd50136ef722b9df3dfb0fef195fcc1a137fd8ed"
-                ),
-                "scope": (
-                    "Separate Agent-friendly exact-replace and completion-file "
-                    "creation surface over durable Runtime Patch identity, "
-                    "reconciliation, visible Check, diff, reread and closed "
-                    "Workspace; does not resume frozen B5"
-                ),
-            },
+            pre_a0_entry["implementationRevision"],
+            "dd50136ef722b9df3dfb0fef195fcc1a137fd8ed",
+        )
+        self.assertEqual(
+            pre_a0_entry["file"],
+            "repository-repair-edit-runtime-bridge-dd50136.json",
+        )
+        self.assertEqual(post_a0_entry["status"], "historical")
+        self.assertEqual(
+            post_a0_entry["implementationRevision"],
+            "e6256714f92fff9b66c998328da870e8ac3b50e9",
+        )
+        self.assertEqual(
+            post_a0_entry["file"],
+            "repository-repair-edit-runtime-bridge-e625671.json",
         )
 
     def test_failed_check_is_rejected_after_integrity_recomputation(self) -> None:

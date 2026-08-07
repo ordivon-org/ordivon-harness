@@ -128,7 +128,7 @@ def validate_receipt(path: Path) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate the committed V2 edit receipt")
+    parser = argparse.ArgumentParser(description="Validate the frozen pre-A0 V2 edit receipt")
     parser.add_argument("receipt", type=Path)
     args = parser.parse_args()
     value = validate_receipt(args.receipt)
@@ -138,7 +138,7 @@ def main() -> int:
                 "kind": value["kind"],
                 "implementationRevision": value["implementationRevision"],
                 "payloadDigest": value["integrity"]["payloadDigest"],
-                "status": "verified",
+                "status": "historical",
             },
             indent=2,
             sort_keys=True,

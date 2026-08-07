@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-05
+updated: 2026-08-07
 summary: Stable maturity claim, proven capabilities, support boundary and known limits for Ordivon Harness.
 evidence_status: verified
 readiness: READY
