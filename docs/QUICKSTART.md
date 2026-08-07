@@ -39,7 +39,7 @@ uv lock --check
 
 The base package uses the exact Protocol revision. The exact Host revision is an optional `host` extra and a repository development dependency, so `uv sync --locked` still installs the complete legacy regression graph. `pyproject.toml`, `uv.lock` and `_host_compat` metadata must agree. A plain editable `pip install` is not the canonical repository setup because it does not validate `uv.lock`.
 
-For a built wheel, the base installation exposes `ordivon_harness.core` and independent `store-*` commands without Host. Install the `host` extra only for `ordivon_harness.api`, Host-backed Runner commands and current production compatibility.
+For a built wheel, the base installation exposes the recommended `ordivon_harness.api`, the wider `ordivon_harness.core`, and independent `store-*` commands without Host. Install the `host` extra only for `ordivon_harness.host_api`, Host-backed Runner commands, and current production compatibility.
 
 ## Run the portable contract
 

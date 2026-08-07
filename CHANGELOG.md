@@ -30,8 +30,8 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 - the optional Host integration and development graph now pin remote-reachable Host `7b17807784cc52f0be4f1786719f6dc20deb92c8`;
 - the production `HarnessRunner`, Provider Call, Tool Step, Snapshot, recovery and completion paths remain Host-backed;
 - no new Run is dual-written and no retained Host history is rewritten;
-- the stable `ordivon_harness.api` facade is unchanged; P0 types are transitional package-root exports;
-- the base wheel requires only the exact Protocol revision; Host-backed APIs require the exact `host` extra, while the repository dev group keeps the complete regression graph.
+- `ordivon_harness.api` is now the recommended Host-free application facade; the former Host-backed facade is preserved explicitly as `ordivon_harness.host_api`, while historical package-root aliases remain during the pre-1.0 window;
+- the base wheel requires only the exact Protocol revision and proves the recommended API loads without Host; Host-backed APIs require the exact `host` extra, while the repository dev group keeps the complete regression graph.
 
 ### Verification
 

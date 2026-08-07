@@ -15,7 +15,7 @@ audience:
   - operator
   - agent
 updated: 2026-08-05
-summary: Public entry to current Host-backed Agent Run execution and the staged independent Harness persistence foundation.
+summary: Public entry to caller-neutral Agent Run execution, durable Harness-owned continuity, Runtime bridging, and explicit Host compatibility.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -35,18 +35,18 @@ related:
 
 Ordivon Harness keeps one Agent Run understandable and recoverable when a model, Provider process, Tool response, or local process fails.
 
-The current production Runner binds execution to a durable Host Assignment, adapts replaceable Providers, constrains and records Tool use, checkpoints public Run state, and produces evidence that Host or a domain verifier can evaluate. P0 now also provides a separate caller-neutral Run Contract and independent Journal/CAS foundation; the production Runner has not cut over to it.
+The recommended application surface is now caller-neutral: one `HarnessRunContract`, Harness-owned Journal/CAS continuity, Provider/Tool execution, Runtime bridging, and a caller-neutral CompletionProposal. A Host-backed Runner remains as an explicit compatibility path for existing durable Host Assignments; changing the recommended import surface does **not** migrate production state or silently activate the cutover writer.
 
 ```text
-Host Task and Assignment
-→ Harness Context and ToolGrant
+caller or domain-owned work
+→ HarnessRunContract + bounded Context/Tool surface
 → Provider Call
 → model Tool request
-→ durable Tool Step intent/fence
-→ Runtime physical execution
-→ Tool Observation and Run Snapshot
-→ Completion Proposal
-→ Host/domain verification and Task outcome
+→ durable Harness Tool intent/fence
+→ Runtime or domain Tool execution
+→ Tool Observation + Run Snapshot/Trace
+→ caller-neutral CompletionProposal
+→ optional Host/domain verification and outcome ownership
 ```
 
 ## Responsibility boundary
@@ -162,20 +162,22 @@ A domain supplies immutable Tool definitions, a Bridge implementation, a per-loo
 
 ## Public API
 
-Host-free integrations should import the independent facade:
+New Agent applications should import the small Host-free facade:
 
 ```python
-from ordivon_harness.core import (
+from ordivon_harness.api import (
     HarnessRunContract,
     SQLiteHarnessStore,
     StandaloneHarnessRunner,
 )
 ```
 
-Host-backed application integrations should import from the stable facade after installing the `host` extra:
+`ordivon_harness.core` remains the wider Host-free integration surface for advanced Runtime, persistence, recovery, and Provider work.
+
+Applications that intentionally bind execution to the historical Host-backed Runner install the `host` extra and use the explicit compatibility facade:
 
 ```python
-from ordivon_harness.api import (
+from ordivon_harness.host_api import (
     CompletionMode,
     HarnessRunner,
     HarnessRunPlan,
@@ -184,7 +186,7 @@ from ordivon_harness.api import (
 )
 ```
 
-The package root retains historical pre-1.0 exports for compatibility. Provider drivers, owner-local persistence records and recovery implementation types remain integration or internal APIs even when old root aliases still exist. See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
+The package root retains historical pre-1.0 exports for compatibility. No production state is migrated by importing the new facade. Provider drivers, owner-local persistence records and recovery implementation types remain integration or internal APIs even when old root aliases still exist. See [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md).
 
 ## Operator interface
 
