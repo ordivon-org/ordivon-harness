@@ -1,39 +1,60 @@
-"""Recommended public facade for application code.
+"""Recommended Host-free public facade for Agent applications.
 
-The package root retains historical exports during the pre-1.0 compatibility
-window. New integrations should import from this module so internal persistence,
-Provider-driver, and recovery implementation types can evolve independently.
+This surface exposes one bounded cognitive Run, caller-neutral durable Run
+state, Runtime bridging, completion evidence, and domain-owned Tool loops. It
+does not import Ordivon Host or make Host Task authority a prerequisite for a
+Harness Run.
+
+Host-bound applications that intentionally use the historical production path
+must import :mod:`ordivon_harness.host_api` explicitly.
 """
 
-from .contracts import TaskContract, ToolGrant
+from .core import (
+    AgentTurnAdapter,
+    AgentTurnRequest,
+    AgentTurnResult,
+    HarnessPrivacyPolicy,
+    HarnessRunContract,
+    HarnessRuntimeClient,
+    IndependentCompletionProposal,
+    IndependentHarnessRunReceipt,
+    OrdivonAgentLoop,
+    RunBudget,
+    RunStopCode,
+    SQLiteHarnessRunContinuityStore,
+    SQLiteHarnessRuntimeBridge,
+    SQLiteHarnessStore,
+    StandaloneHarnessExecution,
+    StandaloneHarnessRunner,
+    StandaloneToolBridge,
+)
 from .domain_tools import (
     DomainToolBridge,
     DomainToolCatalog,
     DomainToolLoopPlan,
     DomainToolLoopRunner,
 )
-from .runner import (
-    CompletionMode,
-    HarnessCancellationResult,
-    HarnessExecutionResult,
-    HarnessRunner,
-    HarnessRunPlan,
-    HarnessStatus,
-    RunHandle,
-)
 
 __all__ = [
-    "CompletionMode",
+    "AgentTurnAdapter",
+    "AgentTurnRequest",
+    "AgentTurnResult",
     "DomainToolBridge",
     "DomainToolCatalog",
     "DomainToolLoopPlan",
     "DomainToolLoopRunner",
-    "HarnessCancellationResult",
-    "HarnessExecutionResult",
-    "HarnessRunner",
-    "HarnessRunPlan",
-    "HarnessStatus",
-    "RunHandle",
-    "TaskContract",
-    "ToolGrant",
+    "HarnessPrivacyPolicy",
+    "HarnessRunContract",
+    "HarnessRuntimeClient",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "OrdivonAgentLoop",
+    "RunBudget",
+    "RunStopCode",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SQLiteHarnessStore",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
 ]

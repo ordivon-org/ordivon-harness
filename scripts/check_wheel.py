@@ -17,6 +17,29 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
+    "AgentTurnAdapter",
+    "AgentTurnRequest",
+    "AgentTurnResult",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
+    "HarnessPrivacyPolicy",
+    "HarnessRunContract",
+    "HarnessRuntimeClient",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "OrdivonAgentLoop",
+    "RunBudget",
+    "RunStopCode",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SQLiteHarnessStore",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
+}
+EXPECTED_HOST_API = {
     "CompletionMode",
     "DomainToolBridge",
     "DomainToolCatalog",
@@ -46,6 +69,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/core.py",
     "ordivon_harness/cutover.py",
     "ordivon_harness/api.py",
+    "ordivon_harness/host_api.py",
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/domain_tools.py",
     "ordivon_harness/errors.py",
@@ -183,10 +207,11 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
                 str(python),
                 "-c",
                 (
-                    "import importlib.metadata as m,importlib.util,json; "
-                    "import ordivon_harness.core as core; "
+                    "import importlib.metadata as m,importlib.util,json,sys; "
+                    "import ordivon_harness.core as core; import ordivon_harness.api as api; "
                     "print(json.dumps({'version':m.version('ordivon-harness'),"
-                    "'core':sorted(core.__all__),"
+                    "'core':sorted(core.__all__),'api':sorted(api.__all__),"
+                    "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules),"
                     "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
                 ),
             ]
@@ -196,6 +221,10 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
             fail("installed Core distribution version differs from wheel metadata")
         if not REQUIRED_CORE_API.issubset(set(observed_core.get("core", []))):
             fail("installed Core API lacks required independent symbols")
+        if set(observed_core.get("api", [])) != EXPECTED_API:
+            fail("installed recommended API differs from the Host-free repository contract")
+        if observed_core.get("hostLoaded") is not False:
+            fail("recommended API eagerly loaded Host in the base installation")
         if observed_core.get("hostInstalled") is not False:
             fail("base wheel installation unexpectedly installed Host")
         run_checked([str(python), str(ROOT / "scripts/check_core_without_host.py")])
@@ -221,15 +250,15 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
                 str(python),
                 "-c",
                 (
-                    "import importlib.util,json; import ordivon_harness.api as api; "
+                    "import importlib.util,json; import ordivon_harness.host_api as api; "
                     "print(json.dumps({'api':sorted(api.__all__),"
                     "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
                 ),
             ]
         )
         observed_host = json.loads(host_probe.stdout)
-        if set(observed_host.get("api", [])) != EXPECTED_API:
-            fail("installed Host public API differs from the repository contract")
+        if set(observed_host.get("api", [])) != EXPECTED_HOST_API:
+            fail("installed Host compatibility API differs from the repository contract")
         if observed_host.get("hostInstalled") is not True:
             fail("Host extra did not install ordivon-host")
         commands = (

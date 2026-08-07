@@ -57,7 +57,13 @@ A Host pin change requires:
 
 ### Recommended facade
 
-`ordivon_harness.api` contains application-facing orchestration types.
+`ordivon_harness.api` is the small Host-free application surface. Importing it must not require or load `ordivon-host`.
+
+`ordivon_harness.core` is the wider Host-free integration surface for persistence, Provider, Runtime, recovery, and advanced Harness composition.
+
+### Host compatibility facade
+
+`ordivon_harness.host_api` contains the existing Host-backed `HarnessRunner` application surface. It requires the `host` extra and remains supported during the pre-1.0 cutover window; moving the recommended facade does not migrate existing Runs.
 
 ### Integration modules
 

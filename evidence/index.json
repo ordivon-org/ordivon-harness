@@ -134,6 +134,13 @@
       "status": "verified",
       "implementationRevision": "e6256714f92fff9b66c998328da870e8ac3b50e9",
       "scope": "Current Agent-friendly exact-replace and completion-file creation surface reverified after A0-U1 token normalization and terminal Observation measurement projection; one Runtime Job, reconciliation, visible Check, diff, reread and closed Workspace"
+    },
+    {
+      "claimId": "harness.api.c3-agent-first",
+      "file": "harness-c3-agent-first-api-be7200a.json",
+      "status": "verified",
+      "implementationRevision": "be7200ab54033f82d587ae5451c3c6c88dc65866",
+      "scope": "Current caller-neutral Host-free recommended API, explicit Host compatibility facade, full regression, deterministic demo and isolated wheel smoke without production Run-state cutover"
     }
   ]
 }

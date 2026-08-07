@@ -41,6 +41,29 @@ REQUIRED_README_HEADINGS = {
     "License",
 }
 STABLE_API = {
+    "AgentTurnAdapter",
+    "AgentTurnRequest",
+    "AgentTurnResult",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
+    "HarnessPrivacyPolicy",
+    "HarnessRunContract",
+    "HarnessRuntimeClient",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "OrdivonAgentLoop",
+    "RunBudget",
+    "RunStopCode",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SQLiteHarnessStore",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
+}
+HOST_COMPAT_API = {
     "CompletionMode",
     "DomainToolBridge",
     "DomainToolCatalog",
@@ -171,8 +194,8 @@ def validate_links() -> list[str]:
     return errors
 
 
-def public_api_exports() -> set[str]:
-    tree = ast.parse((ROOT / "src/ordivon_harness/api.py").read_text(encoding="utf-8"))
+def module_api_exports(relative: str) -> set[str]:
+    tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == "__all__"
@@ -238,10 +261,19 @@ def validate_public_contracts() -> list[str]:
         if heading not in pull_request:
             errors.append(f"pull-request contract lacks heading: {heading}")
 
-    if public_api_exports() != STABLE_API:
+    public_api = module_api_exports("src/ordivon_harness/api.py")
+    if public_api != STABLE_API:
         errors.append(
-            f"stable API differs: expected={sorted(STABLE_API)} observed={sorted(public_api_exports())}"
+            f"stable Host-free API differs: expected={sorted(STABLE_API)} observed={sorted(public_api)}"
         )
+    host_api = module_api_exports("src/ordivon_harness/host_api.py")
+    if host_api != HOST_COMPAT_API:
+        errors.append(
+            f"Host compatibility API differs: expected={sorted(HOST_COMPAT_API)} observed={sorted(host_api)}"
+        )
+    api_source = (ROOT / "src/ordivon_harness/api.py").read_text(encoding="utf-8")
+    if "ordivon_host" in api_source or "_host_compat" in api_source or "from .runner" in api_source:
+        errors.append("recommended API is no longer Host-free")
 
     architecture = (ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
     for stale in (
