@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 from anc_canonical import canonical_digest as owner_digest, loads_strict
 
+from .independent_result import IndependentHarnessRunReceipt
 from .ordivon.continuity_records import HarnessDispatchFenceV2
 from .protocol import HarnessDispatchFence, HarnessToolStepReceipt
 
@@ -24,6 +25,7 @@ _TYPED_KINDS = frozenset(
     {
         "harness-tool-step-receipt",
         "harness-dispatch-fence",
+        "independent-harness-run-receipt",
     }
 )
 
@@ -103,7 +105,7 @@ def _load_typed_object(
     objects_root: Path,
     digest: str,
     stored_kind: str,
-) -> tuple[str, dict[str, str | None]]:
+) -> tuple[str, dict[str, Any]]:
     path = objects_root / f"{digest.removeprefix('sha256:')}.json"
     if path.is_symlink() or not path.is_file():
         raise HarnessObservationExportError(f"typed Harness object is absent: {digest}")
@@ -135,6 +137,13 @@ def _load_typed_object(
                 "toolCallId": receipt.tool_call_id,
                 "runtimeJobRef": receipt.runtime_job_ref,
             }
+        if stored_kind == "independent-harness-run-receipt":
+            receipt = IndependentHarnessRunReceipt.from_dict(payload)
+            return stored_kind, {
+                "harnessRunId": receipt.harness_run_id,
+                "runtimeJobRefs": list(receipt.runtime_job_refs),
+                "usage": dict(receipt.usage),
+            }
         version = payload.get("schemaVersion")
         if version == 2:
             fence = HarnessDispatchFenceV2.from_dict(payload)
@@ -156,7 +165,7 @@ def _relations(
     core: Any,
     row: sqlite3.Row,
     refs: list[sqlite3.Row],
-    typed: list[tuple[str, dict[str, str | None]]],
+    typed: list[tuple[str, dict[str, Any]]],
 ) -> tuple[Any, ...]:
     values = [
         core.ObservationRelation(
@@ -208,7 +217,7 @@ def _relations(
                         "executes", "ordivon.runtime.job", runtime_job
                     )
                 )
-        else:
+        elif kind == "harness-dispatch-fence":
             values.append(
                 core.ObservationRelation(
                     "requested_by",
@@ -216,7 +225,56 @@ def _relations(
                     str(item["clientRequestId"]),
                 )
             )
+        elif kind == "independent-harness-run-receipt":
+            runtime_jobs = item["runtimeJobRefs"]
+            if not isinstance(runtime_jobs, list):
+                raise HarnessObservationExportError(
+                    "independent Harness Run Receipt Runtime Job refs are invalid"
+                )
+            for runtime_job in runtime_jobs:
+                if not isinstance(runtime_job, str):
+                    raise HarnessObservationExportError(
+                        "independent Harness Run Receipt Runtime Job ref is invalid"
+                    )
+                values.append(
+                    core.ObservationRelation(
+                        "executes", "ordivon.runtime.job", runtime_job
+                    )
+                )
     return tuple(sorted(set(values)))
+
+
+def _measurements(
+    core: Any,
+    typed: list[tuple[str, dict[str, Any]]],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for kind, item in typed:
+        if kind != "independent-harness-run-receipt":
+            continue
+        usage = item.get("usage")
+        if not isinstance(usage, dict):
+            raise HarnessObservationExportError(
+                "independent Harness Run Receipt usage is invalid"
+            )
+        mapping = {
+            "modelCalls": ("ordivon.harness.model_calls", "1"),
+            "toolCalls": ("ordivon.harness.tool_calls", "1"),
+            "observationBytes": ("ordivon.harness.observation_bytes", "By"),
+            "totalTokens": ("ordivon.harness.total_tokens", "token"),
+            "wallTimeMs": ("ordivon.harness.wall_time", "ms"),
+            "toolCorrections": ("ordivon.harness.tool_corrections", "1"),
+        }
+        for source, (target, unit) in mapping.items():
+            value = usage.get(source)
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+                raise HarnessObservationExportError(
+                    f"independent Harness Run Receipt {source} is not non-negative numeric"
+                )
+            result[target] = core.ObservationMeasurement(value=value, unit=unit)
+    return result
 
 
 def _read_events(
@@ -302,6 +360,7 @@ def _read_events(
                         "referenceCount": sum(ref["role"] == "reference" for ref in refs),
                         "typedKeyKinds": [kind for kind, _ in typed],
                     },
+                    measurements=_measurements(core, typed),
                     privacy=core.ObservationPrivacy(
                         "private_content_ref", "harness-observation-metadata-v1"
                     ),

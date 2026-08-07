@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from ordivon_harness.core_contracts import HarnessBoundReference, HarnessRunContract
+from ordivon_harness.independent_result import IndependentHarnessRunReceipt
 from ordivon_harness.observation_export import (
     HarnessObservationExportError,
     MAPPING_VERSION,
@@ -117,6 +118,62 @@ class HarnessObservationExporterTests(unittest.TestCase):
                 lease_checked_at_ms=1_003,
                 referenced_objects=(fence_object, receipt_object),
             )
+            run_receipt = IndependentHarnessRunReceipt(
+                harness_run_id=run_a.harness_run_id,
+                caller_id=run_a.caller_id,
+                caller_run_ref=run_a.caller_run_ref,
+                contract_digest=run_a.digest,
+                harness_implementation_id=run_a.harness_implementation_id,
+                system_manifest_digest=run_a.system_manifest_ref.digest,
+                started_at_ms=1_000,
+                finished_at_ms=1_004,
+                stop_reason="completed",
+                termination_code="candidate_completed",
+                trace_digest=DIGEST_A,
+                context_digests=(run_a.context_refs[0].digest,),
+                tool_catalog_digest=run_a.tool_catalog_digest,
+                tool_grant_digest=run_a.tool_grant_digest,
+                runtime_job_refs=(
+                    "job-019fd000-0000-7000-8000-000000000001",
+                ),
+                artifact_refs=(),
+                usage={
+                    "modelCalls": 2,
+                    "toolCalls": 1,
+                    "observationBytes": 3_682,
+                    "totalTokens": 58,
+                    "wallTimeMs": 821,
+                    "toolCorrections": 0,
+                    "providerUsage": [
+                        {
+                            "inputTokens": 40,
+                            "outputTokens": 18,
+                            "private": "provider usage detail must remain owner-native",
+                        }
+                    ],
+                },
+                conclusion_digest=DIGEST_B,
+            )
+            run_receipt_object = store.put_object(
+                run_receipt.to_dict(), kind="independent-harness-run-receipt"
+            )
+            terminal_lease = store.acquire_run_lease(
+                run_a.harness_run_id,
+                owner_id="worker:observation-test",
+                ttl_ms=1_000,
+                now_ms=1_004,
+            )
+            store.append_event(
+                event_id="event:observation-a:run-completed",
+                harness_run_id=run_a.harness_run_id,
+                event_kind="harness.run-completed",
+                data={"private": "terminal payload must not be exported"},
+                expected_revision=2,
+                recorded_at_ms=1_004,
+                lease=terminal_lease,
+                lease_checked_at_ms=1_004,
+                referenced_objects=(run_receipt_object,),
+            )
 
     @staticmethod
     def durable_snapshot(root: Path) -> dict[str, bytes]:
@@ -157,7 +214,7 @@ class HarnessObservationExporterTests(unittest.TestCase):
             self.create_history(root / "harness")
             before = self.durable_snapshot(root / "harness")
             result = self.run_export(directory)
-            self.assertEqual(result["eventCount"], 3)
+            self.assertEqual(result["eventCount"], 4)
             self.assertEqual(self.durable_snapshot(root / "harness"), before)
             bundle_path = Path(str(result["bundlePath"]))
             encoded = bundle_path.read_text(encoding="utf-8")
@@ -165,12 +222,38 @@ class HarnessObservationExporterTests(unittest.TestCase):
                 "budget content must not be exported",
                 "completion content must not be exported",
                 "tool event payload must not be exported",
+                "terminal payload must not be exported",
+                "provider usage detail must remain owner-native",
+                '"inputTokens"',
+                '"outputTokens"',
             ):
                 self.assertNotIn(private, encoded)
             bundle = observation.ObservationExportBundle.from_dict(json.loads(encoded))
             events = tuple(event for batch in bundle.batches for event in batch.events)
-            self.assertEqual([event.source.sequence for event in events], [1, 2, 3])
-            self.assertEqual([event.source.native_revision for event in events], [1, 1, 2])
+            self.assertEqual([event.source.sequence for event in events], [1, 2, 3, 4])
+            self.assertEqual(
+                [event.source.native_revision for event in events], [1, 1, 2, 3]
+            )
+            terminal = events[-1]
+            self.assertEqual(
+                terminal.attributes["typedKeyKinds"],
+                ["independent-harness-run-receipt"],
+            )
+            self.assertTrue(all(not event.measurements for event in events[:-1]))
+            self.assertEqual(
+                {
+                    key: (measurement.value, measurement.unit)
+                    for key, measurement in terminal.measurements.items()
+                },
+                {
+                    "ordivon.harness.model_calls": (2, "1"),
+                    "ordivon.harness.tool_calls": (1, "1"),
+                    "ordivon.harness.observation_bytes": (3_682, "By"),
+                    "ordivon.harness.total_tokens": (58, "token"),
+                    "ordivon.harness.wall_time": (821, "ms"),
+                    "ordivon.harness.tool_corrections": (0, "1"),
+                },
+            )
             relations = [relation.to_dict() for event in events for relation in event.relations]
             self.assertTrue(
                 any(
@@ -210,7 +293,7 @@ class HarnessObservationExporterTests(unittest.TestCase):
                     gateway.ingest(batch, ingested_at_ms=3_000).accepted
                     for batch in bundle.batches
                 )
-                self.assertEqual(accepted, 3)
+                self.assertEqual(accepted, 4)
                 self.assertTrue(gateway.doctor(full=True)["healthy"])
             self.assertEqual(
                 self.run_export(directory, exported_at_ms=2_001)["status"],
@@ -229,7 +312,7 @@ class HarnessObservationExporterTests(unittest.TestCase):
             self.assertEqual(first["eventCount"], 2)
             self.assertEqual(len(tuple((root / "outbox").glob("bundle-*.json"))), 1)
             second = self.run_export(directory, limit=2, exported_at_ms=2_001)
-            self.assertEqual(second["eventCount"], 1)
+            self.assertEqual(second["eventCount"], 2)
             self.assertEqual(
                 self.run_export(directory, limit=2, exported_at_ms=2_002)["status"],
                 "no_events",
