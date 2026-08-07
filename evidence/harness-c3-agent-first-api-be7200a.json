@@ -1,0 +1,50 @@
+{
+  "changedPaths": [
+    "CHANGELOG.md",
+    "README.md",
+    "docs/COMPATIBILITY.md",
+    "docs/QUICKSTART.md",
+    "pyproject.toml",
+    "scripts/check_docs.py",
+    "scripts/check_wheel.py",
+    "src/ordivon_harness/api.py",
+    "src/ordivon_harness/host_api.py",
+    "tests/test_public_api.py"
+  ],
+  "checks": {
+    "cliCommandsVerified": 19,
+    "dependencyContractPassed": true,
+    "deterministicDemoPassed": true,
+    "documentationContractPassed": true,
+    "dualWriteActivated": false,
+    "durableRunStateModulesChanged": false,
+    "fullRegressionPassed": true,
+    "hostCompatibilityFacadePassedWithHostExtra": true,
+    "legacyWriterRemoved": false,
+    "productionCutoverActivated": false,
+    "recommendedApiHostFreeInBaseWheel": true,
+    "wheelSmokePassed": true
+  },
+  "digests": {
+    "deterministicDemoTrace": "sha256:bb18e5d6fba7a0046823d5b143bba1a4812168cec5ff6ee996dd1afcde42f832",
+    "hostCompatibilityApi": "sha256:c187ac9cb907f634a401307bb3f8726669922550f4d6c77919906e52fac8d19c",
+    "recommendedApi": "sha256:f463a10e0cb83d4648527718ecdafd738a5ff3f16ff462e26c3de53c1f0a7448",
+    "wheel": "sha256:e8095455af3688bcc1e7a7bdc4a8ba8e5d35656d8a8338c837fc13cf153a907b"
+  },
+  "implementationRevision": "be7200ab54033f82d587ae5451c3c6c88dc65866",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalization": "ordivon-evidence-json-v1",
+    "payloadDigest": "sha256:f2c7dd80b4d6312de4ec9a2e5c603177f7ec6edc299d26362fce9158b41ea112"
+  },
+  "kind": "ordivon.harness-c3-agent-first-api-acceptance",
+  "knownLimits": [
+    "This receipt verifies C3 API packaging and compatibility, not a production state cutover.",
+    "The historical Host-backed HarnessRunner remains the production compatibility path until an explicit cutover receipt activates another writer.",
+    "The prior V2 repository-repair edit receipt remains historical evidence bound to its own implementation revision; C3 does not revalidate or resume frozen B5.",
+    "No Provider capability claim is made."
+  ],
+  "parentRevision": "593a389d1b035ee46b91b374bf76f40ed2c697ef",
+  "schemaVersion": 1,
+  "scope": "Recommended caller-neutral Host-free Harness API with explicit Host-backed compatibility facade; no durable Run-state cutover."
+}

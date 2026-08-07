@@ -114,9 +114,52 @@ def main() -> int:
         integrity = receipt.get("integrity")
         if integrity is not None and not isinstance(integrity, dict):
             errors.append(f"invalid integrity object: {filename}")
-        if isinstance(integrity, dict) and receipt.get("kind") == "ordivon.harness-p0-scale-acceptance":
+        if isinstance(integrity, dict) and receipt.get("kind") in {
+            "ordivon.harness-p0-scale-acceptance",
+            "ordivon.harness-c3-agent-first-api-acceptance",
+        }:
             if integrity.get("payloadDigest") != _canonical_payload_digest(receipt):
                 errors.append(f"integrity mismatch: {filename}")
+        if receipt.get("kind") == "ordivon.harness-c3-agent-first-api-acceptance":
+            checks = receipt.get("checks")
+            expected_changed = {
+                "CHANGELOG.md",
+                "README.md",
+                "docs/COMPATIBILITY.md",
+                "docs/QUICKSTART.md",
+                "pyproject.toml",
+                "scripts/check_docs.py",
+                "scripts/check_wheel.py",
+                "src/ordivon_harness/api.py",
+                "src/ordivon_harness/host_api.py",
+                "tests/test_public_api.py",
+            }
+            if set(receipt.get("changedPaths", [])) != expected_changed:
+                errors.append("C3 API receipt changed-path set differs")
+            if not isinstance(checks, dict):
+                errors.append("C3 API receipt checks are missing")
+            else:
+                for required_check in (
+                    "fullRegressionPassed",
+                    "documentationContractPassed",
+                    "dependencyContractPassed",
+                    "recommendedApiHostFreeInBaseWheel",
+                    "hostCompatibilityFacadePassedWithHostExtra",
+                    "deterministicDemoPassed",
+                    "wheelSmokePassed",
+                ):
+                    if checks.get(required_check) is not True:
+                        errors.append(f"C3 API receipt failed check: {required_check}")
+                for forbidden_change in (
+                    "productionCutoverActivated",
+                    "dualWriteActivated",
+                    "legacyWriterRemoved",
+                    "durableRunStateModulesChanged",
+                ):
+                    if checks.get(forbidden_change) is not False:
+                        errors.append(f"C3 API receipt changed forbidden state: {forbidden_change}")
+                if checks.get("cliCommandsVerified") != 19:
+                    errors.append("C3 API receipt CLI command count differs")
         if status == "verified":
             current, invalidating = _verified_revision_is_current(revision)
             if not current:

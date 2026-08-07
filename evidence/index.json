@@ -124,9 +124,16 @@
     {
       "claimId": "harness.repository-repair-edit-runtime-bridge.v2",
       "file": "repository-repair-edit-runtime-bridge-dd50136.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "dd50136ef722b9df3dfb0fef195fcc1a137fd8ed",
       "scope": "Separate Agent-friendly exact-replace and completion-file creation surface over durable Runtime Patch identity, reconciliation, visible Check, diff, reread and closed Workspace; does not resume frozen B5"
+    },
+    {
+      "claimId": "harness.api.c3-agent-first",
+      "file": "harness-c3-agent-first-api-be7200a.json",
+      "status": "verified",
+      "implementationRevision": "be7200ab54033f82d587ae5451c3c6c88dc65866",
+      "scope": "Current caller-neutral Host-free recommended API, explicit Host compatibility facade, full regression, deterministic demo and isolated wheel smoke without production Run-state cutover"
     }
   ]
 }
