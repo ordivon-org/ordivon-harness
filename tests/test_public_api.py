@@ -35,22 +35,6 @@ EXPECTED_API = {
     "StandaloneHarnessRunner",
     "StandaloneToolBridge",
 }
-EXPECTED_HOST_API = {
-    "CompletionMode",
-    "DomainToolBridge",
-    "DomainToolCatalog",
-    "DomainToolLoopPlan",
-    "DomainToolLoopRunner",
-    "HarnessCancellationResult",
-    "HarnessExecutionResult",
-    "HarnessRunner",
-    "HarnessRunPlan",
-    "HarnessStatus",
-    "RunHandle",
-    "TaskContract",
-    "ToolGrant",
-}
-
 
 class PublicApiTests(unittest.TestCase):
     def test_recommended_facade_is_host_free_and_exact(self) -> None:
@@ -76,11 +60,13 @@ class PublicApiTests(unittest.TestCase):
         self.assertFalse(observed["hostLoaded"])
         self.assertEqual(set(observed["api"]), EXPECTED_API)
 
-    def test_host_backed_facade_remains_explicit(self) -> None:
-        import ordivon_harness.host_api as host_api
+    def test_host_integration_is_an_explicit_host_free_adapter_module(self) -> None:
+        from ordivon_harness.host_external_adapter import (
+            OrdivonHarnessExternalExecutorAdapter,
+        )
 
-        self.assertEqual(set(host_api.__all__), EXPECTED_HOST_API)
-        self.assertIs(ordivon_harness.HarnessRunner, host_api.HarnessRunner)
+        self.assertFalse(hasattr(ordivon_harness, "HarnessRunner"))
+        self.assertTrue(callable(OrdivonHarnessExternalExecutorAdapter))
 
     def test_source_checkout_version_matches_project_metadata(self) -> None:
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
@@ -108,24 +94,19 @@ class PublicApiTests(unittest.TestCase):
         self.assertFalse(observed["hasHostRunner"])
         self.assertFalse(observed["hostLoaded"])
 
-    def test_historical_root_exports_remain_during_transition(self) -> None:
-        self.assertTrue(hasattr(ordivon_harness, "HarnessRunner"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessProviderCallRecord"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessRunContract"))
-        self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessStore"))
-        self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessRunContinuityStore"))
-        self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessAgentBridge"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessExecutionBinding"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessRuntimeReference"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessRuntimeClient"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessToolObservation"))
-        self.assertTrue(hasattr(ordivon_harness, "SQLiteHarnessRuntimeBridge"))
-        self.assertTrue(hasattr(ordivon_harness, "IndependentHarnessRunReceipt"))
-        self.assertTrue(hasattr(ordivon_harness, "IndependentCompletionProposal"))
-        self.assertTrue(hasattr(ordivon_harness, "StandaloneHarnessRunner"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessCutoverReceipt"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessStoreMode"))
-        self.assertTrue(hasattr(ordivon_harness, "OrdivonHarnessExternalExecutorAdapter"))
+    def test_package_root_is_the_recommended_api_without_legacy_exports(self) -> None:
+        self.assertEqual(set(ordivon_harness.__all__), EXPECTED_API | {"package_version"})
+        for removed in (
+            "HarnessRunner",
+            "HarnessHost",
+            "HarnessCutoverReceipt",
+            "HarnessAssignment",
+            "TaskContract",
+            "HostHarnessRunStore",
+        ):
+            self.assertFalse(hasattr(ordivon_harness, removed))
+
+
 
 
 if __name__ == "__main__":

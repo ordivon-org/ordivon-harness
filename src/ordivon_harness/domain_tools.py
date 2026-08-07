@@ -157,8 +157,8 @@ class DomainToolLoopRunner:
     """Run one bounded Provider-neutral loop through a domain-owned Tool bridge.
 
     Domain code remains responsible for durable Actor/Task state, admission,
-    external effect truth, and result verification. Use HarnessRunner when Host
-    Assignment and Runtime Tool durability are the owning boundary.
+    external effect truth, and result verification. Use the independent Harness
+    Run APIs when Provider/Runtime continuity must be durably retained.
     """
 
     def __init__(

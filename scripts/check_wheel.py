@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and install-smoke-test one Ordivon Harness wheel."""
+"""Validate one Host-free Ordivon Harness wheel and isolated installation."""
 
 from __future__ import annotations
 
@@ -17,82 +17,36 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
-    "AgentTurnAdapter",
-    "AgentTurnRequest",
-    "AgentTurnResult",
-    "DomainToolBridge",
-    "DomainToolCatalog",
-    "DomainToolLoopPlan",
-    "DomainToolLoopRunner",
-    "HarnessPrivacyPolicy",
-    "HarnessRunContract",
-    "HarnessRuntimeClient",
-    "IndependentCompletionProposal",
-    "IndependentHarnessRunReceipt",
-    "OrdivonAgentLoop",
-    "RunBudget",
-    "RunStopCode",
-    "SQLiteHarnessRunContinuityStore",
-    "SQLiteHarnessRuntimeBridge",
-    "SQLiteHarnessStore",
-    "StandaloneHarnessExecution",
-    "StandaloneHarnessRunner",
-    "StandaloneToolBridge",
-}
-EXPECTED_HOST_API = {
-    "CompletionMode",
-    "DomainToolBridge",
-    "DomainToolCatalog",
-    "DomainToolLoopPlan",
-    "DomainToolLoopRunner",
-    "HarnessCancellationResult",
-    "HarnessExecutionResult",
-    "HarnessRunner",
-    "HarnessRunPlan",
-    "HarnessStatus",
-    "RunHandle",
-    "TaskContract",
-    "ToolGrant",
-}
-REQUIRED_CORE_API = {
-    "HarnessRunContract",
-    "SQLiteHarnessStore",
-    "SQLiteHarnessRunContinuityStore",
-    "SQLiteHarnessAgentBridge",
-    "SQLiteHarnessRuntimeBridge",
-    "StandaloneHarnessRunner",
-    "IndependentHarnessRunReceipt",
-    "IndependentCompletionProposal",
+    "AgentTurnAdapter", "AgentTurnRequest", "AgentTurnResult",
+    "DomainToolBridge", "DomainToolCatalog", "DomainToolLoopPlan", "DomainToolLoopRunner",
+    "HarnessPrivacyPolicy", "HarnessRunContract", "HarnessRuntimeClient",
+    "IndependentCompletionProposal", "IndependentHarnessRunReceipt",
+    "OrdivonAgentLoop", "RunBudget", "RunStopCode",
+    "SQLiteHarnessRunContinuityStore", "SQLiteHarnessRuntimeBridge", "SQLiteHarnessStore",
+    "StandaloneHarnessExecution", "StandaloneHarnessRunner", "StandaloneToolBridge",
 }
 REQUIRED_MEMBERS = {
-    "ordivon_harness/agent_tool_observation.py",
-    "ordivon_harness/core.py",
-    "ordivon_harness/cutover.py",
-    "ordivon_harness/api.py",
-    "ordivon_harness/host_api.py",
-    "ordivon_harness/core_contracts.py",
-    "ordivon_harness/domain_tools.py",
-    "ordivon_harness/errors.py",
-    "ordivon_harness/execution_binding.py",
-    "ordivon_harness/host_external_adapter.py",
-    "ordivon_harness/independent_result.py",
-    "ordivon_harness/independent_cli.py",
-    "ordivon_harness/runtime_port.py",
-    "ordivon_harness/sqlite_store.py",
-    "ordivon_harness/standalone.py",
-    "ordivon_harness/store.py",
-    "ordivon_harness/store_ops.py",
-    "ordivon_harness/version.py",
-    "ordivon_harness/ordivon/continuity_records.py",
-    "ordivon_harness/ordivon/run_recovery.py",
-    "ordivon_harness/ordivon/run_store_port.py",
+    "ordivon_harness/api.py", "ordivon_harness/core.py",
+    "ordivon_harness/core_contracts.py", "ordivon_harness/independent_cli.py",
+    "ordivon_harness/independent_result.py", "ordivon_harness/host_external_adapter.py",
+    "ordivon_harness/sqlite_store.py", "ordivon_harness/standalone.py",
+    "ordivon_harness/store.py", "ordivon_harness/store_ops.py",
+    "ordivon_harness/ordivon/loop.py", "ordivon_harness/ordivon/model.py",
     "ordivon_harness/ordivon/sqlite_agent_bridge.py",
     "ordivon_harness/ordivon/sqlite_run_store.py",
     "ordivon_harness/ordivon/sqlite_runtime_bridge.py",
-    "ordivon_harness/ordivon/runtime_lowering.py",
-    "ordivon_harness/ordivon/tool_bridge.py",
-    "ordivon_harness/ordivon/tool_errors.py",
 }
+FORBIDDEN_MEMBERS = {
+    "ordivon_harness/host.py", "ordivon_harness/host_api.py",
+    "ordivon_harness/runner.py", "ordivon_harness/cutover.py",
+    "ordivon_harness/history.py", "ordivon_harness/contracts.py",
+    "ordivon_harness/models.py", "ordivon_harness/ordivon/run_store.py",
+}
+CLI_COMMANDS = (
+    "capabilities", "doctor", "status", "inspect", "run", "resume", "recover",
+    "store-init", "store-doctor", "store-backup", "store-verify-backup",
+    "store-restore", "store-inspect", "store-events",
+)
 
 
 def fail(message: str) -> None:
@@ -100,224 +54,107 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def resolve_wheel(value: str) -> Path:
-    path = Path(value).resolve()
-    if path.is_file() and path.suffix == ".whl":
-        return path
-    if not path.is_dir():
-        fail(f"wheel path does not exist: {path}")
-    wheels = sorted(path.glob("*.whl"))
-    if len(wheels) != 1:
-        fail(f"expected exactly one wheel in {path}, observed {len(wheels)}")
-    return wheels[0]
-
-
-def run_checked(arguments: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(arguments, text=True, capture_output=True, check=False)
-    if result.returncode != 0:
+def checked(args: list[str]) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(args, text=True, capture_output=True, check=False)
+    if result.returncode:
         if result.stdout:
             print(result.stdout, file=sys.stderr, end="")
         if result.stderr:
             print(result.stderr, file=sys.stderr, end="")
-        fail(f"command failed ({result.returncode}): {' '.join(arguments)}")
+        fail(f"command failed ({result.returncode}): {' '.join(args)}")
     return result
 
 
-def validate_metadata(wheel: Path) -> tuple[str, tuple[str, ...]]:
-    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
-    version = project["version"]
+def resolve(value: str) -> Path:
+    path = Path(value).resolve()
+    if path.is_file() and path.suffix == ".whl":
+        return path
+    wheels = sorted(path.glob("*.whl")) if path.is_dir() else []
+    if len(wheels) != 1:
+        fail(f"expected exactly one wheel, observed {len(wheels)}")
+    return wheels[0]
+
+
+def validate_archive(wheel: Path) -> str:
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     with ZipFile(wheel) as archive:
         names = set(archive.namelist())
-        metadata_names = [name for name in names if name.endswith(".dist-info/METADATA")]
-        entry_names = [name for name in names if name.endswith(".dist-info/entry_points.txt")]
-        license_names = [name for name in names if name.endswith(".dist-info/licenses/LICENSE")]
-        if len(metadata_names) != 1 or len(entry_names) != 1 or len(license_names) != 1:
-            fail("wheel must contain one METADATA, entry_points.txt and Apache LICENSE")
+        metadata_names = [n for n in names if n.endswith(".dist-info/METADATA")]
+        entry_names = [n for n in names if n.endswith(".dist-info/entry_points.txt")]
+        if len(metadata_names) != 1 or len(entry_names) != 1:
+            fail("wheel metadata or entry point file is missing")
         missing = sorted(REQUIRED_MEMBERS - names)
         if missing:
             fail("wheel lacks required modules: " + ", ".join(missing))
+        forbidden = sorted(FORBIDDEN_MEMBERS & names)
+        if forbidden:
+            fail("wheel still contains Host-backed modules: " + ", ".join(forbidden))
         metadata = BytesParser(policy=policy.default).parsebytes(archive.read(metadata_names[0]))
-        entries = archive.read(entry_names[0]).decode("utf-8")
-
-    if metadata.get("Name") != project["name"]:
-        fail("wheel distribution name differs from pyproject")
-    if metadata.get("Version") != version:
-        fail("wheel version differs from pyproject")
-    observed_python = metadata.get("Requires-Python")
-    expected_python = project["requires-python"]
-
-    def normalize_specifier(value: str) -> tuple[str, ...]:
-        return tuple(sorted(part.strip() for part in value.split(",") if part.strip()))
-
-    if not isinstance(observed_python, str) or normalize_specifier(
-        observed_python
-    ) != normalize_specifier(expected_python):
-        fail("wheel Requires-Python differs from pyproject")
-    if metadata.get("License-Expression") != project["license"]:
-        fail("wheel license expression differs from pyproject")
+        entries = archive.read(entry_names[0]).decode()
+    if metadata.get("Name") != project["name"] or metadata.get("Version") != project["version"]:
+        fail("wheel name/version differs from pyproject")
     requirements = tuple(metadata.get_all("Requires-Dist", []))
-    if len(requirements) != 2:
-        fail(f"wheel must contain Protocol plus optional Host, observed {len(requirements)}")
-    joined = "\n".join(requirements)
-    protocol = project["dependencies"][0]
-    protocol_name = protocol.split(" @ ", 1)[0]
-    protocol_revision = protocol.rsplit("@", 1)[-1].split("#", 1)[0]
-    if protocol_name not in joined or protocol_revision not in joined:
-        fail("wheel metadata lacks the exact base Protocol dependency")
-    host = project["optional-dependencies"]["host"][0]
-    host_name = host.split(" @ ", 1)[0]
-    host_revision = host.rsplit("@", 1)[-1].split("#", 1)[0]
-    host_requirements = [item for item in requirements if host_name in item]
-    if (
-        len(host_requirements) != 1
-        or host_revision not in host_requirements[0]
-        or not any(
-            marker in host_requirements[0]
-            for marker in ("extra == 'host'", 'extra == "host"')
-        )
-    ):
-        fail("wheel metadata lacks the exact optional Host integration dependency")
+    if len(requirements) != 1 or "ordivon-protocol" not in requirements[0]:
+        fail(f"wheel must contain exactly one Protocol dependency: {requirements}")
+    if any("ordivon-host" in item or "extra ==" in item for item in requirements):
+        fail("wheel metadata still exposes Host/extra dependencies")
     if "ordivon-harness = ordivon_harness.cli:entrypoint" not in entries:
-        fail("wheel entry point differs from the public CLI contract")
-    return version, requirements
+        fail("wheel entry point differs")
+    return project["version"]
 
 
 def install_smoke(wheel: Path, version: str) -> dict[str, object]:
     uv = shutil.which("uv")
     if uv is None:
-        fail("uv is required for isolated wheel installation")
+        fail("uv is required")
     with tempfile.TemporaryDirectory(prefix="ordivon-harness-wheel-") as directory:
         root = Path(directory)
-        run_checked([uv, "venv", "--python", "3.12", str(root)])
-        python = root / "bin" / "python"
-        cli = root / "bin" / "ordivon-harness"
-        run_checked(
-            [
-                uv,
-                "pip",
-                "install",
-                "--link-mode",
-                "copy",
-                "--python",
-                str(python),
-                str(wheel),
-            ]
-        )
-        core_probe = run_checked(
-            [
-                str(python),
-                "-c",
-                (
-                    "import importlib.metadata as m,importlib.util,json,sys; "
-                    "import ordivon_harness.core as core; import ordivon_harness.api as api; "
-                    "print(json.dumps({'version':m.version('ordivon-harness'),"
-                    "'core':sorted(core.__all__),'api':sorted(api.__all__),"
-                    "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules),"
-                    "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
-                ),
-            ]
-        )
-        observed_core = json.loads(core_probe.stdout)
-        if observed_core.get("version") != version:
-            fail("installed Core distribution version differs from wheel metadata")
-        if not REQUIRED_CORE_API.issubset(set(observed_core.get("core", []))):
-            fail("installed Core API lacks required independent symbols")
-        if set(observed_core.get("api", [])) != EXPECTED_API:
-            fail("installed recommended API differs from the Host-free repository contract")
-        if observed_core.get("hostLoaded") is not False:
-            fail("recommended API eagerly loaded Host in the base installation")
-        if observed_core.get("hostInstalled") is not False:
-            fail("base wheel installation unexpectedly installed Host")
-        run_checked([str(python), str(ROOT / "scripts/check_core_without_host.py")])
-        help_text = run_checked([str(cli), "--help"]).stdout
-        independent_commands = (
-            "capabilities", "doctor", "status", "inspect", "run", "resume",
-            "recover", "host", "store-init", "store-doctor", "store-inspect",
-            "store-events", "store-backup", "store-verify-backup", "store-restore",
-            "cutover-status", "cutover-inventory", "cutover-activate", "cutover-rollback",
-        )
-        for command in independent_commands:
+        checked([uv, "venv", "--python", "3.12", str(root)])
+        python = root / "bin/python"
+        cli = root / "bin/ordivon-harness"
+        checked([uv, "pip", "install", "--link-mode", "copy", "--python", str(python), str(wheel)])
+        probe = json.loads(checked([
+            str(python), "-c",
+            "import importlib.metadata as m,importlib.util,json,sys; import ordivon_harness,ordivon_harness.api as api; "
+            "print(json.dumps({'version':m.version('ordivon-harness'),'api':sorted(api.__all__),"
+            "'root':sorted(ordivon_harness.__all__),'hostInstalled':importlib.util.find_spec('ordivon_host') is not None,"
+            "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules)}))"
+        ]).stdout)
+        if probe["version"] != version or set(probe["api"]) != EXPECTED_API:
+            fail("installed API/version differs")
+        if set(probe["root"]) != EXPECTED_API | {"package_version"}:
+            fail("package root differs from recommended API")
+        if probe["hostInstalled"] or probe["hostLoaded"]:
+            fail("Host appeared in isolated base installation")
+        checked([str(python), str(ROOT / "scripts/check_core_without_host.py")])
+        help_text = checked([str(cli), "--help"]).stdout
+        for command in CLI_COMMANDS:
             if command not in help_text:
-                fail(f"Host-free CLI help lacks primary command: {command}")
-        for legacy_top_level in ("handoff", "cancel"):
-            if f"    {legacy_top_level}" in help_text:
-                fail(f"Host-free CLI still advertises legacy top-level command: {legacy_top_level}")
-        capability_value = json.loads(run_checked([str(cli), "capabilities"]).stdout)
-        if (
-            capability_value.get("defaultAuthority") != "independent-harness-run"
-            or capability_value.get("hostCompatibilityCommand") != "host"
-            or capability_value.get("toolBearingCliExecution") is not False
-        ):
-            fail("installed CLI capability discovery differs from the independent contract")
-
-        run_checked(
-            [
-                uv,
-                "pip",
-                "install",
-                "--link-mode",
-                "copy",
-                "--python",
-                str(python),
-                f"ordivon-harness[host] @ {wheel.as_uri()}",
-            ]
-        )
-        host_probe = run_checked(
-            [
-                str(python),
-                "-c",
-                (
-                    "import importlib.util,json; import ordivon_harness.host_api as api; "
-                    "print(json.dumps({'api':sorted(api.__all__),"
-                    "'hostInstalled':importlib.util.find_spec('ordivon_host') is not None}))"
-                ),
-            ]
-        )
-        observed_host = json.loads(host_probe.stdout)
-        if set(observed_host.get("api", [])) != EXPECTED_HOST_API:
-            fail("installed Host compatibility API differs from the repository contract")
-        if observed_host.get("hostInstalled") is not True:
-            fail("Host extra did not install ordivon-host")
-        host_help = run_checked([str(cli), "host", "--help"]).stdout
-        host_commands = (
-            "doctor", "status", "inspect", "handoff", "run", "resume", "cancel", "recover"
-        )
-        for command in host_commands:
-            if command not in host_help:
-                fail(f"installed Host compatibility CLI lacks command: {command}")
+                fail(f"CLI lacks {command}")
+        for removed in ("host", "cutover-status", "cutover-activate", "--harness-state-root"):
+            if removed in help_text:
+                fail(f"CLI still advertises removed surface: {removed}")
+        caps = json.loads(checked([str(cli), "capabilities"]).stdout)
+        if caps.get("defaultAuthority") != "independent-harness-run":
+            fail("capabilities default authority differs")
+        if "hostCompatibilityCommand" in caps:
+            fail("capabilities still advertise Host compatibility")
         return {
-            "installedVersion": observed_core["version"],
-            "coreApiRequired": sorted(REQUIRED_CORE_API),
-            "hostApi": observed_host["api"],
+            "installedVersion": version,
             "hostFreeCoreVerified": True,
-            "hostExtraVerified": True,
-            "cliCommandsVerified": len(independent_commands),
-            "hostCliCommandsVerified": len(host_commands),
+            "cliCommandsVerified": len(CLI_COMMANDS),
         }
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Validate wheel metadata and perform an isolated installation smoke test."
-    )
-    parser.add_argument("wheel", help="wheel file or directory containing exactly one wheel")
-    parser.add_argument(
-        "--metadata-only",
-        action="store_true",
-        help="validate archive metadata without installing dependencies",
-    )
-    return parser.parse_args()
-
-
 def main() -> int:
-    args = parse_args()
-    wheel = resolve_wheel(args.wheel)
-    version, requirements = validate_metadata(wheel)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("wheel")
+    parser.add_argument("--metadata-only", action="store_true")
+    args = parser.parse_args()
+    wheel = resolve(args.wheel)
+    version = validate_archive(wheel)
     result: dict[str, object] = {
-        "status": "passed",
-        "wheel": wheel.name,
-        "version": version,
-        "requirements": list(requirements),
+        "status": "passed", "wheel": wheel.name, "version": version,
         "metadataOnly": bool(args.metadata_only),
     }
     if not args.metadata_only:

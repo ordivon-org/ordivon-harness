@@ -10,7 +10,7 @@ from ordivon_harness.errors import HarnessSuperseded
 from ordivon_harness.ordivon.sqlite_run_store import (
     SQLiteHarnessRunContinuityStore,
 )
-from ordivon_harness.ordivon.tools import RuntimeToolBridge
+from ordivon_harness.ordivon.sqlite_runtime_bridge import SQLiteHarnessRuntimeBridge
 from ordivon_harness.protocol import (
     HarnessRecoveryConsequence,
     HarnessRunPauseReason,
@@ -81,7 +81,7 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
                 continuity.load_current_snapshot().snapshot,
                 retained.snapshot,
             )
-            arguments = RuntimeToolBridge._with_dispatch_fence(
+            arguments = SQLiteHarnessRuntimeBridge._with_dispatch_fence(
                 {"execution": {"foreignReferences": []}},
                 step.fence,
             )

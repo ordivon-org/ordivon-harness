@@ -5,7 +5,7 @@ import unittest
 
 from anc_canonical import canonical_digest
 
-from ordivon_harness import (
+from ordivon_harness.protocol import (
     HarnessProviderCallFailureReceipt,
     HarnessProviderCallRecord,
     HarnessProviderCallSource,

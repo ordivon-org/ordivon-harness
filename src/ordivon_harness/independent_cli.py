@@ -43,8 +43,7 @@ def capabilities() -> dict[str, JsonValue]:
         ],
         "toolBearingCliExecution": False,
         "toolBearingApi": "ordivon_harness.api / ordivon_harness.core",
-        "hostCompatibilityCommand": "host",
-    }
+            }
 
 
 def dispatch(args, *, clock_ms) -> dict[str, object]:
@@ -134,9 +133,9 @@ def dispatch(args, *, clock_ms) -> dict[str, object]:
 
 
 def _state_root(args) -> Path:
-    root = args.harness_state_root
+    root = args.state_root
     if root is None:
-        raise ValueError("independent Harness command requires --harness-state-root")
+        raise ValueError("Harness command requires --state-root")
     return root.expanduser().resolve()
 
 

@@ -23,200 +23,85 @@ related:
   - harness.start
   - harness.authority
 ---
-# Ordivon Harness architecture
+# Ordivon Harness Architecture
 
 ## Purpose
 
-Provide replaceable Agent execution lifecycles for Host and domain callers while preserving explicit Tool authority, Runtime correlation, bounded Provider behavior, recoverable Run state, and independently admitted completion. Caller-neutral independent Run authority is now the default operational CLI; the retained Host-backed `HarnessRunner` remains a compatibility lifecycle for existing Task/Assignment state.
+Ordivon Harness is an **independent Agent Run authority**. A caller supplies immutable semantic/execution authority in a `HarnessRunContract`; Harness owns the bounded execution lifecycle required to produce durable Run evidence.
 
-## Boundaries
-
-Host owns generic Task continuity, Task Attempt commitments, verification admission, outcomes, and the retained legacy Journal/CAS admission path. Harness owns Run, Tool-step, Provider, recovery, abandonment, completion-proposal semantics and its independent Run Journal/CAS. Runtime owns physical Workspace, Job, Attempt, Artifact, and cancellation truth. Domain applications retain task meaning and final domain verification.
-
-### Component responsibility matrix
-
-| Component | Owns | Explicitly does not own |
-| --- | --- | --- |
-| Runtime | Workspace lifecycle, physical Jobs and Attempts, process trees, bounded Artifacts, cancellation, and physical reconciliation | Task semantics, Assignment/Run policy, Provider behavior, or domain completion |
-| Host | generic Task continuity, Journal/CAS, revision and lease fencing, generic extension admission, verification records, and Task outcomes | Harness-specific schemas, model–Tool execution, physical process truth, or domain-world truth |
-| Harness | Agent Runs, Provider adapters, Tool authority/catalogs, Tool-step checkpoints, Run persistence, recovery, abandonment, and completion proposals | Task/Goal authority, Host verification/outcome authority, Runtime supervision, promoted protocol, or final domain authority |
-
-## Components
-
-The architecture now has two explicit entry paths over shared Harness semantics. The primary caller-neutral path uses `HarnessRunContract`, `SQLiteHarnessStore`, `SQLiteHarnessRunContinuityStore`, Standalone Runner, Provider adapters, durable Run snapshots, Tool-step Intent/Receipt chains, Recovery Assessment, Trace, Run Receipt and CompletionProposal. The retained compatibility path projects the same domain through Host Task/Assignment state, `HarnessRunner`, Host CAS/Journal, operator handoff and legacy semantic Doctor.
-
-## Data flow
-
-In the primary path, a caller prepares a `HarnessRunContract`; Harness commits `harness.run-created` to its Journal, retains immutable CAS objects, and executes a bounded Provider/model loop under exact budget, Tool catalog and Tool Grant authority. Provider Call, Tool Step and Snapshot continuity are event-sourced; terminal evidence becomes a Harness-owned Trace, Run Receipt and caller-neutral CompletionProposal. Task or domain acceptance remains outside Harness.
-
-The CLI currently executes the canonical no-Tool DeepSeek profile directly. Tool-bearing independent applications construct the appropriate Bridge and supply `HarnessRuntimeClient`; Runtime remains the authority for physical Workspace/Job/Artifact truth. The compatibility path still begins with Host Task Contract, Context, Tool Grant and Assignment and is invoked explicitly through `ordivon-harness host ...`.
-
-## Failure modes
-
-Harness fails closed on catalog drift, stale Assignment or fence identity, unsupported durable mutation, ambiguous Provider output, unbounded retry or token use, unresolved effectful Tool steps, missing receipts, UNKNOWN physical consequence, invalid replacement, and attempts to treat live streams, handles, sessions, or hidden model state as durable continuity.
-
-## Verification
-
-Exact behavior is verified by deterministic tests, semantic history validation, Host and Runtime integration fixtures, frozen provider and fault evidence, production Runtime catalog inspection, recovery matrices, and the canonical final Trace. The repository entry is [`README.md`](README.md), and the authority boundary is recorded in [`docs/authority.md`](docs/authority.md). Stage and closeout documents retain the evidence behind these claims but are not alternate current architectures.
-
-## Boundary
-
-Ordivon Harness is an independent Agent Run authority, not a second Task Host and not a Provider Session store. Host is one optional caller/integration boundary rather than a prerequisite for Harness Core.
+## Ownership
 
 ```text
 caller / domain / optional Host
-          ↓ HarnessRunContract
-ordivon-harness
-  Run Journal / CAS / Provider Call / Tool Step / Snapshot
-  Recovery / Trace / Run Receipt / CompletionProposal
-          ↓ caller-supplied Tool / Runtime port when required
-ordivon-runtime
-  Workspace / Job / Attempt / Artifact / cancellation
-
-retained compatibility only:
-ordivon-harness host integration → exact ordivon-host source API
+        │
+        │ HarnessRunContract
+        ▼
+┌────────────────────────────┐
+│ Ordivon Harness            │
+│                            │
+│ independent Journal / CAS  │
+│ Provider Call continuity   │
+│ model ↔ Tool loop          │
+│ Run budgets                │
+│ pause / resume / recovery  │
+│ Trace / Run Receipt        │
+│ CompletionProposal         │
+└─────────────┬──────────────┘
+              │ Tool-bearing Runs only
+              ▼
+       HarnessRuntimeClient
+              │
+              ▼
+           Runtime
 ```
 
-The dependency remains one-way: Harness Core does not import Host; the optional Host integration imports the exact Host compatibility surface; Host does not import Harness semantics. Runtime remains unaware of the Harness state machine.
+Harness does not own caller Task state, domain commitments, final acceptance, or Runtime Workspace/Job truth. Runtime does not know the Harness state machine. Host is an optional caller rather than a persistence prerequisite.
 
-## Host compatibility boundary
+## Run Contract
 
-Harness is repository-independent and semantically independent, but it is currently source-compatible with one exact Host revision rather than a generic plugin protocol. Every direct `ordivon_host` import is centralized under `src/ordivon_harness/_host_compat/`, split by Context, domain, effects, persistence, extension admission and Runtime concerns. Other Harness modules import only that private boundary.
+`HarnessRunContract` binds one Run to caller identity/reference, Objective and Context refs, Provider/Adapter/model identity, Tool catalog and grant digests, execution budget, completion contract, system manifest, privacy policy, deadline and correlation links. The Contract digest is execution authority: a Run may not silently execute against different values.
 
-That optional integration remains the **Host-native source compatibility boundary**: it is deliberately exact and legacy-facing, not the authority boundary of Harness Core.
+Harness does not synthesize a higher-level Task from CLI flags. The caller authors the Contract; the CLI only supplies Run-local input messages.
 
-The independent Core no longer requires Host authority. Only the explicit Host integration depends on the pinned Host source API; Host still does not import Harness semantics. No daemon or RPC layer was introduced, and no retained Run is dual-written. Existing production roots still require inventory/cutover before migration. A Host pin change remains a compatibility event requiring lockfile regeneration and the complete Harness suite.
+## Persistence and continuity
 
-## Durable ownership
+The independent Store is the only current Harness writer. It owns:
 
-Harness code constructs and validates:
+- Run creation, caller binding and terminal projection;
+- immutable CAS objects and contiguous Run events;
+- leases and revision fencing;
+- Provider Call claim, dispatch, completion, failure and UNKNOWN state;
+- Tool-step intent, dispatch fence, receipt and observation chains;
+- pause/resume snapshots;
+- recovery assessments;
+- Trace, Run Receipt and CompletionProposal objects.
 
-- `TaskContract` and `TaskAttemptDescriptor`;
-- `HarnessAssignment`, `ToolGrant` and native Run Contract;
-- retained Tool catalog semantics;
-- durable Tool Step Intent, DispatchFence, Receipt chain and Observation;
-- bounded full Run checkpoints and append-only state deltas;
-- Run Recovery and Abandonment evidence;
-- Trace, Tool Observations and `HarnessRunReceipt`;
-- CompletionProposal, independent CompletionVerification and CompletionDecision.
+There is no Host-backed Store, Assignment writer, dual write or cutover selector.
 
-For the current production path, the bytes remain in Host CAS and their event admission remains in the Host Journal. The public Host extension port supplies storage and concurrency fencing only; it does not supply a Harness scheduler, table, state machine or recovery policy.
+## Provider lifecycle
 
-The P0 foundation stores caller-neutral Run Contracts and new Store events in the Harness state root. It does not copy current production Run bytes, rewrite retained Host history, or authorize a dual-write transition. [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) owns the exact implemented and pending boundary.
+A Provider Call is durable before uncertain physical delivery. Live claims exclude competing holders; response loss is reconciled from retained Provider state rather than treated as permission to redispatch. Dispatching with no safe proof of outcome becomes UNKNOWN. Retry is admitted only when the retained failure semantics prove redispatch safe and budget remains.
 
-## Execution ownership
+Provider identity belongs to Harness execution. A higher-level caller does not need to model Provider sessions or retry state.
 
-Provider Sessions, subprocesses, transcripts and hidden model state are disposable execution state. They never own Task continuity. Public Run state can be restored from a `HarnessRunSnapshot` plus its full-or-delta state object chain.
+## Tool lifecycle
 
-These durable formats are defined by `ordivon_harness.protocol` and remain outside `ordivon-protocol`; promotion requires another materially different consumer or transport boundary. Historical package-root aliases still expose some low-level types during the pre-1.0 compatibility window, but new application code should use `ordivon_harness.api` and must not treat those aliases as a newly stable surface.
+Tool-bearing Runs bind a complete Tool catalog digest and Tool grant digest. Before physical delivery, Harness records a Tool intent and dispatch fence. Runtime requests carry Harness authority references. Observation-only failures can be corrected by the Agent; ambiguous external effects require reconciliation and may terminate recovery as UNKNOWN.
 
-`OrdivonAgentLoop.resume()` currently resumes:
+The primary CLI intentionally supports only the canonical no-Tool DeepSeek profile. Tool-bearing applications use `ordivon_harness.api`/`core` with an application-supplied `HarnessRuntimeClient`.
 
-- `needs-input` after additional messages are supplied;
-- `effect-dispatch-pending` after the active Tool Step is reconciled against Runtime.
+## Pause, resume and recovery
 
-The resumed Run restores cumulative budget use, messages, observations, seen Model/Tool Call identities, effective-model provenance and Provider usage. It does not restore Provider hidden state.
+Pause snapshots retain exact Run state and Provider source identity. Resume starts from that snapshot and may append caller messages. Recovery is conservative: it never converts lost delivery into success or automatic redispatch. Terminal evidence is reopenable from a fresh process.
 
-Runtime owns physical Job and process truth. Harness requests `task.cancel`, observes the result and keeps `cancel-requested` nonterminal until a later Receipt proves `cancelled`, completion, failure, timeout or UNKNOWN. Runtime execution is dispatched with `waitMs=0`, then polled in short bounded intervals so cancellation and deadlines remain responsive.
+## Completion
 
-Provider execution follows the same shape through `AgentTurnCallHandle.poll()` and `cancel()`. Explicit `transport_failed` and `unavailable` failures may be retried within a bounded retry budget while preserving the same logical Turn request. Timeout, rejection, malformed output and ambiguous failures are not retried. Provider-reported token usage is accumulated as a hard Run budget; Harness does not estimate missing usage. The default DeepSeek transport owns one HTTP connection per call and closes the active response/socket on cancellation. Codex and Hermes retain their provider-faithful process/session mechanics.
+Harness can conclude that an Agent Run produced a candidate-completed result and can record a `CompletionProposal`. That is not the same as caller/domain completion. Final verification and commitment remain outside Harness.
 
-## Live event projection
+## Integration boundary
 
-The canonical `HarnessTrace` remains the durable semantic event record. `TraceRecorder` may additionally emit each already-recorded event to a best-effort sink used by `RunHandle.iter_events()` and CLI JSON Lines. Sink failure cannot change Run execution or evidence; consumers reconnect through Host state and the final Trace rather than treating the live stream as a durable broker.
+`host_external_adapter.py` is intentionally duck-typed and Host-free. It maps a foreign execution request to an independent Harness Run and maps durable observations/completion proposal back out. It does not import Host, use Host storage, or transfer Run authority.
 
-## Internal execution seams
+## Removed pre-H3 architecture
 
-`RuntimeToolBridge` remains the execution facade, but model-Tool argument validation and deterministic Runtime request construction live in the pure `ordivon.runtime_lowering` module. It performs no Runtime I/O and writes no Host state. Restart-time durable Tool-batch reconstruction and evidence comparison live in `ordivon.run_recovery`; the main Agent loop consumes their result and retains authority over stop, budget, Provider, and Trace behavior.
-
-These modules are internal seams, not new public protocols or persistence owners. They preserve the existing `RuntimeToolBridge._lower()` compatibility entry, durable object schemas, dispatch identities, and recovery ordering.
-
-### Domain-owned Tool loops
-
-`DomainToolLoopRunner` is the public low-level cognition seam for a domain that already owns durable Actor state, action admission, effect truth and evaluation. The domain supplies an immutable `DomainToolCatalog`, a `DomainToolBridge`, an explicit per-loop grant and a Bridge implementation identity. Harness binds that identity to the Provider adapter, requested model, complete Loop budget and granted catalog, then runs the existing `OrdivonAgentLoop`.
-
-```text
-domain-owned observation and objective
-→ DomainToolLoopPlan
-→ Provider-neutral Harness loop
-→ granted domain Tool call
-→ domain-owned admission/effect/observation
-→ Harness conclusion or typed stop
-```
-
-This path creates neither Host Assignment persistence nor Runtime Tool durability. It must not disguise domain actions as workspace operations, and Harness does not infer domain effect success. The consuming domain binds `execution_identity(plan)` into its own Trial or Assignment evidence.
-
-## Dispatch fencing
-
-Each durable `workspace.exec` preparation writes a `HarnessDispatchFence` bound to:
-
-- Task revision;
-- Harness Run and Assignment generation/digest;
-- Tool Step Intent digest;
-- Runtime operation and `clientRequestId`;
-- issue and expiry times.
-
-Harness verifies the fence before dispatch and again when the Runtime response returns. A stale Assignment therefore cannot be silently admitted as current Harness work, and an exposed Runtime Job is cancelled if post-dispatch validation fails.
-
-The fence is also included in Runtime `foreignReferences` as immutable correlation evidence. Durable `workspace.patch` uses the same Host Intent/fence ordering but delegates physical effect reconciliation to Runtime's stable Patch receipt. On restart Harness queries `workspace.patch.get`; it never reconstructs or redispatches the edit from a partial local transcript. Runtime does not yet validate a Host MAC or call back into Host at admission, so this is not claimed as cryptographic end-to-end authorization.
-
-## Recovery ordering
-
-Native Run recovery is ordered as:
-
-```text
-load active Tool Step
-→ reconcile Runtime dispatch / cancellation
-→ persist the latest Receipt and Observation
-→ inspect Workspace and diff
-→ derive remaining UNKNOWNs
-→ retain, abandon or replace only when evidence permits
-```
-
-This prevents Workspace cleanup or replacement decisions from racing ahead of an unresolved physical Tool Step.
-
-## Application surface
-
-`HarnessRunner` is a facade over the existing authorities:
-
-```text
-HarnessRunPlan
-  → TaskContract / Context compilation / ToolGrant admission
-  → HarnessHost Assignment
-  → HostHarnessRunStore + RuntimeToolBridge
-  → OrdivonAgentLoop
-  → durable Run receipt
-  → optional CompletionProposal / adjudication
-```
-
-The current `HarnessRunner` adds no independent durable object of its own. Every production persisted transition still passes through `HarnessHost`, Host CAS and the Host Journal, and every physical Tool operation still passes through Runtime. `HarnessExecutionResult` only aggregates the already-authoritative Run, proposal and decision results for the caller. The new Store kernel is not yet selected by this facade.
-
-`RunHandle` is an in-process thread boundary for responsive Provider cancellation and live event projection. The Runner registers the handle before starting its worker, uses a fresh HostStorage connection in that worker, and removes the handle after completion. It is not a scheduler, service or recoverable process registry. After process loss, continuity comes from the durable Snapshot and `recover()`/`resume()`, not from the handle.
-
-Execution entry guards are explicit:
-
-- a current durable Snapshot must be resumed rather than restarted;
-- an already recorded Run cannot be executed again;
-- adjudication configuration is validated before an Attempt or Assignment is created;
-- durable `workspace.mutate` is removed from model Tool definitions and rejected by `HarnessRunPlan`;
-- durable `patch_workspace` is admitted only when both Runtime Patch operations are present and the Tool Grant binds allowed mutation paths;
-- approval events remain unsupported rather than represented by an unreachable pause state.
-
-The primary CLI is a projection of independent Run authority: `capabilities`, `run`, `resume`, `status`, `inspect`, `recover` and `doctor`. `run` consumes a complete caller-supplied `HarnessRunContract`; it does not synthesize Objective, Context, Tool Grant, caller identity or budget authority. The CLI currently exposes only canonical no-Tool DeepSeek execution and fails closed for Tool-bearing Contracts before Provider construction.
-
-The Host-backed compatibility projection is explicit under `host status`, `host inspect`, `host handoff`, `host run`, `host resume`, `host cancel`, `host recover` and `host doctor`. `store-*` remains administrative persistence control, and `cutover-*` governs retained deployment migration rather than selecting the default API/CLI semantics.
-
-## Extension surfaces
-
-Harness owns:
-
-- its event-kind constants;
-- `harness_operator_handoff()`;
-- full Harness semantic history validation;
-- the `ordivon-harness doctor` command.
-
-Host owns the generic extension persistence port, handoff capsule and core history validation. Runtime owns Workspace, Job, Attempt, Artifact and cancellation mechanics.
-
-## Freeze rule
-
-Do not generalize the accepted `workspace.exec` durable Tool-step slice into arbitrary mutation, a daemon, workflow DSL, plugin platform, parallel Tools, subagents or Provider routing without a real workload and a reconcilable physical dispatch identity.
+H3 intentionally removed the former `HarnessHost`, Host Assignment/TaskContract model, `HostHarnessRunStore`, Host CLI namespace, cutover machinery, Host dependency extra, and Host-coupled Codex/Hermes drivers. Historical evidence may describe those experiments, but current source does not decode or advertise them.

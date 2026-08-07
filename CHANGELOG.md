@@ -4,60 +4,32 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
-### Added
+### Changed
 
-- first-class Host-free CLI `capabilities`, `run`, `resume`, `status`, `inspect`, `recover` and `doctor` over the independent Harness Journal/CAS, with caller-supplied `HarnessRunContract` authority;
-- canonical no-Tool Tool Grant identity, enforced together with the no-Tool catalog before independent Provider execution;
-- caller-neutral `HarnessRunContract`, bounded references, W3C correlation context and metadata-first privacy policy;
-- independent `SQLiteHarnessStore` with append-only Run Events, caller binding, revision fencing, Run leases, immutable CAS and full-history Doctor;
-- owner-neutral `HarnessRunContinuityStore` consumed by `RuntimeToolBridge`, with shared retained Run values and lifecycle errors outside the Host-backed implementation;
-- caller-neutral Provider Call Record and Dispatch Fence v2 codecs while retaining exact v1 Host-backed decoding;
-- event-sourced `SQLiteHarnessRunContinuityStore` for Provider Call, Tool Step, Snapshot, pause and replay semantics over the independent Journal/CAS;
-- `SQLiteHarnessAgentBridge` and canonical no-Tool surface for real Host-free Agent Loop completion, pause/resume and durable Provider replay;
-- caller-neutral `HarnessExecutionBinding`, Runtime references and generic Workspace execution request builder;
-- Host-free Runtime Tool lowering with the legacy Host bridge adapted through the same binding while preserving request identity;
-- `SQLiteHarnessRuntimeBridge` for observation-only independent Runtime search, Harness-owned dispatch fencing, exact-request response-loss reconciliation and durable Tool observations;
-- explicit `StandaloneHarnessRunner` and `IndependentRunRecorder` for segmented Trace retention, caller-neutral Run Receipt, Recovery Assessment and CompletionProposal admission;
-- Host-free `ordivon_harness.core` facade, lazy compatibility exports and an optional exact `host` integration extra;
-- Host-neutral `OrdivonHarnessExternalExecutorAdapter` and a cross-repository response-loss roundtrip with separate Host and Harness histories;
-- active legacy/independent Run inventory, append-only cutover and rollback receipts, tamper detection, and a legacy writer gate;
-- explicit `store-init`, `store-doctor`, `store-inspect` and `store-events` operator commands;
-- online Store backup, exact verification, tamper detection and restore to a fresh destination;
-- frozen P0 inventory for 27 durable object classes and 15 Host extension Event kinds;
-- bounded atomic Harness Event batches with complete replay idempotency, partial-replay rejection, same-batch causality checks, and one-lease projection commit;
-- repository-owned 1,000-Run / 100,000-Event scale acceptance and integrity-bound receipt generation.
+- **Breaking pre-1.0 H3:** Ordivon Harness is now a single independent Agent Run product line. The SQLite Harness Journal/CAS is the only current Run writer and `HarnessRunContract` is the only current caller/execution contract.
+- the CLI has one `--state-root` meaning and only independent `capabilities`, Run/recovery, and `store-*` commands; the historical `host` namespace and all `cutover-*` commands were removed;
+- the package root now mirrors `ordivon_harness.api` plus `package_version` instead of resolving historical lazy compatibility exports;
+- the built wheel and repository dependency graph contain only the exact Ordivon Protocol dependency. There is no `host` extra, Host development dependency, or Host pin.
 
-### Fixed
+### Removed
 
-- independent `StandaloneHarnessRunner` now enforces every `RunBudget` field explicitly claimed by `HarnessRunContract`; unsupported budget fields fail closed instead of being silently ignored;
-- `HarnessRunContract` snapshots and exposes read-only top-level budget/completion authority maps so caller-side mutation cannot change the durable Contract digest after construction.
+- `HarnessHost`, Host-backed `HarnessRunner`, `HostHarnessRunStore`, TaskContract/Assignment/native-Run compatibility objects, `_host_compat`, Host history/handoff/recovery controllers, cutover state, and Host-backed CLI/configuration paths;
+- Host-coupled Codex App and Hermes ACP drivers and their old live/stress acceptance scripts; future Provider integrations must bind directly to independent Harness Run authority;
+- frozen pre-migration persistence inventory/checks whose object/event set described the deleted Host-backed writer;
+- compatibility aliases and decoders whose only purpose was preserving the removed Host-backed product line. Historical evidence receipts remain immutable evidence of the implementation revisions they bind.
 
-### Compatibility
+### Retained
 
-- the primary CLI now names independent Harness Run operations directly; historical Host-backed Task/Assignment commands move under the explicit `host` namespace without removing the underlying compatibility APIs or durable decoders;
-- fresh package capability discovery advertises the recommended Host-free facade instead of optional Host-backed root aliases; historical lazy attribute access remains available during the pre-1.0 window;
-- primary CLI execution is intentionally limited to the canonical no-Tool DeepSeek profile; Tool-bearing independent execution remains available through the Host-free Python API with a caller-supplied Runtime client rather than a duplicated Host transport.
-- the optional Host integration and development graph now pin remote-reachable Host `428a6f2f90b4050535507c9be078c450552177e5`;
-- the historical `HarnessRunner` compatibility path remains Host-backed; retained Host Provider Call, Tool Step, Snapshot, recovery and completion bytes are not rewritten by the independent CLI transition;
-- no new Run is dual-written and no retained Host history is rewritten;
-- `ordivon_harness.api` is now the recommended Host-free application facade; the former Host-backed facade is preserved explicitly as `ordivon_harness.host_api`, while historical package-root aliases remain during the pre-1.0 window;
-- the base wheel requires only the exact Protocol revision and proves the recommended API loads without Host; Host-backed APIs require the exact `host` extra, while the repository dev group keeps the complete regression graph.
+- independent Provider Call claim/dispatch/completion/failure durability, response-loss replay and UNKNOWN recovery;
+- independent Tool-step intent/fence/receipt continuity and caller-supplied Runtime bridges;
+- bounded Agent loop, pause/resume snapshots, Trace, Run Receipt, Recovery Assessment and CompletionProposal;
+- repository-repair read/edit bridges and the Host-free duck-typed `host_external_adapter` integration module.
 
 ### Verification
 
-- focused P0 Contract, Journal/CAS, lease, idempotency, corruption, permissions, CLI, backup and restore tests;
-- independent Provider/Tool continuity tests covering claim races, stale completion privacy, UNKNOWN recovery, safe retry budgets, Harness authority fences, Receipt chains and close/reopen reconstruction;
-- real Agent Loop tests for independent candidate completion, lost-completion-response replay and `needs_input` resume without Host or Runtime access;
-- independent Runtime Tool tests for direct completion, response loss without redispatch, ambiguous lookup cardinality and pre-admission rejection;
-- Standalone Runner tests for terminal restart inspection, pause/resume Trace combination and status-preserving Recovery Assessment;
-- isolated base-wheel proof that `ordivon_host` is absent while a persistent Run completes and reopens, followed by optional Host-extra API verification;
-- real DeepSeek `deepseek-v4-flash` no-Tool primary-CLI acceptance: one Provider call reached `candidate_completed`, produced an independent Run Receipt and CompletionProposal, then reopened through fresh `status`, `inspect`, `recover` and full Doctor commands;
-- Host request-only commit-gap acceptance proving exact retry binds the same completed Harness Run and collects a proposal without Task completion;
-- cutover acceptance for active legacy blockers, terminal legacy admission, nonterminal independent blockers, safe rollback, post-activation rollback refusal, CLI selection and receipt tampering;
-- Execution Binding tests for deterministic identities, Harness-only foreign references, generic Tool lowering and exact legacy Host request compatibility;
-- complete legacy Host-backed Harness suite remains a required regression gate;
-- atomic Event-batch rollback/replay tests and deterministic scale-receipt smoke are part of the current gate;
-- [`docs/P0-INDEPENDENT-PERSISTENCE.md`](docs/P0-INDEPENDENT-PERSISTENCE.md) records the implemented boundary and remaining cutover work.
+- current deterministic suite runs only the independent product line and preserves Provider/Tool response-loss, fencing, recovery and restart coverage;
+- isolated wheel verification requires one Protocol dependency, no Host installation, no Host-backed modules, one independent package-root API, and 14 independent CLI commands;
+- `check_dependencies.py`, `check_docs.py` and repository-boundary tests fail if Host imports/dependencies or compatibility product files reappear.
 
 ## 0.6.0 — 2026-08-04
 

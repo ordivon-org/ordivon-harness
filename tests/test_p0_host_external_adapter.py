@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import ast
 from dataclasses import replace
-import os
 from pathlib import Path
 from types import SimpleNamespace
-import subprocess
-import sys
 import tempfile
 import unittest
 
@@ -18,35 +14,9 @@ from tests.test_p0_sqlite_agent_loop import contract as independent_contract
 
 
 ROOT = Path(__file__).resolve().parents[1]
-HOST_SOURCE = Path("/root/projects/ordivon-host/src")
 
 
 class HostExternalAdapterTests(unittest.TestCase):
-    def test_real_host_harness_roundtrip_with_response_loss(self) -> None:
-        if not HOST_SOURCE.exists():
-            self.skipTest("local Ordivon Host source is unavailable")
-        env = dict(os.environ)
-        env["PYTHONPATH"] = os.pathsep.join(
-            (str(HOST_SOURCE), str(ROOT / "src"), env.get("PYTHONPATH", ""))
-        )
-        completed = subprocess.run(
-            [sys.executable, str(ROOT / "scripts" / "check_host_external_roundtrip.py")],
-            cwd=ROOT,
-            env=env,
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        receipt = ast.literal_eval(completed.stdout.strip().splitlines()[-1])
-        self.assertTrue(receipt["ok"])
-        self.assertEqual(receipt["hostTaskState"], "ready")
-        self.assertEqual(receipt["harnessRunState"], "completed")
-        self.assertEqual(receipt["physicalHarnessExecutions"], 1)
-        self.assertEqual(receipt["adapterStartCalls"], 2)
-        self.assertGreater(receipt["hostEvents"], 1)
-        self.assertGreater(receipt["harnessEvents"], 1)
-
     def test_recover_records_conservative_unknown_instead_of_invalid_safe_state(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state_root = Path(directory) / "harness"

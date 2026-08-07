@@ -24,10 +24,9 @@ managed_paths:
   - docs/DATA_AND_PRIVACY.md
   - docs/RELEASES.md
   - docs/DOMAIN-TOOL-BRIDGE-P0.md
-  - docs/P0-INDEPENDENT-PERSISTENCE.md
   - docs/authority.md
 enforcement: strict
 maintainers:
   - zycxfyh
 public_projection: ordivon-web
-description: Host-native Agent Run execution, Provider adaptation, Tool checkpointing, evidence, resume, and recovery.
+description: Independent Agent Run execution, Provider continuity, Tool checkpointing, evidence, resume, and recovery.

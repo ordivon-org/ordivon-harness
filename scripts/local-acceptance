@@ -5,14 +5,11 @@ usage() {
   cat <<'EOF'
 usage: scripts/local-acceptance check|run
 
-check  validate the portable, deterministic and live acceptance contract
-run    execute portable gates, wheel smoke, deterministic demo and real Host→Harness→Runtime H2 journey
+check  validate the current independent Harness acceptance contract
+run    execute deterministic regression, repository gates, scale smoke and isolated wheel proof
 
-Environment for run:
-  ORDIVON_MCP_ENDPOINT          default http://127.0.0.1:8897/mcp
-  ORDIVON_BEARER_TOKEN          optional direct ephemeral token
-  ORDIVON_BEARER_TOKEN_FILE     optional private token file understood by Host scenario helpers
-  ORDIVON_HARNESS_ACCEPTANCE_OUTPUT optional final live receipt path
+Real Provider credentials are deliberately outside this portable gate. Run live Provider
+acceptance explicitly when release evidence requires it.
 EOF
 }
 
@@ -25,13 +22,16 @@ mode=${1:-}
 case "$mode" in
   check)
     test -n "$python_bin"
-    test -f "$repo/scripts/demo_deterministic_run.py"
-    test -f "$repo/scripts/live_harness_h2.py"
-    test -f "$repo/scripts/check_dependencies.py"
-    test -f "$repo/scripts/check_docs.py"
-    test -f "$repo/scripts/check_evidence.py"
-    test -f "$repo/scripts/check_wheel.py"
-    test -f "$repo/scripts/harness_p0_scale_acceptance.py"
+    for path in \
+      scripts/demo_deterministic_run.py \
+      scripts/check_dependencies.py \
+      scripts/check_docs.py \
+      scripts/check_evidence.py \
+      scripts/check_wheel.py \
+      scripts/check_core_without_host.py \
+      scripts/harness_p0_scale_acceptance.py; do
+      test -f "$repo/$path"
+    done
     "$python_bin" "$repo/scripts/check_dependencies.py"
     "$python_bin" "$repo/scripts/check_docs.py"
     "$python_bin" "$repo/scripts/check_evidence.py"
@@ -44,12 +44,12 @@ case "$mode" in
     cd "$repo"
     "$python_bin" -m compileall -q src tests scripts evals
     "$uvx_bin" ruff==0.15.17 check src tests scripts
-    "$python_bin" -W error::ResourceWarning -m unittest discover -s tests -v
+    "$uv_bin" run python -W error::ResourceWarning -m unittest discover -s tests -v
     "$python_bin" scripts/check_dependencies.py
     "$python_bin" scripts/check_docs.py
     "$python_bin" scripts/check_evidence.py
     "$uv_bin" lock --check
-    "$python_bin" scripts/demo_deterministic_run.py
+    "$uv_bin" run python scripts/demo_deterministic_run.py
     "$uv_bin" run python scripts/harness_p0_scale_acceptance.py \
       --runs 8 --events-per-run 12 --batch-size 11 --inspect-samples 4 \
       --max-write-ms 30000 --max-reopen-ms 30000 --max-inspect-p95-ms 1000 \
@@ -58,33 +58,7 @@ case "$mode" in
     trap 'rm -rf "$wheel_dir"' EXIT
     "$uv_bin" build --wheel --out-dir "$wheel_dir"
     "$python_bin" scripts/check_wheel.py "$wheel_dir"
-
-    revision=$(git rev-parse HEAD)
-    output=${ORDIVON_HARNESS_ACCEPTANCE_OUTPUT:-target/acceptance/harness-h2-runtime.json}
-    mkdir -p "$(dirname "$output")"
-    "$python_bin" scripts/live_harness_h2.py \
-      --endpoint "${ORDIVON_MCP_ENDPOINT:-http://127.0.0.1:8897/mcp}" \
-      --source-repo "$repo" \
-      --source-revision "$revision" >"$output"
-    chmod 600 "$output"
-    "$python_bin" - "$output" "$revision" <<'PY'
-import json,sys
-path,revision=sys.argv[1:]
-r=json.load(open(path,encoding='utf-8'))
-assert r['kind']=='ordivon.host-h2-runtime-r2-live-receipt'
-assert r['implementationSourceRevision']==revision
-assert r['runtime']['workspaceClosed'] is True
-assert all(r['checks'].values())
-print(json.dumps({
-  'status':'passed',
-  'harnessRevision':revision,
-  'taskId':r['taskId'],
-  'harnessRunId':r['harnessRunId'],
-  'runtimeJobId':r['runtime']['jobId'],
-  'workspaceClosed':True,
-  'payloadDigest':r['integrity']['payloadDigest'],
-},sort_keys=True))
-PY
+    printf '%s\n' 'local acceptance: passed'
     ;;
   --help|-h)
     usage

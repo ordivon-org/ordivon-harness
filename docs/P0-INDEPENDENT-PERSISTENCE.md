@@ -4,8 +4,8 @@ id: harness.p0-independent-persistence
 title: P0 independent persistence foundation
 type: architecture
 profile: engineering
-lifecycle: active
-source_role: canonical
+lifecycle: historical
+source_role: historical
 visibility: public
 owners:
   - ordivon-harness
@@ -15,7 +15,7 @@ audience:
   - agent
 updated: 2026-08-06
 summary: Current implementation boundary, contracts, operations, evidence, and remaining cutover work for the independent Harness Journal and CAS.
-evidence_status: verified
+evidence_status: historical
 readiness: EXPERIMENTAL
 applies_to:
   - ordivon-harness
@@ -190,9 +190,9 @@ These semantics are local single-node fencing. They do not claim distributed con
 
 ## Frozen migration inventory
 
-[`../specs/p0-persistence-inventory-v1.json`](../specs/p0-persistence-inventory-v1.json) freezes 27 current durable object classes and 15 Host extension Event kinds at Harness revision `796e9f07899a250ea4d87ae3e96f38c7172ff674`.
+`specs/p0-persistence-inventory-v1.json` (removed in H3) freezes 27 current durable object classes and 15 Host extension Event kinds at Harness revision `796e9f07899a250ea4d87ae3e96f38c7172ff674`.
 
-Each entry records its current owner, intended P0 owner, schema versions, source literal, privacy class, causal role, and migration disposition. The checker [`../scripts/check_p0_persistence_inventory.py`](../scripts/check_p0_persistence_inventory.py) verifies that the inventory remains bound to current source literals and its canonical digest.
+Each entry records its current owner, intended P0 owner, schema versions, source literal, privacy class, causal role, and migration disposition. The checker `scripts/check_p0_persistence_inventory.py` (removed in H3) verifies that the inventory remains bound to current source literals and its canonical digest.
 
 The cutover rules are fixed and now executable:
 

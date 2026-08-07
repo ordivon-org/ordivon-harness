@@ -5,76 +5,47 @@ from pathlib import Path
 import tomllib
 import unittest
 
-import ordivon_host
 import ordivon_harness
-from ordivon_host.domain import EventKind
-from ordivon_host.journal import HostJournal
-
-from ordivon_harness._host_compat import HOST_REQUIRED_SOURCE_REVISION
-from ordivon_harness.event_kinds import HARNESS_ASSIGNMENT_COMMITTED
-
+from ordivon_harness.store import HARNESS_STORE_EVENT_KINDS
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryBoundaryTests(unittest.TestCase):
-    def test_dependency_direction_is_harness_to_host_only(self) -> None:
-        self.assertFalse(hasattr(ordivon_host, "HarnessHost"))
-        self.assertTrue(hasattr(ordivon_harness, "HarnessHost"))
-        host_root = Path(ordivon_host.__file__).resolve().parent
-        self.assertFalse((host_root / "harness").exists())
+    def test_harness_has_no_host_dependency_or_compatibility_package(self) -> None:
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text())
+        requirements = project["project"]["dependencies"]
+        self.assertEqual(len(requirements), 1)
+        self.assertTrue(requirements[0].startswith("ordivon-protocol @ "))
+        self.assertNotIn("optional-dependencies", project["project"])
+        self.assertNotIn("dependency-groups", project)
+        package = ROOT / "src" / "ordivon_harness"
+        self.assertFalse((package / "_host_compat").exists())
+        self.assertFalse((package / "host.py").exists())
+        self.assertFalse((package / "runner.py").exists())
+        self.assertFalse((package / "cutover.py").exists())
+        self.assertFalse(hasattr(ordivon_harness, "HarnessHost"))
+        self.assertFalse(hasattr(ordivon_harness, "HarnessRunner"))
 
-    def test_host_dependency_and_lock_share_one_exact_revision(self) -> None:
-        project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-        expected = (
-            "ordivon-host @ "
-            "git+https://github.com/zycxfyh/ordivon-host.git@"
-            f"{HOST_REQUIRED_SOURCE_REVISION}"
-        )
-        self.assertFalse(
-            any(value.startswith("ordivon-host @ ") for value in project["dependencies"])
-        )
-        self.assertEqual(project["optional-dependencies"]["host"], [expected])
-        groups = tomllib.loads((ROOT / "pyproject.toml").read_text())["dependency-groups"]
-        self.assertEqual(groups["dev"], [expected])
-        lock = (ROOT / "uv.lock").read_text()
-        self.assertIn(f"rev={HOST_REQUIRED_SOURCE_REVISION}", lock)
-        self.assertIn(f"#{HOST_REQUIRED_SOURCE_REVISION}", lock)
-        self.assertTrue(hasattr(HostJournal, "event_object_references"))
-        self.assertTrue(hasattr(HostJournal, "event_object_refs_start_sequence"))
-        self.assertTrue(hasattr(HostJournal, "legacy_object_refs"))
-
-    def test_raw_host_imports_are_centralized_in_private_compat_package(self) -> None:
+    def test_source_tree_contains_no_ordivon_host_imports(self) -> None:
         source_root = ROOT / "src" / "ordivon_harness"
         violations: list[str] = []
         for path in source_root.rglob("*.py"):
-            relative = path.relative_to(source_root)
-            if relative.parts and relative.parts[0] == "_host_compat":
-                continue
             tree = ast.parse(path.read_text(), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.ImportFrom) and node.module:
-                    if node.module == "ordivon_host" or node.module.startswith(
-                        "ordivon_host."
-                    ):
-                        violations.append(f"{relative}:{node.lineno}:{node.module}")
+                    if node.module == "ordivon_host" or node.module.startswith("ordivon_host."):
+                        violations.append(f"{path.relative_to(source_root)}:{node.lineno}")
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
-                        if alias.name == "ordivon_host" or alias.name.startswith(
-                            "ordivon_host."
-                        ):
-                            violations.append(f"{relative}:{node.lineno}:{alias.name}")
+                        if alias.name == "ordivon_host" or alias.name.startswith("ordivon_host."):
+                            violations.append(f"{path.relative_to(source_root)}:{node.lineno}")
         self.assertEqual(violations, [])
 
-    def test_harness_event_vocabulary_uses_host_extension_values(self) -> None:
-        self.assertIs(
-            HARNESS_ASSIGNMENT_COMMITTED,
-            EventKind("harness.assignment-committed"),
-        )
-        self.assertEqual(
-            HARNESS_ASSIGNMENT_COMMITTED.value,
-            "harness.assignment-committed",
-        )
+    def test_harness_store_owns_its_event_vocabulary(self) -> None:
+        self.assertIn("harness.run-created", HARNESS_STORE_EVENT_KINDS)
+        self.assertIn("harness.provider-call-claimed", HARNESS_STORE_EVENT_KINDS)
+        self.assertIn("harness.tool-step-prepared", HARNESS_STORE_EVENT_KINDS)
 
 
 if __name__ == "__main__":

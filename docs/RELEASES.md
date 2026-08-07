@@ -59,7 +59,7 @@ Add facade APIs, adapters, object versions or capabilities while preserving exis
 
 ### Major
 
-Remove or reinterpret supported public APIs, object schemas, Host boundaries, Provider semantics or Tool recovery. Requires an explicit cutover, migration/export plan and rollback boundary.
+Remove or reinterpret supported public APIs, current independent object schemas, Provider semantics or Tool recovery. Before 1.0 this may be an intentional break, but the release must name removed authority, retained state expectations, evidence, and rollback/backup boundary.
 
 ## Release gates
 

@@ -32,12 +32,12 @@ class IndependentCliTests(unittest.TestCase):
         value = None if not stdout.getvalue() else json.loads(stdout.getvalue())
         return code, value, stderr.getvalue()
 
-    def test_capabilities_make_independent_authority_and_host_compat_explicit(self) -> None:
+    def test_capabilities_describe_only_independent_authority(self) -> None:
         code, value, error = self.invoke("capabilities")
         self.assertEqual(code, 0, error)
         assert value is not None
         self.assertEqual(value["defaultAuthority"], "independent-harness-run")
-        self.assertEqual(value["hostCompatibilityCommand"], "host")
+        self.assertNotIn("hostCompatibilityCommand", value)
         self.assertFalse(value["toolBearingCliExecution"])
         profile = value["executionProfiles"][0]
         self.assertEqual(profile["profileId"], "deepseek-no-tool-v1")
@@ -53,7 +53,7 @@ class IndependentCliTests(unittest.TestCase):
                 encoding="utf-8",
             )
             code, _, error = self.invoke(
-                "--harness-state-root", str(root), "store-init"
+                "--state-root", str(root), "store-init"
             )
             self.assertEqual(code, 0, error)
 
@@ -62,7 +62,7 @@ class IndependentCliTests(unittest.TestCase):
                 return_value=ScriptedTurnAdapter((needs_input_result("h1-cli-pause"),)),
             ):
                 code, paused, error = self.invoke(
-                    "--harness-state-root",
+                    "--state-root",
                     str(root),
                     "run",
                     str(contract_path),
@@ -77,7 +77,7 @@ class IndependentCliTests(unittest.TestCase):
             self.assertIsNone(paused["runReceipt"])
 
             code, status, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "status",
                 run_contract.harness_run_id,
@@ -87,7 +87,7 @@ class IndependentCliTests(unittest.TestCase):
             self.assertEqual(status["run"]["status"], "paused")
 
             code, inspected, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "inspect",
                 run_contract.harness_run_id,
@@ -99,7 +99,7 @@ class IndependentCliTests(unittest.TestCase):
             self.assertIsNone(inspected["providerCall"])
 
             code, recovery, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "recover",
                 run_contract.harness_run_id,
@@ -114,7 +114,7 @@ class IndependentCliTests(unittest.TestCase):
                 return_value=ScriptedTurnAdapter((completed_result("h1-cli-resume"),)),
             ):
                 code, completed, error = self.invoke(
-                    "--harness-state-root",
+                    "--state-root",
                     str(root),
                     "resume",
                     run_contract.harness_run_id,
@@ -129,7 +129,7 @@ class IndependentCliTests(unittest.TestCase):
             self.assertIsNotNone(completed["completionProposal"])
 
             code, terminal, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "recover",
                 run_contract.harness_run_id,
@@ -148,7 +148,7 @@ class IndependentCliTests(unittest.TestCase):
             contract_path = Path(directory) / "contract.json"
             contract_path.write_text(json.dumps(value), encoding="utf-8")
             self.assertEqual(
-                self.invoke("--harness-state-root", str(root), "store-init")[0],
+                self.invoke("--state-root", str(root), "store-init")[0],
                 0,
             )
             with patch(
@@ -156,7 +156,7 @@ class IndependentCliTests(unittest.TestCase):
                 side_effect=AssertionError("Provider must not be constructed"),
             ):
                 code, value, error = self.invoke(
-                    "--harness-state-root",
+                    "--state-root",
                     str(root),
                     "run",
                     str(contract_path),

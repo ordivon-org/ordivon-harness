@@ -29,82 +29,26 @@ related:
 
 ## Dependency graph
 
-The supported public graph is exact, not a floating version range:
+The current Harness runtime dependency graph is intentionally small: the package depends only on the exact Ordivon Protocol revision pinned by `pyproject.toml` and `uv.lock`. There is no Host dependency, optional Host extra, or Host development group.
 
-| Component | Required identity |
-| --- | --- |
-| Harness package | `0.6.0` plus exact Git commit |
-| Host | `428a6f2f90b4050535507c9be078c450552177e5` |
-| Protocol | `420dc356cb664d75db0f34f356156baebe5843db` |
-| Python | `>=3.12,<3.13` |
-| Runtime | required Tool catalog and request schemas discovered at execution time |
+Python support is `>=3.12,<3.13`. Runtime integration is structural through the caller-supplied `HarnessRuntimeClient`; a Runtime server/version is not a Python package dependency.
 
-`pyproject.toml`, `uv.lock`, `requirements-audit.txt`, `_host_compat` and boundary tests must agree.
+## Public API
 
-## Host-native source boundary
+`ordivon_harness.api` is the recommended application facade. The package root mirrors that API plus `package_version`. `ordivon_harness.core` is the wider Host-free integration surface.
 
-Harness is not a generic Host plugin. Only `src/ordivon_harness/_host_compat/` may import Host directly. Its submodules separate Context, domain, effects, persistence, extension and Runtime dependencies so model-loop modules do not accidentally load Host kernel/storage internals.
+H3 intentionally removed historical package-root aliases, `host_api`, `HarnessRunner`, `HarnessHost`, Assignment/TaskContract objects, cutover APIs and Host source compatibility modules. New code must not depend on them.
 
-A Host pin change requires:
+## Durable state
 
-1. complete Harness deterministic tests against the candidate Host;
-2. lockfile regeneration;
-3. compatibility and Changelog update;
-4. inspection of raw import/API drift;
-5. live evidence when Runtime transport or recovery behavior changes.
+Current writers own only independent Harness state: `HarnessRunContract`, Run projection/events, Provider Call records, Tool-step intents/fences/receipts, Run snapshots, Trace, recovery assessment, Run Receipt and CompletionProposal.
 
-## Public API levels
+Pre-H3 Host-backed state is not a current compatibility obligation. Historical receipts remain evidence of the implementation that produced them; they are not a decoder requirement for H3.
 
-### Recommended facade
+Schema-v1 caller-neutral `HarnessRunContract` keeps one narrow compatibility rule because it is part of the independent line: budget fields present in the Contract are exact authority; omitted known fields use the historical defaults; unknown fields fail closed.
 
-`ordivon_harness.api` is the small Host-free application surface. Importing it must not require or load `ordivon-host`.
+## Upgrade rule
 
-`ordivon_harness.core` is the wider Host-free integration surface for persistence, Provider, Runtime, recovery, and advanced Harness composition.
+Before upgrading active independent work, inspect nonterminal Runs and unresolved Provider/Tool delivery, back up the Harness root, and prove the candidate can reopen current independent state. Do not reinterpret UNKNOWN or resend an ambiguous effect merely because code changed.
 
-### Host compatibility facade
-
-`ordivon_harness.host_api` contains the existing Host-backed `HarnessRunner` application surface. It requires the `host` extra and remains supported during the pre-1.0 cutover window; moving the recommended facade does not migrate existing Runs.
-
-### Integration modules
-
-`ordivon_harness.host`, `contracts`, `handoff`, Provider drivers and Runtime bridge modules support advanced Ordivon integration but may evolve during pre-1.0.
-
-### Owner-local protocols
-
-`protocol`, `run_state`, history internals and persistence helpers define durable Harness semantics. Their existing decoders are compatibility obligations, but their Python import layout is not a promise that every class remains at package root.
-
-Historical root exports remain temporarily available. New code should not add dependencies on low-level root aliases.
-
-## Durable objects
-
-Current state includes versioned forms of:
-
-- TaskContract and ToolGrant;
-- caller-neutral HarnessRunContract and Host-backed NativeHarnessRunContract;
-- HarnessRunReceipt and HarnessRunState;
-- ProviderCallRecord and failure receipt;
-- ToolStep intent, dispatch fence and receipt;
-- Run Snapshot;
-- completion proposal, verification and decision;
-- recovery assessment and abandonment.
-
-New writers may use newer schemas only when readers preserve supported older versions or migration/cutover is explicit. History is never rewritten merely to normalize format.
-
-Schema-v1 caller-neutral `HarnessRunContract` records may contain only a subset of the current `RunBudget` fields. Those present fields remain authoritative and must exactly match execution; absent fields retain their historical unbound/default meaning. New Contract writers should persist the complete `RunBudget.to_contract_dict()` projection. An executing Standalone Runner rejects unknown budget fields rather than silently treating them as unenforced authority.
-
-## Upgrade rules for active work
-
-Before upgrading an instance:
-
-1. run Host Doctor and Harness semantic history validation;
-2. inspect active Provider Calls and Tool Steps;
-3. do not upgrade through an unresolved effect boundary without preserving the exact original identities;
-4. back up Host state;
-5. verify candidate code can read retained objects;
-6. run live acceptance on the candidate graph.
-
-A Provider process or hidden session cannot be migrated mid-call. Provider replacement is allowed only at a safe Assignment/recovery boundary. Completed or UNKNOWN calls must be replayed or reconciled from durable records, not resent.
-
-## Deletion of compatibility code
-
-A decoder, root alias, Host adapter or schema path may be deleted only when all retained state and supported consumers are named, an observation window has completed, tests and receipts prove the replacement and rollback no longer depends on the old path.
+Pre-1.0 breaking changes may deliberately drop unused schemas or APIs. Such deletion must be explicit in the Changelog and current tests/docs must describe only the retained authority.

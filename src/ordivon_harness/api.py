@@ -5,8 +5,8 @@ state, Runtime bridging, completion evidence, and domain-owned Tool loops. It
 does not import Ordivon Host or make Host Task authority a prerequisite for a
 Harness Run.
 
-Host-bound applications that intentionally use the historical production path
-must import :mod:`ordivon_harness.host_api` explicitly.
+Host integrations are adapters around this caller-neutral authority; they do not
+change Harness persistence or execution ownership.
 """
 
 from .core import (

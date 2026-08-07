@@ -327,7 +327,7 @@ class _ContentAddressedStore:
 class SQLiteHarnessStore:
     """P0 independent Harness Journal/CAS kernel.
 
-    This store is intentionally not wired into the legacy Host-backed Runner yet.
+    This Store is the current Harness persistence authority.
     New P0 migration slices consume this boundary instead of dual-writing.
     """
 

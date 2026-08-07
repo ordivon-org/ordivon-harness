@@ -49,7 +49,7 @@ def _integer(value: int, label: str, *, minimum: int = 0) -> None:
 class HarnessProviderCallRecordV2:
     """Caller-neutral durable Provider Call record for the independent Store.
 
-    Version 1 remains the exact Host-backed historical codec. Version 2 binds
+    Version 1 is a historical codec. Version 2 binds
     the record to one Harness Run Store binding digest and contains no Host Task
     identity or Host Journal revision.
     """

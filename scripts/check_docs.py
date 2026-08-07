@@ -63,21 +63,6 @@ STABLE_API = {
     "StandaloneHarnessRunner",
     "StandaloneToolBridge",
 }
-HOST_COMPAT_API = {
-    "CompletionMode",
-    "DomainToolBridge",
-    "DomainToolCatalog",
-    "DomainToolLoopPlan",
-    "DomainToolLoopRunner",
-    "HarnessCancellationResult",
-    "HarnessExecutionResult",
-    "HarnessRunner",
-    "HarnessRunPlan",
-    "HarnessStatus",
-    "RunHandle",
-    "TaskContract",
-    "ToolGrant",
-}
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -266,11 +251,6 @@ def validate_public_contracts() -> list[str]:
         errors.append(
             f"stable Host-free API differs: expected={sorted(STABLE_API)} observed={sorted(public_api)}"
         )
-    host_api = module_api_exports("src/ordivon_harness/host_api.py")
-    if host_api != HOST_COMPAT_API:
-        errors.append(
-            f"Host compatibility API differs: expected={sorted(HOST_COMPAT_API)} observed={sorted(host_api)}"
-        )
     api_source = (ROOT / "src/ordivon_harness/api.py").read_text(encoding="utf-8")
     if "ordivon_host" in api_source or "_host_compat" in api_source or "from .runner" in api_source:
         errors.append("recommended API is no longer Host-free")
@@ -282,14 +262,12 @@ def validate_public_contracts() -> list[str]:
     ):
         if stale in architecture:
             errors.append(f"ARCHITECTURE.md retains stale claim: {stale}")
-    if "Host-native source compatibility boundary" not in architecture:
-        errors.append("ARCHITECTURE.md lacks the Host-native boundary")
+    if "independent Agent Run authority" not in architecture:
+        errors.append("ARCHITECTURE.md lacks the independent Harness authority boundary")
 
     source_root = ROOT / "src/ordivon_harness"
     for path in source_root.rglob("*.py"):
         relative = path.relative_to(source_root)
-        if relative.parts and relative.parts[0] == "_host_compat":
-            continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             modules: list[str] = []
@@ -300,7 +278,7 @@ def validate_public_contracts() -> list[str]:
             for module in modules:
                 if module == "ordivon_host" or module.startswith("ordivon_host."):
                     errors.append(
-                        f"raw Host import outside _host_compat: {relative}:{node.lineno}:{module}"
+                        f"raw Host import in Harness source: {relative}:{node.lineno}:{module}"
                     )
     return errors
 

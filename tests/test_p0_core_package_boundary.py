@@ -34,17 +34,17 @@ class HarnessCorePackageBoundaryTests(unittest.TestCase):
         self.assertFalse(observed["coreLoadedHost"])
         self.assertTrue(observed["hasStandalone"])
 
-    def test_host_compatibility_export_remains_lazy_and_available(self) -> None:
+    def test_package_root_has_no_host_compatibility_exports(self) -> None:
         observed = self.run_probe(
             "import json,sys,ordivon_harness; "
-            "before=any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules); "
-            "runner=ordivon_harness.HarnessRunner; "
-            "after=any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules); "
-            "print(json.dumps({'before':before,'after':after,'name':runner.__name__}))"
+            "names=dir(ordivon_harness); "
+            "print(json.dumps({'hasHostRunner':'HarnessRunner' in names,"
+            "'hasRunContract':'HarnessRunContract' in names,"
+            "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules)}))"
         )
-        self.assertFalse(observed["before"])
-        self.assertTrue(observed["after"])
-        self.assertEqual(observed["name"], "HarnessRunner")
+        self.assertFalse(observed["hasHostRunner"])
+        self.assertTrue(observed["hasRunContract"])
+        self.assertFalse(observed["hostLoaded"])
 
     def test_independent_modules_have_no_host_compatibility_imports(self) -> None:
         package = ROOT / "src" / "ordivon_harness"

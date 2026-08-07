@@ -6,4 +6,4 @@ class HarnessLifecycleError(RuntimeError):
 
 
 class HarnessSuperseded(HarnessLifecycleError):
-    """The caller, Assignment, Run, Provider Call, or Tool Step is no longer current."""
+    """The caller binding, Run, Provider Call, or Tool Step is no longer current."""

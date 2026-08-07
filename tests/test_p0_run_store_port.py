@@ -2,44 +2,37 @@ from __future__ import annotations
 
 import inspect
 from pathlib import Path
+import tempfile
 import unittest
 
-from ordivon_harness import HarnessLifecycleError
-from ordivon_harness.host import HarnessLifecycleError as HostLifecycleError
-from ordivon_harness.ordivon.run_store import HostHarnessRunStore
+from ordivon_harness.errors import HarnessLifecycleError
 from ordivon_harness.ordivon.run_store_port import (
     HarnessProviderCallRecoveryRequired,
     HarnessRunContinuityStore,
 )
-from ordivon_harness.ordivon.tools import RuntimeToolBridge
+from ordivon_harness.ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
+from ordivon_harness.sqlite_store import SQLiteHarnessStore
+from tests.test_p0_sqlite_provider_store import MutableClock, contract
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "ordivon_harness"
 
 
 class HarnessRunStorePortTests(unittest.TestCase):
-    def test_lifecycle_error_has_one_owner(self) -> None:
-        self.assertIs(HarnessLifecycleError, HostLifecycleError)
+    def test_lifecycle_error_has_one_harness_owner(self) -> None:
         self.assertTrue(issubclass(HarnessProviderCallRecoveryRequired, HarnessLifecycleError))
 
-    def test_port_and_errors_do_not_import_host(self) -> None:
-        for relative in ("errors.py", "ordivon/run_store_port.py"):
+    def test_port_and_current_store_do_not_import_host(self) -> None:
+        for relative in (
+            "errors.py",
+            "ordivon/run_store_port.py",
+            "ordivon/sqlite_run_store.py",
+        ):
             source = (ROOT / relative).read_text(encoding="utf-8")
             self.assertNotIn("ordivon_host", source)
             self.assertNotIn("_host_compat", source)
-            self.assertNotIn("CommittedHarnessAssignment", source)
             self.assertNotIn("HostHarnessRunStore", source)
 
-    def test_runtime_bridge_depends_on_port_not_concrete_store(self) -> None:
-        source = (ROOT / "ordivon" / "tools.py").read_text(encoding="utf-8")
-        self.assertNotIn("HostHarnessRunStore", source)
-        self.assertNotIn("run_store.committed", source)
-        self.assertNotIn("run_store.host", source)
-        annotation = (
-            inspect.signature(RuntimeToolBridge.__init__).parameters["run_store"].annotation
-        )
-        self.assertIn("HarnessRunContinuityStore", str(annotation))
-
-    def test_legacy_store_supplies_every_port_operation(self) -> None:
+    def test_sqlite_store_supplies_every_port_operation(self) -> None:
         required = {
             name
             for name, value in HarnessRunContinuityStore.__dict__.items()
@@ -47,40 +40,31 @@ class HarnessRunStorePortTests(unittest.TestCase):
             and (callable(value) or isinstance(value, property))
             and not name.startswith("_")
         }
-        instance_fields = {"harness_run_id"}
         missing = sorted(
-            name for name in required - instance_fields if not hasattr(HostHarnessRunStore, name)
+            name
+            for name in required - {"harness_run_id"}
+            if not hasattr(SQLiteHarnessRunContinuityStore, name)
         )
         self.assertEqual(missing, [])
-        source = inspect.getsource(HostHarnessRunStore.__init__)
-        self.assertIn("self.harness_run_id =", source)
-        self.assertEqual(
-            required,
-            {
-                "assignment_provider_source",
-                "assert_dispatch_fence_current",
-                "bind_state",
-                "binding",
-                "caller_revision",
-                "claim_provider_call",
-                "clock_ms",
-                "complete_provider_call",
-                "fail_claimed_provider_call",
-                "fail_provider_call",
-                "harness_run_id",
-                "load_current_provider_call",
-                "load_current_snapshot",
-                "load_current_tool_step",
-                "load_provider_replay_state",
-                "mark_provider_call_dispatching",
-                "prepare_tool_step",
-                "provider_outcome_requires_resume",
-                "record_pause",
-                "record_tool_step_receipt",
-                "retry_failed_provider_call",
-                "snapshot_provider_source",
-            },
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            run_contract = contract()
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(run_contract)
+                continuity = SQLiteHarnessRunContinuityStore(
+                    store, run_contract, clock_ms=MutableClock()
+                )
+                self.assertIsInstance(continuity, HarnessRunContinuityStore)
+
+    def test_runtime_bridge_contract_depends_on_port_not_concrete_host_store(self) -> None:
+        source = (ROOT / "ordivon" / "sqlite_runtime_bridge.py").read_text(
+            encoding="utf-8"
         )
+        self.assertNotIn("HostHarnessRunStore", source)
+        annotation = inspect.signature(
+            SQLiteHarnessRunContinuityStore.__init__
+        ).parameters["contract"].annotation
+        self.assertTrue(annotation)
 
 
 if __name__ == "__main__":

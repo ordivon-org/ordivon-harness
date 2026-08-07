@@ -46,7 +46,7 @@ A contribution must identify:
 
 Do not add a Harness database, daemon, generic scheduler, automatic Provider router or remote Host protocol without a real workload failure that cannot be solved by the current owner.
 
-Only `src/ordivon_harness/_host_compat/` may import `ordivon_host` directly. New application-facing APIs belong in `ordivon_harness.api`; owner-local persistence types should remain in their defining modules.
+Harness source must not import `ordivon_host`. New application-facing APIs belong in `ordivon_harness.api`; owner-local persistence types should remain in their defining modules.
 
 ## Releases
 

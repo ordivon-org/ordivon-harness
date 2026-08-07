@@ -25,7 +25,7 @@ class HarnessStoreCliTests(unittest.TestCase):
     def test_init_doctor_inspect_and_events_use_only_harness_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "harness"
-            code, value, error = self.invoke("--harness-state-root", str(root), "store-init")
+            code, value, error = self.invoke("--state-root", str(root), "store-init")
             self.assertEqual((code, error), (0, ""))
             self.assertTrue(value["store"]["healthy"])
 
@@ -34,7 +34,7 @@ class HarnessStoreCliTests(unittest.TestCase):
                 store.create_run(contract)
 
             code, value, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "store-inspect",
                 contract.harness_run_id,
@@ -44,7 +44,7 @@ class HarnessStoreCliTests(unittest.TestCase):
             self.assertEqual(value["run"]["revision"], 1)
 
             code, value, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "store-events",
                 contract.harness_run_id,
@@ -53,7 +53,7 @@ class HarnessStoreCliTests(unittest.TestCase):
             self.assertEqual(len(value["events"]), 1)
             self.assertEqual(value["events"][0]["eventKind"], "harness.run-created")
 
-            code, value, error = self.invoke("--harness-state-root", str(root), "store-doctor")
+            code, value, error = self.invoke("--state-root", str(root), "store-doctor")
             self.assertEqual((code, error), (0, ""))
             self.assertEqual(value["store"]["runs"], 1)
 
@@ -68,7 +68,7 @@ class HarnessStoreCliTests(unittest.TestCase):
                 store.create_run(contract)
 
             code, value, error = self.invoke(
-                "--harness-state-root",
+                "--state-root",
                 str(root),
                 "store-backup",
                 str(backup),
@@ -99,7 +99,7 @@ class HarnessStoreCliTests(unittest.TestCase):
         self.assertEqual(value, {})
         failure = json.loads(error)
         self.assertEqual(failure["error"], "ValueError")
-        self.assertIn("--harness-state-root", failure["message"])
+        self.assertIn("--state-root", failure["message"])
 
 
 if __name__ == "__main__":
