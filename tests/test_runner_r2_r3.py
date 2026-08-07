@@ -570,6 +570,40 @@ class HarnessR2R3Tests(unittest.TestCase):
         self.assertEqual(bridge.attempts, 0)
         self.assertEqual(bridge.effects, 0)
 
+    def test_input_output_token_usage_enforces_hard_limit(self) -> None:
+        call = AgentToolCall(
+            "tool-call:r2-r3:input-output-token-effect",
+            "read_workspace",
+            {"relativePath": "README.md"},
+        )
+        adapter = ScriptedTurnAdapter(
+            (
+                _turn(
+                    "input-output-over-token-limit",
+                    model_id=ScriptedTurnAdapter.model_id,
+                    calls=(call,),
+                    usage={"inputTokens": 80, "outputTokens": 21},
+                ),
+            )
+        )
+        bridge = _LoopBridge()
+        result = OrdivonAgentLoop(
+            adapter,
+            bridge,
+            budget=RunBudget(2, 2, 64_000, 10_000, 100, 0, 0),
+            clock_ms=_Clock(),
+        ).run(
+            harness_run_id="harness-run:r2-r3-input-output-token-limit",
+            assignment_id="assignment:r2-r3-input-output-token-limit",
+            context_digest=canonical_digest({"context": "input-output-token-limit"}),
+            initial_messages=({"role": "user", "content": "inspect"},),
+        )
+
+        self.assertEqual(result.stop_code, RunStopCode.BUDGET_EXHAUSTED)
+        self.assertEqual(result.usage["totalTokens"], 101)
+        self.assertEqual(bridge.attempts, 0)
+        self.assertEqual(bridge.effects, 0)
+
     def test_provider_token_preflight_stops_before_overshooting_request(self) -> None:
         call = AgentToolCall(
             "tool-call:r2-r3:preflight-read",

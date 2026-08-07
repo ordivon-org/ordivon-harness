@@ -1770,4 +1770,13 @@ def _usage_total_tokens(usage: dict[str, JsonValue]) -> int | None:
         and completion >= 0
     ):
         return prompt + completion
+    input_tokens = usage.get("input_tokens", usage.get("inputTokens"))
+    output_tokens = usage.get("output_tokens", usage.get("outputTokens"))
+    if (
+        type(input_tokens) is int
+        and input_tokens >= 0
+        and type(output_tokens) is int
+        and output_tokens >= 0
+    ):
+        return input_tokens + output_tokens
     return None
