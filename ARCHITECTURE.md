@@ -126,6 +126,16 @@ Ordinary Store open validates global physical authority: schema, SQLite `quick_c
 
 Durable event and request identities remain deterministic for idempotent replay. Execution ownership does not: Continuity Stores, Agent Bridges, and terminal recorders use process-instance owner identities for leases and Provider claims so two workers cannot consume one durable dispatch admission as two physical executions.
 
+## Model-visible Working View
+
+The mature `OrdivonAgentLoop` no longer requires the Provider request to be identical to the complete canonical Run-local message history. An optional internal `WorkingViewProjector` seam may supply the exact model-visible messages for each Provider turn while the Loop continues to retain canonical execution history for progress accounting, recovery and Tool correlation.
+
+The current `WorkingSetViewProjector` is deliberately narrow: it loads the current **committed** `HarnessWorkingSetSpec` and deterministically compiles its pinned exact sources into one `HarnessWorkingView`. It performs no Context discovery, ranking, RAG, Memory, summarization or automatic replan. The transition to a new Working Set must already have been made explicitly by the caller/domain/Agent integration.
+
+When a Working Set exists, Provider claim revalidates under the Run lease that the exact `AgentTurnRequest` still matches the current committed Working View. A projection that became stale before claim is rejected before physical Provider dispatch. Trace records only the Working Set/View and message digests needed to audit the projection boundary.
+
+This projector remains an internal experimental seam and is not part of the recommended `ordivon_harness.api` facade.
+
 ## Provider lifecycle
 
 A Provider Call is durable before uncertain physical delivery. Live claims exclude competing holders; response loss is reconciled from retained Provider state rather than treated as permission to redispatch. Dispatching with no safe proof of outcome becomes UNKNOWN. Retry is admitted only when the retained failure semantics prove redispatch safe and budget remains.

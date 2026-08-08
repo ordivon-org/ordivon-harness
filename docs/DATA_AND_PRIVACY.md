@@ -70,6 +70,8 @@ Working View source material is model-visible content. Product-level materializa
 
 `SQLiteHarnessStore` remains a low-level mechanical CAS/Journal primitive. A privileged caller that deliberately bypasses Continuity and writes arbitrary bytes directly to the Store is exercising its own storage authority; the Run privacy policy cannot stop a process that already has filesystem/Store write authority from doing that. Continuity still rejects an unauthorized mechanically present Working View source from becoming valid cognition history.
 
+The mature Loop may also receive an ephemeral Working View projector. Provider disclosure still follows that projected view, but durable retention remains governed independently by the Contract. In particular, an ephemeral projection used by a `metadata-only` Run is not made durable merely because it became the Provider request for that turn; only its execution/request digests remain in Harness-managed persistence.
+
 ## Structural versus semantic Tool provenance
 
 The model/tool flags enforce structural content boundaries, not information-flow taint tracking.

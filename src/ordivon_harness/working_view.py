@@ -297,6 +297,37 @@ class WorkingViewObjects(Protocol):
     def get_object(self, digest: str, *, expected_kind: str | None = None) -> JsonValue: ...
 
 
+class WorkingSetReader(Protocol):
+    def load_current_working_set(self) -> HarnessWorkingSetSpec: ...
+
+
+class WorkingViewProjector(Protocol):
+    """Project the exact model-visible view for the next Provider turn."""
+
+    def project(self) -> HarnessWorkingView: ...
+
+
+@dataclass(frozen=True, slots=True)
+class WorkingSetViewProjector:
+    """Compile each Provider turn from the current committed Working Set.
+
+    The projector does not discover or rank Context and it does not mutate the
+    Working Set. A caller/Agent transition must already have committed the exact
+    selection that should become model-visible for the next turn.
+    """
+
+    objects: WorkingViewObjects
+    working_sets: WorkingSetReader
+
+    def project(self) -> HarnessWorkingView:
+        spec = self.working_sets.load_current_working_set()
+        if not spec.committed:
+            raise ValueError(
+                "Provider Working View requires a committed Working Set"
+            )
+        return compile_working_view(spec, self.objects)
+
+
 def compile_working_view(
     spec: HarnessWorkingSetSpec,
     objects: WorkingViewObjects,
@@ -328,5 +359,7 @@ __all__ = [
     "HarnessWorkingSetSpec",
     "HarnessWorkingView",
     "HarnessWorkingViewSource",
+    "WorkingSetViewProjector",
+    "WorkingViewProjector",
     "compile_working_view",
 ]

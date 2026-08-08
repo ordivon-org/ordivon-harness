@@ -8,6 +8,7 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
+from ..working_view import WorkingViewProjector
 from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
@@ -255,10 +256,12 @@ class OrdivonAgentLoop:
         monotonic_ms: Callable[[], int] | None = None,
         assignment_deadline_ms: int | None = None,
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
+        working_view_projector: WorkingViewProjector | None = None,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
         self.budget = budget
+        self.working_view_projector = working_view_projector
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
             lambda: time.monotonic_ns() // 1_000_000
@@ -1189,14 +1192,42 @@ class OrdivonAgentLoop:
                 return stop(RunStopCode.BUDGET_EXHAUSTED)
             sequence = model_calls + 1
             turn_id = f"turn:{harness_run_id.removeprefix('harness-run:')}:{sequence}"
+            request_context_digest = context_digest
+            request_messages = tuple(messages)
+            if self.working_view_projector is not None:
+                try:
+                    working_view = self.working_view_projector.project()
+                except Exception as error:  # noqa: BLE001 - projection is a local Harness boundary.
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=(
+                            "Working View projection failed: "
+                            f"{type(error).__name__}: {error}"
+                        ),
+                    )
+                request_context_digest = working_view.digest
+                request_messages = working_view.messages
+                recorder.record(
+                    "model_view_projected",
+                    {
+                        "turnId": turn_id,
+                        "attemptId": working_view.attempt_id,
+                        "workingSetDigest": working_view.working_set_digest,
+                        "workingViewDigest": working_view.digest,
+                        "canonicalMessagesDigest": canonical_digest(messages),
+                        "projectedMessagesDigest": canonical_digest(
+                            list(working_view.messages)
+                        ),
+                    },
+                )
             request = AgentTurnRequest(
                 harness_run_id=harness_run_id,
                 turn_id=turn_id,
                 sequence=sequence,
                 assignment_id=assignment_id,
-                context_digest=context_digest,
+                context_digest=request_context_digest,
                 tool_catalog_digest=self.tool_bridge.catalog_digest,
-                messages=tuple(messages),
+                messages=request_messages,
                 tools=self.tool_bridge.definitions(),
                 remaining_budget=self.budget.remaining(
                     model_calls=model_calls,

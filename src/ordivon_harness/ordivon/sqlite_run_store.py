@@ -23,6 +23,7 @@ from ..run_state import HarnessRunState, state_from_dict
 from ..working_view import (
     HarnessWorkingSetSpec,
     HarnessWorkingViewSource,
+    compile_working_view,
 )
 from ..sqlite_store import (
     HarnessEventConflict,
@@ -390,6 +391,27 @@ class SQLiteHarnessRunContinuityStore:
             self._require_working_view_source_authorized(source)
         return spec
 
+    def _require_current_working_view_request(
+        self,
+        request: AgentTurnRequest | None,
+    ) -> None:
+        spec = self._load_current_working_set_or_none()
+        if spec is None:
+            return
+        if not spec.committed:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider Call cannot bind an uncommitted Working Set"
+            )
+        if request is None:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider Call for a Working Set requires its exact Agent Turn request"
+            )
+        view = compile_working_view(spec, self.store)
+        if request.context_digest != view.digest or request.messages != view.messages:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider Call request differs from the current committed Working View"
+            )
+
     def claim_provider_call(
         self,
         *,
@@ -432,6 +454,7 @@ class SQLiteHarnessRunContinuityStore:
             ) from error
         try:
             self._require_provider_source_current(source)
+            self._require_current_working_view_request(request)
             active = self._load_current_provider_call_or_none()
             previous = None
             generation = 1
