@@ -497,9 +497,9 @@ class OrdivonAgentLoop:
             if callable(restorer):
                 restorer(tuple(sorted(seen_tool_call_ids)))
 
-        # Tool exchanges are short-lived cognition continuity, distinct from the
-        # durable Agent-selected WorkingSet. They are rebuilt only within this
-        # execution segment and are cleared when the selected WorkingSet changes.
+        # Tool exchanges are attempt-local cognition continuity, distinct from the
+        # durable Agent-selected WorkingSet. Authorized exact exchanges are rebuilt
+        # on resume and are cleared when the selected WorkingSet changes.
         transient_tool_exchange_messages: list[dict[str, JsonValue]] = []
         transient_working_set_digest: str | None = None
         external_observation_gate_reason: str | None = None
@@ -1022,6 +1022,55 @@ class OrdivonAgentLoop:
                 external_observation_gate_reason = gate_reason
             return None
 
+        def restore_attempt_local_tool_exchange() -> AgentLoopResult | None:
+            nonlocal transient_working_set_digest
+            if (
+                retained is None
+                or not observations
+                or self.working_view_projector is None
+            ):
+                return None
+            exchange_restorer = getattr(
+                self.tool_bridge,
+                "restore_current_attempt_tool_exchanges",
+                None,
+            )
+            if not callable(exchange_restorer):
+                return None
+            try:
+                restored_exchange = exchange_restorer(tuple(observations))
+                restored_base_view = self.working_view_projector.project()
+            except ToolBridgeError as error:
+                return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
+            except Exception as error:  # noqa: BLE001 - recovery projection is a Harness boundary.
+                return stop(
+                    RunStopCode.HARNESS_FAILED,
+                    detail=(
+                        "transient Tool exchange recovery failed: "
+                        f"{type(error).__name__}: {error}"
+                    ),
+                )
+            transient_tool_exchange_messages.clear()
+            transient_tool_exchange_messages.extend(
+                dict(message) for message in restored_exchange
+            )
+            transient_working_set_digest = (
+                restored_base_view.working_set_digest
+                if restored_exchange
+                else None
+            )
+            recorder.record(
+                "transient_tool_exchange_restored",
+                {
+                    "workingSetDigest": restored_base_view.working_set_digest,
+                    "restoredMessages": len(restored_exchange),
+                    "restoredExchangeDigest": canonical_digest(
+                        list(restored_exchange)
+                    ),
+                },
+            )
+            return None
+
         if remaining_wall_time_ms <= 0:
             return stop(
                 RunStopCode.BUDGET_EXHAUSTED,
@@ -1185,45 +1234,10 @@ class OrdivonAgentLoop:
             if stopped is not None:
                 return stopped
 
-            if self.working_view_projector is not None:
-                exchange_restorer = getattr(
-                    self.tool_bridge,
-                    "restore_current_attempt_tool_exchanges",
-                    None,
-                )
-                if callable(exchange_restorer):
-                    try:
-                        restored_exchange = exchange_restorer(tuple(observations))
-                        restored_base_view = self.working_view_projector.project()
-                    except ToolBridgeError as error:
-                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
-                    except Exception as error:  # noqa: BLE001 - recovery projection is a Harness boundary.
-                        return stop(
-                            RunStopCode.HARNESS_FAILED,
-                            detail=(
-                                "transient Tool exchange recovery failed: "
-                                f"{type(error).__name__}: {error}"
-                            ),
-                        )
-                    transient_tool_exchange_messages.clear()
-                    transient_tool_exchange_messages.extend(
-                        dict(message) for message in restored_exchange
-                    )
-                    transient_working_set_digest = (
-                        restored_base_view.working_set_digest
-                        if restored_exchange
-                        else None
-                    )
-                    recorder.record(
-                        "transient_tool_exchange_restored",
-                        {
-                            "workingSetDigest": restored_base_view.working_set_digest,
-                            "restoredMessages": len(restored_exchange),
-                            "restoredExchangeDigest": canonical_digest(
-                                list(restored_exchange)
-                            ),
-                        },
-                    )
+        if retained is not None:
+            stopped = restore_attempt_local_tool_exchange()
+            if stopped is not None:
+                return stopped
 
         while True:
             if cancellation.cancelled:
