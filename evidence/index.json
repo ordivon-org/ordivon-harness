@@ -180,9 +180,16 @@
     {
       "claimId": "harness.execution.agent-first-mandate-attempts",
       "file": "harness-agent-first-mandate-6daeee4.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "6daeee4b2345850cf193fb3edfe2ac7653634e3b",
-      "scope": "Current Agent-first acceptance: caller-delegated Mandate with allowed execution profiles and aggregate token/wall-time envelope, receipt-derived consumption across attempts, immutable Strategy-to-Run compilation, reuse of evidence from a budget-exhausted Runtime-search attempt, and a no-Tool follow-up attempt that completes without repeating Runtime observation. No built-in StrategyPolicy or second Mandate Store."
+      "scope": "Historical Agent-first Mandate/attempt acceptance retained unchanged after the DeepSeek mixed-turn correction advanced implementation source; the Mandate result remains valid for its tested revision but no longer serves as current whole-implementation verification."
+    },
+    {
+      "claimId": "harness.deepseek.mixed-turn-correction",
+      "file": "harness-deepseek-mixed-turn-6124cd2.json",
+      "status": "verified",
+      "implementationRevision": "6124cd22b182264cfd0acbcf6ddd3a0c5ccda964",
+      "scope": "Current DeepSeek acceptance: a Provider turn that mixes ordinary Tool calls with submit_run_conclusion is rejected before ordinary Tool dispatch and before conclusion admission, then routed through existing model-correction semantics; deterministic loop proof confirms zero physical Tool executions from the mixed turn and successful corrected completion on the following turn."
     }
   ]
 }

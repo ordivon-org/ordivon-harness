@@ -1,0 +1,35 @@
+{
+  "behavior": {
+    "admission": "neither ordinary Tool execution nor simultaneous conclusion is admitted",
+    "agentChoice": "the next model turn chooses whether to continue acting or submit a pure conclusion",
+    "ambiguousProviderTurn": "ordinary Tool call(s) plus submit_run_conclusion in the same DeepSeek response",
+    "correction": "ordinary Tool calls are returned with argumentError=mixed_with_conclusion through the existing model-correctable rejected-observation path"
+  },
+  "checks": {
+    "cliCommandsVerified": 14,
+    "correctedNextTurnCanComplete": true,
+    "deterministicTests": 168,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "mixedTurnConclusionAdmitted": false,
+    "mixedTurnFocusedTests": 2,
+    "mixedTurnPhysicalToolExecutions": 0,
+    "modelCorrectionPathUsed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "A mixed continue-and-conclude Provider turn is an Agent action conflict, not a Harness authority decision. Harness preserves causal safety by dispatching no ordinary Tool from that turn and admitting no simultaneous conclusion, then returns a model-correctable signal so the Agent can choose one path next turn.",
+  "implementationSourceRevision": "6124cd22b182264cfd0acbcf6ddd3a0c5ccda964",
+  "kind": "ordivon.harness-deepseek-mixed-turn-correction-acceptance",
+  "knownLimits": [
+    "Current direct acceptance is for the built-in DeepSeek adapter; other Provider adapters may encode mixed actions differently.",
+    "This acceptance does not productize Prime-Agent Context World, replaceable Working Sets, working_set_commit, or Agent-authored work notes.",
+    "The correction resolves an ambiguous turn shape; it does not decide when an Agent has gathered enough evidence to stop exploring."
+  ],
+  "motivation": {
+    "observedDuring": "Prime-Agent replaceable Working-Set experiment",
+    "preFixFailure": "a real DeepSeek turn attempted Context Tool action and Run conclusion simultaneously and the Adapter raised ValueError before the generic correction path could run"
+  },
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
