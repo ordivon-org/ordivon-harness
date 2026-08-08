@@ -12,7 +12,7 @@ owners:
 audience:
   - builder
   - agent
-updated: 2026-08-04
+updated: 2026-08-08
 summary: Public dependency-inverted Harness loop boundary for domain-owned Tool catalogs, grants, execution, and execution identity without a domain dependency.
 evidence_status: verified
 readiness: READY
@@ -82,7 +82,7 @@ P0 does not:
 - allow Harness to import Security, Game, World, or another domain;
 - provide credential pooling or model routing by itself.
 
-Use `HarnessRunner` for Host-owned durable Assignments and Runtime Tools. Use `DomainToolLoopRunner` when another domain already owns the durable Actor/Contest boundary and needs a bounded Harness cognition loop.
+Use the independent Harness Run API (`HarnessRunContract` plus the Store/continuity/runtime bridge) when Provider/Runtime continuity must be durably retained. Use `DomainToolLoopRunner` when another domain already owns the durable Actor/Contest boundary and only needs a bounded Harness cognition loop.
 
 ## Acceptance
 

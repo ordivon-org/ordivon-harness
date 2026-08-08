@@ -27,6 +27,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Fixed
 
+- canonical security, data/privacy, verification and domain-Tool guidance now describe the independent Harness Journal/CAS and current Host-free Run API instead of removed Host-backed Assignment/Runner persistence; documentation checks reject those stale current claims;
 - concurrent same-digest CAS publication now preserves one immutable published inode and tolerates publication-only `ctime` movement without weakening canonical digest, inode, size, mtime, mode, or no-follow checks;
 - SQLite database/WAL/SHM hardening now happens outside active SQLite lock ownership, preventing hardening descriptors from disturbing process-scoped locks under multi-process Store use;
 - Continuity, Provider-claim, and terminal-recording execution owners are process-instance unique, so idempotent durable dispatch admission cannot be consumed as duplicate physical Provider or Runtime execution;

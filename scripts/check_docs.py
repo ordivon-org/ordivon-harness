@@ -265,6 +265,31 @@ def validate_public_contracts() -> list[str]:
     if "independent Agent Run authority" not in architecture:
         errors.append("ARCHITECTURE.md lacks the independent Harness authority boundary")
 
+    data_privacy = (ROOT / "docs/DATA_AND_PRIVACY.md").read_text(encoding="utf-8")
+    for stale in (
+        "Assignment, Provider Call, Tool Step, Snapshot, Run receipt | Host Journal/CAS",
+        "Harness has no separate database or retention engine",
+        "Use Host backup/restore to export Harness-backed state",
+    ):
+        if stale in data_privacy:
+            errors.append(f"DATA_AND_PRIVACY.md retains removed Host-backed state claim: {stale}")
+    for required in ("independent Harness Journal/CAS", "Harness `store-backup`"):
+        if required not in data_privacy:
+            errors.append(f"DATA_AND_PRIVACY.md lacks current independent-state marker: {required}")
+
+    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+    for stale in ("Harness owns Assignment, Provider Call", "Host CAS and receipts may contain"):
+        if stale in security:
+            errors.append(f"SECURITY.md retains removed Host-backed boundary: {stale}")
+
+    domain_bridge = (ROOT / "docs/DOMAIN-TOOL-BRIDGE-P0.md").read_text(encoding="utf-8")
+    if "Use `HarnessRunner`" in domain_bridge:
+        errors.append("DOMAIN-TOOL-BRIDGE-P0.md references removed HarnessRunner")
+
+    verification = (ROOT / "docs/VERIFICATION.md").read_text(encoding="utf-8")
+    if "Task, Assignment and Run identities" in verification:
+        errors.append("VERIFICATION.md requires removed Host-backed Assignment identity")
+
     source_root = ROOT / "src/ordivon_harness"
     for path in source_root.rglob("*.py"):
         relative = path.relative_to(source_root)

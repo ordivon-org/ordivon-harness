@@ -76,10 +76,10 @@ The receipt must bind the exact implementation revision and prove 1,000 Runs, 10
 A current release-changing Provider, Runtime, recovery or completion path should produce a new receipt containing:
 
 - Harness Git commit and package version;
-- Host and Protocol revisions;
-- Runtime identity and Tool catalog digest;
+- Protocol revision, and Host/caller revision only when that caller participates in the exercised graph;
+- Runtime identity and Tool catalog digest when Runtime Tools participate;
 - Provider adapter/model identity;
-- Task, Assignment and Run identities;
+- caller reference and Harness Run identity;
 - relevant Tool Step and Provider Call identities;
 - final status and explicit unknowns;
 - receipt integrity digest;

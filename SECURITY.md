@@ -20,8 +20,8 @@ Only current `main` and the exact package/dependency graph currently used by the
 
 Harness is a trusted-local Agent Run subsystem. It does not sandbox Provider processes, Runtime commands, repositories or domain systems.
 
-- Host owns Task authority, Journal/CAS admission, revision fencing and outcome admission.
-- Harness owns Assignment, Provider Call, Tool Step, Run Snapshot and completion-proposal semantics.
+- A caller/domain/optional Host owns Task or Actor meaning, final outcome admission, and any higher-level commitment semantics.
+- Harness owns its independent Run Journal/CAS, Run revision fencing, Provider Calls, Tool Steps, Run Snapshots, Trace/Receipt evidence and completion-proposal semantics.
 - Runtime owns physical execution and Artifact truth.
 - Domain verifiers own semantic completion.
 
@@ -29,7 +29,7 @@ A model message, Provider session, Tool output or Runtime success cannot expand 
 
 ## Provider boundary
 
-Providers may receive bounded Task Context, prior messages, Tool definitions and retained Tool observations. Provider output is untrusted input until parsed, authority-checked and durably admitted.
+Providers may receive bounded caller-supplied Context, prior messages, Tool definitions and retained Tool observations. Provider output is untrusted input until parsed, authority-checked and durably admitted.
 
 DeepSeek API keys are loaded from private regular files. Codex and Hermes adapters may start local child processes and inherit only the environment deliberately supplied by their driver configuration. Hidden Provider sessions are disposable and are not durable continuity.
 
@@ -41,7 +41,7 @@ ToolGrant limits the logical Tool surface; it is not a hostile-code sandbox. Run
 
 ## Sensitive data
 
-Host CAS and receipts may contain prompts, Context blocks, source-derived content, Tool arguments, model output, Runtime Job and Artifact references, provider/model identities, usage and failure details. Harness does not automatically redact secrets or personal data.
+Harness Journal/CAS, Traces and receipts may contain prompts, Context blocks, source-derived content, Tool arguments, model output, Runtime Job and Artifact references, provider/model identities, usage and failure details. Caller/domain state may contain additional semantic material outside Harness. Harness does not automatically redact secrets or personal data.
 
 Read [`docs/DATA_AND_PRIVACY.md`](docs/DATA_AND_PRIVACY.md) before sharing state or evidence.
 
