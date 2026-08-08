@@ -16,7 +16,7 @@ from ..protocol import (
     HarnessToolStepReceipt,
 )
 from ..run_state import HarnessRunState
-from .model import AgentTurnResult
+from .model import AgentTurnRequest, AgentTurnResult
 
 
 @runtime_checkable
@@ -131,6 +131,8 @@ class StoredHarnessProviderCall:
     result_object: HarnessStoredObject | None
     failure: HarnessProviderCallFailureReceipt | None
     failure_object: HarnessStoredObject | None
+    request: AgentTurnRequest | None = None
+    request_object: HarnessStoredObject | None = None
 
 
 class HarnessProviderCallClaimHeld(HarnessLifecycleError):
@@ -201,6 +203,7 @@ class HarnessRunContinuityStore(Protocol):
         requested_model_id: str,
         holder_id: str,
         ttl_ms: int,
+        request: AgentTurnRequest | None = None,
     ) -> StoredHarnessProviderCall: ...
 
     def mark_provider_call_dispatching(

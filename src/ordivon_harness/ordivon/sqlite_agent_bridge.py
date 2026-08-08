@@ -194,6 +194,7 @@ class SQLiteHarnessAgentBridge:
             requested_model_id=requested_model_id,
             holder_id=self._provider_holder_id,
             ttl_ms=self._provider_claim_ttl_ms(request),
+            request=(request if self.contract.privacy.allow_model_content else None),
         )
         self._active_provider_call = retained
         if retained.result is not None:

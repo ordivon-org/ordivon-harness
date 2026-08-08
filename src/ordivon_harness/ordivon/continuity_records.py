@@ -253,6 +253,99 @@ class HarnessProviderCallRecordV2:
 
 
 @dataclass(frozen=True, slots=True)
+class HarnessProviderCallRecordV3(HarnessProviderCallRecordV2):
+    """Provider Call v3 binds the exact Agent Turn request object.
+
+    v2 remains a historical/current-compatible codec for records created before
+    request bytes became independent execution evidence. v3 does not change
+    dispatch authority; it only makes exact Provider input reconstructable
+    without relying on append-only Run messages.
+    """
+
+    request_object_digest: str
+
+    def __post_init__(self) -> None:
+        # slots=True dataclasses replace the class object; explicit base dispatch
+        # avoids zero-argument super() retaining the pre-replacement __class__.
+        HarnessProviderCallRecordV2.__post_init__(self)
+        _digest(self.request_object_digest, "Agent Turn request object digest")
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        value = HarnessProviderCallRecordV2.to_dict(self)
+        value["schemaVersion"] = 3
+        value["requestObjectDigest"] = self.request_object_digest
+        return value
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> HarnessProviderCallRecordV3:
+        expected = {
+            "schemaVersion",
+            "kind",
+            "recordId",
+            "providerCallId",
+            "harnessRunId",
+            "bindingDigest",
+            "sourceKind",
+            "sourceDigest",
+            "sourceObjectDigest",
+            "stateObjectDigest",
+            "turnId",
+            "turnSequence",
+            "requestDigest",
+            "requestObjectDigest",
+            "providerRequestDigest",
+            "adapterId",
+            "requestedModelId",
+            "holderId",
+            "claimGeneration",
+            "status",
+            "resultDigest",
+            "resultObjectDigest",
+            "failureDigest",
+            "failureObjectDigest",
+            "previousRecordDigest",
+            "issuedAtMs",
+            "expiresAtMs",
+            "recordedAtMs",
+        }
+        _exact(value, expected, "HarnessProviderCallRecordV3")
+        if value["schemaVersion"] != 3 or value["kind"] != "ordivon.harness-provider-call-record":
+            raise HarnessProtocolError("HarnessProviderCallRecordV3 version or kind is invalid")
+        base = dict(value)
+        request_object_digest = base.pop("requestObjectDigest")
+        base["schemaVersion"] = 2
+        historical = HarnessProviderCallRecordV2.from_dict(base)
+        return cls(
+            record_id=historical.record_id,
+            provider_call_id=historical.provider_call_id,
+            harness_run_id=historical.harness_run_id,
+            binding_digest=historical.binding_digest,
+            source_kind=historical.source_kind,
+            source_digest=historical.source_digest,
+            source_object_digest=historical.source_object_digest,
+            state_object_digest=historical.state_object_digest,
+            turn_id=historical.turn_id,
+            turn_sequence=historical.turn_sequence,
+            request_digest=historical.request_digest,
+            provider_request_digest=historical.provider_request_digest,
+            adapter_id=historical.adapter_id,
+            requested_model_id=historical.requested_model_id,
+            holder_id=historical.holder_id,
+            claim_generation=historical.claim_generation,
+            status=historical.status,
+            result_digest=historical.result_digest,
+            result_object_digest=historical.result_object_digest,
+            failure_digest=historical.failure_digest,
+            failure_object_digest=historical.failure_object_digest,
+            previous_record_digest=historical.previous_record_digest,
+            issued_at_ms=historical.issued_at_ms,
+            expires_at_ms=historical.expires_at_ms,
+            recorded_at_ms=historical.recorded_at_ms,
+            request_object_digest=request_object_digest,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessDispatchFenceV2:
     """Caller-neutral physical-dispatch fence for an independent Run Store."""
 

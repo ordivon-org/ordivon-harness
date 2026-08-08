@@ -40,6 +40,7 @@ from .independent_result import (
 from .ordivon.continuity_records import (
     HarnessDispatchFenceV2,
     HarnessProviderCallRecordV2,
+    HarnessProviderCallRecordV3,
 )
 from .ordivon.deepseek import (
     DEFAULT_DEEPSEEK_BASE_URL,
@@ -129,6 +130,13 @@ from .store_ops import (
     restore_harness_backup,
     verify_harness_backup,
 )
+from .working_view import (
+    HarnessWorkingSetPin,
+    HarnessWorkingSetSpec,
+    HarnessWorkingView,
+    HarnessWorkingViewSource,
+    compile_working_view,
+)
 from .version import package_version
 
 __all__ = [
@@ -177,6 +185,7 @@ __all__ = [
     "HarnessPrivacyPolicy",
     "HarnessProviderCallClaimHeld",
     "HarnessProviderCallRecordV2",
+    "HarnessProviderCallRecordV3",
     "HarnessProviderCallRecoveryRequired",
     "HarnessProviderCallRequestMismatch",
     "HarnessRevisionConflict",
@@ -197,6 +206,10 @@ __all__ = [
     "HarnessStoreError",
     "HarnessTerminalConflict",
     "HarnessToolObservation",
+    "HarnessWorkingSetPin",
+    "HarnessWorkingSetSpec",
+    "HarnessWorkingView",
+    "HarnessWorkingViewSource",
     "IndependentCompletionProposal",
     "IndependentHarnessRunReceipt",
     "IndependentRunRecorder",
@@ -218,6 +231,7 @@ __all__ = [
     "backup_harness_store",
     "build_harness_workspace_exec_request_from_binding",
     "compile_harness_attempt",
+    "compile_working_view",
     "decode_structured_completion_result",
     "find_runtime_jobs_by_client_request",
     "package_version",

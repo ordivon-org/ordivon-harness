@@ -61,6 +61,18 @@ class AgentToolDefinition:
             "inputSchema": self.input_schema,
         }
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentToolDefinition:
+        _exact(value, {"name", "description", "inputSchema"}, "AgentToolDefinition")
+        raw_schema = value["inputSchema"]
+        if not isinstance(raw_schema, dict):
+            raise ValueError("AgentToolDefinition inputSchema must be an object")
+        return cls(
+            name=value["name"],
+            description=value["description"],
+            input_schema=dict(raw_schema),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class AgentToolCall:
@@ -264,6 +276,50 @@ class AgentTurnRequest:
             "tools": [tool.to_dict() for tool in self.tools],
             "remainingBudget": self.remaining_budget,
         }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentTurnRequest:
+        _exact(
+            value,
+            {
+                "schemaVersion",
+                "kind",
+                "harnessRunId",
+                "turnId",
+                "sequence",
+                "assignmentId",
+                "contextDigest",
+                "toolCatalogDigest",
+                "messages",
+                "tools",
+                "remainingBudget",
+            },
+            "AgentTurnRequest",
+        )
+        if value["schemaVersion"] != 1 or value["kind"] != "ordivon.agent-turn-request":
+            raise ValueError("AgentTurnRequest version or kind is invalid")
+        raw_messages = value["messages"]
+        raw_tools = value["tools"]
+        raw_budget = value["remainingBudget"]
+        if (
+            not isinstance(raw_messages, list)
+            or any(not isinstance(item, dict) for item in raw_messages)
+            or not isinstance(raw_tools, list)
+            or any(not isinstance(item, dict) for item in raw_tools)
+            or not isinstance(raw_budget, dict)
+        ):
+            raise ValueError("AgentTurnRequest collections are invalid")
+        return cls(
+            harness_run_id=value["harnessRunId"],
+            turn_id=value["turnId"],
+            sequence=value["sequence"],
+            assignment_id=value["assignmentId"],
+            context_digest=value["contextDigest"],
+            tool_catalog_digest=value["toolCatalogDigest"],
+            messages=tuple(dict(item) for item in raw_messages),
+            tools=tuple(AgentToolDefinition.from_dict(item) for item in raw_tools),
+            remaining_budget=dict(raw_budget),
+        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -20,6 +20,10 @@ from ..protocol import (
     HarnessToolStepStatus,
 )
 from ..run_state import HarnessRunState, state_from_dict
+from ..working_view import (
+    HarnessWorkingSetSpec,
+    HarnessWorkingViewSource,
+)
 from ..sqlite_store import (
     HarnessEventConflict,
     HarnessLeaseConflict,
@@ -28,13 +32,18 @@ from ..sqlite_store import (
     SQLiteHarnessStore,
 )
 from ..store import (
+    HarnessEventAdmission,
     HarnessRunEventRecord,
     HarnessRunLease,
     StoredHarnessObject,
     new_execution_owner_id,
 )
-from .continuity_records import HarnessDispatchFenceV2, HarnessProviderCallRecordV2
-from .model import AgentTurnResult
+from .continuity_records import (
+    HarnessDispatchFenceV2,
+    HarnessProviderCallRecordV2,
+    HarnessProviderCallRecordV3,
+)
+from .model import AgentTurnRequest, AgentTurnResult
 from .run_store_port import (
     HarnessDispatchFenceView,
     HarnessProviderCallClaimHeld,
@@ -62,6 +71,7 @@ _PROVIDER_EVENT_KINDS = frozenset(
 _PROVIDER_CLEAR_EVENT_KINDS = frozenset(
     {
         "harness.snapshot-recorded",
+        "harness.working-set-recorded",
         "harness.run-paused",
         "harness.tool-step-prepared",
         "harness.run-stopped",
@@ -85,6 +95,7 @@ class _Heads:
     provider: HarnessRunEventRecord | None
     tool: HarnessRunEventRecord | None
     snapshot: HarnessRunEventRecord | None
+    working_set: HarnessRunEventRecord | None
 
 
 class SQLiteHarnessRunContinuityStore:
@@ -183,6 +194,170 @@ class SQLiteHarnessRunContinuityStore:
             retained.snapshot_object.digest,
         )
 
+    def record_working_set(
+        self,
+        spec: HarnessWorkingSetSpec,
+    ) -> HarnessEventAdmission:
+        """Admit one exact Agent-owned Working Set revision to Run history.
+
+        The event is a durable selection claim, not a relevance judgment. Pinned
+        sources are exact CAS identities. A committed attempt is frozen; a new
+        attempt may only replan from the committed head.
+        """
+        if not self.contract.privacy.allow_model_content:
+            raise ValueError(
+                "Working Set prototype requires Contract permission to persist model content"
+            )
+        if self._validate_working_set_transition(spec):
+            return HarnessEventAdmission.EXISTING
+
+        spec_object = self.store.put_object(
+            spec.to_dict(),
+            kind="harness-working-set-spec",
+        )
+        source_objects: list[StoredHarnessObject] = []
+        for pin in spec.pins:
+            raw = self.store.get_object(
+                pin.resolved_digest,
+                expected_kind="harness-working-view-source",
+            )
+            if not isinstance(raw, dict):
+                raise TypeError("Working Set source object is invalid")
+            source = HarnessWorkingViewSource.from_dict(raw)
+            if (
+                source.logical_ref != pin.logical_ref
+                or source.logical_generation != pin.logical_generation
+            ):
+                raise ValueError("Working Set pin differs from its exact source")
+            source_objects.append(self.store.inspect_object(pin.resolved_digest))
+
+        now_ms = self.clock_ms()
+        lease = self._acquire_lease("working-set", spec.digest, now_ms=now_ms)
+        try:
+            # The first validation is a fast fail. This second validation is the
+            # authority check: another writer may have advanced the head while
+            # this caller waited for the Run lease.
+            if self._validate_working_set_transition(spec):
+                return HarnessEventAdmission.EXISTING
+            event_id = self._event_id("working-set", spec.digest)
+            events = self.store.list_run_events(self.harness_run_id)
+            return self.store.append_event(
+                event_id=event_id,
+                harness_run_id=self.harness_run_id,
+                event_kind="harness.working-set-recorded",
+                data={
+                    "workingSetDigest": spec.digest,
+                    "workingSetObjectDigest": spec_object.digest,
+                    "attemptId": spec.attempt_id,
+                    "workingSetRevision": spec.revision,
+                    "committed": spec.committed,
+                },
+                expected_revision=lease.run_revision,
+                recorded_at_ms=self._recorded_time(now_ms),
+                lease=lease,
+                lease_checked_at_ms=self.clock_ms(),
+                caused_by_event_id=None if not events else events[-1].event_id,
+                referenced_objects=(spec_object, *source_objects),
+            )
+        finally:
+            self.store.release_run_lease(lease)
+
+    def _validate_working_set_transition(
+        self, spec: HarnessWorkingSetSpec
+    ) -> bool:
+        current = self._load_current_working_set_or_none()
+        if current == spec:
+            return True
+        provider = self._load_current_provider_call_or_none()
+        if provider is not None and provider.record.status in {
+            HarnessProviderCallStatus.CLAIMED,
+            HarnessProviderCallStatus.DISPATCHING,
+            HarnessProviderCallStatus.UNKNOWN,
+        }:
+            raise HarnessProviderCallRecoveryRequired(
+                "Working Set cannot change while a Provider Call may still act on the prior view"
+            )
+        self._require_working_set_predecessor(current, spec)
+        return False
+
+    @staticmethod
+    def _require_working_set_predecessor(
+        current: HarnessWorkingSetSpec | None,
+        spec: HarnessWorkingSetSpec,
+    ) -> None:
+        if current is None:
+            if (
+                spec.revision != 1
+                or spec.previous_digest is not None
+                or spec.parent_attempt_id is not None
+            ):
+                raise ValueError("initial Working Set revision or predecessor is invalid")
+            return
+        if spec.attempt_id == current.attempt_id:
+            if current.committed:
+                raise ValueError("committed Working Set is frozen for this attempt")
+            if (
+                spec.revision != current.revision + 1
+                or spec.previous_digest != current.digest
+            ):
+                raise ValueError("Working Set revision does not extend the current attempt")
+            if spec.parent_attempt_id != current.parent_attempt_id:
+                raise ValueError("Working Set parent attempt changed within one attempt")
+            return
+        if not current.committed:
+            raise ValueError("Working Set replan requires a committed predecessor")
+        if (
+            spec.revision != 1
+            or spec.parent_attempt_id != current.attempt_id
+            or spec.previous_digest != current.digest
+        ):
+            raise ValueError(
+                "Working Set replan does not identify its committed predecessor"
+            )
+
+    def load_current_working_set(self) -> HarnessWorkingSetSpec:
+        value = self._load_current_working_set_or_none()
+        if value is None:
+            raise KeyError("Harness Run has no Working Set")
+        return value
+
+    def _load_current_working_set_or_none(self) -> HarnessWorkingSetSpec | None:
+        event = self._heads().working_set
+        return None if event is None else self._working_set_from_event(event)
+
+    def _working_set_from_event(
+        self, event: HarnessRunEventRecord
+    ) -> HarnessWorkingSetSpec:
+        object_digest = self._required_digest(event.data, "workingSetObjectDigest")
+        raw = self.store.get_object(
+            object_digest,
+            expected_kind="harness-working-set-spec",
+        )
+        if not isinstance(raw, dict):
+            raise TypeError("Harness Working Set object is invalid")
+        spec = HarnessWorkingSetSpec.from_dict(raw)
+        if (
+            event.data.get("workingSetDigest") != spec.digest
+            or event.data.get("attemptId") != spec.attempt_id
+            or event.data.get("workingSetRevision") != spec.revision
+            or event.data.get("committed") is not spec.committed
+        ):
+            raise ValueError("Harness Working Set event differs from its object")
+        for pin in spec.pins:
+            raw_source = self.store.get_object(
+                pin.resolved_digest,
+                expected_kind="harness-working-view-source",
+            )
+            if not isinstance(raw_source, dict):
+                raise TypeError("Harness Working Set source object is invalid")
+            source = HarnessWorkingViewSource.from_dict(raw_source)
+            if (
+                source.logical_ref != pin.logical_ref
+                or source.logical_generation != pin.logical_generation
+            ):
+                raise ValueError("Harness Working Set source identity differs")
+        return spec
+
     def claim_provider_call(
         self,
         *,
@@ -195,11 +370,26 @@ class SQLiteHarnessRunContinuityStore:
         requested_model_id: str,
         holder_id: str,
         ttl_ms: int,
+        request: AgentTurnRequest | None = None,
     ) -> StoredHarnessProviderCall:
         if ttl_ms < 1:
             raise ValueError("Provider Call claim TTL must be positive")
+        if request is not None and (
+            request.harness_run_id != self.harness_run_id
+            or request.turn_id != turn_id
+            or request.sequence != turn_sequence
+            or request.dispatch_digest != request_digest
+        ):
+            raise HarnessProviderCallRequestMismatch(
+                "exact Agent Turn request differs from Provider Call claim identity"
+            )
         state = self._require_state()
         state_object = self._put_state(state)
+        request_object = (
+            None
+            if request is None
+            else self.store.put_object(request.to_dict(), kind="agent-turn-request")
+        )
         now_ms = self.clock_ms()
         provider_call_id = self._provider_call_id(source, turn_sequence)
         try:
@@ -224,6 +414,9 @@ class SQLiteHarnessRunContinuityStore:
                         turn_sequence=turn_sequence,
                         request_digest=request_digest,
                         provider_request_digest=provider_request_digest,
+                        request_object_digest=(
+                            None if request_object is None else request_object.digest
+                        ),
                         adapter_id=adapter_id,
                         requested_model_id=requested_model_id,
                     )
@@ -286,6 +479,9 @@ class SQLiteHarnessRunContinuityStore:
                 turn_id=turn_id,
                 turn_sequence=turn_sequence,
                 request_digest=request_digest,
+                request_object_digest=(
+                    None if request_object is None else request_object.digest
+                ),
                 provider_request_digest=provider_request_digest,
                 adapter_id=adapter_id,
                 requested_model_id=requested_model_id,
@@ -301,7 +497,12 @@ class SQLiteHarnessRunContinuityStore:
                 expires_at_ms=now_ms + ttl_ms,
                 recorded_at_ms=recorded_at_ms,
             )
-            stored = self._store_provider_call(record, state_object=state_object)
+            stored = self._store_provider_call(
+                record,
+                state_object=state_object,
+                request=request,
+                request_object=request_object,
+            )
             self._append_provider_event(
                 lease=lease,
                 event_kind=event_kind,
@@ -352,7 +553,12 @@ class SQLiteHarnessRunContinuityStore:
                     previous_recorded_at_ms=current.record.recorded_at_ms,
                 ),
             )
-            stored = self._store_provider_call(record, state_object=state_object)
+            stored = self._store_provider_call(
+                record,
+                state_object=state_object,
+                request=current.request,
+                request_object=current.request_object,
+            )
             self._append_provider_event(
                 lease=lease,
                 event_kind="harness.provider-call-dispatching",
@@ -423,6 +629,8 @@ class SQLiteHarnessRunContinuityStore:
             stored = self._store_provider_call(
                 record,
                 state_object=state_object,
+                request=current.request,
+                request_object=current.request_object,
                 result=result,
                 result_object=result_object,
             )
@@ -493,6 +701,8 @@ class SQLiteHarnessRunContinuityStore:
             stored = self._store_provider_call(
                 record,
                 state_object=state_object,
+                request=current.request,
+                request_object=current.request_object,
                 failure=failure,
                 failure_object=failure_object,
             )
@@ -553,6 +763,8 @@ class SQLiteHarnessRunContinuityStore:
             stored = self._store_provider_call(
                 record,
                 state_object=state_object,
+                request=current.request,
+                request_object=current.request_object,
                 failure=failure,
                 failure_object=failure_object,
             )
@@ -606,6 +818,7 @@ class SQLiteHarnessRunContinuityStore:
                 turn_id=previous.turn_id,
                 turn_sequence=previous.turn_sequence,
                 request_digest=previous.request_digest,
+                request_object_digest=getattr(previous, "request_object_digest", None),
                 provider_request_digest=previous.provider_request_digest,
                 adapter_id=previous.adapter_id,
                 requested_model_id=previous.requested_model_id,
@@ -624,7 +837,12 @@ class SQLiteHarnessRunContinuityStore:
                     previous_recorded_at_ms=previous.recorded_at_ms,
                 ),
             )
-            stored = self._store_provider_call(record, state_object=state_object)
+            stored = self._store_provider_call(
+                record,
+                state_object=state_object,
+                request=current.request,
+                request_object=current.request_object,
+            )
             self._append_provider_event(
                 lease=lease,
                 event_kind="harness.provider-call-superseded",
@@ -1021,6 +1239,8 @@ class SQLiteHarnessRunContinuityStore:
         provider_records = 0
         tool_records = 0
         snapshots = 0
+        working_sets = 0
+        previous_working_set: HarnessWorkingSetSpec | None = None
         for event in events:
             if event.event_kind in _PROVIDER_EVENT_KINDS:
                 self._load_provider_from_event(event)
@@ -1031,6 +1251,11 @@ class SQLiteHarnessRunContinuityStore:
             if "snapshotObjectDigest" in event.data:
                 self._load_snapshot_from_event(event)
                 snapshots += 1
+            if event.event_kind == "harness.working-set-recorded":
+                spec = self._working_set_from_event(event)
+                self._require_working_set_predecessor(previous_working_set, spec)
+                previous_working_set = spec
+                working_sets += 1
         from ..independent_result import IndependentRunRecorder
 
         independent = IndependentRunRecorder(
@@ -1048,6 +1273,7 @@ class SQLiteHarnessRunContinuityStore:
             "providerRecords": provider_records,
             "toolRecords": tool_records,
             "snapshots": snapshots,
+            "workingSets": working_sets,
             "independentResult": independent,
             "store": base,
         }
@@ -1061,6 +1287,8 @@ class SQLiteHarnessRunContinuityStore:
         caused_by_event_id: str | None,
     ) -> None:
         references = [stored.record_object, stored.state_object]
+        if stored.request_object is not None:
+            references.append(stored.request_object)
         if stored.result_object is not None:
             references.append(stored.result_object)
         if stored.failure_object is not None:
@@ -1073,6 +1301,9 @@ class SQLiteHarnessRunContinuityStore:
                 "providerCallRecordDigest": stored.record.digest,
                 "providerCallRecordObjectDigest": stored.record_object.digest,
                 "stateObjectDigest": stored.state_object.digest,
+                "requestObjectDigest": (
+                    None if stored.request_object is None else stored.request_object.digest
+                ),
                 "resultObjectDigest": (
                     None if stored.result_object is None else stored.result_object.digest
                 ),
@@ -1135,6 +1366,7 @@ class SQLiteHarnessRunContinuityStore:
         provider = None
         tool = None
         snapshot = None
+        working_set = None
         for event in self.store.list_run_events(self.harness_run_id):
             if event.event_kind in _PROVIDER_CLEAR_EVENT_KINDS:
                 provider = None
@@ -1144,7 +1376,14 @@ class SQLiteHarnessRunContinuityStore:
                 tool = event
             if "snapshotObjectDigest" in event.data:
                 snapshot = event
-        return _Heads(provider=provider, tool=tool, snapshot=snapshot)
+            if event.event_kind == "harness.working-set-recorded":
+                working_set = event
+        return _Heads(
+            provider=provider,
+            tool=tool,
+            snapshot=snapshot,
+            working_set=working_set,
+        )
 
     def _load_current_provider_call_or_none(
         self,
@@ -1161,9 +1400,13 @@ class SQLiteHarnessRunContinuityStore:
         )
         if not isinstance(raw_record, dict):
             raise ValueError("Harness Provider Call record object is invalid")
-        if raw_record.get("schemaVersion") != 2:
-            raise ValueError("independent Harness Store requires caller-neutral Provider Call v2")
-        record = HarnessProviderCallRecordV2.from_dict(raw_record)
+        record_version = raw_record.get("schemaVersion")
+        if record_version == 2:
+            record = HarnessProviderCallRecordV2.from_dict(raw_record)
+        elif record_version == 3:
+            record = HarnessProviderCallRecordV3.from_dict(raw_record)
+        else:
+            raise ValueError("independent Harness Store requires Provider Call v2 or v3")
         self._require_provider_record(record)
         if data.get("providerCallRecordDigest") != record.digest:
             raise ValueError("Harness Provider Call record digest differs")
@@ -1178,6 +1421,32 @@ class SQLiteHarnessRunContinuityStore:
             raise TypeError("Harness Provider Call state object is invalid")
         state = state_from_dict(raw_state, harness_run_id=self.harness_run_id)
         state_object = self.store.inspect_object(state_object_digest)
+
+        request = None
+        request_object = None
+        request_object_digest = data.get("requestObjectDigest")
+        retained_request_digest = getattr(record, "request_object_digest", None)
+        if retained_request_digest is None:
+            if request_object_digest is not None:
+                raise ValueError("Provider Call v2 unexpectedly references an exact request object")
+        else:
+            if request_object_digest != retained_request_digest:
+                raise ValueError("Provider Call exact request event reference differs")
+            raw_request = self.store.get_object(
+                retained_request_digest,
+                expected_kind="agent-turn-request",
+            )
+            if not isinstance(raw_request, dict):
+                raise TypeError("Provider Call exact request object is invalid")
+            request = AgentTurnRequest.from_dict(raw_request)
+            request_object = self.store.inspect_object(retained_request_digest)
+            if (
+                request.dispatch_digest != record.request_digest
+                or request.harness_run_id != self.harness_run_id
+                or request.turn_id != record.turn_id
+                or request.sequence != record.turn_sequence
+            ):
+                raise ValueError("Provider Call exact request differs from its record")
 
         result = None
         result_object = None
@@ -1231,6 +1500,8 @@ class SQLiteHarnessRunContinuityStore:
             result_object,
             failure,
             failure_object,
+            request=request,
+            request_object=request_object,
         )
 
     def _validate_tool_event(self, event: HarnessRunEventRecord) -> None:
@@ -1328,6 +1599,7 @@ class SQLiteHarnessRunContinuityStore:
         turn_id: str,
         turn_sequence: int,
         request_digest: str,
+        request_object_digest: str | None,
         provider_request_digest: str,
         adapter_id: str,
         requested_model_id: str,
@@ -1342,7 +1614,7 @@ class SQLiteHarnessRunContinuityStore:
         issued_at_ms: int,
         expires_at_ms: int,
         recorded_at_ms: int,
-    ) -> HarnessProviderCallRecordV2:
+    ) -> HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3:
         record_token = canonical_digest(
             {
                 "providerCallId": provider_call_id,
@@ -1350,13 +1622,19 @@ class SQLiteHarnessRunContinuityStore:
                 "claimGeneration": generation,
                 "status": status.value,
                 "providerRequestDigest": provider_request_digest,
+                "requestObjectDigest": request_object_digest,
                 "resultDigest": result_digest,
                 "failureDigest": failure_digest,
                 "previousRecordDigest": previous_record_digest,
                 "recordedAtMs": recorded_at_ms,
             }
         )[7:31]
-        return HarnessProviderCallRecordV2(
+        record_type = (
+            HarnessProviderCallRecordV3
+            if request_object_digest is not None
+            else HarnessProviderCallRecordV2
+        )
+        record_kwargs = dict(
             record_id=f"harness-provider-call-record:{record_token}",
             provider_call_id=provider_call_id,
             harness_run_id=self.harness_run_id,
@@ -1383,6 +1661,9 @@ class SQLiteHarnessRunContinuityStore:
             expires_at_ms=expires_at_ms,
             recorded_at_ms=recorded_at_ms,
         )
+        if request_object_digest is not None:
+            record_kwargs["request_object_digest"] = request_object_digest
+        return record_type(**record_kwargs)
 
     def _transition_provider_call(
         self,
@@ -1395,7 +1676,7 @@ class SQLiteHarnessRunContinuityStore:
         result_object_digest: str | None = None,
         failure_digest: str | None = None,
         failure_object_digest: str | None = None,
-    ) -> HarnessProviderCallRecordV2:
+    ) -> HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3:
         return self._provider_call_record(
             provider_call_id=previous.provider_call_id,
             source=HarnessProviderCallSourceRef(
@@ -1407,6 +1688,7 @@ class SQLiteHarnessRunContinuityStore:
             turn_id=previous.turn_id,
             turn_sequence=previous.turn_sequence,
             request_digest=previous.request_digest,
+            request_object_digest=getattr(previous, "request_object_digest", None),
             provider_request_digest=previous.provider_request_digest,
             adapter_id=previous.adapter_id,
             requested_model_id=previous.requested_model_id,
@@ -1425,9 +1707,11 @@ class SQLiteHarnessRunContinuityStore:
 
     def _store_provider_call(
         self,
-        record: HarnessProviderCallRecordV2,
+        record: HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3,
         *,
         state_object: StoredHarnessObject,
+        request: AgentTurnRequest | None = None,
+        request_object: StoredHarnessObject | None = None,
         result: AgentTurnResult | None = None,
         result_object: StoredHarnessObject | None = None,
         failure: HarnessProviderCallFailureReceipt | None = None,
@@ -1435,6 +1719,18 @@ class SQLiteHarnessRunContinuityStore:
     ) -> StoredHarnessProviderCall:
         if record.state_object_digest != state_object.digest:
             raise ValueError("Provider Call state object differs from its record")
+        request_digest = getattr(record, "request_object_digest", None)
+        if request_digest is None:
+            if request is not None or request_object is not None:
+                raise ValueError("Provider Call v2 cannot carry an exact request object")
+        else:
+            if request is None or request_object is None:
+                raise ValueError("Provider Call v3 exact request object is incomplete")
+            if (
+                request_object.digest != request_digest
+                or request.dispatch_digest != record.request_digest
+            ):
+                raise ValueError("Provider Call exact request differs from its record")
         if (result is None) != (result_object is None):
             raise ValueError("Provider Call result object is incomplete")
         if result is not None and (
@@ -1459,6 +1755,8 @@ class SQLiteHarnessRunContinuityStore:
             result_object,
             failure,
             failure_object,
+            request=request,
+            request_object=request_object,
         )
 
     def _put_state(self, state: HarnessRunState) -> StoredHarnessObject:
@@ -1548,6 +1846,7 @@ class SQLiteHarnessRunContinuityStore:
         turn_sequence: int,
         request_digest: str,
         provider_request_digest: str,
+        request_object_digest: str | None,
         adapter_id: str,
         requested_model_id: str,
     ) -> None:
@@ -1559,6 +1858,7 @@ class SQLiteHarnessRunContinuityStore:
             or record.turn_sequence != turn_sequence
             or record.request_digest != request_digest
             or record.provider_request_digest != provider_request_digest
+            or getattr(record, "request_object_digest", None) != request_object_digest
             or record.adapter_id != adapter_id
             or record.requested_model_id != requested_model_id
         ):
