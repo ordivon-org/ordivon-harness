@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
 
 from anc_canonical import canonical_digest
 
-from ordivon_harness.core_contracts import HarnessBoundReference, HarnessRunContract
+from ordivon_harness.core_contracts import (
+    HarnessBoundReference,
+    HarnessPrivacyPolicy,
+    HarnessRunContract,
+)
 from ordivon_harness.ordivon.loop import OrdivonAgentLoop, RunBudget, RunStopCode
 from ordivon_harness.ordivon.model import (
     AgentRunConclusion,
@@ -15,6 +20,7 @@ from ordivon_harness.ordivon.model import (
     ScriptedTurnAdapter,
     static_provider_request_digest,
 )
+from ordivon_harness.ordivon.run_store_port import HarnessProviderCallRecoveryRequired
 from ordivon_harness.ordivon.sqlite_agent_bridge import (
     NO_TOOL_AGENT_SURFACE_DIGEST,
     SQLiteHarnessAgentBridge,
@@ -209,7 +215,13 @@ class SQLiteHarnessAgentLoopTests(unittest.TestCase):
                 retained.record.status,
                 HarnessProviderCallStatus.COMPLETED,
             )
-            self.assertEqual(retained.result, completed_result("complete"))
+            self.assertEqual(retained.record.to_dict()["schemaVersion"], 4)
+            self.assertEqual(
+                retained.record.result_digest,
+                completed_result("complete").digest,
+            )
+            self.assertIsNone(retained.result)
+            self.assertIsNone(retained.result_object)
             self.assertEqual(continuity.doctor()["providerRecords"], 3)
             store.close()
 
@@ -219,16 +231,27 @@ class SQLiteHarnessAgentLoopTests(unittest.TestCase):
                     run_contract.harness_run_id,
                     clock_ms=clock,
                 )
+                retained = reopened.load_current_provider_call()
+                self.assertEqual(retained.record.to_dict()["schemaVersion"], 4)
                 self.assertEqual(
-                    reopened.load_current_provider_call().result,
-                    completed_result("complete"),
+                    retained.record.result_digest,
+                    completed_result("complete").digest,
                 )
+                self.assertIsNone(retained.result)
+                self.assertIsNone(retained.result_object)
 
     def test_durable_completion_replays_after_bridge_response_loss(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = FixedClock()
-            run_contract = contract("response-loss")
+            run_contract = replace(
+                contract("response-loss"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
             store, continuity = self.initialize(root, run_contract, clock)
             first_adapter = ScriptedTurnAdapter((completed_result("response-loss"),))
             with self.assertRaisesRegex(RuntimeError, "response loss"):
@@ -265,11 +288,74 @@ class SQLiteHarnessAgentLoopTests(unittest.TestCase):
                 self.assertEqual(result.usage["providerResultsReplayed"], 1)
                 self.assertEqual(reopened.caller_revision, revision)
 
+    def test_metadata_only_response_loss_fences_redispatch_without_result_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            run_contract = contract("response-loss-metadata-only")
+            store, continuity = self.initialize(root, run_contract, clock)
+            first_adapter = ScriptedTurnAdapter(
+                (completed_result("response-loss-metadata-only"),)
+            )
+            with self.assertRaisesRegex(RuntimeError, "response loss"):
+                self.run_loop(
+                    run_contract,
+                    continuity,
+                    first_adapter,
+                    clock,
+                    bridge_type=LoseCompletionResponseBridge,
+                )
+            self.assertEqual(len(first_adapter.requests), 1)
+            retained = continuity.load_current_provider_call()
+            self.assertEqual(retained.record.status, HarnessProviderCallStatus.COMPLETED)
+            self.assertEqual(retained.record.to_dict()["schemaVersion"], 4)
+            self.assertEqual(
+                retained.record.result_digest,
+                completed_result("response-loss-metadata-only").digest,
+            )
+            self.assertIsNone(retained.result)
+            self.assertIsNone(retained.result_object)
+            revision = continuity.caller_revision
+            store.close()
+
+            with SQLiteHarnessStore(root) as reopened_store:
+                reopened = SQLiteHarnessRunContinuityStore.open(
+                    reopened_store,
+                    run_contract.harness_run_id,
+                    clock_ms=clock,
+                )
+                replay_adapter = FailIfInvokedAdapter()
+                with self.assertRaisesRegex(
+                    HarnessProviderCallRecoveryRequired,
+                    "result rehydration",
+                ):
+                    self.run_loop(
+                        run_contract,
+                        reopened,
+                        replay_adapter,
+                        clock,
+                    )
+                self.assertEqual(replay_adapter.requests, [])
+                self.assertEqual(reopened.caller_revision, revision)
+                retained = reopened.load_current_provider_call()
+                self.assertEqual(retained.record.status, HarnessProviderCallStatus.COMPLETED)
+                self.assertEqual(
+                    retained.record.result_digest,
+                    completed_result("response-loss-metadata-only").digest,
+                )
+
     def test_needs_input_snapshot_resumes_and_completes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = FixedClock()
-            run_contract = contract("pause-resume")
+            run_contract = replace(
+                contract("pause-resume"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
             store, continuity = self.initialize(root, run_contract, clock)
             first_adapter = ScriptedTurnAdapter((needs_input_result("pause"),))
             _, paused = self.run_loop(

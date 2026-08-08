@@ -62,9 +62,7 @@ def _crash_after_projected_provider_completion(root_text: str) -> None:
                 {"role": "user", "content": "TOKEN=ALPHA"},
             ),
         )
-        stored = store.put_object(
-            source.to_dict(), kind="harness-working-view-source"
-        )
+        stored = continuity.store_working_view_source(source)
         initial = HarnessWorkingSetSpec.initial(
             "working-attempt:crash-1",
             pins=(
@@ -109,13 +107,19 @@ def _crash_after_projected_provider_completion(root_text: str) -> None:
 
 class WorkingViewPrototypeTests(unittest.TestCase):
     @staticmethod
-    def source(store: SQLiteHarnessStore, *, ref: str, generation: str, content: str):
+    def source(
+        continuity: SQLiteHarnessRunContinuityStore,
+        *,
+        ref: str,
+        generation: str,
+        content: str,
+    ):
         source = HarnessWorkingViewSource(
             logical_ref=ref,
             logical_generation=generation,
             messages=({"role": "user", "content": content},),
         )
-        stored = store.put_object(source.to_dict(), kind="harness-working-view-source")
+        stored = continuity.store_working_view_source(source)
         return source, stored
 
     def test_metadata_only_contract_rejects_working_set_content_persistence(self) -> None:
@@ -132,6 +136,49 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "permission to persist model content"):
                     continuity.record_working_set(spec)
 
+    def test_model_only_contract_rejects_tool_content_in_working_set_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            run_contract = _private_content_contract("pc12a-working-tool-content")
+            with SQLiteHarnessStore.initialize(root) as store:
+                store.create_run(run_contract)
+                continuity = SQLiteHarnessRunContinuityStore(
+                    store, run_contract, clock_ms=clock
+                )
+                source = HarnessWorkingViewSource(
+                    logical_ref="source://tool/current",
+                    logical_generation="tool:g1",
+                    messages=(
+                        {
+                            "role": "tool",
+                            "toolCallId": "tool-call:pc12a-working",
+                            "name": "search_workspace",
+                            "content": "PRIVATE-TOOL-WORKING-SET-PC12A",
+                        },
+                    ),
+                )
+                with self.assertRaisesRegex(ValueError, "Tool content"):
+                    continuity.store_working_view_source(source)
+                # Deliberately bypass the policy-aware cognition API to prove that
+                # Continuity still rejects a mechanically present unauthorized source.
+                stored = store.put_object(
+                    source.to_dict(), kind="harness-working-view-source"
+                )
+                spec = HarnessWorkingSetSpec.initial(
+                    "working-attempt:pc12a-tool-content",
+                    pins=(
+                        HarnessWorkingSetPin(
+                            slot="tool-evidence",
+                            logical_ref=source.logical_ref,
+                            logical_generation=source.logical_generation,
+                            resolved_digest=stored.digest,
+                        ),
+                    ),
+                )
+                with self.assertRaisesRegex(ValueError, "Tool content"):
+                    continuity.record_working_set(spec)
+
     def test_replace_commit_replan_preserves_history_and_exact_sources(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
@@ -143,13 +190,13 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                     store, run_contract, clock_ms=clock
                 )
                 source_a, stored_a = self.source(
-                    store,
+                    continuity,
                     ref="source://rule/current",
                     generation="git:a",
                     content="RULE=A",
                 )
                 source_b, stored_b = self.source(
-                    store,
+                    continuity,
                     ref="source://rule/current",
                     generation="git:b",
                     content="RULE=B",
@@ -275,10 +322,10 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                     store, run_contract, clock_ms=clock
                 )
                 source_a, stored_a = self.source(
-                    store, ref="source://race/a", generation="g1", content="A"
+                    continuity, ref="source://race/a", generation="g1", content="A"
                 )
                 source_b, stored_b = self.source(
-                    store, ref="source://race/b", generation="g1", content="B"
+                    continuity, ref="source://race/b", generation="g1", content="B"
                 )
                 initial = HarnessWorkingSetSpec.initial("working-attempt:race")
                 continuity.record_working_set(initial)
@@ -353,9 +400,15 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                 )
                 self.assertTrue(result.candidate_completed)
                 retained = continuity.load_current_provider_call()
-                self.assertEqual(retained.record.to_dict()["schemaVersion"], 2)
+                self.assertEqual(retained.record.to_dict()["schemaVersion"], 4)
                 self.assertIsNone(retained.request)
                 self.assertIsNone(retained.request_object)
+                self.assertEqual(
+                    retained.record.result_digest,
+                    completed_result("pc11-provider-metadata-only").digest,
+                )
+                self.assertIsNone(retained.result)
+                self.assertIsNone(retained.result_object)
                 provider_events = [
                     event
                     for event in store.list_run_events(run_contract.harness_run_id)
@@ -446,7 +499,7 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                     store, run_contract, clock_ms=clock
                 )
                 source, stored = self.source(
-                    store,
+                    continuity,
                     ref="source://pc11/current",
                     generation="git:pc11",
                     content="TOKEN=ALPHA",
@@ -499,10 +552,10 @@ class WorkingViewPrototypeTests(unittest.TestCase):
                     store, run_contract, clock_ms=clock
                 )
                 source_a, stored_a = self.source(
-                    store, ref="source://replan/current", generation="g:a", content="A"
+                    continuity, ref="source://replan/current", generation="g:a", content="A"
                 )
                 source_b, stored_b = self.source(
-                    store, ref="source://replan/current", generation="g:b", content="B"
+                    continuity, ref="source://replan/current", generation="g:b", content="B"
                 )
                 initial = HarnessWorkingSetSpec.initial(
                     "working-attempt:replan-1",

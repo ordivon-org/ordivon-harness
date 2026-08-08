@@ -41,6 +41,7 @@ from .ordivon.continuity_records import (
     HarnessDispatchFenceV2,
     HarnessProviderCallRecordV2,
     HarnessProviderCallRecordV3,
+    HarnessProviderCallRecordV4,
 )
 from .ordivon.deepseek import (
     DEFAULT_DEEPSEEK_BASE_URL,
@@ -186,6 +187,7 @@ __all__ = [
     "HarnessProviderCallClaimHeld",
     "HarnessProviderCallRecordV2",
     "HarnessProviderCallRecordV3",
+    "HarnessProviderCallRecordV4",
     "HarnessProviderCallRecoveryRequired",
     "HarnessProviderCallRequestMismatch",
     "HarnessRevisionConflict",

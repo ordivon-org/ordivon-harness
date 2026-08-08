@@ -368,6 +368,11 @@ class OrdivonAgentLoop:
                 if provider_state is not None:
                     state = provider_state
                     initial_messages = ()
+            if not state.messages_retained or not state.observations_retained:
+                raise ValueError(
+                    "Harness Run resume content was not retained by the Privacy policy; "
+                    "caller-authorized content rehydration is required"
+                )
             if (
                 snapshot.harness_run_id != harness_run_id
                 or snapshot.assignment_id != assignment_id

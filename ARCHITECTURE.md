@@ -106,13 +106,21 @@ The independent Store is the only current Harness writer. It owns:
 - Run creation, caller binding and terminal projection;
 - immutable CAS objects and contiguous Run events;
 - leases and revision fencing;
-- Provider Call claim, dispatch, completion, failure and UNKNOWN state;
-- Tool-step intent, dispatch fence, receipt and observation chains;
-- pause/resume snapshots;
+- Provider Call claim, dispatch, completion, failure and UNKNOWN state, with exact request/result content only when authorized;
+- Tool-step intent, dispatch fence and receipt chains, plus exact Tool observations only when authorized;
+- privacy-projected pause/resume snapshots;
 - recovery assessments;
-- Trace, Run Receipt and CompletionProposal objects.
+- privacy-projected Trace and terminal Run evidence, with exact conclusion/CompletionProposal content only when authorized.
 
 There is no Host-backed Store, Assignment writer, dual write or cutover selector.
+
+### Privacy authority inside continuity
+
+The Run Contract privacy policy is execution authority, not a diagnostic preference. Default `metadata-only` continuity retains identities, digests, causal/effect receipts and budgets while omitting exact model/Tool content from Harness-managed durable objects. `bounded-private-content` may separately authorize model and Tool content; mixed objects use the stricter applicable authority so Tool calls, Tool-role messages and Tool observations cannot become a model-content persistence bypass.
+
+Privacy does not weaken effect fencing. A digest-only completed Provider Call still prevents physical redispatch after response loss. If exact result/transcript/Tool content was not authorized for retention, recovery fails closed and requires caller-authorized rehydration rather than reconstructing content from another hidden Harness copy.
+
+These are structural content laws, not semantic taint tracking: ordinary model text can semantically repeat Tool-derived information, and Harness does not currently prove otherwise.
 
 Ordinary Store open validates global physical authority: schema, SQLite `quick_check`, and retained CAS object identity/content. It does **not** replay every unrelated Run. Opening a Run continuity boundary validates that Run's complete semantic history before execution; explicit full Doctor remains the authority-wide history replay. This keeps fail-closed semantics local to the Run being executed instead of making every worker pay an all-Runs startup cost.
 
@@ -134,7 +142,7 @@ The primary CLI intentionally supports only the canonical no-Tool DeepSeek profi
 
 ## Pause, resume and recovery
 
-Pause snapshots retain exact Run state and Provider source identity. Resume starts from that snapshot and may append caller messages. Recovery is conservative: it never converts lost delivery into success or automatic redispatch. Terminal evidence is reopenable from a fresh process.
+Pause snapshots retain Provider source identity plus the Run state content or content digests authorized by the Contract. Exact-content resume starts from an authorized snapshot and may append caller messages. Digest-only recovery is conservative: it never converts omitted content into reconstructed content, lost delivery into success, or completion into permission to redispatch. Terminal execution evidence remains reopenable from a fresh process even when exact conclusion/proposal content was intentionally not retained.
 
 ## Completion
 

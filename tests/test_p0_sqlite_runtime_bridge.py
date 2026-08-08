@@ -422,7 +422,9 @@ class SQLiteHarnessRuntimeBridgeTests(unittest.TestCase):
             retained = continuity.load_current_tool_step()
             self.assertEqual(retained.receipt.status, HarnessToolStepStatus.OBSERVED)
             self.assertFalse(retained.receipt.reconciled)
-            self.assertEqual(retained.observation["structuredContent"]["matchCount"], 1)
+            self.assertIsNotNone(retained.receipt.observation_digest)
+            self.assertIsNone(retained.observation)
+            self.assertIsNone(retained.observation_object)
             store.close()
 
     def test_transport_response_loss_reconciles_without_redispatch(self) -> None:

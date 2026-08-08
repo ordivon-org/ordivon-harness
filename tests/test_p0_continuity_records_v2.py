@@ -5,6 +5,7 @@ import unittest
 from ordivon_harness.ordivon.continuity_records import (
     HarnessDispatchFenceV2,
     HarnessProviderCallRecordV2,
+    HarnessProviderCallRecordV4,
 )
 from ordivon_harness.ordivon.run_store_port import (
     HarnessDispatchFenceView,
@@ -112,6 +113,49 @@ class ContinuityRecordV2Tests(unittest.TestCase):
         self.assertEqual(encoded["bindingDigest"], binding().digest)
         self.assertEqual(HarnessProviderCallRecordV2.from_dict(encoded), value)
         self.assertEqual(HarnessProviderCallRecordV2.from_dict(encoded).digest, value.digest)
+
+    def test_provider_v4_round_trip_allows_digest_only_completed_result(self) -> None:
+        value = HarnessProviderCallRecordV4(
+            record_id="harness-provider-call-record:p0-v4-001",
+            provider_call_id="provider-call:p0-v4-001",
+            harness_run_id=binding().harness_run_id,
+            binding_digest=binding().digest,
+            source_kind=HarnessProviderCallSource.ASSIGNMENT,
+            source_digest=DIGEST_B,
+            source_object_digest=DIGEST_C,
+            state_object_digest=DIGEST_D,
+            turn_id="turn:p0-v4-001",
+            turn_sequence=1,
+            request_digest=DIGEST_A,
+            provider_request_digest=DIGEST_B,
+            adapter_id="adapter:test",
+            requested_model_id="model:test",
+            holder_id="worker:test",
+            claim_generation=1,
+            status=HarnessProviderCallStatus.COMPLETED,
+            result_digest=DIGEST_E,
+            result_object_digest=None,
+            failure_digest=None,
+            failure_object_digest=None,
+            previous_record_digest=DIGEST_A,
+            issued_at_ms=1_000,
+            expires_at_ms=2_000,
+            recorded_at_ms=1_100,
+            request_object_digest=None,
+        )
+        encoded = value.to_dict()
+        self.assertEqual(encoded["schemaVersion"], 4)
+        self.assertEqual(encoded["resultDigest"], DIGEST_E)
+        self.assertIsNone(encoded["resultObjectDigest"])
+        self.assertIsNone(encoded["requestObjectDigest"])
+        self.assertEqual(HarnessProviderCallRecordV4.from_dict(encoded), value)
+        with self.assertRaisesRegex(ValueError, "both result references"):
+            HarnessProviderCallRecordV2(
+                **{
+                    field: getattr(value, field)
+                    for field in HarnessProviderCallRecordV2.__dataclass_fields__
+                }
+            )
 
     def test_provider_v1_codec_remains_exact(self) -> None:
         value = provider_v1()

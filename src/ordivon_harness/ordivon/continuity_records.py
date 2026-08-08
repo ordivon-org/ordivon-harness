@@ -346,6 +346,171 @@ class HarnessProviderCallRecordV3(HarnessProviderCallRecordV2):
 
 
 @dataclass(frozen=True, slots=True)
+class HarnessProviderCallRecordV4(HarnessProviderCallRecordV2):
+    """Provider Call record that may retain only the exact result digest.
+
+    v4 is used when the Provider physically completed but the Run privacy policy
+    does not authorize Harness to retain the exact AgentTurnResult content. The
+    completed status and exact semantic result digest remain durable, preserving
+    dispatch fencing after response loss without silently expanding content
+    authority. request_object_digest remains optional so v4 can represent the
+    privacy projection independently of the request-content generation.
+    """
+
+    request_object_digest: str | None = None
+
+    def __post_init__(self) -> None:
+        _text(
+            self.record_id,
+            "Provider Call Record identity",
+            prefix="harness-provider-call-record",
+        )
+        _text(
+            self.provider_call_id,
+            "Provider Call identity",
+            prefix="provider-call",
+        )
+        _text(self.harness_run_id, "Harness Run identity", prefix="harness-run")
+        _digest(self.binding_digest, "Harness Run Store binding digest")
+        if not isinstance(self.source_kind, HarnessProviderCallSource):
+            raise HarnessProtocolError("Provider Call source kind is invalid")
+        _digest(self.source_digest, "Provider Call source digest")
+        _digest(self.source_object_digest, "Provider Call source object digest")
+        _digest(self.state_object_digest, "Harness Run State object digest")
+        _text(self.turn_id, "Turn identity", prefix="turn")
+        _integer(self.turn_sequence, "Turn sequence", minimum=1)
+        _digest(self.request_digest, "Agent Turn request digest")
+        if self.request_object_digest is not None:
+            _digest(self.request_object_digest, "Agent Turn request object digest")
+        _digest(self.provider_request_digest, "Provider request digest")
+        _text(self.adapter_id, "Provider adapter identity")
+        _text(self.requested_model_id, "requested model identity")
+        _text(self.holder_id, "Provider Call holder identity")
+        _integer(self.claim_generation, "Provider Call claim generation", minimum=1)
+        if not isinstance(self.status, HarnessProviderCallStatus):
+            raise HarnessProtocolError("Provider Call status is invalid")
+        for value, label in (
+            (self.result_digest, "Agent Turn result digest"),
+            (self.result_object_digest, "Agent Turn result object digest"),
+            (self.failure_digest, "Provider Call failure digest"),
+            (self.failure_object_digest, "Provider Call failure object digest"),
+            (self.previous_record_digest, "previous Provider Call Record digest"),
+        ):
+            if value is not None:
+                _digest(value, label)
+        _integer(self.issued_at_ms, "Provider Call issue time")
+        _integer(self.expires_at_ms, "Provider Call expiry time")
+        _integer(self.recorded_at_ms, "Provider Call record time")
+        if self.expires_at_ms <= self.issued_at_ms:
+            raise HarnessProtocolError("Provider Call expiry must follow issue time")
+        if self.status is HarnessProviderCallStatus.COMPLETED:
+            if self.result_digest is None:
+                raise HarnessProtocolError(
+                    "completed Provider Call requires an exact result digest"
+                )
+        elif self.result_digest is not None or self.result_object_digest is not None:
+            raise HarnessProtocolError("non-completed Provider Call cannot carry result references")
+        failure_refs = (self.failure_digest, self.failure_object_digest)
+        if self.status in {
+            HarnessProviderCallStatus.FAILED,
+            HarnessProviderCallStatus.UNKNOWN,
+        }:
+            if any(value is None for value in failure_refs):
+                raise HarnessProtocolError(
+                    "failed or unknown Provider Call requires both failure references"
+                )
+        elif any(value is not None for value in failure_refs):
+            raise HarnessProtocolError("non-failed Provider Call cannot carry failure references")
+        initial_claim = (
+            self.status is HarnessProviderCallStatus.CLAIMED and self.claim_generation == 1
+        )
+        if not initial_claim and self.previous_record_digest is None:
+            raise HarnessProtocolError("Provider Call transition requires a previous record")
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        value = HarnessProviderCallRecordV2.to_dict(self)
+        value["schemaVersion"] = 4
+        value["requestObjectDigest"] = self.request_object_digest
+        return value
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> HarnessProviderCallRecordV4:
+        expected = {
+            "schemaVersion",
+            "kind",
+            "recordId",
+            "providerCallId",
+            "harnessRunId",
+            "bindingDigest",
+            "sourceKind",
+            "sourceDigest",
+            "sourceObjectDigest",
+            "stateObjectDigest",
+            "turnId",
+            "turnSequence",
+            "requestDigest",
+            "requestObjectDigest",
+            "providerRequestDigest",
+            "adapterId",
+            "requestedModelId",
+            "holderId",
+            "claimGeneration",
+            "status",
+            "resultDigest",
+            "resultObjectDigest",
+            "failureDigest",
+            "failureObjectDigest",
+            "previousRecordDigest",
+            "issuedAtMs",
+            "expiresAtMs",
+            "recordedAtMs",
+        }
+        _exact(value, expected, "HarnessProviderCallRecordV4")
+        if value["schemaVersion"] != 4 or value["kind"] != "ordivon.harness-provider-call-record":
+            raise HarnessProtocolError("HarnessProviderCallRecordV4 version or kind is invalid")
+        request_object_digest = value["requestObjectDigest"]
+        if request_object_digest is not None and not isinstance(request_object_digest, str):
+            raise HarnessProtocolError(
+                "HarnessProviderCallRecordV4 requestObjectDigest must be a digest or null"
+            )
+        try:
+            source_kind = HarnessProviderCallSource(value["sourceKind"])
+            status = HarnessProviderCallStatus(value["status"])
+        except (TypeError, ValueError) as error:
+            raise HarnessProtocolError(
+                "HarnessProviderCallRecordV4 enum field is invalid"
+            ) from error
+        return cls(
+            record_id=value["recordId"],
+            provider_call_id=value["providerCallId"],
+            harness_run_id=value["harnessRunId"],
+            binding_digest=value["bindingDigest"],
+            source_kind=source_kind,
+            source_digest=value["sourceDigest"],
+            source_object_digest=value["sourceObjectDigest"],
+            state_object_digest=value["stateObjectDigest"],
+            turn_id=value["turnId"],
+            turn_sequence=value["turnSequence"],
+            request_digest=value["requestDigest"],
+            provider_request_digest=value["providerRequestDigest"],
+            adapter_id=value["adapterId"],
+            requested_model_id=value["requestedModelId"],
+            holder_id=value["holderId"],
+            claim_generation=value["claimGeneration"],
+            status=status,
+            result_digest=value["resultDigest"],
+            result_object_digest=value["resultObjectDigest"],
+            failure_digest=value["failureDigest"],
+            failure_object_digest=value["failureObjectDigest"],
+            previous_record_digest=value["previousRecordDigest"],
+            issued_at_ms=value["issuedAtMs"],
+            expires_at_ms=value["expiresAtMs"],
+            recorded_at_ms=value["recordedAtMs"],
+            request_object_digest=request_object_digest,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessDispatchFenceV2:
     """Caller-neutral physical-dispatch fence for an independent Run Store."""
 

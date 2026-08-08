@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from dataclasses import replace
 import io
 import json
 from pathlib import Path
@@ -9,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from ordivon_harness.cli import main as cli_main
+from ordivon_harness.core_contracts import HarnessPrivacyPolicy
 from ordivon_harness.ordivon.model import ScriptedTurnAdapter
 from ordivon_harness.ordivon.sqlite_runtime_bridge import (
     INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
@@ -52,7 +54,14 @@ class IndependentCliTests(unittest.TestCase):
     def test_independent_run_pause_resume_status_and_inspect_are_first_class(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "harness"
-            run_contract = contract("h1-cli")
+            run_contract = replace(
+                contract("h1-cli"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
             contract_path = Path(directory) / "contract.json"
             contract_path.write_text(
                 json.dumps(run_contract.to_dict(), sort_keys=True),

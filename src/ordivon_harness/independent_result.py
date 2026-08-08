@@ -341,15 +341,52 @@ class IndependentRunRecorder:
         self.clock_ms = clock_ms
         self._execution_owner_id = new_execution_owner_id("independent-result")
 
+    def _persistent_trace(self, trace: HarnessTrace) -> HarnessTrace:
+        if self.contract.privacy.allow_model_content and self.contract.privacy.allow_tool_content:
+            return trace
+        events: list[HarnessRunEvent] = []
+        for event in trace.events:
+            payload = dict(event.payload)
+            normalized_result = payload.get("normalizedResult")
+            normalized_has_tool_calls = (
+                isinstance(normalized_result, dict)
+                and isinstance(normalized_result.get("toolCalls"), list)
+                and bool(normalized_result["toolCalls"])
+            )
+            if (
+                not self.contract.privacy.allow_model_content
+                or not self.contract.privacy.allow_tool_content
+                and normalized_has_tool_calls
+            ):
+                payload.pop("normalizedResult", None)
+            if not self.contract.privacy.allow_tool_content:
+                payload.pop("toolCall", None)
+            if "detail" in payload and (
+                not self.contract.privacy.allow_model_content
+                or not self.contract.privacy.allow_tool_content
+            ):
+                detail = payload.pop("detail")
+                payload["detailDigest"] = canonical_digest(detail)
+            events.append(
+                HarnessRunEvent(
+                    sequence=event.sequence,
+                    kind=event.kind,
+                    occurred_at_ms=event.occurred_at_ms,
+                    payload=payload,
+                )
+            )
+        return HarnessTrace(trace.harness_run_id, tuple(events))
+
     def record_trace_segment(self, trace: HarnessTrace) -> HarnessEventAdmission:
         if trace.harness_run_id != self.contract.harness_run_id:
             raise ValueError("Harness Trace belongs to another Run")
+        persistent_trace = self._persistent_trace(trace)
         events = self.store.list_run_events(self.contract.harness_run_id)
         existing = next(
             (
                 event for event in events
                 if event.event_kind == _TRACE_EVENT_KIND
-                and event.data.get("traceDigest") == trace.digest
+                and event.data.get("traceDigest") == persistent_trace.digest
             ),
             None,
         )
@@ -358,19 +395,19 @@ class IndependentRunRecorder:
                 self._required_digest(existing.data, "traceObjectDigest"),
                 expected_kind="harness-trace",
             )
-            if not isinstance(raw, dict) or HarnessTrace.from_dict(raw) != trace:
+            if not isinstance(raw, dict) or HarnessTrace.from_dict(raw) != persistent_trace:
                 raise ValueError("existing Harness Trace segment differs")
             return HarnessEventAdmission.EXISTING
         now_ms = self._recorded_time(self.clock_ms())
-        lease = self._acquire_lease("trace", trace.digest, now_ms=now_ms)
+        lease = self._acquire_lease("trace", persistent_trace.digest, now_ms=now_ms)
         try:
-            stored = self.store.put_object(trace.to_dict(), kind="harness-trace")
+            stored = self.store.put_object(persistent_trace.to_dict(), kind="harness-trace")
             return self.store.append_event(
-                event_id=self._event_id("trace", trace.digest),
+                event_id=self._event_id("trace", persistent_trace.digest),
                 harness_run_id=self.contract.harness_run_id,
                 event_kind=_TRACE_EVENT_KIND,
                 data={
-                    "traceDigest": trace.digest,
+                    "traceDigest": persistent_trace.digest,
                     "traceObjectDigest": stored.digest,
                     "segmentIndex": 1 + sum(event.event_kind == _TRACE_EVENT_KIND for event in events),
                 },
@@ -424,11 +461,16 @@ class IndependentRunRecorder:
         lease = self._acquire_lease("terminal", receipt.digest, now_ms=now_ms)
         try:
             trace_object = self.store.put_object(trace.to_dict(), kind="harness-trace")
+            persistent_observations = (
+                observations if self.contract.privacy.allow_tool_content else ()
+            )
             observations_object = self.store.put_object(
-                [item.to_dict() for item in observations], kind="harness-tool-observations"
+                [item.to_dict() for item in persistent_observations],
+                kind="harness-tool-observations",
             )
             conclusion_object = (
-                None if conclusion is None
+                None
+                if conclusion is None or not self.contract.privacy.allow_model_content
                 else self.store.put_object(conclusion.to_dict(), kind="harness-run-conclusion")
             )
             receipt_object = self.store.put_object(
@@ -436,7 +478,8 @@ class IndependentRunRecorder:
             )
             proposal = self._build_completion_proposal(receipt, result, now_ms)
             proposal_object = (
-                None if proposal is None
+                None
+                if proposal is None or not self.contract.privacy.allow_model_content
                 else self.store.put_object(
                     proposal.to_dict(), kind="independent-completion-proposal"
                 )
@@ -531,25 +574,49 @@ class IndependentRunRecorder:
                 raise ValueError("Completion Proposal object is invalid")
             proposal = IndependentCompletionProposal.from_dict(raw_proposal)
             proposal_object = self.store.inspect_object(proposal_object_digest)
+        conclusion_digest = data.get("conclusionDigest")
+        if conclusion_digest is not None:
+            if not isinstance(conclusion_digest, str):
+                raise ValueError("Harness conclusion digest is invalid")
+            _digest(conclusion_digest, "Harness conclusion digest")
+        proposal_digest = data.get("completionProposalDigest")
+        if proposal_digest is not None:
+            if not isinstance(proposal_digest, str):
+                raise ValueError("Completion Proposal digest is invalid")
+            _digest(proposal_digest, "Completion Proposal digest")
         if (
             receipt.digest != data.get("runReceiptDigest")
             or trace.digest != data.get("traceDigest")
             or receipt.trace_digest != trace.digest
             or receipt.contract_digest != self.contract.digest
             or receipt.harness_run_id != self.contract.harness_run_id
-            or receipt.conclusion_digest != (
-                None if conclusion is None else canonical_digest(conclusion.to_dict())
-            )
-            or (proposal is None) != (receipt.stop_reason != "completed")
+            or receipt.conclusion_digest != conclusion_digest
+            or (proposal_digest is not None) != (receipt.stop_reason == "completed")
         ):
             raise ValueError("independent terminal evidence bindings differ")
+        if conclusion is not None and canonical_digest(conclusion.to_dict()) != conclusion_digest:
+            raise ValueError("Harness conclusion differs from its digest")
+        if (
+            conclusion is None
+            and conclusion_digest is not None
+            and self.contract.privacy.allow_model_content
+        ):
+            raise ValueError("authorized Harness conclusion content is missing")
         if proposal is not None and (
-            proposal.digest != data.get("completionProposalDigest")
+            proposal.digest != proposal_digest
             or proposal.run_receipt_digest != receipt.digest
             or proposal.trace_digest != trace.digest
             or proposal.contract_digest != self.contract.digest
         ):
             raise ValueError("Completion Proposal bindings differ")
+        if (
+            proposal is None
+            and proposal_digest is not None
+            and self.contract.privacy.allow_model_content
+        ):
+            raise ValueError("authorized Completion Proposal content is missing")
+        if not self.contract.privacy.allow_tool_content and observations:
+            raise ValueError("metadata-only terminal evidence retained Tool content")
         if terminal.event_kind != self._terminal_event_kind(RunStopCode(receipt.termination_code)):
             raise ValueError("terminal Event kind differs from Run Receipt")
         return StoredIndependentRunResult(

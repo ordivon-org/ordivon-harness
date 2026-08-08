@@ -223,7 +223,8 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         if current.receipt is not None and current.receipt.terminal:
             if current.observation is None:
                 raise ToolBridgeError(
-                    "terminal Tool Receipt omitted its Observation",
+                    "terminal Tool Observation content was not retained by the Privacy policy; "
+                    "caller-authorized Tool content rehydration is required",
                     kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
                 )
             return HarnessToolObservation.from_dict(current.observation)

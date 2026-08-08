@@ -8,6 +8,7 @@ import threading
 import time
 import unittest
 
+from ordivon_harness.core_contracts import HarnessPrivacyPolicy
 from ordivon_harness.independent_result import (
     IndependentCompletionProposal,
     IndependentRunRecorder,
@@ -31,8 +32,8 @@ from tests.test_p0_sqlite_agent_loop import (
 
 class StandaloneHarnessRunnerTests(unittest.TestCase):
     @staticmethod
-    def initialize(root: Path, suffix: str, clock: FixedClock):
-        run_contract = contract(suffix)
+    def initialize(root: Path, suffix: str, clock: FixedClock, run_contract=None):
+        run_contract = contract(suffix) if run_contract is None else run_contract
         store = SQLiteHarnessStore.initialize(root)
         store.create_run(run_contract)
         continuity = SQLiteHarnessRunContinuityStore(
@@ -153,8 +154,16 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = FixedClock()
+            run_contract = replace(
+                contract("completed-with-unknowns"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
             run_contract, store, continuity = self.initialize(
-                root, "completed-with-unknowns", clock
+                root, "completed-with-unknowns", clock, run_contract
             )
             unknowns = (
                 "A later Run must observe the current repository before executing the plan.",
@@ -201,7 +210,17 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = FixedClock()
-            run_contract, store, continuity = self.initialize(root, "standalone", clock)
+            run_contract = replace(
+                contract("standalone"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
+            run_contract, store, continuity = self.initialize(
+                root, "standalone", clock, run_contract
+            )
             adapter = ScriptedTurnAdapter((completed_result("standalone"),))
             bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
             runner = self.runner(run_contract, continuity, adapter, bridge, clock)
@@ -251,7 +270,17 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = FixedClock()
-            run_contract, store, continuity = self.initialize(root, "standalone-resume", clock)
+            run_contract = replace(
+                contract("standalone-resume"),
+                privacy=HarnessPrivacyPolicy(
+                    content_policy="bounded-private-content",
+                    allow_model_content=True,
+                    allow_tool_content=False,
+                ),
+            )
+            run_contract, store, continuity = self.initialize(
+                root, "standalone-resume", clock, run_contract
+            )
             first_adapter = ScriptedTurnAdapter((needs_input_result("standalone-pause"),))
             first_bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
             first = self.runner(

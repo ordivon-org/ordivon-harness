@@ -184,6 +184,13 @@ class SQLiteHarnessAgentBridge:
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
         adapter_id, requested_model_id = self._require_provider_configuration()
+        contains_tool_projection = any(
+            message.get("role") == "tool" or "toolCalls" in message
+            for message in request.messages
+        )
+        retain_request = self.contract.privacy.allow_model_content and (
+            self.contract.privacy.allow_tool_content or not contains_tool_projection
+        )
         retained = self.run_store.claim_provider_call(
             source=self._provider_source,
             turn_id=request.turn_id,
@@ -194,13 +201,18 @@ class SQLiteHarnessAgentBridge:
             requested_model_id=requested_model_id,
             holder_id=self._provider_holder_id,
             ttl_ms=self._provider_claim_ttl_ms(request),
-            request=(request if self.contract.privacy.allow_model_content else None),
+            request=(request if retain_request else None),
         )
         self._active_provider_call = retained
         if retained.result is not None:
             return retained.result
         if retained.failure is not None:
             return retained.failure
+        if retained.record.status is HarnessProviderCallStatus.COMPLETED:
+            raise HarnessProviderCallRecoveryRequired(
+                "Provider completed, but exact result content was not retained by the "
+                "Privacy policy; caller-authorized result rehydration is required"
+            )
         return None
 
     def admit_provider_call(
@@ -249,13 +261,18 @@ class SQLiteHarnessAgentBridge:
                 "Provider failure status differs from its dispatch safety",
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
+        error_detail = str(error)[:2_048]
         failure = HarnessProviderCallFailureReceipt(
             provider_call_id=retained.record.provider_call_id,
             request_digest=request.dispatch_digest,
             provider_request_digest=retained.record.provider_request_digest,
             failure_code=error.failure_code.value,
             dispatch_safety=error.dispatch_safety.value,
-            detail=str(error)[:2_048],
+            detail=(
+                error_detail
+                if self.contract.privacy.allow_model_content
+                else f"redacted-provider-detail:{canonical_digest(error_detail)}"
+            ),
         )
         self._active_provider_call = self.run_store.fail_provider_call(
             retained,

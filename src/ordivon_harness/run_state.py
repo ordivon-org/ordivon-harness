@@ -27,8 +27,27 @@ class RunStateObjects(Protocol):
     def get(self, digest: str, *, expected_kind: str | None = None) -> JsonValue: ...
 
 
+def _stored_digest(value: Any, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or len(value) != 71
+        or not value.startswith("sha256:")
+        or any(character not in "0123456789abcdef" for character in value[7:])
+    ):
+        raise ValueError(f"{label} must be sha256:<64 lowercase hex>")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class HarnessRunState:
+    """Run execution state with privacy-aware content fingerprints.
+
+    In-memory state may carry exact model messages and Tool observations. Durable
+    metadata-only state may instead retain only their canonical digests. Digest
+    fingerprints preserve identity and Snapshot/Provider fencing without granting
+    the Harness authority to retain caller/model/Tool content.
+    """
+
     messages: tuple[dict[str, JsonValue], ...]
     observations: tuple[dict[str, JsonValue], ...]
     remaining_budget: dict[str, JsonValue]
@@ -39,11 +58,22 @@ class HarnessRunState:
     seen_tool_call_ids: tuple[str, ...] = ()
     provider_usage: tuple[dict[str, JsonValue], ...] = ()
     effective_model_ids: tuple[str, ...] = ()
+    retained_messages_digest: str | None = None
+    retained_observation_digests: tuple[str, ...] | None = None
 
     def __post_init__(self) -> None:
         validate_json_value(list(self.messages))
         validate_json_value(list(self.observations))
         validate_json_value(self.remaining_budget)
+        if self.retained_messages_digest is not None:
+            _stored_digest(self.retained_messages_digest, "retained messages digest")
+            if self.messages:
+                raise ValueError("redacted Harness Run messages cannot retain content")
+        if self.retained_observation_digests is not None:
+            for digest in self.retained_observation_digests:
+                _stored_digest(digest, "retained Tool Observation digest")
+            if self.observations:
+                raise ValueError("redacted Harness Run observations cannot retain content")
         if self.active_elapsed_ms is not None and (
             type(self.active_elapsed_ms) is not int or self.active_elapsed_ms < 0
         ):
@@ -72,20 +102,92 @@ class HarnessRunState:
         validate_json_value(list(self.provider_usage))
 
     @property
+    def messages_retained(self) -> bool:
+        return self.retained_messages_digest is None
+
+    @property
+    def observations_retained(self) -> bool:
+        return self.retained_observation_digests is None
+
+    @property
     def messages_digest(self) -> str:
+        if self.retained_messages_digest is not None:
+            return self.retained_messages_digest
         return canonical_digest(list(self.messages))
 
     @property
     def observation_digests(self) -> tuple[str, ...]:
+        if self.retained_observation_digests is not None:
+            return self.retained_observation_digests
         return tuple(canonical_digest(item) for item in self.observations)
 
+    def for_persistence(
+        self,
+        *,
+        allow_model_content: bool,
+        allow_tool_content: bool,
+    ) -> HarnessRunState:
+        """Project exact in-memory state to the caller-authorized durable form."""
+        messages_digest = self.messages_digest
+        observation_digests = self.observation_digests
+        contains_tool_projection = any(
+            message.get("role") == "tool" or "toolCalls" in message
+            for message in self.messages
+        )
+        retain_messages = self.messages_retained and (
+            not self.messages
+            or allow_model_content
+            and (allow_tool_content or not contains_tool_projection)
+        )
+        retain_observations = self.observations_retained and (
+            allow_tool_content or not self.observations
+        )
+        return HarnessRunState(
+            messages=self.messages if retain_messages else (),
+            observations=self.observations if retain_observations else (),
+            remaining_budget=dict(self.remaining_budget),
+            requested_model_id=self.requested_model_id,
+            effective_model_id=self.effective_model_id,
+            active_elapsed_ms=self.active_elapsed_ms,
+            seen_model_call_ids=self.seen_model_call_ids,
+            seen_tool_call_ids=self.seen_tool_call_ids,
+            provider_usage=self.provider_usage,
+            effective_model_ids=self.effective_model_ids,
+            retained_messages_digest=None if retain_messages else messages_digest,
+            retained_observation_digests=(
+                None if retain_observations else observation_digests
+            ),
+        )
+
     def to_dict(self, harness_run_id: str) -> dict[str, JsonValue]:
-        value: dict[str, JsonValue] = {
-            "schemaVersion": 2 if self.active_elapsed_ms is not None else 1,
+        if self.messages_retained and self.observations_retained:
+            value: dict[str, JsonValue] = {
+                "schemaVersion": 2 if self.active_elapsed_ms is not None else 1,
+                "kind": _FULL_KIND,
+                "harnessRunId": harness_run_id,
+                "messages": list(self.messages),
+                "observations": list(self.observations),
+                "remainingBudget": self.remaining_budget,
+                "requestedModelId": self.requested_model_id,
+                "effectiveModelId": self.effective_model_id,
+                "seenModelCallIds": list(self.seen_model_call_ids),
+                "seenToolCallIds": list(self.seen_tool_call_ids),
+                "providerUsage": list(self.provider_usage),
+                "effectiveModelIds": list(self.effective_model_ids),
+            }
+            if self.active_elapsed_ms is not None:
+                value["activeElapsedMs"] = self.active_elapsed_ms
+            return value
+        value = {
+            "schemaVersion": 3,
             "kind": _FULL_KIND,
             "harnessRunId": harness_run_id,
-            "messages": list(self.messages),
-            "observations": list(self.observations),
+            "messages": list(self.messages) if self.messages_retained else None,
+            "messagesDigest": self.messages_digest,
+            "observations": (
+                list(self.observations) if self.observations_retained else None
+            ),
+            "observationDigests": list(self.observation_digests),
             "remainingBudget": self.remaining_budget,
             "requestedModelId": self.requested_model_id,
             "effectiveModelId": self.effective_model_id,
@@ -93,9 +195,9 @@ class HarnessRunState:
             "seenToolCallIds": list(self.seen_tool_call_ids),
             "providerUsage": list(self.provider_usage),
             "effectiveModelIds": list(self.effective_model_ids),
+            "activeElapsedMs": self.active_elapsed_ms,
         }
-        if self.active_elapsed_ms is not None:
-            value["activeElapsedMs"] = self.active_elapsed_ms
+        validate_json_value(value)
         return value
 
 
@@ -117,32 +219,80 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         "effectiveModelIds",
     }
     version_two_fields = version_one_fields | {"activeElapsedMs"}
+    version_three_fields = {
+        "schemaVersion",
+        "kind",
+        "harnessRunId",
+        "messages",
+        "messagesDigest",
+        "observations",
+        "observationDigests",
+        "remainingBudget",
+        "requestedModelId",
+        "effectiveModelId",
+        "seenModelCallIds",
+        "seenToolCallIds",
+        "providerUsage",
+        "effectiveModelIds",
+        "activeElapsedMs",
+    }
     fields = frozenset(value)
     version = value.get("schemaVersion")
     if not (
         version == 1 and fields in {frozenset(legacy_fields), frozenset(version_one_fields)}
         or version == 2 and fields == version_two_fields
+        or version == 3 and fields == version_three_fields
     ):
         raise ValueError("Harness Run state fields differ")
     if (
         value["kind"] != _FULL_KIND
         or value["harnessRunId"] != harness_run_id
-        or not isinstance(value["messages"], list)
-        or not isinstance(value["observations"], list)
         or not isinstance(value["remainingBudget"], dict)
         or not isinstance(value["requestedModelId"], str)
         or value["effectiveModelId"] is not None
         and not isinstance(value["effectiveModelId"], str)
     ):
         raise ValueError("Harness Run state is invalid")
+    raw_messages = value["messages"]
+    raw_observations = value["observations"]
+    if version in {1, 2}:
+        if not isinstance(raw_messages, list) or not isinstance(raw_observations, list):
+            raise ValueError("Harness Run state content is invalid")
+        retained_messages_digest = None
+        retained_observation_digests = None
+    else:
+        if raw_messages is not None and not isinstance(raw_messages, list):
+            raise ValueError("Harness Run messages must be an array or null")
+        if raw_observations is not None and not isinstance(raw_observations, list):
+            raise ValueError("Harness Run observations must be an array or null")
+        messages_digest = _stored_digest(value["messagesDigest"], "messages digest")
+        raw_observation_digests = value["observationDigests"]
+        if not isinstance(raw_observation_digests, list):
+            raise ValueError("Harness Run observation digests are invalid")
+        observation_digests = tuple(
+            _stored_digest(item, "Tool Observation digest")
+            for item in raw_observation_digests
+        )
+        retained_messages_digest = None if raw_messages is not None else messages_digest
+        retained_observation_digests = (
+            None if raw_observations is not None else observation_digests
+        )
+        if raw_messages is not None and canonical_digest(raw_messages) != messages_digest:
+            raise ValueError("Harness Run messages differ from their digest")
+        if raw_observations is not None and tuple(
+            canonical_digest(item) for item in raw_observations
+        ) != observation_digests:
+            raise ValueError("Harness Run observations differ from their digests")
     active_elapsed_ms = value.get("activeElapsedMs")
     if active_elapsed_ms is not None and (
         type(active_elapsed_ms) is not int or active_elapsed_ms < 0
     ):
         raise ValueError("Harness Run active elapsed time is invalid")
-    if any(not isinstance(item, dict) for item in value["messages"]):
+    message_items = [] if raw_messages is None else raw_messages
+    observation_items = [] if raw_observations is None else raw_observations
+    if any(not isinstance(item, dict) for item in message_items):
         raise ValueError("Harness Run messages are invalid")
-    if any(not isinstance(item, dict) for item in value["observations"]):
+    if any(not isinstance(item, dict) for item in observation_items):
         raise ValueError("Harness Run observations are invalid")
     for field in ("seenModelCallIds", "seenToolCallIds", "effectiveModelIds"):
         raw = value.get(field, [])
@@ -155,8 +305,8 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         raise ValueError("Harness Run Provider usage is invalid")
     validate_json_value(value)
     return HarnessRunState(
-        messages=tuple(dict(item) for item in value["messages"]),
-        observations=tuple(dict(item) for item in value["observations"]),
+        messages=tuple(dict(item) for item in message_items),
+        observations=tuple(dict(item) for item in observation_items),
         remaining_budget=dict(value["remainingBudget"]),
         requested_model_id=value["requestedModelId"],
         effective_model_id=value["effectiveModelId"],
@@ -165,6 +315,8 @@ def state_from_dict(value: dict[str, Any], *, harness_run_id: str) -> HarnessRun
         seen_tool_call_ids=tuple(value.get("seenToolCallIds", [])),
         provider_usage=tuple(dict(item) for item in provider_usage),
         effective_model_ids=tuple(value.get("effectiveModelIds", [])),
+        retained_messages_digest=retained_messages_digest,
+        retained_observation_digests=retained_observation_digests,
     )
 
 
@@ -175,6 +327,13 @@ def build_state_delta(
     previous: HarnessRunState,
     current: HarnessRunState,
 ) -> dict[str, JsonValue] | None:
+    if not (
+        previous.messages_retained
+        and previous.observations_retained
+        and current.messages_retained
+        and current.observations_retained
+    ):
+        return None
     if previous.requested_model_id != current.requested_model_id:
         return None
     if previous.active_elapsed_ms is not None and (
@@ -336,6 +495,8 @@ def _apply_state_delta(
         harness_run_id=harness_run_id,
         max_depth=max_depth - 1,
     )
+    if not previous.messages_retained or not previous.observations_retained:
+        raise ValueError("Harness Run state delta cannot extend redacted content")
     if (
         canonical_digest(previous.to_dict(harness_run_id))
         != value["previousStateDigest"]

@@ -416,22 +416,55 @@ class SQLiteHarnessRepositoryRepairRuntimeBridge(SQLiteHarnessRuntimeBridge):
         self.execution_binding = execution_binding
         self.runtime = runtime
         self._seen_tool_call_ids: set[str] = set()
+        self._bound_observations: tuple[HarnessToolObservation, ...] | None = None
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]:
         return self.tool_definitions
 
+    def bind_run_state(
+        self,
+        *,
+        messages: tuple[dict[str, JsonValue], ...],
+        observations: tuple[HarnessToolObservation, ...],
+        remaining_budget: dict[str, JsonValue],
+        requested_model_id: str,
+        effective_model_id: str | None,
+        active_elapsed_ms: int | None = None,
+        seen_model_call_ids: tuple[str, ...] = (),
+        seen_tool_call_ids: tuple[str, ...] = (),
+        provider_usage: tuple[dict[str, JsonValue], ...] = (),
+        effective_model_ids: tuple[str, ...] = (),
+    ) -> None:
+        self._bound_observations = tuple(observations)
+        SQLiteHarnessRuntimeBridge.bind_run_state(
+            self,
+            messages=messages,
+            observations=observations,
+            remaining_budget=remaining_budget,
+            requested_model_id=requested_model_id,
+            effective_model_id=effective_model_id,
+            active_elapsed_ms=active_elapsed_ms,
+            seen_model_call_ids=seen_model_call_ids,
+            seen_tool_call_ids=seen_tool_call_ids,
+            provider_usage=provider_usage,
+            effective_model_ids=effective_model_ids,
+        )
+
     def validate_conclusion(self, conclusion: AgentRunConclusion) -> None:
         if conclusion.status != "candidate_completed":
             return
-        try:
-            retained = self.run_store.load_current_snapshot()
-        except KeyError:
-            observations: list[HarnessToolObservation] = []
+        if self._bound_observations is not None:
+            observations = list(self._bound_observations)
         else:
-            observations = [
-                HarnessToolObservation.from_dict(value)
-                for value in retained.state.observations
-            ]
+            try:
+                retained = self.run_store.load_current_snapshot()
+            except KeyError:
+                observations = []
+            else:
+                observations = [
+                    HarnessToolObservation.from_dict(value)
+                    for value in retained.state.observations
+                ]
         try:
             current = self.run_store.load_current_tool_step()
         except KeyError:

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
 
 from anc_canonical import canonical_digest
 
+from ordivon_harness.core_contracts import HarnessPrivacyPolicy
 from ordivon_harness.errors import HarnessSuperseded
 from ordivon_harness.ordivon.sqlite_run_store import (
     SQLiteHarnessRunContinuityStore,
@@ -23,10 +25,32 @@ from ordivon_harness.sqlite_store import SQLiteHarnessStore
 from tests.test_p0_sqlite_provider_store import MutableClock, contract, state
 
 
+def private_contract():
+    return replace(
+        contract(),
+        privacy=HarnessPrivacyPolicy(
+            content_policy="bounded-private-content",
+            allow_model_content=True,
+            allow_tool_content=False,
+        ),
+    )
+
+
+def private_tool_contract():
+    return replace(
+        contract(),
+        privacy=HarnessPrivacyPolicy(
+            content_policy="bounded-private-content",
+            allow_model_content=True,
+            allow_tool_content=True,
+        ),
+    )
+
+
 class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
-    def prepare(self, root: Path, clock: MutableClock):
+    def prepare(self, root: Path, clock: MutableClock, run_contract=None):
         store = SQLiteHarnessStore.initialize(root)
-        run_contract = contract()
+        run_contract = contract() if run_contract is None else run_contract
         store.create_run(run_contract)
         continuity = SQLiteHarnessRunContinuityStore(
             store,
@@ -104,7 +128,8 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = MutableClock()
-            store, continuity, intent = self.prepare(root, clock)
+            run_contract = private_tool_contract()
+            store, continuity, intent = self.prepare(root, clock, run_contract)
             continuity.prepare_tool_step(intent)
             step = continuity.load_current_tool_step()
             assert step.fence is not None
@@ -134,7 +159,7 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
             with SQLiteHarnessStore(root) as reopened_store:
                 reopened = SQLiteHarnessRunContinuityStore(
                     reopened_store,
-                    contract(),
+                    run_contract,
                     clock_ms=clock,
                 )
                 self.assertEqual(reopened.load_current_tool_step().receipt, receipt)
@@ -147,7 +172,9 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = MutableClock()
-            store, continuity, intent = self.prepare(root, clock)
+            store, continuity, intent = self.prepare(
+                root, clock, private_tool_contract()
+            )
             continuity.prepare_tool_step(intent)
             first_observation = self.observation("cancel-requested")
             clock.advance()
@@ -185,11 +212,46 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
             self.assertEqual(continuity.doctor()["toolRecords"], 3)
             store.close()
 
+    def test_metadata_only_receipt_retains_observation_digest_not_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = MutableClock()
+            store, continuity, intent = self.prepare(root, clock)
+            continuity.prepare_tool_step(intent)
+            observation = {
+                **self.observation(),
+                "private": "PRIVATE-TOOL-SENTINEL-PC12A",
+            }
+            clock.advance()
+            receipt = HarnessToolStepReceipt(
+                receipt_id="harness-tool-step-receipt:p0-sqlite-tool-metadata-only",
+                intent_digest=intent.digest,
+                harness_run_id=continuity.harness_run_id,
+                tool_call_id=intent.tool_call_id,
+                status=HarnessToolStepStatus.OBSERVED,
+                runtime_job_ref="runtime-job:p0-sqlite-tool-001",
+                observation_digest=canonical_digest(observation),
+                reconciled=False,
+                created_at_ms=clock(),
+            )
+            continuity.record_tool_step_receipt(receipt, observation)
+            current = continuity.load_current_tool_step()
+            self.assertEqual(current.receipt, receipt)
+            self.assertIsNone(current.observation)
+            self.assertIsNone(current.observation_object)
+            event = store.list_run_events(continuity.harness_run_id)[-1]
+            self.assertEqual(event.data["receiptDigest"], receipt.digest)
+            self.assertIsNone(event.data["observationObjectDigest"])
+            self.assertNotIn("PRIVATE-TOOL-SENTINEL-PC12A", str(event.data))
+            self.assertTrue(continuity.doctor()["healthy"])
+            store.close()
+
     def test_pause_snapshot_reopens_and_supersedes_contract_source(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             clock = MutableClock()
-            store, continuity, _ = self.prepare(root, clock)
+            run_contract = private_contract()
+            store, continuity, _ = self.prepare(root, clock, run_contract)
             initial_source = continuity.assignment_provider_source()
             clock.advance()
             paused = continuity.record_pause(HarnessRunPauseReason.NEEDS_INPUT)
@@ -224,7 +286,7 @@ class SQLiteHarnessRunContinuityToolTests(unittest.TestCase):
             with SQLiteHarnessStore(root) as reopened_store:
                 reopened = SQLiteHarnessRunContinuityStore(
                     reopened_store,
-                    contract(),
+                    run_contract,
                     clock_ms=clock,
                 )
                 retained = reopened.load_current_snapshot()

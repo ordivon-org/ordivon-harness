@@ -42,6 +42,7 @@ from .continuity_records import (
     HarnessDispatchFenceV2,
     HarnessProviderCallRecordV2,
     HarnessProviderCallRecordV3,
+    HarnessProviderCallRecordV4,
 )
 from .model import AgentTurnRequest, AgentTurnResult
 from .run_store_port import (
@@ -194,6 +195,35 @@ class SQLiteHarnessRunContinuityStore:
             retained.snapshot_object.digest,
         )
 
+    def store_working_view_source(
+        self,
+        source: HarnessWorkingViewSource,
+    ) -> StoredHarnessObject:
+        """Persist one exact Working View source under the Run privacy authority."""
+        self._require_working_view_source_authorized(source)
+        return self.store.put_object(
+            source.to_dict(), kind="harness-working-view-source"
+        )
+
+    def _require_working_view_source_authorized(
+        self,
+        source: HarnessWorkingViewSource,
+    ) -> None:
+        if not self.contract.privacy.allow_model_content:
+            raise ValueError(
+                "Working View source requires Contract permission to persist model content"
+            )
+        if (
+            not self.contract.privacy.allow_tool_content
+            and any(
+                message.get("role") == "tool" or "toolCalls" in message
+                for message in source.messages
+            )
+        ):
+            raise ValueError(
+                "Working View source contains Tool content without Contract permission"
+            )
+
     def record_working_set(
         self,
         spec: HarnessWorkingSetSpec,
@@ -229,6 +259,7 @@ class SQLiteHarnessRunContinuityStore:
                 or source.logical_generation != pin.logical_generation
             ):
                 raise ValueError("Working Set pin differs from its exact source")
+            self._require_working_view_source_authorized(source)
             source_objects.append(self.store.inspect_object(pin.resolved_digest))
 
         now_ms = self.clock_ms()
@@ -356,6 +387,7 @@ class SQLiteHarnessRunContinuityStore:
                 or source.logical_generation != pin.logical_generation
             ):
                 raise ValueError("Harness Working Set source identity differs")
+            self._require_working_view_source_authorized(source)
         return spec
 
     def claim_provider_call(
@@ -575,12 +607,19 @@ class SQLiteHarnessRunContinuityStore:
         result: AgentTurnResult,
     ) -> StoredHarnessProviderCall:
         self._provider_outcome_requires_resume = False
+
+        def matches(existing: StoredHarnessProviderCall) -> bool:
+            return (
+                existing.record.result_digest == result.digest
+                and (
+                    existing.record == retained.record
+                    or existing.record.previous_record_digest == retained.record.digest
+                )
+            )
+
         existing = self.load_current_provider_call()
         if existing.record.status is HarnessProviderCallStatus.COMPLETED:
-            if existing.result == result and (
-                existing.record == retained.record
-                or existing.record.previous_record_digest == retained.record.digest
-            ):
+            if matches(existing):
                 return existing
             raise HarnessProviderCallRequestMismatch(
                 "another Provider result already completed this call"
@@ -597,10 +636,7 @@ class SQLiteHarnessRunContinuityStore:
         try:
             current = self.load_current_provider_call()
             if current.record.status is HarnessProviderCallStatus.COMPLETED:
-                if current.result == result and (
-                    current.record == retained.record
-                    or current.record.previous_record_digest == retained.record.digest
-                ):
+                if matches(current):
                     return current
                 raise HarnessProviderCallRequestMismatch(
                     "another Provider result already completed this call"
@@ -614,13 +650,22 @@ class SQLiteHarnessRunContinuityStore:
             state = self._require_state()
             self._require_provider_outcome_state(current.state, state)
             state_object = self._put_state(state)
-            result_object = self.store.put_object(result.to_dict(), kind="agent-turn-result")
+            retain_result = self.contract.privacy.allow_model_content and (
+                self.contract.privacy.allow_tool_content or not result.tool_calls
+            )
+            result_object = (
+                self.store.put_object(result.to_dict(), kind="agent-turn-result")
+                if retain_result
+                else None
+            )
             record = self._transition_provider_call(
                 current.record,
                 status=HarnessProviderCallStatus.COMPLETED,
                 state_object_digest=state_object.digest,
                 result_digest=result.digest,
-                result_object_digest=result_object.digest,
+                result_object_digest=(
+                    None if result_object is None else result_object.digest
+                ),
                 recorded_at_ms=self._recorded_time(
                     now_ms,
                     previous_recorded_at_ms=current.record.recorded_at_ms,
@@ -631,7 +676,7 @@ class SQLiteHarnessRunContinuityStore:
                 state_object=state_object,
                 request=current.request,
                 request_object=current.request_object,
-                result=result,
+                result=(result if result_object is not None else None),
                 result_object=result_object,
             )
             self._append_provider_event(
@@ -992,7 +1037,9 @@ class SQLiteHarnessRunContinuityStore:
             if current.intent.digest != receipt.intent_digest:
                 raise ValueError("Tool Step Receipt belongs to another Intent")
             previous = current.receipt
-            if previous == receipt and current.observation == observation:
+            if previous == receipt:
+                if current.observation is not None and current.observation != observation:
+                    raise ValueError("Tool Step Receipt replay differs from retained Observation")
                 return
             expected_previous = None if previous is None else previous.digest
             if receipt.previous_receipt_digest != expected_previous:
@@ -1002,12 +1049,17 @@ class SQLiteHarnessRunContinuityStore:
             receipt_object = self.store.put_object(
                 receipt.to_dict(), kind="harness-tool-step-receipt"
             )
-            observation_object = self.store.put_object(observation, kind="harness-tool-observation")
+            observation_object = (
+                self.store.put_object(observation, kind="harness-tool-observation")
+                if self.contract.privacy.allow_tool_content
+                else None
+            )
             referenced: list[StoredHarnessObject] = [
                 current.intent_object,
                 receipt_object,
-                observation_object,
             ]
+            if observation_object is not None:
+                referenced.append(observation_object)
             if current.fence_object is not None:
                 referenced.append(current.fence_object)
             if current.receipt_object is not None:
@@ -1024,7 +1076,9 @@ class SQLiteHarnessRunContinuityStore:
                 "previousReceiptObjectDigest": (
                     None if current.receipt_object is None else current.receipt_object.digest
                 ),
-                "observationObjectDigest": observation_object.digest,
+                "observationObjectDigest": (
+                    None if observation_object is None else observation_object.digest
+                ),
             }
             if receipt.status is HarnessToolStepStatus.UNKNOWN:
                 event_kind = "harness.tool-step-unknown"
@@ -1096,7 +1150,9 @@ class SQLiteHarnessRunContinuityStore:
 
         receipt_object_digest = data.get("receiptObjectDigest")
         observation_object_digest = data.get("observationObjectDigest")
-        if receipt_object_digest is None and observation_object_digest is None:
+        if receipt_object_digest is None:
+            if observation_object_digest is not None:
+                raise TypeError("Harness Tool Step Observation cannot exist without a Receipt")
             return StoredHarnessToolStep(
                 intent,
                 intent_object,
@@ -1109,29 +1165,42 @@ class SQLiteHarnessRunContinuityStore:
                 None,
                 None,
             )
-        if not isinstance(receipt_object_digest, str) or not isinstance(
-            observation_object_digest, str
-        ):
-            raise TypeError("Harness Tool Step result references are incomplete")
+        if not isinstance(receipt_object_digest, str):
+            raise TypeError("Harness Tool Step Receipt reference is invalid")
         raw_receipt = self.store.get_object(
             receipt_object_digest,
             expected_kind="harness-tool-step-receipt",
         )
-        raw_observation = self.store.get_object(
-            observation_object_digest,
-            expected_kind="harness-tool-observation",
-        )
-        if not isinstance(raw_receipt, dict) or not isinstance(raw_observation, dict):
-            raise TypeError("Harness Tool Step result objects are invalid")
+        if not isinstance(raw_receipt, dict):
+            raise TypeError("Harness Tool Step Receipt object is invalid")
         receipt = HarnessToolStepReceipt.from_dict(raw_receipt)
-        validate_json_value(raw_observation)
         if (
             data.get("receiptDigest") != receipt.digest
             or receipt.intent_digest != intent.digest
             or receipt.tool_call_id != intent.tool_call_id
-            or canonical_digest(raw_observation) != receipt.observation_digest
         ):
-            raise ValueError("Harness Tool Step result differs from its Intent")
+            raise ValueError("Harness Tool Step Receipt differs from its Intent")
+
+        observation = None
+        observation_object = None
+        if observation_object_digest is not None:
+            if not isinstance(observation_object_digest, str):
+                raise TypeError("Harness Tool Observation reference is invalid")
+            raw_observation = self.store.get_object(
+                observation_object_digest,
+                expected_kind="harness-tool-observation",
+            )
+            if not isinstance(raw_observation, dict):
+                raise TypeError("Harness Tool Observation object is invalid")
+            validate_json_value(raw_observation)
+            if canonical_digest(raw_observation) != receipt.observation_digest:
+                raise ValueError("Harness Tool Observation differs from its Receipt")
+            observation = dict(raw_observation)
+            observation_object = self.store.inspect_object(observation_object_digest)
+        elif self.contract.privacy.allow_tool_content and receipt.observation_digest is not None:
+            raise ValueError(
+                "Harness Tool Observation content was authorized but its object is missing"
+            )
 
         previous_receipt = None
         previous_receipt_object = None
@@ -1165,8 +1234,8 @@ class SQLiteHarnessRunContinuityStore:
             self.store.inspect_object(receipt_object_digest),
             previous_receipt,
             previous_receipt_object,
-            dict(raw_observation),
-            self.store.inspect_object(observation_object_digest),
+            observation,
+            observation_object,
         )
 
     def record_pause(self, pause_reason: HarnessRunPauseReason) -> StoredHarnessRunSnapshot:
@@ -1405,8 +1474,10 @@ class SQLiteHarnessRunContinuityStore:
             record = HarnessProviderCallRecordV2.from_dict(raw_record)
         elif record_version == 3:
             record = HarnessProviderCallRecordV3.from_dict(raw_record)
+        elif record_version == 4:
+            record = HarnessProviderCallRecordV4.from_dict(raw_record)
         else:
-            raise ValueError("independent Harness Store requires Provider Call v2 or v3")
+            raise ValueError("independent Harness Store requires Provider Call v2, v3, or v4")
         self._require_provider_record(record)
         if data.get("providerCallRecordDigest") != record.digest:
             raise ValueError("Harness Provider Call record digest differs")
@@ -1467,8 +1538,12 @@ class SQLiteHarnessRunContinuityStore:
                 or record.result_object_digest != result_object_digest
             ):
                 raise ValueError("Provider result differs from its record")
-        elif record.result_digest is not None or record.result_object_digest is not None:
-            raise ValueError("Provider result references are incomplete")
+        elif record.result_object_digest is not None:
+            raise ValueError("Provider result object reference is incomplete")
+        elif record.result_digest is not None and not isinstance(
+            record, HarnessProviderCallRecordV4
+        ):
+            raise ValueError("Provider result content is missing from a non-redacted record")
 
         failure = None
         failure_object = None
@@ -1539,29 +1614,39 @@ class SQLiteHarnessRunContinuityStore:
                 raise ValueError("Harness Dispatch Fence event differs")
         receipt_object_digest = data.get("receiptObjectDigest")
         observation_object_digest = data.get("observationObjectDigest")
-        if receipt_object_digest is None and observation_object_digest is None:
+        if receipt_object_digest is None:
+            if observation_object_digest is not None:
+                raise ValueError("Harness Tool Observation event lacks its Receipt")
             return
-        if not isinstance(receipt_object_digest, str) or not isinstance(
-            observation_object_digest, str
-        ):
-            raise ValueError("Harness Tool Step result event references are incomplete")
+        if not isinstance(receipt_object_digest, str):
+            raise ValueError("Harness Tool Step Receipt event reference is invalid")
         raw_receipt = self.store.get_object(
             receipt_object_digest,
             expected_kind="harness-tool-step-receipt",
         )
-        raw_observation = self.store.get_object(
-            observation_object_digest,
-            expected_kind="harness-tool-observation",
-        )
-        if not isinstance(raw_receipt, dict) or not isinstance(raw_observation, dict):
-            raise ValueError("Harness Tool Step result event objects are invalid")
+        if not isinstance(raw_receipt, dict):
+            raise ValueError("Harness Tool Step Receipt event object is invalid")
         receipt = HarnessToolStepReceipt.from_dict(raw_receipt)
         if (
             data.get("receiptDigest") != receipt.digest
             or receipt.intent_digest != intent.digest
-            or canonical_digest(raw_observation) != receipt.observation_digest
         ):
-            raise ValueError("Harness Tool Step result event differs")
+            raise ValueError("Harness Tool Step Receipt event differs")
+        if observation_object_digest is not None:
+            if not isinstance(observation_object_digest, str):
+                raise ValueError("Harness Tool Observation event reference is invalid")
+            raw_observation = self.store.get_object(
+                observation_object_digest,
+                expected_kind="harness-tool-observation",
+            )
+            if not isinstance(raw_observation, dict):
+                raise ValueError("Harness Tool Observation event object is invalid")
+            if canonical_digest(raw_observation) != receipt.observation_digest:
+                raise ValueError("Harness Tool Observation event differs from its Receipt")
+        elif self.contract.privacy.allow_tool_content and receipt.observation_digest is not None:
+            raise ValueError(
+                "Harness Tool Observation content was authorized but its event object is missing"
+            )
 
     def _load_snapshot_from_event(self, event: HarnessRunEventRecord) -> StoredHarnessRunSnapshot:
         data = event.data
@@ -1614,7 +1699,11 @@ class SQLiteHarnessRunContinuityStore:
         issued_at_ms: int,
         expires_at_ms: int,
         recorded_at_ms: int,
-    ) -> HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3:
+    ) -> (
+        HarnessProviderCallRecordV2
+        | HarnessProviderCallRecordV3
+        | HarnessProviderCallRecordV4
+    ):
         record_token = canonical_digest(
             {
                 "providerCallId": provider_call_id,
@@ -1630,7 +1719,9 @@ class SQLiteHarnessRunContinuityStore:
             }
         )[7:31]
         record_type = (
-            HarnessProviderCallRecordV3
+            HarnessProviderCallRecordV4
+            if result_digest is not None and result_object_digest is None
+            else HarnessProviderCallRecordV3
             if request_object_digest is not None
             else HarnessProviderCallRecordV2
         )
@@ -1676,7 +1767,11 @@ class SQLiteHarnessRunContinuityStore:
         result_object_digest: str | None = None,
         failure_digest: str | None = None,
         failure_object_digest: str | None = None,
-    ) -> HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3:
+    ) -> (
+        HarnessProviderCallRecordV2
+        | HarnessProviderCallRecordV3
+        | HarnessProviderCallRecordV4
+    ):
         return self._provider_call_record(
             provider_call_id=previous.provider_call_id,
             source=HarnessProviderCallSourceRef(
@@ -1707,7 +1802,11 @@ class SQLiteHarnessRunContinuityStore:
 
     def _store_provider_call(
         self,
-        record: HarnessProviderCallRecordV2 | HarnessProviderCallRecordV3,
+        record: (
+            HarnessProviderCallRecordV2
+            | HarnessProviderCallRecordV3
+            | HarnessProviderCallRecordV4
+        ),
         *,
         state_object: StoredHarnessObject,
         request: AgentTurnRequest | None = None,
@@ -1738,6 +1837,12 @@ class SQLiteHarnessRunContinuityStore:
             or record.result_object_digest != result_object.digest
         ):
             raise ValueError("Provider Call result differs from its record")
+        if (
+            result is None
+            and record.result_digest is not None
+            and not isinstance(record, HarnessProviderCallRecordV4)
+        ):
+            raise ValueError("Provider Call result content is missing from a non-redacted record")
         if (failure is None) != (failure_object is None):
             raise ValueError("Provider Call failure object is incomplete")
         if failure is not None and (
@@ -1759,9 +1864,16 @@ class SQLiteHarnessRunContinuityStore:
             request_object=request_object,
         )
 
+    def _persistent_state(self, state: HarnessRunState) -> HarnessRunState:
+        return state.for_persistence(
+            allow_model_content=self.contract.privacy.allow_model_content,
+            allow_tool_content=self.contract.privacy.allow_tool_content,
+        )
+
     def _put_state(self, state: HarnessRunState) -> StoredHarnessObject:
+        persistent = self._persistent_state(state)
         return self.store.put_object(
-            state.to_dict(self.harness_run_id),
+            persistent.to_dict(self.harness_run_id),
             kind="harness-run-state",
         )
 
@@ -1770,7 +1882,10 @@ class SQLiteHarnessRunContinuityStore:
         if not isinstance(raw, dict):
             raise TypeError("Harness Run state object is invalid")
         state = state_from_dict(raw, harness_run_id=self.harness_run_id)
-        if self._bound_state is not None and state != self._bound_state:
+        if (
+            self._bound_state is not None
+            and state != self._persistent_state(self._bound_state)
+        ):
             raise ValueError("Provider Call state object differs from bound state")
         return state
 
@@ -1779,13 +1894,17 @@ class SQLiteHarnessRunContinuityStore:
         snapshot: HarnessRunSnapshot,
         state: HarnessRunState,
     ) -> StoredHarnessRunSnapshot:
-        self._validate_snapshot_state(snapshot, state)
+        persistent = self._persistent_state(state)
+        self._validate_snapshot_state(snapshot, persistent)
         snapshot_object = self.store.put_object(snapshot.to_dict(), kind="harness-run-snapshot")
-        state_object = self._put_state(state)
+        state_object = self.store.put_object(
+            persistent.to_dict(self.harness_run_id),
+            kind="harness-run-state",
+        )
         return StoredHarnessRunSnapshot(
             snapshot,
             snapshot_object,
-            state,
+            persistent,
             state_object,
         )
 
@@ -1957,8 +2076,8 @@ class SQLiteHarnessRunContinuityStore:
         label: str = "Provider Call outcome",
     ) -> None:
         if (
-            previous.messages != current.messages
-            or previous.observations != current.observations
+            previous.messages_digest != current.messages_digest
+            or previous.observation_digests != current.observation_digests
             or previous.requested_model_id != current.requested_model_id
             or previous.effective_model_id != current.effective_model_id
             or previous.seen_model_call_ids != current.seen_model_call_ids
@@ -1990,8 +2109,8 @@ class SQLiteHarnessRunContinuityStore:
         current: HarnessRunState,
     ) -> None:
         if (
-            previous.messages != current.messages
-            or previous.observations != current.observations
+            previous.messages_digest != current.messages_digest
+            or previous.observation_digests != current.observation_digests
             or previous.requested_model_id != current.requested_model_id
             or previous.effective_model_id != current.effective_model_id
             or previous.seen_model_call_ids != current.seen_model_call_ids

@@ -12,6 +12,7 @@ from ordivon_harness.core_contracts import (
 )
 from ordivon_harness.ordivon.continuity_records import (
     HarnessProviderCallRecordV2,
+    HarnessProviderCallRecordV4,
 )
 from ordivon_harness.ordivon.model import AgentRunConclusion, AgentTurnResult
 from ordivon_harness.ordivon.run_store_port import (
@@ -179,7 +180,11 @@ class SQLiteHarnessRunContinuityProviderTests(unittest.TestCase):
             clock.advance()
             completed = provider.complete_provider_call(dispatching, result())
             self.assertEqual(completed.record.status, HarnessProviderCallStatus.COMPLETED)
-            self.assertEqual(completed.result, result())
+            self.assertIsInstance(completed.record, HarnessProviderCallRecordV4)
+            self.assertEqual(completed.record.result_digest, result().digest)
+            self.assertIsNone(completed.record.result_object_digest)
+            self.assertIsNone(completed.result)
+            self.assertIsNone(completed.result_object)
             self.assertEqual(provider.complete_provider_call(completed, result()), completed)
             revision = provider.caller_revision
             store.close()
@@ -192,7 +197,10 @@ class SQLiteHarnessRunContinuityProviderTests(unittest.TestCase):
                 )
                 retained = fresh.load_current_provider_call()
                 self.assertEqual(retained.record.status, HarnessProviderCallStatus.COMPLETED)
-                self.assertEqual(retained.result, result())
+                self.assertIsInstance(retained.record, HarnessProviderCallRecordV4)
+                self.assertEqual(retained.record.result_digest, result().digest)
+                self.assertIsNone(retained.result)
+                self.assertIsNone(retained.result_object)
                 self.assertEqual(fresh.caller_revision, revision)
                 self.assertEqual(
                     [
@@ -346,7 +354,10 @@ class SQLiteHarnessRunContinuityProviderTests(unittest.TestCase):
                 loser.complete_provider_call(dispatching, losing_result)
             self.assertFalse(object_path.exists())
             retained = winner.load_current_provider_call()
-            self.assertEqual(retained.result, result("winner"))
+            self.assertIsInstance(retained.record, HarnessProviderCallRecordV4)
+            self.assertEqual(retained.record.result_digest, result("winner").digest)
+            self.assertIsNone(retained.result)
+            self.assertIsNone(retained.result_object)
             store.close()
 
     def test_provider_identity_rejects_different_request(self) -> None:
