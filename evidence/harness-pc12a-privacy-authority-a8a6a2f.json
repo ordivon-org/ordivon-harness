@@ -1,0 +1,50 @@
+{
+  "architecture": {
+    "continuityState": "Harness-managed durable Run continuity preserves execution identities, digests, budgets, causal links and effect evidence independently from exact model or Tool content",
+    "privacyAuthority": "HarnessRunContract privacy flags govern Harness-managed durable content; recovery convenience does not expand authority",
+    "providerV4": "Provider Call v4 can prove COMPLETED plus the exact AgentTurnResult digest without retaining the AgentTurnResult object",
+    "workingViewMaterialization": "Working View source materialization is policy-aware at the Continuity boundary while SQLiteHarnessStore remains a mechanical CAS/Journal primitive"
+  },
+  "behavior": {
+    "metadataOnly": "exact model transcript, Provider result content, structured Tool arguments/observations, dynamic Provider error detail, unauthorized Trace payloads and terminal conclusion/proposal content are omitted or digest-projected from Harness-managed durable state",
+    "mixedAuthority": "model-content permission does not directly authorize structured Tool channels; Tool-role messages, Tool Calls, Tool arguments and Tool Observation objects require Tool-content authority",
+    "providerResponseLoss": "a metadata-only completed Provider Call remains durably fenced by completion/result digest and is never physically redispatched merely because exact result bytes were not retained",
+    "rehydration": "when exact content was intentionally not retained, cross-process continuation fails closed and requires caller-authorized rehydration rather than reconstructing hidden content",
+    "sameProcess": "current in-memory Agent/Tool observations remain usable during the active execution; Repository Repair conclusion validation uses ephemeral bound observations instead of treating durable Store content as working memory",
+    "terminalEvidence": "metadata-only terminal Run evidence remains reopenable as receipt/digests/redacted Trace even when exact conclusion, CompletionProposal and Tool Observation content were not retained"
+  },
+  "checks": {
+    "cliCommandsVerified": 14,
+    "dependencyContractPassed": true,
+    "deterministicTests": 188,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "metadataOnlyDirectContentSentinelHitsInStateRoot": 0,
+    "metadataOnlyDynamicProviderErrorSentinelHits": 0,
+    "metadataOnlyFreshProcessProviderRedispatchesAfterCompletedResponseLoss": 0,
+    "metadataOnlyProviderResultObjectRetained": false,
+    "metadataOnlyToolObservationObjectRetained": false,
+    "metadataOnlyWorkingViewContentMaterializationAllowed": false,
+    "modelOnlyStructuredToolProjectionSentinelHitsInStateRoot": 0,
+    "newSQLiteSchemaRequired": false,
+    "pc11FocusedTests": 10,
+    "pc12aFocusedTests": 7,
+    "privateContentExactProviderReplayPreserved": true,
+    "ruffPassed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.2a closes the durable-content authority gap exposed after P-C1.1: Harness execution continuity no longer requires the default metadata-only policy to secretly retain private transcript, Provider-result or Tool-observation bytes. Exact content and effect safety are now separate laws: omitted content can require rehydration while completed physical effects remain fenced against redispatch.",
+  "implementationSourceRevision": "a8a6a2f14d2c1d8fe1e09a5f4f79daa026f8c31f",
+  "kind": "ordivon.harness-pc12a-privacy-state-authority-acceptance",
+  "knownLimits": [
+    "Caller-authorized content rehydration is not yet a first-class API; metadata-only cross-process continuation that needs omitted transcript/result/Tool content currently fails closed.",
+    "Privacy enforcement is structural rather than semantic taint tracking. If model-content retention is allowed, ordinary model text may semantically repeat Tool-derived information that Harness cannot identify as Tool provenance.",
+    "SQLiteHarnessStore is deliberately a low-level mechanical storage authority. A privileged caller that directly writes arbitrary objects can persist its own bytes outside the Run-level privacy boundary; Continuity still refuses to admit unauthorized Working View content as valid cognition history.",
+    "The mature OrdivonAgentLoop still builds its current in-memory model view around a transcript list. P-C1.2a repairs durable privacy authority but does not yet migrate the mature multi-turn loop to replaceable WorkingView projection.",
+    "WorkingViewNoToolTurnRunner remains a narrow P-C1.1 prototype and is not exported from the recommended ordivon_harness.api surface."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}

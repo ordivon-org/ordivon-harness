@@ -98,7 +98,7 @@
       "file": "hho-p0-release-h2-f7e03aa.json",
       "status": "historical",
       "implementationRevision": "f7e03aa78fec63237df6690c0c8f85e4a2ef76c1",
-      "scope": "Exact remote Host pin with live Host\u2192Harness\u2192Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
+      "scope": "Exact remote Host pin with live Host→Harness→Runtime H2 journey, checked Tool evidence and closed Runtime Workspace"
     },
     {
       "claimId": "harness.observation.exporter.b2-a",
@@ -194,9 +194,16 @@
     {
       "claimId": "harness.cognition.pc11-working-view-separation",
       "file": "harness-pc11-working-view-ea38f34.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "ea38f34ca092dd9ad2fcc5fb4defe5c3e499f047",
-      "scope": "Current P-C1.1 acceptance: separates append-only Run history, revisioned Agent WorkingSetSpec, rebuildable WorkingView, and exact Provider request evidence in a one-turn no-Tool prototype; verifies WorkingSet commit/replan and concurrency laws, hard-exit replay with zero Provider redispatch, semantic history Doctor checks, monotonic replan Provider identity, and Contract-authoritative privacy where metadata-only remains digest-only while exact request/WorkingSet content persistence requires allow_model_content."
+      "scope": "Historical P-C1.1 WorkingView separation acceptance retained unchanged after P-C1.2a advanced current Harness persistence paths. Its one-turn History/WorkingSet/WorkingView/Provider-request separation proof remains valid for ea38f34, while the newer Privacy-authority acceptance supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc12a-privacy-state-authority",
+      "file": "harness-pc12a-privacy-authority-a8a6a2f.json",
+      "status": "verified",
+      "implementationRevision": "a8a6a2f14d2c1d8fe1e09a5f4f79daa026f8c31f",
+      "scope": "Current P-C1.2a acceptance: makes HarnessRunContract privacy authoritative across RunState, Provider request/result/failure, Tool observations, Trace, terminal evidence and Working View materialization; metadata-only root-level sentinels remain absent while response-loss completion fencing still prevents physical redispatch, and exact omitted content fails closed pending caller-authorized rehydration."
     }
   ]
 }
