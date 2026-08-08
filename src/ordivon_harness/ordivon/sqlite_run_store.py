@@ -745,18 +745,65 @@ class SQLiteHarnessRunContinuityStore:
             )
         return matches[0]
 
-    def load_current_attempt_tool_exchange_messages(
+    def _caller_cognition_ingress_for_messages(
+        self,
+        messages: tuple[dict[str, JsonValue], ...],
+        *,
+        before_event_sequence: int | None = None,
+    ) -> tuple[int | None, tuple[dict[str, JsonValue], ...]]:
+        """Derive the current caller-owned interaction ingress from Snapshot authority.
+
+        The latest needs-input Snapshot is the interaction boundary. Exact plain
+        user messages immediately following that Snapshot state are caller
+        cognition until the next non-user Run-history message. They are not
+        WorkingSet selection and are consumed by the next needs-input Snapshot.
+        """
+        pause_event: HarnessRunEventRecord | None = None
+        for event in self.store.list_run_events(self.harness_run_id):
+            if (
+                before_event_sequence is not None
+                and event.sequence >= before_event_sequence
+            ):
+                break
+            if (
+                event.event_kind == "harness.run-paused"
+                and event.data.get("pauseReason")
+                == HarnessRunPauseReason.NEEDS_INPUT.value
+            ):
+                pause_event = event
+        if pause_event is None:
+            return None, ()
+        retained = self._load_snapshot_from_event(pause_event)
+        if not retained.state.messages_retained:
+            raise HarnessProviderCallRecoveryRequired(
+                "caller cognition ingress requires retained model content"
+            )
+        prefix = retained.state.messages
+        if messages[: len(prefix)] != prefix:
+            raise HarnessProviderCallRequestMismatch(
+                "caller cognition ingress state does not extend the latest needs-input Snapshot"
+            )
+        ingress: list[dict[str, JsonValue]] = []
+        for message in messages[len(prefix) :]:
+            if message.get("role") != "user":
+                break
+            if (
+                set(message) != {"role", "content"}
+                or not isinstance(message.get("content"), str)
+            ):
+                raise HarnessProviderCallRequestMismatch(
+                    "caller cognition ingress must contain plain user messages"
+                )
+            ingress.append(dict(message))
+        return pause_event.sequence, tuple(ingress)
+
+    def _current_attempt_tool_exchange_segments(
         self,
         observations: tuple[HarnessToolObservation, ...],
-    ) -> tuple[dict[str, JsonValue], ...]:
-        """Rebuild exact transient Tool exchanges for the current committed attempt.
-
-        This is a recovery projection, not Context selection. Provider-authored
-        Tool calls are taken from completed Provider evidence after the current
-        WorkingSet commit boundary. Physical Tool observations must also have a
-        terminal durable Tool receipt/event. Model-correctable local rejections
-        may be supplied by the recovered exact RunState observation sequence.
-        """
+        *,
+        current: HarnessWorkingSetSpec,
+        before_event_sequence: int | None = None,
+    ) -> tuple[tuple[int, tuple[dict[str, JsonValue], ...]], ...]:
         if not self.contract.privacy.allow_model_content:
             raise HarnessProviderCallRecoveryRequired(
                 "transient Tool exchange recovery requires retained model content"
@@ -765,7 +812,6 @@ class SQLiteHarnessRunContinuityStore:
             raise HarnessProviderCallRecoveryRequired(
                 "transient Tool exchange recovery requires retained Tool content"
             )
-        current = self.load_current_working_set()
         if not current.committed:
             raise HarnessProviderCallRequestMismatch(
                 "transient Tool exchange recovery requires a committed Working Set"
@@ -780,9 +826,18 @@ class SQLiteHarnessRunContinuityStore:
                 )
             observations_by_call[observation.tool_call_id] = observation
 
-        terminal_tool_evidence: dict[tuple[str, str], tuple[HarnessToolStepIntent, HarnessToolObservation]] = {}
+        terminal_tool_evidence: dict[
+            tuple[str, str], tuple[HarnessToolStepIntent, HarnessToolObservation]
+        ] = {}
         for event in events:
-            if event.sequence <= boundary_sequence or event.event_kind not in _TOOL_EVENT_KINDS:
+            if event.sequence <= boundary_sequence:
+                continue
+            if (
+                before_event_sequence is not None
+                and event.sequence >= before_event_sequence
+            ):
+                break
+            if event.event_kind not in _TOOL_EVENT_KINDS:
                 continue
             receipt_object_digest = event.data.get("receiptObjectDigest")
             observation_object_digest = event.data.get("observationObjectDigest")
@@ -827,10 +882,15 @@ class SQLiteHarnessRunContinuityStore:
                 observation,
             )
 
-        restored: list[dict[str, JsonValue]] = []
+        segments: list[tuple[int, tuple[dict[str, JsonValue], ...]]] = []
         for event in events:
             if event.sequence <= boundary_sequence:
                 continue
+            if (
+                before_event_sequence is not None
+                and event.sequence >= before_event_sequence
+            ):
+                break
             if event.event_kind != "harness.provider-call-completed":
                 continue
             retained = self._load_provider_from_event(event)
@@ -891,8 +951,58 @@ class SQLiteHarnessRunContinuityStore:
                             "local Tool correction recovery lacks exact no-dispatch evidence"
                         )
                 turn_messages.append(observation.to_model_message())
-            restored.extend(turn_messages)
-        return tuple(restored)
+            segments.append((event.sequence, tuple(turn_messages)))
+        return tuple(segments)
+
+    def load_current_attempt_tool_exchange_messages(
+        self,
+        observations: tuple[HarnessToolObservation, ...],
+    ) -> tuple[dict[str, JsonValue], ...]:
+        """Rebuild exact transient Tool exchanges for the current committed attempt."""
+        if not observations:
+            return ()
+        current = self.load_current_working_set()
+        return tuple(
+            message
+            for _sequence, segment in self._current_attempt_tool_exchange_segments(
+                observations,
+                current=current,
+            )
+            for message in segment
+        )
+
+    def load_current_attempt_cognition_overlay_messages(
+        self,
+        messages: tuple[dict[str, JsonValue], ...],
+        observations: tuple[HarnessToolObservation, ...],
+    ) -> dict[str, JsonValue]:
+        """Rebuild ordered non-WorkingSet cognition for the current interaction."""
+        current = self.load_current_working_set()
+        pause_sequence, caller_messages = self._caller_cognition_ingress_for_messages(
+            messages
+        )
+        segments = (
+            self._current_attempt_tool_exchange_segments(
+                observations,
+                current=current,
+            )
+            if observations
+            else ()
+        )
+        pre_caller: list[dict[str, JsonValue]] = []
+        post_caller: list[dict[str, JsonValue]] = []
+        for sequence, segment in segments:
+            target = (
+                pre_caller
+                if pause_sequence is not None and sequence < pause_sequence
+                else post_caller
+            )
+            target.extend(dict(message) for message in segment)
+        return {
+            "preCallerToolMessages": pre_caller,
+            "callerMessages": [dict(message) for message in caller_messages],
+            "postCallerToolMessages": post_caller,
+        }
 
     def _working_set_from_event(
         self, event: HarnessRunEventRecord
@@ -1074,101 +1184,46 @@ class SQLiteHarnessRunContinuityStore:
                 "Provider Call request does not preserve the current committed Working View prefix"
             )
         overlay_messages = request.messages[len(base_view.messages) :]
-        attempt_boundary_sequence = self._working_set_event_sequence(spec)
-        if overlay_messages:
-            if not state.observations_retained:
-                raise HarnessProviderCallRequestMismatch(
-                    "Provider Working View Tool exchange requires retained bound Tool Observation evidence"
-                )
-            retained_observations = tuple(
-                HarnessToolObservation.from_dict(raw) for raw in state.observations
+        pause_sequence, caller_messages = self._caller_cognition_ingress_for_messages(
+            state.messages,
+            before_event_sequence=before_event_sequence,
+        )
+        retained_observations = (
+            tuple(HarnessToolObservation.from_dict(raw) for raw in state.observations)
+            if state.observations_retained
+            else ()
+        )
+        segments = (
+            self._current_attempt_tool_exchange_segments(
+                retained_observations,
+                current=spec,
+                before_event_sequence=before_event_sequence,
             )
-            completed_tool_turns: list[
-                tuple[int, dict[str, JsonValue], AgentTurnResult]
-            ] = []
-            for provider_event in self.store.list_run_events(self.harness_run_id):
-                if provider_event.sequence <= attempt_boundary_sequence:
-                    continue
-                if (
-                    before_event_sequence is not None
-                    and provider_event.sequence >= before_event_sequence
-                ):
-                    break
-                if provider_event.event_kind != "harness.provider-call-completed":
-                    continue
-                retained = self._load_provider_from_event(provider_event)
-                if retained.result is None or not retained.result.tool_calls:
-                    continue
-                completed_tool_turns.append(
-                    (
-                        provider_event.sequence,
-                        {
-                            "role": "assistant",
-                            "content": retained.result.content,
-                            "toolCalls": [
-                                call.to_dict() for call in retained.result.tool_calls
-                            ],
-                        },
-                        retained.result,
-                    )
+            if retained_observations
+            else ()
+        )
+        expected_overlay: list[dict[str, JsonValue]] = []
+        caller_inserted = False
+        for sequence, segment in segments:
+            if (
+                caller_messages
+                and not caller_inserted
+                and pause_sequence is not None
+                and sequence > pause_sequence
+            ):
+                expected_overlay.extend(dict(message) for message in caller_messages)
+                caller_inserted = True
+            expected_overlay.extend(dict(message) for message in segment)
+        if caller_messages and not caller_inserted:
+            expected_overlay.extend(dict(message) for message in caller_messages)
+        if overlay_messages != tuple(expected_overlay):
+            raise HarnessProviderCallRequestMismatch(
+                (
+                    "Provider Working View overlay differs from durable Tool/caller cognition authority"
+                    if caller_messages
+                    else "Provider Working View overlay is not a completed Provider-authored Tool exchange"
                 )
-
-            overlay_cursor = 0
-            provider_cursor = 0
-            observation_cursor = 0
-            while overlay_cursor < len(overlay_messages):
-                assistant_message = overlay_messages[overlay_cursor]
-                matched_turn: tuple[int, dict[str, JsonValue], AgentTurnResult] | None = None
-                while provider_cursor < len(completed_tool_turns):
-                    candidate = completed_tool_turns[provider_cursor]
-                    provider_cursor += 1
-                    if candidate[1] == assistant_message:
-                        matched_turn = candidate
-                        break
-                if matched_turn is None:
-                    raise HarnessProviderCallRequestMismatch(
-                        "Provider Working View overlay is not a completed Provider-authored Tool exchange"
-                    )
-                overlay_cursor += 1
-                history_calls = [
-                    call
-                    for call in matched_turn[2].tool_calls
-                    if call.name == WORKING_SET_HISTORY_CONTROL_NAME
-                ]
-                if history_calls and len(matched_turn[2].tool_calls) != 1:
-                    raise HarnessProviderCallRequestMismatch(
-                        "Working Set history cognition control cannot mix with Runtime Tool Calls"
-                    )
-                for call in matched_turn[2].tool_calls:
-                    if overlay_cursor >= len(overlay_messages):
-                        raise HarnessProviderCallRequestMismatch(
-                            "Provider Working View Tool exchange omitted a Tool Observation"
-                        )
-                    matched_observation: HarnessToolObservation | None = None
-                    while observation_cursor < len(retained_observations):
-                        candidate_observation = retained_observations[observation_cursor]
-                        observation_cursor += 1
-                        if candidate_observation.tool_call_id == call.tool_call_id:
-                            matched_observation = candidate_observation
-                            break
-                    if (
-                        matched_observation is None
-                        or overlay_messages[overlay_cursor]
-                        != matched_observation.to_model_message()
-                    ):
-                        raise HarnessProviderCallRequestMismatch(
-                            "Provider Working View Tool exchange differs from its bound Tool Observation"
-                        )
-                    if call.name == WORKING_SET_HISTORY_CONTROL_NAME:
-                        expected_history = self._expected_working_set_history_observation(
-                            call,
-                            current=spec,
-                        )
-                        if matched_observation != expected_history:
-                            raise HarnessProviderCallRequestMismatch(
-                                "Working Set history Observation differs from deterministic Journal projection"
-                            )
-                    overlay_cursor += 1
+            )
         effective_view = HarnessWorkingView(
             attempt_id=spec.attempt_id,
             working_set_digest=spec.digest,
@@ -1176,7 +1231,7 @@ class SQLiteHarnessRunContinuityStore:
         )
         if request.context_digest != effective_view.digest:
             raise HarnessProviderCallRequestMismatch(
-                "Provider Call request digest differs from its current Working View plus Tool exchange"
+                "Provider Call request digest differs from its current Working View plus transient cognition"
             )
 
     def _require_current_working_view_request(
@@ -2885,7 +2940,22 @@ class SQLiteHarnessRunContinuityStore:
             raise HarnessProviderCallRequestMismatch(
                 "Provider Call turn differs from its saved Run state"
             )
-        resettable = {"observationOnlyTurns", "noProgressTurns"} if additional_messages else set()
+        durable_caller_ingress = False
+        if provider_state.messages[: len(snapshot_state.messages)] == snapshot_state.messages:
+            for message in provider_state.messages[len(snapshot_state.messages) :]:
+                if (
+                    set(message) == {"role", "content"}
+                    and message.get("role") == "user"
+                    and isinstance(message.get("content"), str)
+                ):
+                    durable_caller_ingress = True
+                    continue
+                break
+        resettable = (
+            {"observationOnlyTurns", "noProgressTurns"}
+            if additional_messages or durable_caller_ingress
+            else set()
+        )
         for field, snapshot_value in snapshot_state.remaining_budget.items():
             if field in resettable:
                 continue

@@ -137,6 +137,23 @@ class SQLiteHarnessAgentBridge:
             )
         )
 
+    def restore_current_attempt_cognition_overlay(
+        self,
+        messages: tuple[dict[str, JsonValue], ...],
+        observations: tuple[_ToolObservationView, ...],
+    ) -> dict[str, JsonValue]:
+        restorer = getattr(
+            self.run_store,
+            "load_current_attempt_cognition_overlay_messages",
+            None,
+        )
+        if not callable(restorer):
+            raise ToolBridgeError(
+                "Harness continuity store cannot reconstruct current projected cognition",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
+        return restorer(messages, observations)
+
     def configure_provider_call(
         self,
         *,

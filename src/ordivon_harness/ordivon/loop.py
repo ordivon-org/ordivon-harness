@@ -60,6 +60,23 @@ def _is_sha256_digest(value: object) -> bool:
     )
 
 
+def _validated_projected_caller_ingress(
+    messages: tuple[dict[str, JsonValue], ...],
+) -> tuple[dict[str, JsonValue], ...]:
+    validated: list[dict[str, JsonValue]] = []
+    for message in messages:
+        if (
+            set(message) != {"role", "content"}
+            or message.get("role") != "user"
+            or not isinstance(message.get("content"), str)
+        ):
+            raise ValueError(
+                "projected caller cognition ingress requires plain user messages"
+            )
+        validated.append(dict(message))
+    return tuple(validated)
+
+
 class RunStopCode(str, Enum):
     CANDIDATE_COMPLETED = "candidate_completed"
     NEEDS_INPUT = "needs_input"
@@ -356,6 +373,11 @@ class OrdivonAgentLoop:
         retained: StoredHarnessRunSnapshot | None,
     ) -> AgentLoopResult:
         cancellation = cancellation or CancellationToken(monotonic_ms=self.monotonic_ms)
+        projected_caller_input = (
+            _validated_projected_caller_ingress(initial_messages)
+            if retained is not None and self.working_view_projector is not None
+            else ()
+        )
         prior_elapsed_ms = 0
         provider_result_replays = 0
         if retained is None:
@@ -472,7 +494,9 @@ class OrdivonAgentLoop:
                     self.budget.max_no_progress_turns,
                 )
             )
-            if initial_messages and self.working_view_projector is None:
+            if (
+                initial_messages and self.working_view_projector is None
+            ) or projected_caller_input:
                 observation_only_turns = 0
                 no_progress_turns = 0
             provider_attempts = model_calls + model_retries
@@ -507,11 +531,14 @@ class OrdivonAgentLoop:
             if callable(restorer):
                 restorer(tuple(sorted(seen_tool_call_ids)))
 
-        # Tool exchanges are attempt-local cognition continuity, distinct from the
-        # durable Agent-selected WorkingSet. Authorized exact exchanges are rebuilt
-        # on resume and are cleared whenever a successor cognition attempt commits,
-        # even when that successor intentionally retains the same exact source pins.
-        transient_tool_exchange_messages: list[dict[str, JsonValue]] = []
+        # Tool exchanges are attempt-local cognition. Caller ingress is instead
+        # caller-owned interaction cognition: it crosses Agent WorkingSet transitions
+        # until the next needs-input Snapshot becomes the new interaction boundary.
+        pre_caller_tool_exchange_messages: list[dict[str, JsonValue]] = []
+        caller_ingress_messages: list[dict[str, JsonValue]] = [
+            dict(message) for message in projected_caller_input
+        ]
+        post_caller_tool_exchange_messages: list[dict[str, JsonValue]] = []
         transient_working_set_digest: str | None = None
 
         def soft_observation_gate_reason() -> str | None:
@@ -1121,53 +1148,106 @@ class OrdivonAgentLoop:
                 external_observation_gate_reason = gate_reason
             return None
 
-        def restore_attempt_local_tool_exchange() -> AgentLoopResult | None:
+        def restore_projected_cognition_overlay() -> AgentLoopResult | None:
             nonlocal transient_working_set_digest
-            if (
-                retained is None
-                or not observations
-                or self.working_view_projector is None
-            ):
+            if retained is None or self.working_view_projector is None:
                 return None
-            exchange_restorer = getattr(
+            structured_restorer = getattr(
                 self.tool_bridge,
-                "restore_current_attempt_tool_exchanges",
+                "restore_current_attempt_cognition_overlay",
                 None,
             )
-            if not callable(exchange_restorer):
-                return None
             try:
-                restored_exchange = exchange_restorer(tuple(observations))
                 restored_base_view = self.working_view_projector.project()
+                if callable(structured_restorer):
+                    restored = structured_restorer(
+                        tuple(messages),
+                        tuple(observations),
+                    )
+                    if not isinstance(restored, dict) or set(restored) != {
+                        "preCallerToolMessages",
+                        "callerMessages",
+                        "postCallerToolMessages",
+                    }:
+                        raise ValueError(
+                            "restored projected cognition overlay has invalid fields"
+                        )
+                    raw_pre = restored["preCallerToolMessages"]
+                    raw_caller = restored["callerMessages"]
+                    raw_post = restored["postCallerToolMessages"]
+                    if not all(
+                        isinstance(value, list)
+                        and all(isinstance(item, dict) for item in value)
+                        for value in (raw_pre, raw_caller, raw_post)
+                    ):
+                        raise ValueError(
+                            "restored projected cognition overlay must contain message lists"
+                        )
+                    pre_caller_tool_exchange_messages.clear()
+                    pre_caller_tool_exchange_messages.extend(
+                        dict(message) for message in raw_pre
+                    )
+                    caller_ingress_messages.clear()
+                    caller_ingress_messages.extend(
+                        dict(message) for message in raw_caller
+                    )
+                    post_caller_tool_exchange_messages.clear()
+                    post_caller_tool_exchange_messages.extend(
+                        dict(message) for message in raw_post
+                    )
+                else:
+                    exchange_restorer = getattr(
+                        self.tool_bridge,
+                        "restore_current_attempt_tool_exchanges",
+                        None,
+                    )
+                    if callable(exchange_restorer) and observations:
+                        restored_exchange = exchange_restorer(tuple(observations))
+                        pre_caller_tool_exchange_messages.clear()
+                        pre_caller_tool_exchange_messages.extend(
+                            dict(message) for message in restored_exchange
+                        )
+                        post_caller_tool_exchange_messages.clear()
             except ToolBridgeError as error:
                 return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
             except Exception as error:  # noqa: BLE001 - recovery projection is a Harness boundary.
                 return stop(
                     RunStopCode.HARNESS_FAILED,
                     detail=(
-                        "transient Tool exchange recovery failed: "
+                        "projected cognition recovery failed: "
                         f"{type(error).__name__}: {error}"
                     ),
                 )
-            transient_tool_exchange_messages.clear()
-            transient_tool_exchange_messages.extend(
-                dict(message) for message in restored_exchange
+            tool_messages = (
+                tuple(pre_caller_tool_exchange_messages)
+                + tuple(post_caller_tool_exchange_messages)
             )
             transient_working_set_digest = (
                 restored_base_view.working_set_digest
-                if restored_exchange
+                if tool_messages
                 else None
             )
-            recorder.record(
-                "transient_tool_exchange_restored",
-                {
-                    "workingSetDigest": restored_base_view.working_set_digest,
-                    "restoredMessages": len(restored_exchange),
-                    "restoredExchangeDigest": canonical_digest(
-                        list(restored_exchange)
-                    ),
-                },
-            )
+            if tool_messages:
+                recorder.record(
+                    "transient_tool_exchange_restored",
+                    {
+                        "workingSetDigest": restored_base_view.working_set_digest,
+                        "restoredMessages": len(tool_messages),
+                        "restoredExchangeDigest": canonical_digest(
+                            list(tool_messages)
+                        ),
+                    },
+                )
+            if caller_ingress_messages:
+                recorder.record(
+                    "caller_cognition_ingress_restored",
+                    {
+                        "messages": len(caller_ingress_messages),
+                        "ingressDigest": canonical_digest(
+                            list(caller_ingress_messages)
+                        ),
+                    },
+                )
             return None
 
         if remaining_wall_time_ms <= 0:
@@ -1334,7 +1414,7 @@ class OrdivonAgentLoop:
                 return stopped
 
         if retained is not None:
-            stopped = restore_attempt_local_tool_exchange()
+            stopped = restore_projected_cognition_overlay()
             if stopped is not None:
                 return stopped
 
@@ -1376,11 +1456,17 @@ class OrdivonAgentLoop:
                     and transient_working_set_digest
                     != base_working_view.working_set_digest
                 ):
-                    transient_tool_exchange_messages.clear()
+                    pre_caller_tool_exchange_messages.clear()
+                    post_caller_tool_exchange_messages.clear()
                     transient_working_set_digest = None
+                projected_overlay = (
+                    tuple(pre_caller_tool_exchange_messages)
+                    + tuple(caller_ingress_messages)
+                    + tuple(post_caller_tool_exchange_messages)
+                )
                 working_view = overlay_working_view(
                     base_working_view,
-                    tuple(transient_tool_exchange_messages),
+                    projected_overlay,
                 )
                 request_context_digest = working_view.digest
                 request_messages = working_view.messages
@@ -1392,8 +1478,12 @@ class OrdivonAgentLoop:
                         "workingSetDigest": working_view.working_set_digest,
                         "baseWorkingViewDigest": base_working_view.digest,
                         "workingViewDigest": working_view.digest,
-                        "transientToolExchangeMessages": len(
-                            transient_tool_exchange_messages
+                        "transientToolExchangeMessages": (
+                            len(pre_caller_tool_exchange_messages)
+                            + len(post_caller_tool_exchange_messages)
+                        ),
+                        "callerCognitionIngressMessages": len(
+                            caller_ingress_messages
                         ),
                         "canonicalMessagesDigest": canonical_digest(messages),
                         "projectedMessagesDigest": canonical_digest(
@@ -1991,7 +2081,8 @@ class OrdivonAgentLoop:
                             f"{type(error).__name__}: {error}"
                         ),
                     )
-                transient_tool_exchange_messages.clear()
+                pre_caller_tool_exchange_messages.clear()
+                post_caller_tool_exchange_messages.clear()
                 transient_working_set_digest = None
                 if selection_changed:
                     external_observation_gate_reason = None
@@ -2158,9 +2249,10 @@ class OrdivonAgentLoop:
                     transient_working_set_digest is not None
                     and transient_working_set_digest != working_view.working_set_digest
                 ):
-                    transient_tool_exchange_messages.clear()
+                    pre_caller_tool_exchange_messages.clear()
+                    post_caller_tool_exchange_messages.clear()
                 transient_working_set_digest = working_view.working_set_digest
-                transient_tool_exchange_messages.append(dict(assistant_tool_message))
+                post_caller_tool_exchange_messages.append(dict(assistant_tool_message))
             turn_observations: list[ToolObservation] = []
             stopped = execute_tool_calls(
                 result.tool_calls,
@@ -2171,7 +2263,7 @@ class OrdivonAgentLoop:
             if stopped is not None:
                 return stopped
             if working_view is not None:
-                transient_tool_exchange_messages.extend(
+                post_caller_tool_exchange_messages.extend(
                     observation.to_model_message()
                     for observation in turn_observations
                 )

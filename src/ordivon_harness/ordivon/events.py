@@ -28,6 +28,7 @@ _EVENT_KINDS = {
     "tool_call_reconciled",
     "working_set_history_observed",
     "transient_tool_exchange_restored",
+    "caller_cognition_ingress_restored",
     "working_set_transition_applied",
     "conclusion_rejected",
     "run_stopped",

@@ -435,7 +435,7 @@ class CognitionTransitionProgressTests(unittest.TestCase):
                 self.assertEqual(replay_runtime.workspace_exec_count, 0)
                 self.assertTrue(reopened.doctor()["healthy"])
 
-    def test_projected_resume_input_does_not_reset_gate_until_model_visible(self) -> None:
+    def test_projected_resume_input_resets_gate_once_model_visible(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
             runtime = FakeRuntime("direct")
@@ -540,12 +540,12 @@ class CognitionTransitionProgressTests(unittest.TestCase):
                     ),
                 )
                 self.assertEqual(second.stop_code, RunStopCode.NEEDS_INPUT)
-                self.assertEqual(second_adapter.requests[0].tools, ())
+                self.assertNotEqual(second_adapter.requests[0].tools, ())
                 self.assertEqual(
                     second_adapter.requests[0].remaining_budget["observationOnlyTurns"],
-                    0,
+                    1,
                 )
-                self.assertNotIn(
+                self.assertIn(
                     "New caller evidence: inspect again under this changed premise.",
                     str(second_adapter.requests[0].messages),
                 )
