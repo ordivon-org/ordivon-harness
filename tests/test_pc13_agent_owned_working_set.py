@@ -581,7 +581,9 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                     basis="replay must not create another cognition branch",
                 )
                 first = continuity.apply_working_set_transition(
-                    proposal, source_working_view_digest=source_view_digest
+                    proposal,
+                    source_working_set_digest=committed_a.digest,
+                    source_model_view_digest=source_view_digest,
                 )
                 event_count = len(store.list_run_events(run_contract.harness_run_id))
 
@@ -594,7 +596,9 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                     clock_ms=clock,
                 )
                 second = reopened.apply_working_set_transition(
-                    proposal, source_working_view_digest=source_view_digest
+                    proposal,
+                    source_working_set_digest=committed_a.digest,
+                    source_model_view_digest=source_view_digest,
                 )
                 self.assertEqual(second, first)
                 self.assertEqual(
@@ -726,7 +730,8 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                     try:
                         value = thread_continuity.apply_working_set_transition(
                             proposal,
-                            source_working_view_digest=source_view_digest,
+                            source_working_set_digest=committed_a.digest,
+                            source_model_view_digest=source_view_digest,
                         )
                     except Exception as error:  # noqa: BLE001 - competing branch must fail closed somehow.
                         return ("rejected", type(error).__name__, str(error))

@@ -379,13 +379,14 @@ class WorkingViewProjector(Protocol):
 
 
 class WorkingSetTransitionHandler(Protocol):
-    """Admit one Agent-authored successor Working Set against its source view."""
+    """Admit one Agent-authored successor Working Set against its source model view."""
 
     def apply_working_set_transition(
         self,
         proposal: AgentWorkingSetTransitionProposal,
         *,
-        source_working_view_digest: str,
+        source_working_set_digest: str,
+        source_model_view_digest: str,
     ) -> HarnessWorkingSetSpec: ...
 
 
@@ -408,6 +409,28 @@ class WorkingSetViewProjector:
                 "Provider Working View requires a committed Working Set"
             )
         return compile_working_view(spec, self.objects)
+
+
+def overlay_working_view(
+    base: HarnessWorkingView,
+    overlay_messages: tuple[dict[str, JsonValue], ...],
+) -> HarnessWorkingView:
+    """Append already-bounded transient messages without replacing selected Context.
+
+    This pure helper assigns no authority or discovery meaning to the appended
+    messages. On the durable Continuity path, Provider admission separately
+    requires appended messages to be exact projections of bound Tool
+    Observations. The committed WorkingView remains an exact prefix.
+    """
+    for message in overlay_messages:
+        validate_json_value(message)
+    if not overlay_messages:
+        return base
+    return HarnessWorkingView(
+        attempt_id=base.attempt_id,
+        working_set_digest=base.working_set_digest,
+        messages=base.messages + tuple(dict(message) for message in overlay_messages),
+    )
 
 
 def compile_working_view(
@@ -446,4 +469,5 @@ __all__ = [
     "WorkingSetViewProjector",
     "WorkingViewProjector",
     "compile_working_view",
+    "overlay_working_view",
 ]

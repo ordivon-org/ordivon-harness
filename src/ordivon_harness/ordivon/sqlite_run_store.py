@@ -6,6 +6,7 @@ import time
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
+from ..agent_tool_observation import HarnessToolObservation
 from ..core_contracts import HarnessRunContract
 from ..errors import HarnessSuperseded
 from ..protocol import (
@@ -23,6 +24,7 @@ from ..run_state import HarnessRunState, state_from_dict
 from ..working_view import (
     AgentWorkingSetTransitionProposal,
     HarnessWorkingSetSpec,
+    HarnessWorkingView,
     HarnessWorkingViewSource,
     compile_working_view,
 )
@@ -300,15 +302,17 @@ class SQLiteHarnessRunContinuityStore:
         self,
         proposal: AgentWorkingSetTransitionProposal,
         *,
-        source_working_view_digest: str,
+        source_working_set_digest: str,
+        source_model_view_digest: str,
     ) -> HarnessWorkingSetSpec:
         """Atomically admit one Agent-authored successor cognition attempt.
 
         The Agent supplies the exact successor pins and basis. Harness only
         verifies that those immutable source identities exist under the current
-        privacy authority and that the proposal still extends the committed
-        Working View that produced it. Replan, complete selection and commit are
-        one bounded Journal transaction under one Run lease.
+        privacy authority, that the selected WorkingSet is still current, and
+        that the exact Provider request which produced the proposal extended that
+        WorkingSet's base view. Replan, complete selection and commit are one
+        bounded Journal transaction under one Run lease.
         """
         if not self.contract.privacy.allow_model_content:
             raise ValueError(
@@ -362,10 +366,35 @@ class SQLiteHarnessRunContinuityStore:
             ]
             if [spec.revision for spec in attempt_specs] != [1, 2, 3]:
                 return None
+            new_evidence = all(
+                "sourceWorkingSetDigest" in event.data
+                and "sourceModelViewDigest" in event.data
+                for event in attempt_events
+            )
+            legacy_evidence = all(
+                "sourceWorkingViewDigest" in event.data
+                and "sourceWorkingSetDigest" not in event.data
+                and "sourceModelViewDigest" not in event.data
+                for event in attempt_events
+            )
+            if not (new_evidence or legacy_evidence):
+                return None
             if any(
                 event.data.get("transitionProposalDigest") != proposal.digest
-                or event.data.get("sourceWorkingViewDigest")
-                != source_working_view_digest
+                for event in attempt_events
+            ):
+                return None
+            if new_evidence and any(
+                event.data.get("sourceWorkingSetDigest")
+                != source_working_set_digest
+                or event.data.get("sourceModelViewDigest")
+                != source_model_view_digest
+                for event in attempt_events
+            ):
+                return None
+            if legacy_evidence and any(
+                event.data.get("sourceWorkingViewDigest")
+                != source_model_view_digest
                 for event in attempt_events
             ):
                 return None
@@ -381,9 +410,17 @@ class SQLiteHarnessRunContinuityStore:
                 ),
                 None,
             )
-            if predecessor is None or not predecessor.committed:
+            if (
+                predecessor is None
+                or not predecessor.committed
+                or predecessor.digest != source_working_set_digest
+            ):
                 return None
-            if compile_working_view(predecessor, self.store).digest != source_working_view_digest:
+            if (
+                legacy_evidence
+                and compile_working_view(predecessor, self.store).digest
+                != source_model_view_digest
+            ):
                 return None
             return current
 
@@ -408,19 +445,53 @@ class SQLiteHarnessRunContinuityStore:
                 raise ValueError(
                     "Agent Working Set transition requires a new attempt identity"
                 )
-            current_view = compile_working_view(current, self.store)
-            if current_view.digest != source_working_view_digest:
+            if current.digest != source_working_set_digest:
                 raise HarnessProviderCallRequestMismatch(
-                    "Agent Working Set transition source view is no longer current"
+                    "Agent Working Set transition source WorkingSet is no longer current"
                 )
+            base_view = compile_working_view(current, self.store)
+            provider_evidence_bound = False
             provider = self._load_current_provider_call_or_none()
-            if provider is not None and provider.record.status in {
+            if provider is None:
+                if source_model_view_digest != base_view.digest:
+                    raise HarnessProviderCallRequestMismatch(
+                        "overlay-backed Working Set transition requires exact Provider evidence"
+                    )
+            elif provider.record.status in {
                 HarnessProviderCallStatus.CLAIMED,
                 HarnessProviderCallStatus.DISPATCHING,
                 HarnessProviderCallStatus.UNKNOWN,
             }:
                 raise HarnessProviderCallRecoveryRequired(
                     "Working Set cannot change while a Provider Call may still act on the prior view"
+                )
+            elif provider.record.status is HarnessProviderCallStatus.COMPLETED:
+                if provider.request is None or provider.result is None:
+                    raise HarnessProviderCallRecoveryRequired(
+                        "Agent Working Set transition requires retained exact Provider request/result evidence"
+                    )
+                effective_view = HarnessWorkingView(
+                    attempt_id=current.attempt_id,
+                    working_set_digest=current.digest,
+                    messages=provider.request.messages,
+                )
+                if (
+                    provider.request.context_digest != source_model_view_digest
+                    or effective_view.digest != source_model_view_digest
+                    or provider.request.messages[: len(base_view.messages)]
+                    != base_view.messages
+                ):
+                    raise HarnessProviderCallRequestMismatch(
+                        "Agent Working Set transition source model view differs from the completed Provider request"
+                    )
+                if provider.result.working_set_transition != proposal:
+                    raise HarnessProviderCallRequestMismatch(
+                        "completed Provider result differs from the Agent Working Set transition proposal"
+                    )
+                provider_evidence_bound = True
+            else:
+                raise HarnessProviderCallRequestMismatch(
+                    "Agent Working Set transition cannot originate from a failed Provider Call"
                 )
 
             replanned = current.replan(proposal.next_attempt_id)
@@ -442,6 +513,14 @@ class SQLiteHarnessRunContinuityStore:
             )
             recorded_at_ms = self._recorded_time(now_ms)
             prior_event_id = self._latest_event_id()
+            transition_source_data: dict[str, JsonValue] = (
+                {
+                    "sourceWorkingSetDigest": source_working_set_digest,
+                    "sourceModelViewDigest": source_model_view_digest,
+                }
+                if provider_evidence_bound
+                else {"sourceWorkingViewDigest": source_model_view_digest}
+            )
             writes: list[HarnessEventWrite] = []
             caused_by = prior_event_id
             for spec, spec_object in zip(chain, spec_objects, strict=True):
@@ -461,7 +540,7 @@ class SQLiteHarnessRunContinuityStore:
                             "committed": spec.committed,
                             "transitionProposalDigest": proposal.digest,
                             "transitionProposalObjectDigest": proposal_object.digest,
-                            "sourceWorkingViewDigest": source_working_view_digest,
+                            **transition_source_data,
                         },
                         recorded_at_ms=recorded_at_ms,
                         caused_by_event_id=caused_by,
@@ -585,24 +664,47 @@ class SQLiteHarnessRunContinuityStore:
         previous_event: HarnessRunEventRecord | None,
         previous_spec: HarnessWorkingSetSpec | None,
     ) -> None:
-        fields = {
+        legacy_fields = {
             "transitionProposalDigest",
             "transitionProposalObjectDigest",
             "sourceWorkingViewDigest",
         }
-        present = fields & set(event.data)
+        current_fields = {
+            "transitionProposalDigest",
+            "transitionProposalObjectDigest",
+            "sourceWorkingSetDigest",
+            "sourceModelViewDigest",
+        }
+        transition_keys = legacy_fields | current_fields
+        present = transition_keys & set(event.data)
         if not present:
             return
-        if present != fields:
+        if current_fields.issubset(event.data) and "sourceWorkingViewDigest" not in event.data:
+            fields = current_fields
+            source_working_set_digest = self._required_digest(
+                event.data, "sourceWorkingSetDigest"
+            )
+            source_model_view_digest = self._required_digest(
+                event.data, "sourceModelViewDigest"
+            )
+            legacy = False
+        elif legacy_fields.issubset(event.data) and not {
+            "sourceWorkingSetDigest",
+            "sourceModelViewDigest",
+        } & set(event.data):
+            fields = legacy_fields
+            source_working_set_digest = None
+            source_model_view_digest = self._required_digest(
+                event.data, "sourceWorkingViewDigest"
+            )
+            legacy = True
+        else:
             raise ValueError("Working Set transition evidence is incomplete")
         proposal_digest = self._required_digest(
             event.data, "transitionProposalDigest"
         )
         proposal_object_digest = self._required_digest(
             event.data, "transitionProposalObjectDigest"
-        )
-        source_view_digest = self._required_digest(
-            event.data, "sourceWorkingViewDigest"
         )
         raw = self.store.get_object(
             proposal_object_digest,
@@ -621,10 +723,43 @@ class SQLiteHarnessRunContinuityStore:
                 raise ValueError(
                     "Working Set transition does not extend a committed predecessor"
                 )
-            if compile_working_view(previous_spec, self.store).digest != source_view_digest:
-                raise ValueError(
-                    "Working Set transition source view differs from its predecessor"
-                )
+            base_view = compile_working_view(previous_spec, self.store)
+            if legacy:
+                if base_view.digest != source_model_view_digest:
+                    raise ValueError(
+                        "Working Set transition source view differs from its predecessor"
+                    )
+            else:
+                if previous_spec.digest != source_working_set_digest:
+                    raise ValueError(
+                        "Working Set transition source WorkingSet differs from its predecessor"
+                    )
+                matched_provider = False
+                for provider_event in self.store.list_run_events(self.harness_run_id):
+                    if provider_event.event_kind != "harness.provider-call-completed":
+                        continue
+                    retained = self._load_provider_from_event(provider_event)
+                    if retained.request is None or retained.result is None:
+                        continue
+                    if retained.result.working_set_transition != proposal:
+                        continue
+                    effective_view = HarnessWorkingView(
+                        attempt_id=previous_spec.attempt_id,
+                        working_set_digest=previous_spec.digest,
+                        messages=retained.request.messages,
+                    )
+                    if (
+                        retained.request.context_digest == source_model_view_digest
+                        and effective_view.digest == source_model_view_digest
+                        and retained.request.messages[: len(base_view.messages)]
+                        == base_view.messages
+                    ):
+                        matched_provider = True
+                        break
+                if not matched_provider:
+                    raise ValueError(
+                        "Working Set transition source model view lacks matching Provider evidence"
+                    )
             if spec.pins or spec.committed:
                 raise ValueError("Working Set transition replan revision is invalid")
             return
@@ -653,6 +788,49 @@ class SQLiteHarnessRunContinuityStore:
             return
         raise ValueError("Working Set transition has an unsupported revision")
 
+    def _require_working_view_request_against_state(
+        self,
+        request: AgentTurnRequest,
+        spec: HarnessWorkingSetSpec,
+        state: HarnessRunState,
+    ) -> None:
+        base_view = compile_working_view(spec, self.store)
+        if request.messages[: len(base_view.messages)] != base_view.messages:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider Call request does not preserve the current committed Working View prefix"
+            )
+        overlay_messages = request.messages[len(base_view.messages) :]
+        if overlay_messages:
+            if not state.observations_retained:
+                raise HarnessProviderCallRequestMismatch(
+                    "Provider Working View overlay requires retained bound Tool Observation evidence"
+                )
+            allowed_observation_messages = tuple(
+                HarnessToolObservation.from_dict(raw).to_model_message()
+                for raw in state.observations
+            )
+            cursor = 0
+            for overlay_message in overlay_messages:
+                while (
+                    cursor < len(allowed_observation_messages)
+                    and allowed_observation_messages[cursor] != overlay_message
+                ):
+                    cursor += 1
+                if cursor >= len(allowed_observation_messages):
+                    raise HarnessProviderCallRequestMismatch(
+                        "Provider Working View overlay is not an exact bound Tool Observation projection"
+                    )
+                cursor += 1
+        effective_view = HarnessWorkingView(
+            attempt_id=spec.attempt_id,
+            working_set_digest=spec.digest,
+            messages=request.messages,
+        )
+        if request.context_digest != effective_view.digest:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider Call request digest differs from its current Working View plus overlay"
+            )
+
     def _require_current_working_view_request(
         self,
         request: AgentTurnRequest | None,
@@ -668,11 +846,11 @@ class SQLiteHarnessRunContinuityStore:
             raise HarnessProviderCallRequestMismatch(
                 "Provider Call for a Working Set requires its exact Agent Turn request"
             )
-        view = compile_working_view(spec, self.store)
-        if request.context_digest != view.digest or request.messages != view.messages:
-            raise HarnessProviderCallRequestMismatch(
-                "Provider Call request differs from the current committed Working View"
-            )
+        self._require_working_view_request_against_state(
+            request,
+            spec,
+            self._require_state(),
+        )
 
     def claim_provider_call(
         self,
@@ -1598,7 +1776,17 @@ class SQLiteHarnessRunContinuityStore:
         previous_working_set_event: HarnessRunEventRecord | None = None
         for event in events:
             if event.event_kind in _PROVIDER_EVENT_KINDS:
-                self._load_provider_from_event(event)
+                retained_provider = self._load_provider_from_event(event)
+                if (
+                    previous_working_set is not None
+                    and previous_working_set.committed
+                    and retained_provider.request is not None
+                ):
+                    self._require_working_view_request_against_state(
+                        retained_provider.request,
+                        previous_working_set,
+                        retained_provider.state,
+                    )
                 provider_records += 1
             if event.event_kind in _TOOL_EVENT_KINDS:
                 self._validate_tool_event(event)

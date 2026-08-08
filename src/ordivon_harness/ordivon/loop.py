@@ -1200,6 +1200,7 @@ class OrdivonAgentLoop:
             turn_id = f"turn:{harness_run_id.removeprefix('harness-run:')}:{sequence}"
             request_context_digest = context_digest
             request_messages = tuple(messages)
+            working_view = None
             if self.working_view_projector is not None:
                 try:
                     working_view = self.working_view_projector.project()
@@ -1760,10 +1761,16 @@ class OrdivonAgentLoop:
                             "did not grant a cognition transition surface"
                         ),
                     )
+                if working_view is None:
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail="Working Set transition omitted its source Working View",
+                    )
                 try:
                     committed_working_set = handler.apply_working_set_transition(
                         result.working_set_transition,
-                        source_working_view_digest=request.context_digest,
+                        source_working_set_digest=working_view.working_set_digest,
+                        source_model_view_digest=request.context_digest,
                     )
                 except ValueError as error:
                     return stop(
@@ -1792,7 +1799,8 @@ class OrdivonAgentLoop:
                     {
                         "turnId": turn_id,
                         "proposalDigest": result.working_set_transition.digest,
-                        "sourceWorkingViewDigest": request.context_digest,
+                        "sourceWorkingSetDigest": working_view.working_set_digest,
+                        "sourceModelViewDigest": request.context_digest,
                         "nextAttemptId": committed_working_set.attempt_id,
                         "committedWorkingSetDigest": committed_working_set.digest,
                     },
