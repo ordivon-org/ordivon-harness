@@ -1021,7 +1021,30 @@ class DeepSeekTurnAdapter:
             runtime_calls = invalid_calls
             conclusion = None
         if conclusion is not None and runtime_calls:
-            raise ValueError("DeepSeek mixed Runtime Tool Calls with a Run conclusion")
+            # A model may try to both continue acting and conclude in one Provider
+            # turn.  The semantic choice is ambiguous, but no physical Tool has
+            # executed yet.  Preserve that causal boundary and return a
+            # model-correctable invalid Tool turn instead of converting an
+            # epistemic/action conflict into a Harness failure.
+            corrected_calls: list[AgentToolCall] = []
+            for call in runtime_calls:
+                raw_arguments = canonical_bytes(call.arguments)
+                corrected_calls.append(
+                    AgentToolCall(
+                        call.tool_call_id,
+                        call.name,
+                        dict(call.arguments),
+                        argument_error="mixed_with_conclusion",
+                        raw_arguments_digest=(
+                            "sha256:" + hashlib.sha256(raw_arguments).hexdigest()
+                        ),
+                        raw_arguments_preview=raw_arguments[:2_048].decode(
+                            "utf-8", errors="ignore"
+                        ),
+                    )
+                )
+            runtime_calls = corrected_calls
+            conclusion = None
         if finish_reason != "tool_calls":
             raise ValueError("DeepSeek Tool Turn has an inconsistent finish reason")
 

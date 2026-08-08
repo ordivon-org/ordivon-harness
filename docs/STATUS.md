@@ -40,6 +40,7 @@ Ordivon Harness is an independent caller-neutral Run system. The current writer 
 - durable Provider Call continuity and response-loss recovery;
 - durable Tool-step intents/fences/receipts and Runtime reconciliation;
 - Agent loop budgets, pause/resume and no-progress handling;
+- DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are admitted from the ambiguous turn;
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
 - independent Run Receipt, CompletionProposal and recovery evidence;

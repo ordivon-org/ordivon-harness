@@ -30,6 +30,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Fixed
 
+- DeepSeek turns that simultaneously request ordinary Tools and `submit_run_conclusion` no longer become Harness failures: the mixed turn is rejected before physical Tool execution and returned through the existing model-correction path so the Agent can choose one action on the next turn;
 - the DeepSeek conclusion Tool now describes caller/domain verification rather than the removed Host-backed verification model, and Standalone execution fails closed when a structured completion Contract is not bound by the executing Adapter;
 - Quick Start now includes a caller-authored Contract construction path, the DeepSeek 8,192-token completion-ceiling preflight behavior, Runtime error-translation requirements for Tool-bearing callers, and a wheel-verification command that passes the actual wheel path;
 - canonical security, data/privacy, verification and domain-Tool guidance now describe the independent Harness Journal/CAS and current Host-free Run API instead of removed Host-backed Assignment/Runner persistence; documentation checks reject those stale current claims;

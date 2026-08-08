@@ -124,6 +124,8 @@ A Provider Call is durable before uncertain physical delivery. Live claims exclu
 
 Provider identity belongs to Harness execution. A higher-level caller does not need to model Provider sessions or retry state.
 
+A Provider turn that simultaneously requests ordinary Tools and submits a Run conclusion is treated as a **model-correctable action conflict**, not as permission to choose on the model's behalf and not as a Harness failure. Harness dispatches none of those ordinary Tools and admits no conclusion from that mixed turn; the next model turn must choose whether to continue acting or conclude.
+
 ## Tool lifecycle
 
 Tool-bearing Runs bind a complete Tool catalog digest and Tool grant digest. Before physical delivery, Harness records a Tool intent and dispatch fence. Runtime requests carry Harness authority references. Observation-only failures can be corrected by the Agent; ambiguous external effects require reconciliation and may terminate recovery as UNKNOWN.
