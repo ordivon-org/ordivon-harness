@@ -1185,6 +1185,46 @@ class OrdivonAgentLoop:
             if stopped is not None:
                 return stopped
 
+            if self.working_view_projector is not None:
+                exchange_restorer = getattr(
+                    self.tool_bridge,
+                    "restore_current_attempt_tool_exchanges",
+                    None,
+                )
+                if callable(exchange_restorer):
+                    try:
+                        restored_exchange = exchange_restorer(tuple(observations))
+                        restored_base_view = self.working_view_projector.project()
+                    except ToolBridgeError as error:
+                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
+                    except Exception as error:  # noqa: BLE001 - recovery projection is a Harness boundary.
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                "transient Tool exchange recovery failed: "
+                                f"{type(error).__name__}: {error}"
+                            ),
+                        )
+                    transient_tool_exchange_messages.clear()
+                    transient_tool_exchange_messages.extend(
+                        dict(message) for message in restored_exchange
+                    )
+                    transient_working_set_digest = (
+                        restored_base_view.working_set_digest
+                        if restored_exchange
+                        else None
+                    )
+                    recorder.record(
+                        "transient_tool_exchange_restored",
+                        {
+                            "workingSetDigest": restored_base_view.working_set_digest,
+                            "restoredMessages": len(restored_exchange),
+                            "restoredExchangeDigest": canonical_digest(
+                                list(restored_exchange)
+                            ),
+                        },
+                    )
+
         while True:
             if cancellation.cancelled:
                 return stop(RunStopCode.CANCELLED)

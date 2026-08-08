@@ -180,6 +180,22 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             raise ValueError("restored Tool Call identities must be unique")
         self._seen_tool_call_ids = set(tool_call_ids)
 
+    def restore_current_attempt_tool_exchanges(
+        self,
+        observations: tuple[HarnessToolObservation, ...],
+    ) -> tuple[dict[str, JsonValue], ...]:
+        restorer = getattr(
+            self.run_store,
+            "load_current_attempt_tool_exchange_messages",
+            None,
+        )
+        if not callable(restorer):
+            raise ToolBridgeError(
+                "Runtime continuity store cannot reconstruct current-attempt Tool exchanges",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
+        return restorer(observations)
+
     def execute(
         self,
         call: AgentToolCall,
