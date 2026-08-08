@@ -250,9 +250,16 @@
     {
       "claimId": "harness.cognition.pc18-historical-cognition-recall",
       "file": "harness-pc18-historical-cognition-recall-fceb781.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "fceb781d5b2f0ecc9acbc11d9e1fbcbec0fabfca",
-      "scope": "Current P-C1.8 acceptance: an opt-in Agent cognition control exposes a bounded deterministic catalog of earlier committed WorkingSet identities and exact pins only; materialized-but-unselected CAS objects are excluded; history inspection costs zero Runtime dispatch/external Tool budget, survives authorized clean resume, is Journal-revalidated against forged local results, and lets the Agent re-select historical pins through the existing transition law without adding semantic Memory search, SQLite schema or recommended public API. Real deepseek-v4-flash exercised history then re-selected the correct dropped K source, while repeated same-selection cognition churn remains explicitly unclaimed."
+      "scope": "Historical P-C1.8 historical-cognition-recall acceptance retained unchanged after P-C1.9 separated attempt reset from progress authority. Its bounded history catalog, exact-pin recall, no-Runtime-effect, clean-resume and Journal-forgery laws remain valid for 9d9eb92, while P-C1.9 supersedes it as whole-current cognition verification."
+    },
+    {
+      "claimId": "harness.cognition.pc19-cognition-transition-progress",
+      "file": "harness-pc19-cognition-transition-progress-8b0f025.json",
+      "status": "verified",
+      "implementationRevision": "8b0f0252cef1597a13be06adccea86fd63b5ce0f",
+      "scope": "Current P-C1.9 acceptance: same-pin successor attempts remain lawful attempt-local cognition resets but no longer count as structural progress, reset soft observation/no-progress counters, or reopen a closed soft external-effect gate; exact selected-pin changes may reset the soft gate; hard Tool budget remains global; fresh-process resume derives soft gate state from durable counters; projected resume messages that are not yet Provider-visible no longer fabricate progress. No new SQLite/Protocol schema, progress database, semantic equivalence engine or recommended public API was added."
     }
   ]
 }
