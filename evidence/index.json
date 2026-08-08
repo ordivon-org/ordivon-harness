@@ -257,9 +257,16 @@
     {
       "claimId": "harness.cognition.pc19-cognition-transition-progress",
       "file": "harness-pc19-cognition-transition-progress-8b0f025.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "8b0f0252cef1597a13be06adccea86fd63b5ce0f",
-      "scope": "Current P-C1.9 acceptance: same-pin successor attempts remain lawful attempt-local cognition resets but no longer count as structural progress, reset soft observation/no-progress counters, or reopen a closed soft external-effect gate; exact selected-pin changes may reset the soft gate; hard Tool budget remains global; fresh-process resume derives soft gate state from durable counters; projected resume messages that are not yet Provider-visible no longer fabricate progress. No new SQLite/Protocol schema, progress database, semantic equivalence engine or recommended public API was added."
+      "scope": "Historical P-C1.9 cognition-transition-progress acceptance retained unchanged after P-C1.10 supplied the previously missing model-visible projected caller ingress. Its attempt-reset-vs-progress, durable soft-gate and global hard-Tool-budget laws remain valid for 98314d3; the prior projected-caller non-claim is superseded by P-C1.10."
+    },
+    {
+      "claimId": "harness.cognition.pc110-caller-cognition-ingress",
+      "file": "harness-pc110-caller-cognition-ingress-b640f2d.json",
+      "status": "verified",
+      "implementationRevision": "b640f2dbbd78cbd645f4adbedc9465fd2218876f",
+      "scope": "Current P-C1.10 acceptance: after a needs_input Snapshot, exact plain caller user messages form a caller-owned projected cognition layer distinct from Agent WorkingSet selection, attempt-local Tool exchange and Harness execution control; caller ingress persists across WorkingSet transitions until the next needs_input boundary, interleaves deterministically with Tool exchanges by Journal sequence, resets soft progress only once model-visible, survives Tool process loss and Provider response loss without caller resend, and is revalidated from Snapshot/RunState authority before Provider dispatch. Model-content authority is sufficient when no Tool channel is present. No new SQLite/Protocol schema, Conversation Store, Memory subsystem or recommended public API was added."
     }
   ]
 }
