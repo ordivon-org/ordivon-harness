@@ -225,6 +225,7 @@ class IndependentCompletionProposal:
     summary: str
     evidence_refs: tuple[str, ...]
     artifact_refs: tuple[str, ...]
+    unresolved_unknowns: tuple[str, ...]
     usage: dict[str, JsonValue]
     created_at_ms: int
 
@@ -239,6 +240,7 @@ class IndependentCompletionProposal:
         _text(self.summary, "Completion Proposal summary", max_bytes=8_000)
         _unique_text(self.evidence_refs, "Completion evidence reference")
         _unique_text(self.artifact_refs, "Completion Artifact reference")
+        _unique_text(self.unresolved_unknowns, "Completion unresolved unknown")
         validate_json_value(self.usage)
         if self.created_at_ms < 0:
             raise ValueError("Completion Proposal creation time must be non-negative")
@@ -249,7 +251,7 @@ class IndependentCompletionProposal:
 
     def to_dict(self) -> dict[str, JsonValue]:
         return {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "kind": "ordivon.independent-completion-proposal",
             "completionProposalId": self.completion_proposal_id,
             "harnessRunId": self.harness_run_id,
@@ -261,20 +263,23 @@ class IndependentCompletionProposal:
             "summary": self.summary,
             "evidenceRefs": list(self.evidence_refs),
             "artifactRefs": list(self.artifact_refs),
+            "unresolvedUnknowns": list(self.unresolved_unknowns),
             "usage": self.usage,
             "createdAtMs": self.created_at_ms,
         }
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> IndependentCompletionProposal:
-        expected = {
+        version = value.get("schemaVersion")
+        common = {
             "schemaVersion", "kind", "completionProposalId", "harnessRunId",
             "callerId", "callerRunRef", "contractDigest", "runReceiptDigest",
             "traceDigest", "summary", "evidenceRefs", "artifactRefs", "usage",
             "createdAtMs",
         }
+        expected = common if version == 1 else common | {"unresolvedUnknowns"}
         _exact(value, expected, "IndependentCompletionProposal")
-        if value["schemaVersion"] != 1 or value["kind"] != "ordivon.independent-completion-proposal":
+        if version not in {1, 2} or value["kind"] != "ordivon.independent-completion-proposal":
             raise ValueError("IndependentCompletionProposal version or kind is invalid")
         for field in (
             "completionProposalId", "harnessRunId", "callerId", "callerRunRef",
@@ -285,6 +290,9 @@ class IndependentCompletionProposal:
         for field in ("evidenceRefs", "artifactRefs"):
             if not isinstance(value[field], list) or any(not isinstance(item, str) for item in value[field]):
                 raise ValueError(f"IndependentCompletionProposal {field} must contain strings")
+        unresolved = value.get("unresolvedUnknowns", [])
+        if not isinstance(unresolved, list) or any(not isinstance(item, str) for item in unresolved):
+            raise ValueError("IndependentCompletionProposal unresolvedUnknowns must contain strings")
         if not isinstance(value["usage"], dict) or type(value["createdAtMs"]) is not int:
             raise ValueError("IndependentCompletionProposal usage or time is invalid")
         return cls(
@@ -293,7 +301,8 @@ class IndependentCompletionProposal:
             caller_run_ref=value["callerRunRef"], contract_digest=value["contractDigest"],
             run_receipt_digest=value["runReceiptDigest"], trace_digest=value["traceDigest"],
             summary=value["summary"], evidence_refs=tuple(value["evidenceRefs"]),
-            artifact_refs=tuple(value["artifactRefs"]), usage=dict(value["usage"]),
+            artifact_refs=tuple(value["artifactRefs"]),
+            unresolved_unknowns=tuple(unresolved), usage=dict(value["usage"]),
             created_at_ms=value["createdAtMs"],
         )
 
@@ -791,6 +800,7 @@ class IndependentRunRecorder:
             summary=conclusion.summary,
             evidence_refs=conclusion.evidence_refs,
             artifact_refs=conclusion.artifact_refs,
+            unresolved_unknowns=conclusion.unresolved_unknowns,
             usage=result.usage,
             created_at_ms=created_at_ms,
         )

@@ -8,9 +8,12 @@ import threading
 import time
 import unittest
 
-from ordivon_harness.independent_result import IndependentRunRecorder
+from ordivon_harness.independent_result import (
+    IndependentCompletionProposal,
+    IndependentRunRecorder,
+)
 from ordivon_harness.ordivon.loop import RunStopCode
-from ordivon_harness.ordivon.model import ScriptedTurnAdapter
+from ordivon_harness.ordivon.model import AgentRunConclusion, ScriptedTurnAdapter
 from ordivon_harness.ordivon.sqlite_agent_bridge import SQLiteHarnessAgentBridge
 from ordivon_harness.ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
 from ordivon_harness.sqlite_store import SQLiteHarnessStore
@@ -143,6 +146,55 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
                     clock_ms=clock,
                     monotonic_ms=clock,
                 )
+            store.close()
+
+
+    def test_completed_run_preserves_unresolved_unknowns_for_caller(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            run_contract, store, continuity = self.initialize(
+                root, "completed-with-unknowns", clock
+            )
+            unknowns = (
+                "A later Run must observe the current repository before executing the plan.",
+            )
+            candidate = replace(
+                completed_result("completed-with-unknowns"),
+                conclusion=AgentRunConclusion(
+                    status="candidate_completed",
+                    summary="The bounded planning Run produced a usable strategy.",
+                    unresolved_unknowns=unknowns,
+                ),
+            )
+            runner = self.runner(
+                run_contract,
+                continuity,
+                ScriptedTurnAdapter((candidate,)),
+                SQLiteHarnessAgentBridge(run_contract, continuity),
+                clock,
+            )
+            execution = runner.run(({"role": "user", "content": "plan"},))
+            self.assertEqual(
+                execution.loop_result.stop_code, RunStopCode.CANDIDATE_COMPLETED
+            )
+            assert execution.terminal_result is not None
+            terminal = execution.terminal_result
+            assert terminal.conclusion is not None
+            assert terminal.completion_proposal is not None
+            self.assertEqual(terminal.conclusion.unresolved_unknowns, unknowns)
+            self.assertEqual(
+                terminal.completion_proposal.unresolved_unknowns, unknowns
+            )
+            encoded = terminal.completion_proposal.to_dict()
+            self.assertEqual(encoded["schemaVersion"], 2)
+            self.assertEqual(encoded["unresolvedUnknowns"], list(unknowns))
+
+            legacy = dict(encoded)
+            legacy["schemaVersion"] = 1
+            legacy.pop("unresolvedUnknowns")
+            decoded_legacy = IndependentCompletionProposal.from_dict(legacy)
+            self.assertEqual(decoded_legacy.unresolved_unknowns, ())
             store.close()
 
     def test_candidate_completion_is_terminal_and_restart_inspectable(self) -> None:

@@ -116,6 +116,8 @@ adapter = DeepSeekTurnAdapter(
 value = decode_structured_completion_result(contract, execution.loop_result.conclusion)
 ```
 
+A candidate-completed Run may still carry explicit unresolved unknowns in `unresolved_unknowns`; that means the bounded Run produced its candidate while honestly reporting facts that remain unknown. The caller/domain, not Harness, decides whether those unknowns block acceptance, justify another strategy, or are irrelevant.
+
 The exact completion Contract is part of `HarnessRunContract.digest`. `StandaloneHarnessRunner` fails closed if a `structured-result-v1` Contract is paired with an Adapter that was not bound to the same completion Contract. DeepSeek receives the caller schema as the `submit_run_conclusion.result` Tool schema, and Harness stores the canonical result JSON in the existing conclusion summary representation, so this adds no second durable result store or Host-specific result type. **Caller/domain verification remains mandatory**: `decode_structured_completion_result` is a codec, not semantic admission.
 
 ## Pause and resume

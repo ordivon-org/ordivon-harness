@@ -315,6 +315,7 @@ def validate_public_contracts() -> list[str]:
         "HarnessExecutionBinding",
         "structured-result-v1",
         "decode_structured_completion_result",
+        "unresolved unknowns",
     ):
         if required not in quickstart:
             errors.append(f"QUICKSTART.md lacks Agent-first authoring guidance: {required}")

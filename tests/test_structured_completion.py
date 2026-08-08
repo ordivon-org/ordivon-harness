@@ -35,13 +35,17 @@ class RecordingTransport:
         return self.response
 
 
-def provider_response(result: dict[str, object]) -> bytes:
+def provider_response(
+    result: dict[str, object], *, unresolved_unknowns: list[str] | None = None
+) -> bytes:
     arguments = {
         "status": "candidate_completed",
         "result": result,
         "artifact_refs": [],
         "evidence_refs": [],
-        "unresolved_unknowns": [],
+        "unresolved_unknowns": (
+            [] if unresolved_unknowns is None else unresolved_unknowns
+        ),
     }
     return canonical_bytes(
         {
@@ -139,6 +143,40 @@ class StructuredCompletionTests(unittest.TestCase):
         self.assertIn("result", properties)
         self.assertNotIn("summary", properties)
         self.assertEqual(properties["result"], run_contract.to_dict()["completionContract"]["resultSchema"])
+
+
+    def test_candidate_completed_may_retain_honest_unresolved_unknowns(self) -> None:
+        run_contract = self.structured_contract()
+        expected = {"choice": "observe", "rationale": "inspect first"}
+        unknowns = ["Current workspace content remains unknown until the next Run observes it."]
+        transport = RecordingTransport(
+            provider_response(expected, unresolved_unknowns=unknowns)
+        )
+        adapter = DeepSeekTurnAdapter(
+            DeepSeekSettings(api_key="k" * 40, max_output_tokens=512),
+            transport=transport,
+            completion_contract=run_contract.completion_contract,
+        )
+        request = AgentTurnRequest(
+            harness_run_id=run_contract.harness_run_id,
+            turn_id="turn:structured-unknowns",
+            sequence=1,
+            assignment_id="assignment:external:structured-unknowns",
+            context_digest=run_contract.context_refs[0].digest,
+            tool_catalog_digest=DIGEST_C,
+            messages=({"role": "user", "content": "choose a plan"},),
+            tools=(),
+            remaining_budget={"modelCalls": 1, "toolCalls": 0, "totalTokens": 4096},
+        )
+        result = adapter.invoke(request)
+        self.assertIsNotNone(result.conclusion)
+        assert result.conclusion is not None
+        self.assertEqual(result.conclusion.status, "candidate_completed")
+        self.assertEqual(result.conclusion.unresolved_unknowns, tuple(unknowns))
+        self.assertEqual(
+            decode_structured_completion_result(run_contract, result.conclusion),
+            expected,
+        )
 
     def test_plain_completion_keeps_summary_contract_and_caller_neutral_description(self) -> None:
         response = canonical_bytes(

@@ -45,6 +45,9 @@ caller / domain / optional Host
 │ Run budgets                │
 │ pause / resume / recovery  │
 │ Trace / Run Receipt        │
+
+> **Run terminality is not epistemic closure.** `candidate_completed` means the bounded Run formed a candidate result; it may retain explicit unresolved unknowns for caller/domain judgment.
+
 │ CompletionProposal         │
 └─────────────┬──────────────┘
               │ Tool-bearing Runs only

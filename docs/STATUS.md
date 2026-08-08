@@ -55,6 +55,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - primary CLI does not construct Tool-bearing Runtime clients;
 - the current Host-free external-executor adapter covers generic foreign Runs, not a direct `CognitionWorkRequest` → structured `ActionSelection`/`ActionProposal` bridge for Host cognition;
 - CompletionProposal is not caller/domain completion authority;
+- `candidate_completed` is bounded-Run terminality, not a claim that all world uncertainty is resolved; CompletionProposal v2 carries `unresolvedUnknowns`, while v1 remains readable with an empty unknown set;
 - structured completion constrains Provider output shape but does not make Harness a JSON-Schema or domain verifier; callers must still decode and semantically admit the result under their own authority;
 - Provider/Tool UNKNOWN may require external reconciliation;
 - public API and owner-local schemas remain pre-1.0;

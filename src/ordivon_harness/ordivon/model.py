@@ -175,8 +175,6 @@ class AgentRunConclusion:
                 _text(value, label, max_bytes=500)
             if len(values) != len(set(values)):
                 raise ValueError(f"{label} values must be unique")
-        if self.status == "candidate_completed" and self.unresolved_unknowns:
-            raise ValueError("candidate completion cannot retain unresolved unknowns")
 
     def to_dict(self) -> dict[str, JsonValue]:
         return {

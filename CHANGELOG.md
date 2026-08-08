@@ -6,6 +6,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Changed
 
+- `candidate_completed` now means bounded Run completion rather than epistemic closure: conclusions may retain honest unresolved unknowns, and new `IndependentCompletionProposal` v2 records them while still reading v1 proposals as having no recorded unknowns;
 - the recommended `ordivon_harness.api` facade is now closed over basic Run Contract authoring and the built-in execution paths: DeepSeek settings/adapter, no-Tool and search capability digests, bound/correlation references, execution/runtime references, and Runtime error-contract types are available without dropping to `ordivon_harness.core`;
 - no-Tool Runs may bind `maxToolCalls=0`; model, observation, wall-time and token budgets remain positive and Tool capability is still controlled only by the Contract Tool catalog/grant;
 - **Breaking pre-1.0 H3:** Ordivon Harness is now a single independent Agent Run product line. The SQLite Harness Journal/CAS is the only current Run writer and `HarnessRunContract` is the only current caller/execution contract.
