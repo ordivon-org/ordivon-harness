@@ -187,9 +187,16 @@
     {
       "claimId": "harness.deepseek.mixed-turn-correction",
       "file": "harness-deepseek-mixed-turn-6124cd2.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "6124cd22b182264cfd0acbcf6ddd3a0c5ccda964",
-      "scope": "Current DeepSeek acceptance: a Provider turn that mixes ordinary Tool calls with submit_run_conclusion is rejected before ordinary Tool dispatch and before conclusion admission, then routed through existing model-correction semantics; deterministic loop proof confirms zero physical Tool executions from the mixed turn and successful corrected completion on the following turn."
+      "scope": "Historical DeepSeek mixed-turn correction acceptance retained unchanged after P-C1.1 advanced current Harness implementation paths; the correction remains valid for its tested revision but no longer serves as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc11-working-view-separation",
+      "file": "harness-pc11-working-view-ea38f34.json",
+      "status": "verified",
+      "implementationRevision": "ea38f34ca092dd9ad2fcc5fb4defe5c3e499f047",
+      "scope": "Current P-C1.1 acceptance: separates append-only Run history, revisioned Agent WorkingSetSpec, rebuildable WorkingView, and exact Provider request evidence in a one-turn no-Tool prototype; verifies WorkingSet commit/replan and concurrency laws, hard-exit replay with zero Provider redispatch, semantic history Doctor checks, monotonic replan Provider identity, and Contract-authoritative privacy where metadata-only remains digest-only while exact request/WorkingSet content persistence requires allow_model_content."
     }
   ]
 }

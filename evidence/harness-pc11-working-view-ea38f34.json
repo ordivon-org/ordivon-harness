@@ -1,0 +1,54 @@
+{
+  "architecture": {
+    "agentTurnRequest": "immutable Provider execution evidence after claim answers what was actually dispatched",
+    "canonicalHistory": "append-only Harness Journal/CAS evidence answers what happened",
+    "workingSetSpec": "Agent-owned revisioned selection state answers what this attempt chooses to focus on",
+    "workingView": "deterministic rebuildable projection answers what the model sees for this turn"
+  },
+  "behavior": {
+    "commit": "a committed Working Set is frozen for that attempt; caller/domain rejection may lead to a new explicit replan attempt linked to the committed predecessor",
+    "concurrency": "Working Set transition is revalidated under the Run lease so two writers based on one revision cannot both advance the head",
+    "privacy": "the Run Contract privacy policy remains authoritative: metadata-only does not persist exact model request content and rejects the current Working Set content prototype",
+    "providerEvidence": "Provider Call v3 binds an exact AgentTurnRequest CAS object when model-content persistence is authorized; historical/default v2 remains supported",
+    "recovery": "a projected no-Tool turn can keep HarnessRunState.messages empty, recover the committed Working Set, rebuild the same Working View, and replay an already-completed Provider result without physical redispatch",
+    "workingSetIdentity": "pins bind a logical reference/generation to an exact Harness CAS source object digest; logical-current drift cannot silently retarget an existing pin"
+  },
+  "checks": {
+    "boundedPrivateContentCanPersistExactAgentRequest": true,
+    "cliCommandsVerified": 14,
+    "concurrentSameRevisionWorkingSetWinners": 1,
+    "continuityDoctorValidatesWorkingSetHistory": true,
+    "deterministicTests": 177,
+    "durableRunStateMessagesEmptyInProjectedTurn": true,
+    "freshProcessPhysicalProviderRedispatches": 0,
+    "fullRegressionPassed": true,
+    "hardExitCode": 37,
+    "hostFreeCoreVerified": true,
+    "metadataOnlyAllowsWorkingSetContentPersistence": false,
+    "metadataOnlyPersistsExactAgentRequest": false,
+    "newSQLiteSchemaRequired": false,
+    "pc11FocusedTests": 9,
+    "providerRequestMatchesWorkingView": true,
+    "replanUsesMonotonicProviderTurnIdentity": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true,
+    "workingSetJournaledInExistingStore": true,
+    "workingViewMessagesNonEmptyInProjectedTurn": true
+  },
+  "conclusion": "P-C1.1 proves that durable Run history, Agent-owned Working Set state, model-visible Working View, and exact Provider request evidence can be separated without weakening existing Run revision, concurrency, privacy, crash-recovery, or Provider replay laws. The proof is intentionally limited to a one-turn no-Tool projected execution path and does not replace the mature multi-turn Agent Loop.",
+  "implementationSourceRevision": "ea38f34ca092dd9ad2fcc5fb4defe5c3e499f047",
+  "kind": "ordivon.harness-pc11-working-view-separation-acceptance",
+  "knownLimits": [
+    "The mature OrdivonAgentLoop still uses append-only HarnessRunState.messages for multi-turn and Tool-bearing execution; P-C1.1 has not migrated that path.",
+    "WorkingViewNoToolTurnRunner is an intentionally narrow prototype and is not exported from the recommended ordivon_harness.api surface.",
+    "No Context discovery, search, ranking, RAG, Memory, automatic summarization, evidence-sufficiency scoring, or Context scheduler is introduced.",
+    "HarnessWorkingViewSource currently contains already-materialized model messages; a generic Context object/address space remains experimental.",
+    "Exact AgentTurnRequest content persistence requires HarnessPrivacyPolicy.allow_model_content=True; metadata-only Runs retain digest-only Provider evidence."
+  ],
+  "motivation": {
+    "financePattern": "canonical history/evidence remains durable while Agent-facing projections are replaceable and exact identities are version-bound",
+    "primeAgentFinding": "append-only model-visible transcript caused Agent-controlled Context acquisition to exhaust request capacity even when the Agent only needed a small current Working Set"
+  },
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
