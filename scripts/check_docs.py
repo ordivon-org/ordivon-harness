@@ -44,11 +44,16 @@ STABLE_API = {
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
+    "CompiledHarnessAttempt",
     "DeepSeekSettings",
     "DeepSeekTurnAdapter",
     "HarnessBoundReference",
     "HarnessCorrelationContext",
     "HarnessExecutionBinding",
+    "HarnessExecutionMandate",
+    "HarnessMandateConsumption",
+    "HarnessExecutionProfile",
+    "HarnessExecutionStrategy",
     "DomainToolBridge",
     "DomainToolCatalog",
     "DomainToolLoopPlan",
@@ -76,6 +81,7 @@ STABLE_API = {
     "StandaloneHarnessExecution",
     "StandaloneHarnessRunner",
     "StandaloneToolBridge",
+    "compile_harness_attempt",
     "decode_structured_completion_result",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",
@@ -316,6 +322,8 @@ def validate_public_contracts() -> list[str]:
         "structured-result-v1",
         "decode_structured_completion_result",
         "unresolved unknowns",
+        "HarnessExecutionMandate",
+        "compile_harness_attempt",
     ):
         if required not in quickstart:
             errors.append(f"QUICKSTART.md lacks Agent-first authoring guidance: {required}")

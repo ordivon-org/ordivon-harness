@@ -33,11 +33,11 @@ related:
 ---
 # Ordivon Harness
 
-Ordivon Harness is an independent Agent Run authority. It turns a caller-authored `HarnessRunContract` into a bounded, durable model/Tool execution with explicit Provider-call continuity, Tool-step fencing, pause/resume, conservative recovery, Trace evidence, a Run Receipt, and a CompletionProposal.
+Ordivon Harness is an independent Agent execution authority. A caller may submit one exact `HarnessRunContract`, or delegate a broader `HarnessExecutionMandate` that is compiled with a chosen `HarnessExecutionStrategy` into one immutable Run attempt. Harness turns each admitted attempt into durable model/Tool execution with explicit Provider-call continuity, Tool-step fencing, pause/resume, conservative recovery, Trace evidence, a Run Receipt, and a CompletionProposal.
 
 ## Responsibility boundary
 
-Harness owns **how one Agent Run executes**: Provider calls, model/Tool turns, Run-local state, budgets, retries, pause/resume and recovery. It does not own the caller's Task truth, domain commitments, final verification, or physical Runtime Workspace/Job truth.
+Harness owns **how admitted Agent execution attempts run**: Provider calls, model/Tool turns, Run-local state, per-attempt strategy/budgets, retries, pause/resume and recovery. A Mandate constrains aggregate capability/resource delegation without dictating exact cognitive step counts. It does not own the caller's Task truth, domain commitments, final verification, or physical Runtime Workspace/Job truth.
 
 A Host may call Harness, but Host is not a Harness dependency and does not store Harness Run state. The optional `ordivon_harness.host_external_adapter` module is duck-typed and Host-free; it connects two independent authorities without sharing persistence.
 
@@ -47,7 +47,8 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 
 ## What works
 
-- immutable `HarnessRunContract` authority, including Context refs, Provider/Adapter identity, Tool catalog/grant digests, budget and completion contract;
+- `HarnessExecutionMandate` → `HarnessExecutionStrategy` → `compile_harness_attempt()` separation, so caller delegation can constrain allowed profiles plus aggregate token/wall-time envelopes while caller-supplied `HarnessMandateConsumption` reserves only the remaining envelope for later attempts and each resulting `HarnessRunContract` remains exact attempt authority;
+- immutable `HarnessRunContract` attempt authority, including Context refs, Provider/Adapter identity, Tool catalog/grant digests, budget and completion contract;
 - independent SQLite Journal/CAS with caller binding, revision fencing, leases, backup/restore and full Doctor;
 - durable Provider Call claim/dispatch/completion/failure state with response-loss reconciliation;
 - durable Tool intents, dispatch fences, observations and recovery-sensitive receipts;
@@ -63,7 +64,8 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - import or require `ordivon-host`;
 - migrate or decode the removed Host-backed Harness state model;
 - infer success from an ambiguous Provider or Tool delivery;
-- provide a built-in Tool-bearing Runtime transport in the primary CLI; applications supply a Runtime client through the Python API.
+- provide a built-in Tool-bearing Runtime transport in the primary CLI; applications supply a Runtime client through the Python API;
+- choose execution strategy for a Mandate with a built-in planner, or persist a second Mandate state machine. Current Mandate support is a caller-delegated contract plus pure compiler into independently durable Run attempts.
 
 ## Requirements
 
@@ -95,8 +97,9 @@ For a source checkout, run the deterministic regression suite and wheel gate:
 
 ```bash
 uv run python -m unittest discover -s tests -v
-python -m build
-python scripts/check_wheel.py dist
+rm -rf dist
+uv build --wheel --out-dir dist
+python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
 ```
 
 ## Public API

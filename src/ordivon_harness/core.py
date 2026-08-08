@@ -23,6 +23,14 @@ from .execution_binding import (
     HarnessRuntimeReference,
     build_harness_workspace_exec_request_from_binding,
 )
+from .mandate import (
+    CompiledHarnessAttempt,
+    HarnessExecutionMandate,
+    HarnessMandateConsumption,
+    HarnessExecutionProfile,
+    HarnessExecutionStrategy,
+    compile_harness_attempt,
+)
 from .independent_result import (
     IndependentCompletionProposal,
     IndependentHarnessRunReceipt,
@@ -146,6 +154,7 @@ __all__ = [
     "AgentTurnRequest",
     "AgentTurnResult",
     "CancellationToken",
+    "CompiledHarnessAttempt",
     "DeepSeekSettings",
     "DeepSeekTurnAdapter",
     "HarnessArtifactReference",
@@ -156,6 +165,10 @@ __all__ = [
     "HarnessEventWrite",
     "HarnessEventConflict",
     "HarnessExecutionBinding",
+    "HarnessExecutionMandate",
+    "HarnessMandateConsumption",
+    "HarnessExecutionProfile",
+    "HarnessExecutionStrategy",
     "HarnessJournalCorruption",
     "HarnessLeaseConflict",
     "HarnessLeaseHeld",
@@ -204,6 +217,7 @@ __all__ = [
     "StoredIndependentRunResult",
     "backup_harness_store",
     "build_harness_workspace_exec_request_from_binding",
+    "compile_harness_attempt",
     "decode_structured_completion_result",
     "find_runtime_jobs_by_client_request",
     "package_version",

@@ -45,9 +45,6 @@ caller / domain / optional Host
 │ Run budgets                │
 │ pause / resume / recovery  │
 │ Trace / Run Receipt        │
-
-> **Run terminality is not epistemic closure.** `candidate_completed` means the bounded Run formed a candidate result; it may retain explicit unresolved unknowns for caller/domain judgment.
-
 │ CompletionProposal         │
 └─────────────┬──────────────┘
               │ Tool-bearing Runs only
@@ -60,9 +57,45 @@ caller / domain / optional Host
 
 Harness does not own caller Task state, domain commitments, final acceptance, or Runtime Workspace/Job truth. Runtime does not know the Harness state machine. Host is an optional caller rather than a persistence prerequisite.
 
+> **Run terminality is not epistemic closure.** `candidate_completed` means the bounded Run formed a candidate result; it may retain explicit unresolved unknowns for caller/domain judgment.
+
+## Execution Mandate and strategy
+
+The caller does not have to prescribe every execution step. `HarnessExecutionMandate` is a higher-level delegation envelope over one or more possible Run attempts:
+
+```text
+caller / domain / optional Host
+        │
+        │ HarnessExecutionMandate
+        │ objective + Context + completion semantics
+        │ allowed execution profiles
+        │ aggregate token / wall-time envelope
+        ▼
+  StrategyPolicy (not built in)
+        │
+        │ HarnessExecutionStrategy
+        │ chosen profile + exact attempt budget/options
+        │ optional adopted prior evidence refs
+        ▼
+  compile_harness_attempt()
+        │
+        ▼
+   HarnessRunContract
+   immutable attempt authority
+        │
+        ▼
+    Run → Receipt
+        │
+        └── caller/Agent may choose another strategy/attempt
+```
+
+The distinction is deliberate: **Mandate says what has been delegated; Strategy says how the Agent currently chooses to act; Run Contract freezes one admitted attempt; Receipt says what actually happened.** `maxModelCalls` and `maxToolCalls` remain valid per-attempt runaway/fencing parameters, but the Mandate compiler does not treat them as caller-owned aggregate policy. It enforces the allowed execution-profile set and aggregate economic bounds (`maxTotalTokens`, `maxWallTimeMs`). Later attempts require an explicit `HarnessMandateConsumption` reconstructed from prior receipts; the compiler only admits a new RunBudget that fits inside the remaining envelope.
+
+Current Mandate support is intentionally pure and stateless: Harness does not ship a built-in StrategyPolicy, Mandate scheduler, or second durable Mandate database. The caller supplies the exact Mandate plus consumption snapshot on re-entry; immutable Run receipts remain the source evidence from which that snapshot is reconstructed. Prior Run evidence can be adopted into a later Strategy as bound Context refs; automatic cross-attempt orchestration remains outside the current product until more real use pays for it.
+
 ## Run Contract
 
-`HarnessRunContract` binds one Run to caller identity/reference, Objective and Context refs, Provider/Adapter/model identity, Tool catalog and grant digests, execution budget, completion contract, system manifest, privacy policy, deadline and correlation links. The Contract digest is execution authority: a Run may not silently execute against different values.
+`HarnessRunContract` binds one **attempt** to caller identity/reference, Objective and Context refs, Provider/Adapter/model identity, Tool catalog and grant digests, execution budget, completion contract, system manifest, privacy policy, deadline and correlation links. The Contract digest is execution authority for that attempt: a Run may not silently execute against different values. When compiled from a Mandate, its system manifest binds the Mandate, selected profile, Strategy, attempt index, and adopted prior Context evidence.
 
 Harness does not synthesize a higher-level Task from CLI flags. The caller authors the Contract; the CLI only supplies Run-local input messages.
 

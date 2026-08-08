@@ -54,7 +54,41 @@ ordivon-harness capabilities
 
 ## Run
 
-Create a caller-authored `HarnessRunContract` JSON. The CLI does not invent Objective, Context, caller identity, Tool grant, budget or completion authority. The recommended API is closed over the values required for basic Contract authoring:
+For one exact attempt, create a caller-authored `HarnessRunContract` JSON. When the caller wants to delegate the goal/resource envelope without prescribing every execution step, use `HarnessExecutionMandate` plus a separately selected `HarnessExecutionStrategy`, then compile one exact attempt with `compile_harness_attempt()`. The current library deliberately does not choose Strategy automatically.
+
+```python
+from ordivon_harness.api import (
+    HarnessExecutionMandate,
+    HarnessExecutionProfile,
+    HarnessExecutionStrategy,
+    RunBudget,
+    compile_harness_attempt,
+)
+
+# Mandate: objective/context/completion + allowed profiles + aggregate envelope.
+mandate = HarnessExecutionMandate(..., max_total_tokens=65_536, max_wall_time_ms=120_000)
+
+# Strategy: Agent/application-selected profile and exact parameters for attempt 1.
+strategy = HarnessExecutionStrategy(
+    mandate_digest=mandate.digest,
+    attempt_index=1,
+    profile_id=profile.profile_id,
+    budget=RunBudget(...).to_contract_dict(),
+    provider_options={"maxOutputTokens": 2048},
+    rationale="Selected from current evidence and capability needs.",
+)
+compiled = compile_harness_attempt(
+    mandate, profile, strategy,
+    harness_run_id="harness-run:example:1",
+    harness_implementation_id="ordivon-harness@...",
+    created_at_ms=...,
+)
+contract = compiled.contract
+```
+
+A later attempt must also supply `HarnessMandateConsumption` reconstructed from prior Run receipts. The compiler reserves only the remaining total-token/wall-time envelope. Prior Receipt/observation references may be adopted through `strategy.adopted_context_refs`; the compiler binds those refs into the next Run Contract. This allows evidence to survive a failed or budget-exhausted strategy attempt without turning one Run into an unlimited workflow.
+
+For direct execution, create a caller-authored `HarnessRunContract` JSON. The CLI does not invent Objective, Context, caller identity, Tool grant, budget or completion authority. The recommended API is closed over the values required for basic Contract authoring:
 
 ```python
 from anc_canonical import canonical_digest

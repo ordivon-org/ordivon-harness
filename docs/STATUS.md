@@ -34,6 +34,7 @@ Ordivon Harness is an independent caller-neutral Run system. The current writer 
 
 ## Operational
 
+- caller-delegated `HarnessExecutionMandate`, receipt-derived `HarnessMandateConsumption`, selectable `HarnessExecutionProfile` / `HarnessExecutionStrategy`, and pure `compile_harness_attempt()` into exact `HarnessRunContract` attempt authority;
 - `HarnessRunContract` with exact execution-bound authority;
 - SQLite Store creation, reopen, Doctor, lease/revision fencing, backup and restore;
 - durable Provider Call continuity and response-loss recovery;
@@ -53,7 +54,8 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 ## Known limits
 
 - primary CLI does not construct Tool-bearing Runtime clients;
-- the current Host-free external-executor adapter covers generic foreign Runs, not a direct `CognitionWorkRequest` → structured `ActionSelection`/`ActionProposal` bridge for Host cognition;
+- Mandate support currently compiles caller delegation + a supplied Strategy into Run attempts; Harness does not yet persist Mandate state or ship a built-in StrategyPolicy/cross-attempt controller;
+- there is intentionally no Host-specific cognition bridge: the tested Host cognition slices use generic `structured-result-v1` completion and Host-owned semantic admission;
 - CompletionProposal is not caller/domain completion authority;
 - `candidate_completed` is bounded-Run terminality, not a claim that all world uncertainty is resolved; CompletionProposal v2 carries `unresolvedUnknowns`, while v1 remains readable with an empty unknown set;
 - structured completion constrains Provider output shape but does not make Harness a JSON-Schema or domain verifier; callers must still decode and semantically admit the result under their own authority;

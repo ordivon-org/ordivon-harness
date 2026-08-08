@@ -18,8 +18,10 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
     "AgentTurnAdapter", "AgentTurnRequest", "AgentTurnResult",
-    "DeepSeekSettings", "DeepSeekTurnAdapter",
+    "CompiledHarnessAttempt", "DeepSeekSettings", "DeepSeekTurnAdapter",
     "HarnessBoundReference", "HarnessCorrelationContext", "HarnessExecutionBinding",
+    "HarnessExecutionMandate", "HarnessMandateConsumption",
+    "HarnessExecutionProfile", "HarnessExecutionStrategy",
     "DomainToolBridge", "DomainToolCatalog", "DomainToolLoopPlan", "DomainToolLoopRunner",
     "HarnessPrivacyPolicy", "HarnessRunContract", "HarnessRuntimeClient",
     "HarnessRuntimeClientError", "HarnessRuntimeErrorDetail", "HarnessRuntimeReference",
@@ -30,11 +32,13 @@ EXPECTED_API = {
     "OrdivonAgentLoop", "RunBudget", "RunStopCode", "STRUCTURED_COMPLETION_MODE",
     "SQLiteHarnessRunContinuityStore", "SQLiteHarnessRuntimeBridge", "SQLiteHarnessStore",
     "StandaloneHarnessExecution", "StandaloneHarnessRunner", "StandaloneToolBridge",
-    "decode_structured_completion_result", "structured_completion_contract_digest",
+    "compile_harness_attempt", "decode_structured_completion_result",
+    "structured_completion_contract_digest",
     "structured_completion_result_schema",
 }
 REQUIRED_MEMBERS = {
     "ordivon_harness/api.py", "ordivon_harness/completion.py", "ordivon_harness/core.py",
+    "ordivon_harness/mandate.py",
     "ordivon_harness/core_contracts.py", "ordivon_harness/independent_cli.py",
     "ordivon_harness/independent_result.py", "ordivon_harness/host_external_adapter.py",
     "ordivon_harness/sqlite_store.py", "ordivon_harness/standalone.py",

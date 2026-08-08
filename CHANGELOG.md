@@ -48,6 +48,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Added
 
+- caller-delegated `HarnessExecutionMandate`, `HarnessExecutionProfile`, `HarnessExecutionStrategy`, and pure `compile_harness_attempt()` separate objective/capability/economic delegation from one exact immutable Run attempt; aggregate Mandate enforcement covers allowed profile IDs plus total-token/wall-time envelopes, with later attempts requiring receipt-derived `HarnessMandateConsumption`; per-attempt model/Tool call limits remain Strategy parameters;
 - generic caller-defined `structured-result-v1` completion for DeepSeek: the Run Contract binds a result schema, the Provider conclusion Tool emits a structured result, and callers decode the canonical result without introducing Host/domain policy or a second durable result schema;
 - public `DomainToolCatalog`, `DomainToolBridge`, `DomainToolLoopPlan` and `DomainToolLoopRunner`;
 - deterministic domain catalog/grant identity and an inspectable execution identity binding Harness, Provider, domain Bridge and complete Loop budget;

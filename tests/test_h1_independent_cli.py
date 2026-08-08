@@ -39,6 +39,12 @@ class IndependentCliTests(unittest.TestCase):
         self.assertEqual(value["defaultAuthority"], "independent-harness-run")
         self.assertNotIn("hostCompatibilityCommand", value)
         self.assertFalse(value["toolBearingCliExecution"])
+        mandate = value["executionMandate"]
+        self.assertTrue(mandate["supported"])
+        self.assertEqual(mandate["authority"], "caller-delegated")
+        self.assertEqual(mandate["compilesTo"], "HarnessRunContract")
+        self.assertFalse(mandate["builtInStrategyPolicy"])
+        self.assertFalse(mandate["durableMandateStore"])
         profile = value["executionProfiles"][0]
         self.assertEqual(profile["profileId"], "deepseek-no-tool-v1")
         self.assertFalse(profile["runtimeRequired"])
