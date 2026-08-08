@@ -243,9 +243,16 @@
     {
       "claimId": "harness.cognition.pc17-durable-knowledge-promotion",
       "file": "harness-pc17-durable-knowledge-promotion-5a0530a.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "5a0530a247acdd2a8695643d65b9f5609bb4ef09",
-      "scope": "Current P-C1.7 acceptance: exact Tool cognition is attempt-local and reconstructed on any authorized fresh-process resume; materialized CAS bytes do not become cognition unless the Agent explicitly selects their exact pin into a successor committed WorkingSet; selected knowledge persists across attempts/processes until an Agent successor omits it; structural Tool privacy remains distinct from semantic taint tracking; no Memory/Promotion subsystem, persistence schema or recommended public API was added."
+      "scope": "Historical P-C1.7 durable-knowledge-promotion acceptance retained unchanged after P-C1.8 added an Agent-visible bounded catalog over earlier committed WorkingSet identities. Its storage-vs-cognition, explicit promotion/drop and attempt-local resume laws remain valid for 5a0530a, while P-C1.8 supersedes it as whole-current cognition verification."
+    },
+    {
+      "claimId": "harness.cognition.pc18-historical-cognition-recall",
+      "file": "harness-pc18-historical-cognition-recall-fceb781.json",
+      "status": "verified",
+      "implementationRevision": "fceb781d5b2f0ecc9acbc11d9e1fbcbec0fabfca",
+      "scope": "Current P-C1.8 acceptance: an opt-in Agent cognition control exposes a bounded deterministic catalog of earlier committed WorkingSet identities and exact pins only; materialized-but-unselected CAS objects are excluded; history inspection costs zero Runtime dispatch/external Tool budget, survives authorized clean resume, is Journal-revalidated against forged local results, and lets the Agent re-select historical pins through the existing transition law without adding semantic Memory search, SQLite schema or recommended public API. Real deepseek-v4-flash exercised history then re-selected the correct dropped K source, while repeated same-selection cognition churn remains explicitly unclaimed."
     }
   ]
 }
