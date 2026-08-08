@@ -132,6 +132,7 @@ from .store_ops import (
     verify_harness_backup,
 )
 from .working_view import (
+    AgentWorkingSetTransitionProposal,
     HarnessWorkingSetPin,
     HarnessWorkingSetSpec,
     HarnessWorkingView,
@@ -156,6 +157,7 @@ __all__ = [
     "SUPPORTED_DEEPSEEK_MODELS",
     "AgentLoopResult",
     "AgentRunConclusion",
+    "AgentWorkingSetTransitionProposal",
     "AgentToolCall",
     "AgentToolDefinition",
     "AgentTurnAdapter",

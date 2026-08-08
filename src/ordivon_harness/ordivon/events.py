@@ -26,6 +26,7 @@ _EVENT_KINDS = {
     "tool_call_cancel_requested",
     "tool_call_cancelled",
     "tool_call_reconciled",
+    "working_set_transition_applied",
     "conclusion_rejected",
     "run_stopped",
 }

@@ -72,6 +72,8 @@ Working View source material is model-visible content. Product-level materializa
 
 The mature Loop may also receive an ephemeral Working View projector. Provider disclosure still follows that projected view, but durable retention remains governed independently by the Contract. In particular, an ephemeral projection used by a `metadata-only` Run is not made durable merely because it became the Provider request for that turn; only its execution/request digests remain in Harness-managed persistence.
 
+Agent-owned WorkingSet transitions are a durable cognition feature rather than ephemeral Provider disclosure. They therefore require model-content retention authority: the exact already-known source pins, transition proposal and committed successor WorkingSet become part of Harness cognition history. `metadata-only` does not silently upgrade itself merely because a model asks to change its view; that transition is rejected unless the Contract authorizes the necessary retained model content. The transition is not Tool content merely because a Provider such as DeepSeek encodes it through function-calling on the wire.
+
 ## Structural versus semantic Tool provenance
 
 The model/tool flags enforce structural content boundaries, not information-flow taint tracking.

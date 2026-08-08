@@ -130,11 +130,15 @@ Durable event and request identities remain deterministic for idempotent replay.
 
 The mature `OrdivonAgentLoop` no longer requires the Provider request to be identical to the complete canonical Run-local message history. An optional internal `WorkingViewProjector` seam may supply the exact model-visible messages for each Provider turn while the Loop continues to retain canonical execution history for progress accounting, recovery and Tool correlation.
 
-The current `WorkingSetViewProjector` is deliberately narrow: it loads the current **committed** `HarnessWorkingSetSpec` and deterministically compiles its pinned exact sources into one `HarnessWorkingView`. It performs no Context discovery, ranking, RAG, Memory, summarization or automatic replan. The transition to a new Working Set must already have been made explicitly by the caller/domain/Agent integration.
+The current `WorkingSetViewProjector` is deliberately narrow: it loads the current **committed** `HarnessWorkingSetSpec` and deterministically compiles its pinned exact sources into one `HarnessWorkingView`. It performs no Context discovery, ranking, RAG, Memory, summarization or automatic source selection.
+
+An execution may explicitly grant an Agent-owned cognition transition surface. In that mode, one Provider turn can return an `AgentWorkingSetTransitionProposal` containing the exact already-known successor pins plus a bounded basis. This is a third Agent action category beside external Tool calls and a Run conclusion; it is not charged to the Tool budget and it cannot be mixed with either action in the same normalized turn. DeepSeek may encode the proposal as a function call on the wire, but the Adapter normalizes it as cognition state rather than an `AgentToolCall`.
+
+Continuity applies one accepted proposal as an atomic `replan → select exact pins → commit` Journal transaction under one Run lease. The proposal is bound to the exact Working View that produced it, competing proposals from that same view have one winner, exact replay is idempotent across fresh Store instances, and Continuity Doctor verifies the proposal/source-view/commit evidence rather than trusting a mechanically valid WorkingSet chain alone. Harness validates these laws but does not choose or repair the Agent's pins.
 
 When a Working Set exists, Provider claim revalidates under the Run lease that the exact `AgentTurnRequest` still matches the current committed Working View. A projection that became stale before claim is rejected before physical Provider dispatch. Trace records only the Working Set/View and message digests needed to audit the projection boundary.
 
-This projector remains an internal experimental seam and is not part of the recommended `ordivon_harness.api` facade.
+The projector, transition handler and DeepSeek transition switch remain experimental execution seams rather than part of the recommended `ordivon_harness.api` facade. The proposal value is available from `ordivon_harness.core` for caller-neutral integrations.
 
 ## Provider lifecycle
 

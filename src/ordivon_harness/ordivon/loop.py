@@ -8,7 +8,7 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
-from ..working_view import WorkingViewProjector
+from ..working_view import WorkingSetTransitionHandler, WorkingViewProjector
 from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
@@ -257,11 +257,17 @@ class OrdivonAgentLoop:
         assignment_deadline_ms: int | None = None,
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
         working_view_projector: WorkingViewProjector | None = None,
+        working_set_transition_handler: WorkingSetTransitionHandler | None = None,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
         self.budget = budget
         self.working_view_projector = working_view_projector
+        self.working_set_transition_handler = working_set_transition_handler
+        if working_set_transition_handler is not None and working_view_projector is None:
+            raise ValueError(
+                "Agent Working Set transitions require a Working View projector"
+            )
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
             lambda: time.monotonic_ns() // 1_000_000
@@ -1744,6 +1750,74 @@ class OrdivonAgentLoop:
                     detail=f"duplicate Model Call identity: {result.model_call_id}",
                 )
             seen_model_call_ids.add(result.model_call_id)
+            if result.working_set_transition is not None:
+                handler = self.working_set_transition_handler
+                if handler is None:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=(
+                            "Agent proposed a Working Set transition but this Loop "
+                            "did not grant a cognition transition surface"
+                        ),
+                    )
+                try:
+                    committed_working_set = handler.apply_working_set_transition(
+                        result.working_set_transition,
+                        source_working_view_digest=request.context_digest,
+                    )
+                except ValueError as error:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=f"Working Set transition rejected: {error}",
+                    )
+                except Exception as error:  # noqa: BLE001 - durable cognition admission failure terminates this Run.
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=(
+                            "Working Set transition admission failed: "
+                            f"{type(error).__name__}: {error}"
+                        ),
+                    )
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": result.content,
+                        "workingSetTransition": result.working_set_transition.to_dict(),
+                    }
+                )
+                observation_only_turns = 0
+                no_progress_turns = 0
+                recorder.record(
+                    "working_set_transition_applied",
+                    {
+                        "turnId": turn_id,
+                        "proposalDigest": result.working_set_transition.digest,
+                        "sourceWorkingViewDigest": request.context_digest,
+                        "nextAttemptId": committed_working_set.attempt_id,
+                        "committedWorkingSetDigest": committed_working_set.digest,
+                    },
+                )
+                recorder.record(
+                    "run_progress_evaluated",
+                    {
+                        "turnId": turn_id,
+                        "observationOnly": False,
+                        "actionProgress": True,
+                        "newEvidence": False,
+                        "observationOnlyTurns": observation_only_turns,
+                        "noProgressTurns": no_progress_turns,
+                    },
+                )
+                try:
+                    bind_run_state()
+                except ToolBridgeError as state_error:
+                    return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                except Exception as state_error:  # noqa: BLE001
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=f"{type(state_error).__name__}: {state_error}",
+                    )
+                continue
             if result.conclusion is not None:
                 conclusion_validator = getattr(
                     self.tool_bridge, "validate_conclusion", None

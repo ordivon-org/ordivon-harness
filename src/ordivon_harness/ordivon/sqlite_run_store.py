@@ -21,6 +21,7 @@ from ..protocol import (
 )
 from ..run_state import HarnessRunState, state_from_dict
 from ..working_view import (
+    AgentWorkingSetTransitionProposal,
     HarnessWorkingSetSpec,
     HarnessWorkingViewSource,
     compile_working_view,
@@ -34,6 +35,7 @@ from ..sqlite_store import (
 )
 from ..store import (
     HarnessEventAdmission,
+    HarnessEventWrite,
     HarnessRunEventRecord,
     HarnessRunLease,
     StoredHarnessObject,
@@ -294,6 +296,190 @@ class SQLiteHarnessRunContinuityStore:
         finally:
             self.store.release_run_lease(lease)
 
+    def apply_working_set_transition(
+        self,
+        proposal: AgentWorkingSetTransitionProposal,
+        *,
+        source_working_view_digest: str,
+    ) -> HarnessWorkingSetSpec:
+        """Atomically admit one Agent-authored successor cognition attempt.
+
+        The Agent supplies the exact successor pins and basis. Harness only
+        verifies that those immutable source identities exist under the current
+        privacy authority and that the proposal still extends the committed
+        Working View that produced it. Replan, complete selection and commit are
+        one bounded Journal transaction under one Run lease.
+        """
+        if not self.contract.privacy.allow_model_content:
+            raise ValueError(
+                "Agent Working Set transition requires permission to retain model content"
+            )
+
+        def source_objects_for(
+            pins,
+        ) -> tuple[StoredHarnessObject, ...]:
+            objects: list[StoredHarnessObject] = []
+            for pin in pins:
+                raw = self.store.get_object(
+                    pin.resolved_digest,
+                    expected_kind="harness-working-view-source",
+                )
+                if not isinstance(raw, dict):
+                    raise TypeError("Working Set transition source object is invalid")
+                source = HarnessWorkingViewSource.from_dict(raw)
+                if (
+                    source.logical_ref != pin.logical_ref
+                    or source.logical_generation != pin.logical_generation
+                ):
+                    raise ValueError(
+                        "Working Set transition pin differs from its exact source"
+                    )
+                self._require_working_view_source_authorized(source)
+                objects.append(self.store.inspect_object(pin.resolved_digest))
+            return tuple(objects)
+
+        def existing_transition() -> HarnessWorkingSetSpec | None:
+            current = self._load_current_working_set_or_none()
+            if (
+                current is None
+                or not current.committed
+                or current.attempt_id != proposal.next_attempt_id
+                or current.pins != proposal.pins
+                or current.commit_basis != proposal.basis
+            ):
+                return None
+            history = self.store.list_run_events(self.harness_run_id)
+            attempt_events = [
+                event
+                for event in history
+                if event.event_kind == "harness.working-set-recorded"
+                and event.data.get("attemptId") == proposal.next_attempt_id
+            ]
+            if len(attempt_events) != 3:
+                return None
+            attempt_specs = [
+                self._working_set_from_event(event) for event in attempt_events
+            ]
+            if [spec.revision for spec in attempt_specs] != [1, 2, 3]:
+                return None
+            if any(
+                event.data.get("transitionProposalDigest") != proposal.digest
+                or event.data.get("sourceWorkingViewDigest")
+                != source_working_view_digest
+                for event in attempt_events
+            ):
+                return None
+            first = attempt_specs[0]
+            if first.previous_digest is None:
+                return None
+            predecessor = next(
+                (
+                    self._working_set_from_event(event)
+                    for event in history
+                    if event.event_kind == "harness.working-set-recorded"
+                    and event.data.get("workingSetDigest") == first.previous_digest
+                ),
+                None,
+            )
+            if predecessor is None or not predecessor.committed:
+                return None
+            if compile_working_view(predecessor, self.store).digest != source_working_view_digest:
+                return None
+            return current
+
+        replay = existing_transition()
+        if replay is not None:
+            return replay
+        source_objects = source_objects_for(proposal.pins)
+        now_ms = self.clock_ms()
+        lease = self._acquire_lease(
+            "working-set-transition", proposal.digest, now_ms=now_ms
+        )
+        try:
+            replay = existing_transition()
+            if replay is not None:
+                return replay
+            current = self._load_current_working_set_or_none()
+            if current is None or not current.committed:
+                raise ValueError(
+                    "Agent Working Set transition requires a committed predecessor"
+                )
+            if proposal.next_attempt_id == current.attempt_id:
+                raise ValueError(
+                    "Agent Working Set transition requires a new attempt identity"
+                )
+            current_view = compile_working_view(current, self.store)
+            if current_view.digest != source_working_view_digest:
+                raise HarnessProviderCallRequestMismatch(
+                    "Agent Working Set transition source view is no longer current"
+                )
+            provider = self._load_current_provider_call_or_none()
+            if provider is not None and provider.record.status in {
+                HarnessProviderCallStatus.CLAIMED,
+                HarnessProviderCallStatus.DISPATCHING,
+                HarnessProviderCallStatus.UNKNOWN,
+            }:
+                raise HarnessProviderCallRecoveryRequired(
+                    "Working Set cannot change while a Provider Call may still act on the prior view"
+                )
+
+            replanned = current.replan(proposal.next_attempt_id)
+            selected = replanned.select_pins(proposal.pins)
+            committed = selected.commit(proposal.basis)
+            chain = (replanned, selected, committed)
+            self._require_working_set_predecessor(current, replanned)
+            self._require_working_set_predecessor(replanned, selected)
+            self._require_working_set_predecessor(selected, committed)
+
+            proposal_object = self.store.put_object(
+                proposal.to_dict(), kind="agent-working-set-transition-proposal"
+            )
+            spec_objects = tuple(
+                self.store.put_object(
+                    spec.to_dict(), kind="harness-working-set-spec"
+                )
+                for spec in chain
+            )
+            recorded_at_ms = self._recorded_time(now_ms)
+            prior_event_id = self._latest_event_id()
+            writes: list[HarnessEventWrite] = []
+            caused_by = prior_event_id
+            for spec, spec_object in zip(chain, spec_objects, strict=True):
+                event_id = self._event_id("working-set", spec.digest)
+                refs = (spec_object, proposal_object)
+                if spec.pins:
+                    refs += source_objects
+                writes.append(
+                    HarnessEventWrite(
+                        event_id=event_id,
+                        event_kind="harness.working-set-recorded",
+                        data={
+                            "workingSetDigest": spec.digest,
+                            "workingSetObjectDigest": spec_object.digest,
+                            "attemptId": spec.attempt_id,
+                            "workingSetRevision": spec.revision,
+                            "committed": spec.committed,
+                            "transitionProposalDigest": proposal.digest,
+                            "transitionProposalObjectDigest": proposal_object.digest,
+                            "sourceWorkingViewDigest": source_working_view_digest,
+                        },
+                        recorded_at_ms=recorded_at_ms,
+                        caused_by_event_id=caused_by,
+                        referenced_objects=refs,
+                    )
+                )
+                caused_by = event_id
+            self.store.append_events(
+                harness_run_id=self.harness_run_id,
+                events=tuple(writes),
+                expected_revision=lease.run_revision,
+                lease=lease,
+                lease_checked_at_ms=self.clock_ms(),
+            )
+            return committed
+        finally:
+            self.store.release_run_lease(lease)
+
     def _validate_working_set_transition(
         self, spec: HarnessWorkingSetSpec
     ) -> bool:
@@ -390,6 +576,82 @@ class SQLiteHarnessRunContinuityStore:
                 raise ValueError("Harness Working Set source identity differs")
             self._require_working_view_source_authorized(source)
         return spec
+
+    def _validate_working_set_transition_evidence(
+        self,
+        event: HarnessRunEventRecord,
+        spec: HarnessWorkingSetSpec,
+        *,
+        previous_event: HarnessRunEventRecord | None,
+        previous_spec: HarnessWorkingSetSpec | None,
+    ) -> None:
+        fields = {
+            "transitionProposalDigest",
+            "transitionProposalObjectDigest",
+            "sourceWorkingViewDigest",
+        }
+        present = fields & set(event.data)
+        if not present:
+            return
+        if present != fields:
+            raise ValueError("Working Set transition evidence is incomplete")
+        proposal_digest = self._required_digest(
+            event.data, "transitionProposalDigest"
+        )
+        proposal_object_digest = self._required_digest(
+            event.data, "transitionProposalObjectDigest"
+        )
+        source_view_digest = self._required_digest(
+            event.data, "sourceWorkingViewDigest"
+        )
+        raw = self.store.get_object(
+            proposal_object_digest,
+            expected_kind="agent-working-set-transition-proposal",
+        )
+        if not isinstance(raw, dict):
+            raise TypeError("Agent Working Set transition proposal object is invalid")
+        proposal = AgentWorkingSetTransitionProposal.from_dict(raw)
+        if proposal.digest != proposal_digest:
+            raise ValueError("Working Set transition proposal digest differs")
+        if spec.attempt_id != proposal.next_attempt_id:
+            raise ValueError("Working Set transition attempt differs from its proposal")
+
+        if spec.revision == 1:
+            if previous_spec is None or not previous_spec.committed:
+                raise ValueError(
+                    "Working Set transition does not extend a committed predecessor"
+                )
+            if compile_working_view(previous_spec, self.store).digest != source_view_digest:
+                raise ValueError(
+                    "Working Set transition source view differs from its predecessor"
+                )
+            if spec.pins or spec.committed:
+                raise ValueError("Working Set transition replan revision is invalid")
+            return
+
+        if previous_event is None or previous_spec is None:
+            raise ValueError("Working Set transition continuation has no predecessor")
+        for field in fields:
+            if previous_event.data.get(field) != event.data.get(field):
+                raise ValueError(
+                    "Working Set transition evidence changed within one transaction"
+                )
+        if previous_spec.attempt_id != spec.attempt_id:
+            raise ValueError("Working Set transition attempt changed within transaction")
+        if spec.revision == 2:
+            if previous_spec.revision != 1 or spec.pins != proposal.pins or spec.committed:
+                raise ValueError("Working Set transition selection revision is invalid")
+            return
+        if spec.revision == 3:
+            if (
+                previous_spec.revision != 2
+                or spec.pins != proposal.pins
+                or not spec.committed
+                or spec.commit_basis != proposal.basis
+            ):
+                raise ValueError("Working Set transition commit revision is invalid")
+            return
+        raise ValueError("Working Set transition has an unsupported revision")
 
     def _require_current_working_view_request(
         self,
@@ -1333,6 +1595,7 @@ class SQLiteHarnessRunContinuityStore:
         snapshots = 0
         working_sets = 0
         previous_working_set: HarnessWorkingSetSpec | None = None
+        previous_working_set_event: HarnessRunEventRecord | None = None
         for event in events:
             if event.event_kind in _PROVIDER_EVENT_KINDS:
                 self._load_provider_from_event(event)
@@ -1346,7 +1609,14 @@ class SQLiteHarnessRunContinuityStore:
             if event.event_kind == "harness.working-set-recorded":
                 spec = self._working_set_from_event(event)
                 self._require_working_set_predecessor(previous_working_set, spec)
+                self._validate_working_set_transition_evidence(
+                    event,
+                    spec,
+                    previous_event=previous_working_set_event,
+                    previous_spec=previous_working_set,
+                )
                 previous_working_set = spec
+                previous_working_set_event = event
                 working_sets += 1
         from ..independent_result import IndependentRunRecorder
 

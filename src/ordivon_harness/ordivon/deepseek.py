@@ -26,6 +26,10 @@ from ..completion import (
     structured_completion_contract_digest,
     structured_completion_result_schema,
 )
+from ..working_view import (
+    AgentWorkingSetTransitionProposal,
+    HarnessWorkingSetPin,
+)
 from .control import ExecutionControl
 from .model import (
     AgentRunConclusion,
@@ -46,6 +50,7 @@ DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 SUPPORTED_DEEPSEEK_MODELS = ("deepseek-v4-flash", "deepseek-v4-pro")
 DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID = "deepseek:default"
 _CONCLUSION_TOOL_NAME = "submit_run_conclusion"
+_WORKING_SET_TRANSITION_TOOL_NAME = "propose_working_set_transition"
 
 
 def _text(value: str, label: str, *, max_bytes: int = 2_048) -> str:
@@ -507,6 +512,89 @@ def _conclusion_tool(
     }
 
 
+def _working_set_transition_tool() -> dict[str, JsonValue]:
+    pin_schema: dict[str, JsonValue] = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "slot": {"type": "string", "minLength": 1},
+            "logical_ref": {"type": "string", "minLength": 1},
+            "logical_generation": {"type": "string", "minLength": 1},
+            "resolved_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$",
+            },
+        },
+        "required": [
+            "slot",
+            "logical_ref",
+            "logical_generation",
+            "resolved_digest",
+        ],
+    }
+    return {
+        "type": "function",
+        "function": {
+            "name": _WORKING_SET_TRANSITION_TOOL_NAME,
+            "description": (
+                "Choose the exact already-known sources that should form the next "
+                "committed Working Set. This changes only your model-visible cognition "
+                "view; it is not an external Tool effect and does not discover sources."
+            ),
+            "parameters": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "next_attempt_id": {"type": "string", "minLength": 1},
+                    "pins": {
+                        "type": "array",
+                        "items": pin_schema,
+                        "maxItems": 128,
+                    },
+                    "basis": {"type": "string", "minLength": 1},
+                },
+                "required": ["next_attempt_id", "pins", "basis"],
+            },
+        },
+    }
+
+
+def _parse_working_set_transition(
+    arguments: dict[str, JsonValue],
+) -> AgentWorkingSetTransitionProposal:
+    if set(arguments) != {"next_attempt_id", "pins", "basis"}:
+        raise ValueError("DeepSeek Working Set transition fields differ")
+    next_attempt_id = arguments["next_attempt_id"]
+    basis = arguments["basis"]
+    raw_pins = arguments["pins"]
+    if not isinstance(next_attempt_id, str) or not isinstance(basis, str):
+        raise TypeError("DeepSeek Working Set transition text fields are invalid")
+    if not isinstance(raw_pins, list) or any(not isinstance(item, dict) for item in raw_pins):
+        raise TypeError("DeepSeek Working Set transition pins must be objects")
+    pins: list[HarnessWorkingSetPin] = []
+    for raw_pin in raw_pins:
+        if set(raw_pin) != {
+            "slot",
+            "logical_ref",
+            "logical_generation",
+            "resolved_digest",
+        }:
+            raise ValueError("DeepSeek Working Set transition pin fields differ")
+        pins.append(
+            HarnessWorkingSetPin(
+                slot=raw_pin["slot"],
+                logical_ref=raw_pin["logical_ref"],
+                logical_generation=raw_pin["logical_generation"],
+                resolved_digest=raw_pin["resolved_digest"],
+            )
+        )
+    return AgentWorkingSetTransitionProposal(
+        next_attempt_id=next_attempt_id,
+        pins=tuple(sorted(pins, key=lambda pin: pin.slot)),
+        basis=basis,
+    )
+
+
 def _provider_tool(tool: AgentToolDefinition) -> dict[str, JsonValue]:
     return {
         "type": "function",
@@ -695,8 +783,10 @@ class DeepSeekTurnAdapter:
         *,
         transport: DeepSeekTransport | None = None,
         completion_contract: Mapping[str, JsonValue] | None = None,
+        working_set_transitions: bool = False,
     ) -> None:
         self.settings = settings
+        self.working_set_transitions = working_set_transitions
         self.model_id = settings.model
         self.transport = transport or HttpClientDeepSeekTransport()
         self._completion_contract = (
@@ -826,11 +916,16 @@ class DeepSeekTurnAdapter:
         self, request: AgentTurnRequest
     ) -> tuple[set[str], str, dict[str, str], bytes]:
         allowed_tool_names = {tool.name for tool in request.tools}
-        if _CONCLUSION_TOOL_NAME in allowed_tool_names:
+        reserved = {_CONCLUSION_TOOL_NAME, _WORKING_SET_TRANSITION_TOOL_NAME}
+        collisions = allowed_tool_names & reserved
+        if collisions:
             raise ValueError(
-                "Runtime Tool catalog collides with the Harness conclusion Tool"
+                "Runtime Tool catalog collides with Harness control Tools: "
+                + ", ".join(sorted(collisions))
             )
         tools = [_provider_tool(tool) for tool in request.tools]
+        if self.working_set_transitions:
+            tools.append(_working_set_transition_tool())
         tools.append(_conclusion_tool(self._structured_result_schema))
         body_value: dict[str, JsonValue] = {
             "model": self.settings.model,
@@ -917,6 +1012,7 @@ class DeepSeekTurnAdapter:
 
         runtime_calls: list[AgentToolCall] = []
         conclusion: AgentRunConclusion | None = None
+        working_set_transition: AgentWorkingSetTransitionProposal | None = None
 
         def invalid_call(
             call_id: str,
@@ -950,13 +1046,16 @@ class DeepSeekTurnAdapter:
             raw_arguments = function.get("arguments")
             if not isinstance(name, str) or not isinstance(raw_arguments, str):
                 raise TypeError("DeepSeek Tool Call name or arguments are invalid")
+            cognition_call = name == _WORKING_SET_TRANSITION_TOOL_NAME
+            cognition_allowed = cognition_call and self.working_set_transitions
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
             except ValueError:
-                if (
-                    name != _CONCLUSION_TOOL_NAME
-                    and name not in allowed_tool_names
-                ):
+                if cognition_allowed:
+                    raise ValueError(
+                        "DeepSeek Working Set transition arguments are invalid JSON"
+                    )
+                if name != _CONCLUSION_TOOL_NAME and name not in allowed_tool_names:
                     raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(
                     invalid_call(
@@ -968,10 +1067,11 @@ class DeepSeekTurnAdapter:
                 )
                 continue
             if not isinstance(arguments, dict):
-                if (
-                    name != _CONCLUSION_TOOL_NAME
-                    and name not in allowed_tool_names
-                ):
+                if cognition_allowed:
+                    raise ValueError(
+                        "DeepSeek Working Set transition arguments must be an object"
+                    )
+                if name != _CONCLUSION_TOOL_NAME and name not in allowed_tool_names:
                     raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(
                     invalid_call(
@@ -1009,11 +1109,32 @@ class DeepSeekTurnAdapter:
                             dict(arguments),
                         )
                     )
+            elif cognition_call:
+                if not self.working_set_transitions:
+                    raise ValueError(
+                        "DeepSeek called the unavailable Working Set transition control"
+                    )
+                if working_set_transition is not None:
+                    raise ValueError(
+                        "DeepSeek emitted multiple Working Set transitions in one turn"
+                    )
+                try:
+                    working_set_transition = _parse_working_set_transition(
+                        dict(arguments)
+                    )
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"invalid DeepSeek Working Set transition: {error}"
+                    ) from error
             else:
                 if name not in allowed_tool_names:
                     raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(AgentToolCall(call_id, name, dict(arguments)))
 
+        if working_set_transition is not None and (runtime_calls or conclusion is not None):
+            raise ValueError(
+                "DeepSeek Working Set transition cannot be mixed with Tools or conclusion"
+            )
         invalid_calls = [
             call for call in runtime_calls if call.argument_error is not None
         ]
@@ -1069,4 +1190,5 @@ class DeepSeekTurnAdapter:
             finish_reason=finish_reason,
             raw_response_digest=raw_digest,
             effective_model_id=response_model,
+            working_set_transition=working_set_transition,
         )

@@ -6,6 +6,8 @@ from typing import Any, Protocol
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
+from ..working_view import AgentWorkingSetTransitionProposal
+
 
 def _exact(value: dict[str, Any], expected: set[str], label: str) -> None:
     if set(value) != expected:
@@ -333,6 +335,7 @@ class AgentTurnResult:
     finish_reason: str
     raw_response_digest: str
     effective_model_id: str | None = None
+    working_set_transition: AgentWorkingSetTransitionProposal | None = None
 
     def __post_init__(self) -> None:
         _text(self.model_call_id, "Model Call identity", max_bytes=300)
@@ -342,12 +345,13 @@ class AgentTurnResult:
         call_ids = [call.tool_call_id for call in self.tool_calls]
         if len(call_ids) != len(set(call_ids)):
             raise ValueError("Agent turn Tool Call identities must be unique")
-        if self.conclusion is not None and self.tool_calls:
+        actions = int(bool(self.tool_calls)) + int(self.conclusion is not None) + int(
+            self.working_set_transition is not None
+        )
+        if actions != 1:
             raise ValueError(
-                "Agent turn cannot request Tools and conclude simultaneously"
+                "Agent turn must choose exactly one of Tool Calls, conclusion, or Working Set transition"
             )
-        if not self.tool_calls and self.conclusion is None:
-            raise ValueError("Agent turn must request a Tool or provide a conclusion")
         validate_json_value(self.usage)
         _text(self.finish_reason, "model finish reason", max_bytes=300)
         _digest(self.raw_response_digest, "raw model response digest")
@@ -379,6 +383,8 @@ class AgentTurnResult:
         }
         if self.effective_model_id is not None:
             value["effectiveModelId"] = self.effective_model_id
+        if self.working_set_transition is not None:
+            value["workingSetTransition"] = self.working_set_transition.to_dict()
         return value
 
     @classmethod
@@ -395,11 +401,11 @@ class AgentTurnResult:
             "finishReason",
             "rawResponseDigest",
         }
-        current_fields = base_fields | {"effectiveModelId"}
-        if set(value) not in {frozenset(base_fields), frozenset(current_fields)}:
+        optional_fields = {"effectiveModelId", "workingSetTransition"}
+        if not base_fields.issubset(value) or set(value) - (base_fields | optional_fields):
             raise ValueError(
                 "AgentTurnResult fields differ: "
-                f"{sorted(set(value) ^ current_fields)}"
+                f"{sorted(set(value) ^ (base_fields | optional_fields))}"
             )
         if (
             type(value["schemaVersion"]) is not int
@@ -421,6 +427,11 @@ class AgentTurnResult:
         raw_conclusion = value["conclusion"]
         if raw_conclusion is not None and not isinstance(raw_conclusion, dict):
             raise ValueError("AgentTurnResult conclusion must be an object or null")
+        raw_transition = value.get("workingSetTransition")
+        if raw_transition is not None and not isinstance(raw_transition, dict):
+            raise ValueError(
+                "AgentTurnResult Working Set transition must be an object or null"
+            )
         raw_usage = value["usage"]
         if not isinstance(raw_usage, dict):
             raise ValueError("AgentTurnResult usage must be an object")
@@ -438,6 +449,11 @@ class AgentTurnResult:
             finish_reason=value["finishReason"],
             raw_response_digest=value["rawResponseDigest"],
             effective_model_id=value.get("effectiveModelId"),
+            working_set_transition=(
+                None
+                if raw_transition is None
+                else AgentWorkingSetTransitionProposal.from_dict(raw_transition)
+            ),
         )
 
 

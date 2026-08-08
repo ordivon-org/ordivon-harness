@@ -119,6 +119,61 @@ class HarnessWorkingSetPin:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentWorkingSetTransitionProposal:
+    """One Agent-authored proposal for the next committed cognition attempt.
+
+    The Agent chooses exact already-known source pins and explains the transition.
+    Harness does not rank, discover or repair those choices; it only validates
+    that the proposal can legally extend the exact Working View that produced it.
+    """
+
+    next_attempt_id: str
+    pins: tuple[HarnessWorkingSetPin, ...]
+    basis: str
+
+    def __post_init__(self) -> None:
+        _text(self.next_attempt_id, "next Working Set attempt identity")
+        _text(self.basis, "Working Set transition basis", max_bytes=2_048)
+        slots = [pin.slot for pin in self.pins]
+        if len(slots) != len(set(slots)):
+            raise ValueError("Working Set transition slots must be unique")
+        if tuple(sorted(self.pins, key=lambda pin: pin.slot)) != self.pins:
+            raise ValueError("Working Set transition pins must be sorted by slot")
+
+    @property
+    def digest(self) -> str:
+        return canonical_digest(self.to_dict())
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "schemaVersion": 1,
+            "kind": "ordivon.agent-working-set-transition-proposal",
+            "nextAttemptId": self.next_attempt_id,
+            "pins": [pin.to_dict() for pin in self.pins],
+            "basis": self.basis,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentWorkingSetTransitionProposal:
+        expected = {"schemaVersion", "kind", "nextAttemptId", "pins", "basis"}
+        if set(value) != expected:
+            raise ValueError("AgentWorkingSetTransitionProposal fields differ")
+        raw_pins = value["pins"]
+        if (
+            value["schemaVersion"] != 1
+            or value["kind"] != "ordivon.agent-working-set-transition-proposal"
+            or not isinstance(raw_pins, list)
+            or any(not isinstance(item, dict) for item in raw_pins)
+        ):
+            raise ValueError("AgentWorkingSetTransitionProposal is invalid")
+        return cls(
+            next_attempt_id=value["nextAttemptId"],
+            pins=tuple(HarnessWorkingSetPin.from_dict(item) for item in raw_pins),
+            basis=value["basis"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessWorkingSetSpec:
     """Agent-owned current selection state, distinct from durable Run history."""
 
@@ -226,6 +281,22 @@ class HarnessWorkingSetSpec:
             pins=tuple(by_slot[key] for key in sorted(by_slot)),
         )
 
+    def select_pins(
+        self, pins: tuple[HarnessWorkingSetPin, ...]
+    ) -> HarnessWorkingSetSpec:
+        """Replace the complete mutable selection in one revision."""
+        self._require_mutable()
+        ordered = tuple(sorted(pins, key=lambda pin: pin.slot))
+        if len({pin.slot for pin in ordered}) != len(ordered):
+            raise ValueError("Working Set selection slots must be unique")
+        return HarnessWorkingSetSpec(
+            attempt_id=self.attempt_id,
+            revision=self.revision + 1,
+            previous_digest=self.digest,
+            parent_attempt_id=self.parent_attempt_id,
+            pins=ordered,
+        )
+
     def remove_pin(self, slot: str) -> HarnessWorkingSetSpec:
         self._require_mutable()
         _text(slot, "Working Set slot", max_bytes=160)
@@ -307,6 +378,17 @@ class WorkingViewProjector(Protocol):
     def project(self) -> HarnessWorkingView: ...
 
 
+class WorkingSetTransitionHandler(Protocol):
+    """Admit one Agent-authored successor Working Set against its source view."""
+
+    def apply_working_set_transition(
+        self,
+        proposal: AgentWorkingSetTransitionProposal,
+        *,
+        source_working_view_digest: str,
+    ) -> HarnessWorkingSetSpec: ...
+
+
 @dataclass(frozen=True, slots=True)
 class WorkingSetViewProjector:
     """Compile each Provider turn from the current committed Working Set.
@@ -355,10 +437,12 @@ def compile_working_view(
 
 
 __all__ = [
+    "AgentWorkingSetTransitionProposal",
     "HarnessWorkingSetPin",
     "HarnessWorkingSetSpec",
     "HarnessWorkingView",
     "HarnessWorkingViewSource",
+    "WorkingSetTransitionHandler",
     "WorkingSetViewProjector",
     "WorkingViewProjector",
     "compile_working_view",
