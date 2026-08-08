@@ -1,0 +1,57 @@
+{
+  "architecture": {
+    "authorityReuse": "Cross-process transient cognition is reconstructed from existing Journal/CAS authority rather than a new conversation store: current committed WorkingSet event ordering, exact completed Provider Tool results, durable Tool intents/receipts and exact Tool Observations.",
+    "attemptBoundary": "The current committed WorkingSet Journal event is the durable cognition-attempt boundary. Only completed Provider Tool turns and Tool evidence recorded after that event may contribute to the recovered transient suffix.",
+    "providerFaithfulExchange": "Recovery rebuilds the same complete model-visible structure proven in P-C1.5: the exact Provider-authored assistant toolCalls message followed by the exact bound Tool Observation messages in call order.",
+    "effectContinuity": "An active Tool whose terminal receipt already exists is reconciled from retained evidence without physical redispatch; pending calls from the same Provider-authored Tool batch may execute once under the existing Tool fence and budget laws.",
+    "privacyLaw": "Exact cognition reconstruction requires both model-content and Tool-content retention authority. Digest-only receipt/fence evidence remains sufficient to prevent redispatch but is deliberately insufficient to recreate omitted model-visible bytes.",
+    "schemaChange": "No SQLite schema, Protocol codec, generic conversation store, CandidateSet, RAG, Memory or epistemic engine was added."
+  },
+  "behavior": {
+    "initialCounterexample": "Before P-C1.6, a hard process loss after Tool A had physically completed and its receipt was durable could be resumed safely at the effect layer: A was not redispatched and pending Tool B executed once, but the next projected Provider request contained only the base WorkingView and lacked the Tool exchange entirely.",
+    "hardCrashRecovery": "A BaseException was injected immediately after the first Tool observation became durable, before the Loop could consume that observation. A fresh Store/Continuity/Runtime bridge resumed from the EFFECT_DISPATCH_PENDING Snapshot, reconciled already-completed Tool A with zero redispatch, executed pending Tool B once, reconstructed assistant(toolCalls=[A,B])+ObservationA+ObservationB, and supplied that exact suffix after the committed base WorkingView to the next Provider turn.",
+    "successorAttemptIsolation": "A three-process experiment recovered Tool exchange A, let the Agent author a WorkingSet transition to B, then crashed after a Tool effect under B. The third process restored B plus B's Tool exchange and did not expose A's Tool Call identity or A's transient cognition to the Provider.",
+    "privacyCounterexample": "With model-content retention allowed but Tool-content retention denied, the physical Tool effect still produced durable digest/receipt fencing, while the Snapshot omitted exact Tool-bearing transcript content and the Tool event omitted the exact Observation object. Fresh-process resume failed closed with rehydration required and performed zero new Runtime dispatches.",
+    "doctorAndAdmission": "Recovered requests pass the same WorkingView Provider-admission law and Continuity Doctor. Provider overlay validation now also filters completed Provider Tool evidence to events after the WorkingSet attempt boundary, preventing predecessor-attempt evidence from authorizing a successor view.",
+    "trace": "A digest-only transient_tool_exchange_restored Trace event records current WorkingSet identity, restored message count and restored exchange digest without adding a second cognition authority."
+  },
+  "checks": {
+    "acceptanceCheckPassed": true,
+    "acceptanceRunPassed": true,
+    "cliCommandsVerified": 14,
+    "concurrencyFocusedRerunsPassed": 5,
+    "dependencyContractPassed": true,
+    "deterministicTests": 215,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "newConversationStoreAdded": false,
+    "newGenericContextOrEpistemicEngineAdded": false,
+    "newProtocolCodecAdded": false,
+    "newSQLiteSchemaAdded": false,
+    "pc16FocusedTests": 3,
+    "predecessorAttemptToolExchangeLeaked": false,
+    "privacyWithoutToolContentFailsClosed": true,
+    "recommendedApiExportsRecoverySeam": false,
+    "recoveredCompletedToolRedispatches": 0,
+    "recoveredPendingToolPhysicalDispatches": 1,
+    "ruffExplicit01514Passed": true,
+    "ruffOfficial01517Passed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.6 demonstrates that transient Tool cognition does not require a second durable conversation authority. At the existing Tool-effect Snapshot boundary, a fresh process can derive the current cognition attempt from WorkingSet Journal order, combine exact completed Provider Tool results with terminal Tool intent/receipt/Observation evidence, reconcile completed effects without redispatch, execute only pending effects, and reconstruct a Provider-faithful Tool exchange before the next Agent turn. The result preserves the P-C1.5 law that Harness owns effect and provenance constraints while the Agent owns cognition and closure, now across a bounded process-loss boundary.",
+  "implementationSourceRevision": "253f7927ce7d62ecaa77013b5b40c5b2f4d2f116",
+  "kind": "ordivon.harness-pc16-cross-process-tool-exchange-acceptance",
+  "knownLimits": [
+    "The demonstrated recovery boundary is a durable Tool-effect Snapshot with an active Tool Step. This receipt does not claim arbitrary recovery from every possible process-loss point in the Agent Loop.",
+    "A local model-correctable Tool rejection has no physical Tool receipt. If the process dies before a later durable state captures that correction, P-C1.6 does not claim that the local correction itself is reconstructable.",
+    "Exact cross-process Tool cognition recovery requires retained model and Tool content. Metadata-only or model-only retention can still fence completed physical effects but cannot recreate omitted Tool-bearing transcript bytes without caller-authorized rehydration.",
+    "The experiments use deterministic Scripted Provider results. P-C1.5 already proved the Provider-faithful assistant(tool_calls)+tool message constraint against real deepseek-v4-flash; P-C1.6 proves fresh-process authority and recovery semantics rather than model competence.",
+    "The recovery seam is internal to SQLite Tool-bearing execution paths and is not exported through the recommended public API.",
+    "One full-suite execution reproduced the pre-existing concurrent Runtime-dispatch scheduling wobble observed in P-C1.5. The exact test then passed five isolated reruns, a subsequent quiet 215-test full suite passed, and the unchanged official local-acceptance run passed completely; no reproducible P-C1.6 concurrency regression was established.",
+    "No Runtime, World, Finance or Host repository was changed."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}

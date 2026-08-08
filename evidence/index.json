@@ -229,9 +229,16 @@
     {
       "claimId": "harness.cognition.pc15-epistemic-control",
       "file": "harness-pc15-epistemic-control-9e65feb.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9e65feb5045aa64ab2da69dc2645bb80bfa93866",
-      "scope": "Current P-C1.5 acceptance: Provider-visible Tool defaults match lowering, projected current-attempt Tool evidence is a complete Provider-authored exchange, DeepSeek receives current budget/capability execution control separately from task Context, observation/no-progress and exhausted-Tool limits close external effect capability before an Agent closure turn, revoked historical Runtime Tool calls are locally correctable with zero dispatch, and real deepseek-v4-flash authored bounded candidate_completed/needs_input outcomes without a Harness-owned epistemic evaluator."
+      "scope": "Historical P-C1.5 epistemic-control acceptance retained unchanged after P-C1.6 added bounded fresh-process restoration of current-attempt Tool exchanges. Its Provider-faithful Tool transcript, execution-control, effect-gate and Agent-authored closure results remain valid for 9e65feb, while P-C1.6 supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc16-cross-process-tool-exchange",
+      "file": "harness-pc16-cross-process-tool-exchange-253f792.json",
+      "status": "verified",
+      "implementationRevision": "253f7927ce7d62ecaa77013b5b40c5b2f4d2f116",
+      "scope": "Current P-C1.6 acceptance: fresh-process resume at the durable Tool-effect Snapshot boundary reconstructs only current-WorkingSet-attempt complete Provider-authored Tool exchanges from existing Journal/CAS authority, reconciles already-completed Tool effects without redispatch, executes only pending calls, excludes predecessor-attempt cognition after WorkingSet transition, and fails closed without exact Tool-content authority; no new conversation store, SQLite schema or recommended public recovery API was added."
     }
   ]
 }
