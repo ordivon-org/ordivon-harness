@@ -1,0 +1,54 @@
+{
+  "architecture": {
+    "agentAction": "AgentTurnResult has a third mutually exclusive action category, AgentWorkingSetTransitionProposal, beside external Tool calls and Run conclusion",
+    "agentChoice": "the Agent proposal names the exact already-known successor pins, next attempt identity and bounded basis; Harness does not rank, discover, summarize or repair that selection",
+    "atomicAdmission": "SQLiteHarnessRunContinuityStore applies one accepted proposal as an atomic replan/select/commit WorkingSet transaction under one Run lease",
+    "providerNormalization": "DeepSeek may encode the cognition action with function-calling, but DeepSeekTurnAdapter normalizes it to WorkingSet cognition rather than AgentToolCall/Runtime effect",
+    "projection": "after admission, the existing mature WorkingSetViewProjector makes the newly committed successor the exact next Provider view"
+  },
+  "behavior": {
+    "deepSeekEndToEnd": "mocked DeepSeek wire turn 1 emits a WorkingSet transition from A to exact source B; mature OrdivonAgentLoop admits it and the second DeepSeek request contains B rather than A before concluding",
+    "notATool": "the end-to-end cognition transition succeeds with Contract and execution maxToolCalls equal to zero and Run toolCalls remains zero",
+    "singleActionLaw": "normalized model turns must choose exactly one of WorkingSet transition, external Tool calls, or conclusion; DeepSeek cognition plus an external Tool in one turn is rejected before ToolBridge execution",
+    "concurrency": "two independent workers racing different successor proposals from the same WorkingView produce one complete three-event successor transaction and one rejected branch, with no partial losing replan",
+    "idempotency": "exact transition replay from a fresh SQLite Store/Continuity instance returns the already committed successor and appends no additional cognition events",
+    "responseLoss": "when Provider turn 1 durably completes with a WorkingSet proposal but its in-process return is lost, a fresh Loop replays that result, admits B, and physically dispatches only turn 2; turn 1 is not redispatched",
+    "doctor": "mechanically valid WorkingSet history carrying a forged transition proposal basis passes low-level Store Doctor but fails Continuity Doctor semantic transition validation",
+    "privacy": "durable Agent-owned WorkingSet transition requires model-content retention authority; metadata-only is not silently promoted to retain cognition content"
+  },
+  "checks": {
+    "cliCommandsVerified": 14,
+    "dependencyContractPassed": true,
+    "deterministicTests": 200,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "maxToolCallsDuringCognitionTransition": 0,
+    "newSQLiteSchemaRequired": false,
+    "pc13FocusedTests": 8,
+    "proposalAvailableFromCore": true,
+    "recommendedApiExportsCognitionExecutionSeam": false,
+    "responseLossFirstTurnRedispatchesAfterFreshOpen": 0,
+    "responseLossProviderResultsReplayed": 1,
+    "ruffPassed": true,
+    "skippedTests": 3,
+    "transitionReplayAddsEventsAfterFreshOpen": 0,
+    "transitionRaceCommittedBranches": 1,
+    "transitionRaceRejectedBranches": 1,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.3 establishes the first Agent-owned cognition-state transition in the mature Harness path: an Agent can choose an exact successor WorkingSet from the WorkingView it actually saw, and Harness can validate, atomically persist, replay and concurrency-fence that choice without treating cognition as a Runtime Tool or selecting Context on the Agent's behalf.",
+  "implementationSourceRevision": "fa23bfc817ce4c63fc5eadc398d044eb6817b7ae",
+  "kind": "ordivon.harness-pc13-agent-owned-working-set-acceptance",
+  "knownLimits": [
+    "P-C1.3 does not provide Context discovery, search, ranking, RAG, Memory, summarization, evidence-sufficiency policy or an automatic Context scheduler. The exact source identities in a proposal must already be known to the Agent.",
+    "The initial committed WorkingSet that gives the Agent its first WorkingView is still seeded by caller/domain integration; this slice proves Agent ownership of successor transitions, not autonomous bootstrap discovery.",
+    "Harness validates proposal identity, predecessor view, source existence/privacy, revision law and concurrency, but it does not judge whether the Agent's selected pins or textual basis are epistemically good choices.",
+    "Durable WorkingSet transition currently requires model-content retention authority. Metadata-only can use ephemeral WorkingView projection but cannot persist an Agent-owned successor without explicit retained-content authority.",
+    "Malformed or mixed DeepSeek cognition actions currently fail closed at Adapter/Loop admission rather than entering a dedicated model-correctable cognition-repair protocol.",
+    "AgentWorkingSetTransitionProposal is available from ordivon_harness.core for caller-neutral integration, while WorkingViewProjector, transition handler wiring and the DeepSeek transition switch remain outside the recommended ordivon_harness.api facade.",
+    "The experiments use deterministic/mock Provider transport to prove the complete Provider-wire normalization and mature execution path; they do not claim a particular model will reliably discover or choose good Context without further experiments."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}

@@ -208,9 +208,16 @@
     {
       "claimId": "harness.cognition.pc12b-multiturn-working-view",
       "file": "harness-pc12b-multiturn-working-view-fd13fab.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "fd13fabae6f26154b4c2fd2e7735313091ee0580",
-      "scope": "Current P-C1.2b acceptance: the mature multi-turn OrdivonAgentLoop can project committed WorkingView A then B without replaying canonical history into turn 2; Provider claim fences stale views before physical dispatch, second-turn response loss replays with zero third dispatch, and metadata-only ephemeral projection leaves zero durable sentinel hits. Context discovery and Agent-owned WorkingSet transitions remain outside this slice."
+      "scope": "Historical P-C1.2b multi-turn WorkingView acceptance retained unchanged after P-C1.3 added Agent-owned successor transitions. Its canonical-history/model-view separation, stale-view fencing, response-loss replay and metadata-only ephemeral-projection proof remain valid for fd13fab, while P-C1.3 supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc13-agent-owned-working-set",
+      "file": "harness-pc13-agent-owned-working-set-fa23bfc.json",
+      "status": "verified",
+      "implementationRevision": "fa23bfc817ce4c63fc5eadc398d044eb6817b7ae",
+      "scope": "Current P-C1.3 acceptance: the mature Agent path can normalize a Provider-authored WorkingSet transition, atomically replan/select/commit exact already-known successor pins against the WorkingView that produced the proposal, project the successor on the next turn with maxToolCalls=0, fence competing transitions, replay idempotently across fresh Store instances and consume a durably completed transition result without Provider redispatch. Context discovery/ranking/RAG/Memory remain outside this slice."
     }
   ]
 }
