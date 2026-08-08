@@ -1,0 +1,52 @@
+{
+  "architecture": {
+    "canonicalHistory": "the mature OrdivonAgentLoop retains complete Run-local execution history for progress, recovery and Tool correlation independently from the messages selected for one Provider turn",
+    "modelView": "an optional internal WorkingViewProjector supplies each Provider turn's exact context digest and model-visible messages without rewriting canonical history",
+    "workingSetProjector": "WorkingSetViewProjector deterministically compiles the current committed HarnessWorkingSetSpec and its exact pinned CAS sources; it performs no discovery, ranking or automatic transition",
+    "claimFence": "Provider claim revalidates under the Run lease that an exact AgentTurnRequest still equals the current committed WorkingView before any physical Provider dispatch"
+  },
+  "behavior": {
+    "multiTurnProjection": "a mature two-turn Agent Loop can dispatch WorkingView A on turn 1, explicitly replan to committed WorkingView B, and dispatch only B on turn 2 while preserving the complete canonical first-turn and correction history",
+    "staleProjection": "if the WorkingSet advances after projection but before Provider claim, the stale request is rejected and the physical Provider invocation count remains zero",
+    "responseLoss": "after two physical Provider turns, loss of the second completion response leaves turn 2 durably COMPLETED and its exact B request/result replayable from fresh continuity without a third physical dispatch",
+    "privacy": "a metadata-only Run may use an ephemeral projected model view for Provider disclosure without making the projected content durable; a full state-root sentinel scan records zero hits",
+    "trace": "model_view_projected is a first-class closed-vocabulary Trace event containing WorkingSet/WorkingView/message digests rather than substituting the projected content for canonical Run history"
+  },
+  "checks": {
+    "cliCommandsVerified": 14,
+    "dependencyContractPassed": true,
+    "deterministicTests": 192,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "metadataOnlyEphemeralProjectionSentinelHitsInStateRoot": 0,
+    "matureCanonicalHistoryRetainedAfterProjectionReplacement": true,
+    "matureTurn1RequestMatchesWorkingViewA": true,
+    "matureTurn2RequestContainsWorkingViewA": false,
+    "matureTurn2RequestContainsWorkingViewB": true,
+    "matureTurn2RequestContainsCanonicalCorrectionHistory": false,
+    "newSQLiteSchemaRequired": false,
+    "pc12bFocusedTests": 4,
+    "projectorExportedFromRecommendedApi": false,
+    "responseLossFreshReplayPhysicalProviderDispatches": 0,
+    "responseLossOriginalPhysicalProviderDispatches": 2,
+    "ruffPassed": true,
+    "skippedTests": 3,
+    "staleProjectedRequestPhysicalProviderDispatches": 0,
+    "wheelSmokePassed": true,
+    "workingSetTransitionHistoryPreserved": true
+  },
+  "conclusion": "P-C1.2b proves that the mature multi-turn Agent Loop can separate canonical execution history from the model-visible per-turn WorkingView without weakening Provider dispatch fencing, response-loss replay or P-C1.2a metadata-only privacy. The Provider no longer has to consume the accumulated canonical transcript merely because Harness keeps that history for execution truth.",
+  "implementationSourceRevision": "fd13fabae6f26154b4c2fd2e7735313091ee0580",
+  "kind": "ordivon.harness-pc12b-multiturn-working-view-acceptance",
+  "knownLimits": [
+    "WorkingSet transition is still explicit caller/domain/Agent-integration behavior. P-C1.2b does not yet define a model-visible action by which the Agent itself requests, revises or commits its WorkingSet.",
+    "There is no Context discovery, search, ranking, RAG, Memory, summarization, evidence-sufficiency policy or automatic Context scheduler in this slice.",
+    "The response-loss proof reopens fresh continuity and replays the exact completed second Provider turn at the durable Provider boundary with zero redispatch; full automatic mature-Loop process re-entry after an arbitrary later-turn crash remains a separate recovery slice.",
+    "The committed WorkingSet source path still requires model-content retention authority. Metadata-only can use an ephemeral projection but cannot durably reconstruct intentionally omitted WorkingView content without caller-authorized rehydration.",
+    "The mature Tool-bearing path still keeps canonical messages for Tool correlation/recovery. P-C1.2b validates the projection seam on no-Tool multi-turn execution and does not yet prove Tool-bearing WorkingView replacement.",
+    "WorkingSetViewProjector and WorkingViewProjector remain internal experimental seams and are not exported from the recommended ordivon_harness.api facade."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}

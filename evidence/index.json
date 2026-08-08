@@ -201,9 +201,16 @@
     {
       "claimId": "harness.cognition.pc12a-privacy-state-authority",
       "file": "harness-pc12a-privacy-authority-a8a6a2f.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "a8a6a2f14d2c1d8fe1e09a5f4f79daa026f8c31f",
-      "scope": "Current P-C1.2a acceptance: makes HarnessRunContract privacy authoritative across RunState, Provider request/result/failure, Tool observations, Trace, terminal evidence and Working View materialization; metadata-only root-level sentinels remain absent while response-loss completion fencing still prevents physical redispatch, and exact omitted content fails closed pending caller-authorized rehydration."
+      "scope": "Historical P-C1.2a Privacy/state-authority acceptance retained unchanged after P-C1.2b advanced the mature Agent Loop request-construction path. Its durable-content authority, metadata-only sentinel and response-loss fencing proof remains valid for a8a6a2f, while P-C1.2b supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc12b-multiturn-working-view",
+      "file": "harness-pc12b-multiturn-working-view-fd13fab.json",
+      "status": "verified",
+      "implementationRevision": "fd13fabae6f26154b4c2fd2e7735313091ee0580",
+      "scope": "Current P-C1.2b acceptance: the mature multi-turn OrdivonAgentLoop can project committed WorkingView A then B without replaying canonical history into turn 2; Provider claim fences stale views before physical dispatch, second-turn response loss replays with zero third dispatch, and metadata-only ephemeral projection leaves zero durable sentinel hits. Context discovery and Agent-owned WorkingSet transitions remain outside this slice."
     }
   ]
 }
