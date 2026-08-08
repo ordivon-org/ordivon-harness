@@ -472,7 +472,7 @@ class OrdivonAgentLoop:
                     self.budget.max_no_progress_turns,
                 )
             )
-            if initial_messages:
+            if initial_messages and self.working_view_projector is None:
                 observation_only_turns = 0
                 no_progress_turns = 0
             provider_attempts = model_calls + model_retries
@@ -509,10 +509,34 @@ class OrdivonAgentLoop:
 
         # Tool exchanges are attempt-local cognition continuity, distinct from the
         # durable Agent-selected WorkingSet. Authorized exact exchanges are rebuilt
-        # on resume and are cleared when the selected WorkingSet changes.
+        # on resume and are cleared whenever a successor cognition attempt commits,
+        # even when that successor intentionally retains the same exact source pins.
         transient_tool_exchange_messages: list[dict[str, JsonValue]] = []
         transient_working_set_digest: str | None = None
-        external_observation_gate_reason: str | None = None
+
+        def soft_observation_gate_reason() -> str | None:
+            if (
+                self.budget.max_no_progress_turns > 0
+                and no_progress_turns >= self.budget.max_no_progress_turns
+            ):
+                return (
+                    "external observation gate closed after "
+                    f"{no_progress_turns} consecutive turns without a mutation, "
+                    "check, materially new bounded observation, or conclusion"
+                )
+            if (
+                self.budget.max_observation_only_turns > 0
+                and observation_only_turns
+                >= self.budget.max_observation_only_turns
+            ):
+                return (
+                    "external observation gate closed after "
+                    f"{observation_only_turns} consecutive observation-only turns "
+                    "without a mutation, check, or conclusion"
+                )
+            return None
+
+        external_observation_gate_reason = soft_observation_gate_reason()
 
         retained_calls = _retained_tool_calls(messages)
         evidence_signatures: set[str] = set()
@@ -1092,26 +1116,7 @@ class OrdivonAgentLoop:
                     "noProgressTurns": no_progress_turns,
                 },
             )
-            gate_reason: str | None = None
-            if (
-                self.budget.max_no_progress_turns > 0
-                and no_progress_turns >= self.budget.max_no_progress_turns
-            ):
-                gate_reason = (
-                    "external observation gate closed after "
-                    f"{no_progress_turns} consecutive turns without a mutation, "
-                    "check, materially new bounded observation, or conclusion"
-                )
-            elif (
-                self.budget.max_observation_only_turns > 0
-                and observation_only_turns
-                >= self.budget.max_observation_only_turns
-            ):
-                gate_reason = (
-                    "external observation gate closed after "
-                    f"{observation_only_turns} consecutive observation-only turns "
-                    "without a mutation, check, or conclusion"
-                )
+            gate_reason = soft_observation_gate_reason()
             if gate_reason is not None:
                 external_observation_gate_reason = gate_reason
             return None
@@ -1960,6 +1965,14 @@ class OrdivonAgentLoop:
                         detail="Working Set transition omitted its source Working View",
                     )
                 try:
+                    source_working_set = handler.load_current_working_set()
+                    if source_working_set.digest != working_view.working_set_digest:
+                        raise ValueError(
+                            "Working Set transition source is no longer the current selected cognition"
+                        )
+                    selection_changed = (
+                        source_working_set.pins != result.working_set_transition.pins
+                    )
                     committed_working_set = handler.apply_working_set_transition(
                         result.working_set_transition,
                         source_working_set_digest=working_view.working_set_digest,
@@ -1980,7 +1993,10 @@ class OrdivonAgentLoop:
                     )
                 transient_tool_exchange_messages.clear()
                 transient_working_set_digest = None
-                external_observation_gate_reason = None
+                if selection_changed:
+                    external_observation_gate_reason = None
+                    observation_only_turns = 0
+                    no_progress_turns = 0
                 messages.append(
                     {
                         "role": "assistant",
@@ -1988,8 +2004,6 @@ class OrdivonAgentLoop:
                         "workingSetTransition": result.working_set_transition.to_dict(),
                     }
                 )
-                observation_only_turns = 0
-                no_progress_turns = 0
                 recorder.record(
                     "working_set_transition_applied",
                     {
@@ -1999,6 +2013,8 @@ class OrdivonAgentLoop:
                         "sourceModelViewDigest": request.context_digest,
                         "nextAttemptId": committed_working_set.attempt_id,
                         "committedWorkingSetDigest": committed_working_set.digest,
+                        "selectionChanged": selection_changed,
+                        "attemptResetOnly": not selection_changed,
                     },
                 )
                 recorder.record(
@@ -2006,10 +2022,12 @@ class OrdivonAgentLoop:
                     {
                         "turnId": turn_id,
                         "observationOnly": False,
-                        "actionProgress": True,
+                        "actionProgress": selection_changed,
                         "newEvidence": False,
                         "observationOnlyTurns": observation_only_turns,
                         "noProgressTurns": no_progress_turns,
+                        "cognitionAttemptReset": True,
+                        "workingSetSelectionChanged": selection_changed,
                     },
                 )
                 try:

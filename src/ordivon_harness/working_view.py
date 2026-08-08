@@ -400,6 +400,8 @@ class WorkingViewProjector(Protocol):
 class WorkingSetTransitionHandler(Protocol):
     """Admit one Agent-authored successor Working Set against its source model view."""
 
+    def load_current_working_set(self) -> HarnessWorkingSetSpec: ...
+
     def apply_working_set_transition(
         self,
         proposal: AgentWorkingSetTransitionProposal,
