@@ -236,9 +236,16 @@
     {
       "claimId": "harness.cognition.pc16-cross-process-tool-exchange",
       "file": "harness-pc16-cross-process-tool-exchange-253f792.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "253f7927ce7d62ecaa77013b5b40c5b2f4d2f116",
-      "scope": "Current P-C1.6 acceptance: fresh-process resume at the durable Tool-effect Snapshot boundary reconstructs only current-WorkingSet-attempt complete Provider-authored Tool exchanges from existing Journal/CAS authority, reconciles already-completed Tool effects without redispatch, executes only pending calls, excludes predecessor-attempt cognition after WorkingSet transition, and fails closed without exact Tool-content authority; no new conversation store, SQLite schema or recommended public recovery API was added."
+      "scope": "Historical P-C1.6 cross-process Tool cognition acceptance retained unchanged after P-C1.7 generalized the same authority reconstruction from active Tool-effect recovery to ordinary clean pause/resume and proved durable knowledge promotion is WorkingSet selection rather than a new Memory subsystem."
+    },
+    {
+      "claimId": "harness.cognition.pc17-durable-knowledge-promotion",
+      "file": "harness-pc17-durable-knowledge-promotion-5a0530a.json",
+      "status": "verified",
+      "implementationRevision": "5a0530a247acdd2a8695643d65b9f5609bb4ef09",
+      "scope": "Current P-C1.7 acceptance: exact Tool cognition is attempt-local and reconstructed on any authorized fresh-process resume; materialized CAS bytes do not become cognition unless the Agent explicitly selects their exact pin into a successor committed WorkingSet; selected knowledge persists across attempts/processes until an Agent successor omits it; structural Tool privacy remains distinct from semantic taint tracking; no Memory/Promotion subsystem, persistence schema or recommended public API was added."
     }
   ]
 }

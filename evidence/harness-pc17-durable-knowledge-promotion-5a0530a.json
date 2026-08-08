@@ -1,0 +1,58 @@
+{
+  "architecture": {
+    "attemptLocalCognition": "Transient complete Tool exchanges are attempt-local cognition. With exact model and Tool content authority they are reconstructed on any fresh-process resume from the current committed WorkingSet Journal boundary and later Provider/Tool evidence, then expire automatically when a successor WorkingSet commits.",
+    "promotionLaw": "Durable knowledge promotion is not a new Harness object or action. A materialized source becomes durable current cognition only when the Agent explicitly includes its exact pin in a successor committed WorkingSet. Carrying the pin preserves it; omitting it later drops current cognition authority.",
+    "storageVsCognition": "Physical source bytes in CAS, current cognition selection, and later continued retention are distinct facts. Materialized-but-unselected sources may remain physically present without ever entering a Provider model view.",
+    "authorityReuse": "P-C1.7 reuses WorkingViewSource materialization, AgentWorkingSetTransitionProposal, committed WorkingSet history, Provider/Tool evidence and the P-C1.6 reconstruction law. No Memory service, promotion store, ranking policy, conversation store or new persistence authority was introduced.",
+    "semanticBoundary": "Harness privacy/provenance remains structural. Direct Tool channels require Tool-content authority, but ordinary user/model text cannot be proven semantically independent of Tool-derived information without an external taint/provenance system."
+  },
+  "behavior": {
+    "promotionExperiment": "A Tool-discovered source K was materialized while A remained current. The Agent explicitly selected successor pins [primary:A, retained-knowledge:K]. The next turn and a fresh process both saw A+K. A later Agent transition explicitly selected only A; the next turn and another fresh process saw only A although K's immutable CAS source object still existed.",
+    "unselectedControl": "A second run materialized K but the Agent explicitly selected successor [A] without K. The successor and a fresh process never received K, even though the K source bytes remained readable from CAS. Materialization therefore did not grant cognition authority.",
+    "cleanPauseCounterexample": "Before the P-C1.7 implementation change, an Agent could see A plus a complete Tool exchange K, stop with needs_input, and cleanly pause. Fresh-process resume of the same WorkingSet attempt then projected only A because transient reconstruction ran only inside the active Tool-step recovery branch. The focused counterexample failed exactly on the missing Tool Call identity in the resumed Provider request.",
+    "cleanPauseRepair": "The existing P-C1.6 current-attempt Tool-exchange restorer is now invoked for every retained exact-content resume that has retained observations, after any active Tool batch is reconciled. The same-attempt clean resume therefore restores the complete Tool exchange; an immediate successor transition that omits K clears it before the following turn.",
+    "semanticTaintAttack": "Under allow_model_content=true and allow_tool_content=false, a WorkingViewSource containing a direct role=tool channel was rejected, while ordinary role=user text carrying the same semantic fact was accepted. This deliberately demonstrates the documented structural-versus-semantic provenance boundary and rejects a promotion-specific tag as a false complete solution.",
+    "doctor": "Promotion, non-promotion, explicit drop and clean-pause restoration experiments all remained healthy under Continuity Doctor and ordinary Provider WorkingView admission."
+  },
+  "checks": {
+    "acceptanceCheckPassed": true,
+    "acceptanceRunPassed": true,
+    "cliCommandsVerified": 14,
+    "dependencyContractPassed": true,
+    "deterministicTests": 219,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "materializedUnselectedAutoInjected": false,
+    "newConversationStoreAdded": false,
+    "newMemoryOrPromotionSubsystemAdded": false,
+    "newProtocolCodecAdded": false,
+    "newRecommendedApiAdded": false,
+    "newSQLiteSchemaAdded": false,
+    "pc17FocusedTests": 4,
+    "promotedKnowledgeSurvivedProcessBoundary": true,
+    "promotedKnowledgeSurvivedAttemptBoundary": true,
+    "explicitDropRemovedCurrentCognition": true,
+    "cleanPauseSameAttemptRestoredTransientExchange": true,
+    "semanticTaintTrackingClaimed": false,
+    "ruffExplicit01514Passed": true,
+    "ruffOfficial01517Passed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.7 falsifies the need for a separate Harness Memory/Promotion primitive at this layer. Source materialization is storage, while durable cognition is already the Agent's explicit committed WorkingSet selection. The missing mechanism exposed by practice was narrower: same-attempt transient Tool cognition survived hard active-effect recovery after P-C1.6 but was lost by ordinary clean pause/resume. P-C1.7 unifies those resume paths using the same existing Journal/CAS authority. The resulting law is: transient evidence remains attempt-local and recoverable when exact content is authorized; materialized bytes remain non-cognitive until the Agent selects them; selected pins persist as durable cognition until the Agent omits them from a successor.",
+  "implementationSourceRevision": "5a0530a247acdd2a8695643d65b9f5609bb4ef09",
+  "kind": "ordivon.harness-pc17-durable-knowledge-promotion-acceptance",
+  "knownLimits": [
+    "Harness still does not discover which materialized sources deserve promotion, synthesize memory summaries, rank retained knowledge, automatically carry pins forward, or retrieve historical source objects for the Agent. Those remain Agent/domain/integration decisions.",
+    "A source must already have an exact materialized Harness CAS identity before AgentWorkingSetTransitionProposal can select it. Domain/caller integration still owns raw-data interpretation and materialization policy.",
+    "CAS object existence is not an erasure or garbage-collection policy. Explicitly dropping a pin removes current cognition authority but does not delete immutable historical/source bytes.",
+    "Structural privacy cannot infer semantic Tool taint after a model or domain integration converts Tool-derived information into ordinary text. P-C1.7 intentionally does not add a promotion-only provenance tag that would leave generic materialization as an equivalent bypass.",
+    "Exact attempt-local Tool cognition reconstruction requires retained exact model and Tool content. Digest-only policies retain effect fencing/audit but cannot recreate omitted cognition bytes without authorized rehydration.",
+    "A purely local model-correctable Tool rejection that is lost before any later durable state captures its exact observation remains outside the demonstrated reconstruction boundary.",
+    "The Agent behavior in P-C1.7 is deterministic test behavior. This receipt proves authority/state semantics, not that a real model will make good long-term memory choices.",
+    "No Runtime, World, Finance or Host repository was changed."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
