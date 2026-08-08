@@ -16,6 +16,9 @@ EXPECTED_API = {
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
+    "HarnessBoundReference",
+    "HarnessCorrelationContext",
+    "HarnessExecutionBinding",
     "DomainToolBridge",
     "DomainToolCatalog",
     "DomainToolLoopPlan",
@@ -23,6 +26,12 @@ EXPECTED_API = {
     "HarnessPrivacyPolicy",
     "HarnessRunContract",
     "HarnessRuntimeClient",
+    "HarnessRuntimeClientError",
+    "HarnessRuntimeErrorDetail",
+    "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
     "IndependentCompletionProposal",
     "IndependentHarnessRunReceipt",
     "OrdivonAgentLoop",
@@ -59,6 +68,34 @@ class PublicApiTests(unittest.TestCase):
         observed = json.loads(probe.stdout)
         self.assertFalse(observed["hostLoaded"])
         self.assertEqual(set(observed["api"]), EXPECTED_API)
+
+
+    def test_recommended_facade_is_closed_over_contract_and_runtime_bridge_authoring(self) -> None:
+        reference = api.HarnessBoundReference(
+            "objective:public-api",
+            "objective",
+            "sha256:" + "a" * 64,
+        )
+        correlation = api.HarnessCorrelationContext()
+        runtime_reference = api.HarnessRuntimeReference(
+            "ordivon.harness",
+            "run",
+            "harness-run:public-api",
+            digest="sha256:" + "b" * 64,
+        )
+        detail = api.HarnessRuntimeErrorDetail(
+            code="CONCURRENCY_LIMIT",
+            message="busy",
+            commit_state="not_started",
+            retryable=True,
+        )
+        rejected = api.HarnessRuntimeToolRejected("workspace.exec", detail)
+        self.assertEqual(reference.kind, "objective")
+        self.assertIsNone(correlation.traceparent)
+        self.assertEqual(runtime_reference.namespace, "ordivon.harness")
+        self.assertTrue(rejected.detail.retryable)
+        self.assertTrue(api.INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST.startswith("sha256:"))
+        self.assertTrue(api.INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST.startswith("sha256:"))
 
     def test_host_integration_is_an_explicit_host_free_adapter_module(self) -> None:
         from ordivon_harness.host_external_adapter import (

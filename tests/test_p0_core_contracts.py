@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import unittest
 
+from ordivon_harness.core import RunBudget
 from ordivon_harness.core_contracts import (
     HarnessBoundReference,
     HarnessCorrelationContext,
@@ -50,6 +51,23 @@ class HarnessCoreContractTests(unittest.TestCase):
         self.assertEqual(HarnessRunContract.from_dict(value.to_dict()), value)
         self.assertEqual(HarnessRunContract.from_dict(value.to_dict()).digest, value.digest)
         self.assertTrue(value.digest.startswith("sha256:"))
+
+
+    def test_no_tool_budget_may_bind_zero_tool_calls(self) -> None:
+        value = RunBudget(
+            max_model_calls=2,
+            max_tool_calls=0,
+            max_observation_bytes=4_096,
+            max_wall_time_ms=60_000,
+            max_total_tokens=16_384,
+        )
+        self.assertEqual(value.to_contract_dict()["maxToolCalls"], 0)
+        self.assertEqual(
+            RunBudget.from_contract_dict(value.to_contract_dict()).max_tool_calls,
+            0,
+        )
+        with self.assertRaisesRegex(ValueError, "Tool Call budget must be non-negative"):
+            RunBudget(2, -1, 4_096, 60_000)
 
     def test_contract_is_caller_neutral(self) -> None:
         rendered = str(contract().to_dict()).lower()

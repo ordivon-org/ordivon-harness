@@ -13,7 +13,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-05
+updated: 2026-08-08
 summary: Minimal path from a clean checkout to deterministic verification, operator inspection and live read-only acceptance.
 evidence_status: verified
 readiness: READY
@@ -38,8 +38,9 @@ uv run python -m unittest discover -s tests -v
 Build and verify the exact installable artifact:
 
 ```bash
-python -m build
-python scripts/check_wheel.py dist
+rm -rf dist
+uv build --wheel --out-dir dist
+python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
 ```
 
 The wheel contains one runtime dependency: the exact Ordivon Protocol pin. It does not install Host or expose a Host extra.
@@ -53,7 +54,28 @@ ordivon-harness capabilities
 
 ## Run
 
-Create a caller-authored `HarnessRunContract` JSON. The CLI does not invent Objective, Context, caller identity, Tool grant, budget or completion authority.
+Create a caller-authored `HarnessRunContract` JSON. The CLI does not invent Objective, Context, caller identity, Tool grant, budget or completion authority. The recommended API is closed over the values required for basic Contract authoring:
+
+```python
+from anc_canonical import canonical_digest
+from ordivon_harness.api import HarnessBoundReference, HarnessRunContract, RunBudget
+
+def bound_ref(reference_id: str, kind: str, claim: object) -> HarnessBoundReference:
+    return HarnessBoundReference(reference_id, kind, canonical_digest(claim))
+
+budget = RunBudget(
+    max_model_calls=2,
+    max_tool_calls=0,
+    max_observation_bytes=65_536,
+    max_wall_time_ms=90_000,
+    max_total_tokens=16_384,
+)
+# Supply caller/objective/context/provider/system identities, the capability digests
+# reported by `ordivon-harness capabilities`, and `budget.to_contract_dict()` to
+# HarnessRunContract. Persist `contract.to_dict()` as RUN_CONTRACT.json.
+```
+
+`max_tool_calls=0` is valid for a no-Tool Run. Capability comes from the Tool catalog/grant bound by the Contract; a positive Tool budget never grants a Tool by itself.
 
 ```bash
 ordivon-harness --state-root /var/lib/ordivon/harness \
@@ -63,7 +85,9 @@ ordivon-harness --state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
 ```
 
-For the built-in DeepSeek profile, the Contract must bind the canonical no-Tool catalog/grant and the configured DeepSeek Adapter/model. A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI.
+For the built-in DeepSeek profile, the Contract must bind the canonical no-Tool catalog/grant and the configured DeepSeek Adapter/model. The current adapter reserves a conservative request-token upper bound equal to the serialized Provider request bytes plus its 8,192-token completion ceiling. A small Contract such as `max_total_tokens=4_096` can therefore be rejected safely before the first Provider dispatch; `16_384` is a practical starting bound for a small no-Tool Run, not a universal required value.
+
+A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI. `call_tool()` is only the success-shape Protocol. The caller must also translate its transport and Runtime rejection failures into `HarnessRuntimeClientError` / `HarnessRuntimeToolRejected` with a `HarnessRuntimeErrorDetail`. In particular, a Runtime rejection with `commit_state` `not_started` or `not_committed` remains model-correctable; passing an unrelated client exception through unchanged loses that recovery meaning and is treated as a Harness failure. The recommended API also exports `HarnessExecutionBinding`, `HarnessRuntimeReference`, and the independent search catalog/grant digests required by the current `SQLiteHarnessRuntimeBridge`.
 
 ## Pause and resume
 

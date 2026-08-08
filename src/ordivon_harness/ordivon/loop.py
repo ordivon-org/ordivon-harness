@@ -87,7 +87,6 @@ class RunBudget:
         if (
             min(
                 self.max_model_calls,
-                self.max_tool_calls,
                 self.max_observation_bytes,
                 self.max_wall_time_ms,
                 self.max_total_tokens,
@@ -95,6 +94,8 @@ class RunBudget:
             < 1
         ):
             raise ValueError("Ordivon Harness primary budgets must be positive")
+        if self.max_tool_calls < 0:
+            raise ValueError("Ordivon Harness Tool Call budget must be non-negative")
         if (
             self.max_model_retries < 0
             or self.max_tool_corrections < 0

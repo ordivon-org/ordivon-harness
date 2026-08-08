@@ -18,8 +18,12 @@ from zipfile import ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
     "AgentTurnAdapter", "AgentTurnRequest", "AgentTurnResult",
+    "HarnessBoundReference", "HarnessCorrelationContext", "HarnessExecutionBinding",
     "DomainToolBridge", "DomainToolCatalog", "DomainToolLoopPlan", "DomainToolLoopRunner",
     "HarnessPrivacyPolicy", "HarnessRunContract", "HarnessRuntimeClient",
+    "HarnessRuntimeClientError", "HarnessRuntimeErrorDetail", "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected", "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
     "IndependentCompletionProposal", "IndependentHarnessRunReceipt",
     "OrdivonAgentLoop", "RunBudget", "RunStopCode",
     "SQLiteHarnessRunContinuityStore", "SQLiteHarnessRuntimeBridge", "SQLiteHarnessStore",

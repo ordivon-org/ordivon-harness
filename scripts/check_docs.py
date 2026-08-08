@@ -44,6 +44,9 @@ STABLE_API = {
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
+    "HarnessBoundReference",
+    "HarnessCorrelationContext",
+    "HarnessExecutionBinding",
     "DomainToolBridge",
     "DomainToolCatalog",
     "DomainToolLoopPlan",
@@ -51,6 +54,12 @@ STABLE_API = {
     "HarnessPrivacyPolicy",
     "HarnessRunContract",
     "HarnessRuntimeClient",
+    "HarnessRuntimeClientError",
+    "HarnessRuntimeErrorDetail",
+    "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
     "IndependentCompletionProposal",
     "IndependentHarnessRunReceipt",
     "OrdivonAgentLoop",
@@ -289,6 +298,18 @@ def validate_public_contracts() -> list[str]:
     verification = (ROOT / "docs/VERIFICATION.md").read_text(encoding="utf-8")
     if "Task, Assignment and Run identities" in verification:
         errors.append("VERIFICATION.md requires removed Host-backed Assignment identity")
+
+    quickstart = (ROOT / "docs/QUICKSTART.md").read_text(encoding="utf-8")
+    for required in (
+        "max_tool_calls=0",
+        "8,192-token completion ceiling",
+        "HarnessRuntimeToolRejected",
+        "HarnessExecutionBinding",
+    ):
+        if required not in quickstart:
+            errors.append(f"QUICKSTART.md lacks Agent-first authoring guidance: {required}")
+    if "python scripts/check_wheel.py dist" in quickstart:
+        errors.append("QUICKSTART.md passes a directory instead of a wheel to check_wheel.py")
 
     source_root = ROOT / "src/ordivon_harness"
     for path in source_root.rglob("*.py"):

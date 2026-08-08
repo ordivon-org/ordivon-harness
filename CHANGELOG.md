@@ -6,6 +6,8 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Changed
 
+- the recommended `ordivon_harness.api` facade is now closed over basic Run Contract authoring and the already-exported independent Runtime bridge: bound/correlation references, execution/runtime references, search capability digests, and Runtime error-contract types are available without dropping to `ordivon_harness.core`;
+- no-Tool Runs may bind `maxToolCalls=0`; model, observation, wall-time and token budgets remain positive and Tool capability is still controlled only by the Contract Tool catalog/grant;
 - **Breaking pre-1.0 H3:** Ordivon Harness is now a single independent Agent Run product line. The SQLite Harness Journal/CAS is the only current Run writer and `HarnessRunContract` is the only current caller/execution contract.
 - the CLI has one `--state-root` meaning and only independent `capabilities`, Run/recovery, and `store-*` commands; the historical `host` namespace and all `cutover-*` commands were removed;
 - the package root now mirrors `ordivon_harness.api` plus `package_version` instead of resolving historical lazy compatibility exports;
@@ -27,6 +29,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Fixed
 
+- Quick Start now includes a caller-authored Contract construction path, the DeepSeek 8,192-token completion-ceiling preflight behavior, Runtime error-translation requirements for Tool-bearing callers, and a wheel-verification command that passes the actual wheel path;
 - canonical security, data/privacy, verification and domain-Tool guidance now describe the independent Harness Journal/CAS and current Host-free Run API instead of removed Host-backed Assignment/Runner persistence; documentation checks reject those stale current claims;
 - concurrent same-digest CAS publication now preserves one immutable published inode and tolerates publication-only `ctime` movement without weakening canonical digest, inode, size, mtime, mode, or no-follow checks;
 - SQLite database/WAL/SHM hardening now happens outside active SQLite lock ownership, preventing hardening descriptors from disturbing process-scoped locks under multi-process Store use;
