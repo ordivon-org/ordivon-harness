@@ -793,6 +793,8 @@ class SQLiteHarnessRunContinuityStore:
         request: AgentTurnRequest,
         spec: HarnessWorkingSetSpec,
         state: HarnessRunState,
+        *,
+        before_event_sequence: int | None = None,
     ) -> None:
         base_view = compile_working_view(spec, self.store)
         if request.messages[: len(base_view.messages)] != base_view.messages:
@@ -803,24 +805,77 @@ class SQLiteHarnessRunContinuityStore:
         if overlay_messages:
             if not state.observations_retained:
                 raise HarnessProviderCallRequestMismatch(
-                    "Provider Working View overlay requires retained bound Tool Observation evidence"
+                    "Provider Working View Tool exchange requires retained bound Tool Observation evidence"
                 )
-            allowed_observation_messages = tuple(
-                HarnessToolObservation.from_dict(raw).to_model_message()
-                for raw in state.observations
+            retained_observations = tuple(
+                HarnessToolObservation.from_dict(raw) for raw in state.observations
             )
-            cursor = 0
-            for overlay_message in overlay_messages:
-                while (
-                    cursor < len(allowed_observation_messages)
-                    and allowed_observation_messages[cursor] != overlay_message
+            completed_tool_turns: list[
+                tuple[int, dict[str, JsonValue], AgentTurnResult]
+            ] = []
+            for provider_event in self.store.list_run_events(self.harness_run_id):
+                if (
+                    before_event_sequence is not None
+                    and provider_event.sequence >= before_event_sequence
                 ):
-                    cursor += 1
-                if cursor >= len(allowed_observation_messages):
-                    raise HarnessProviderCallRequestMismatch(
-                        "Provider Working View overlay is not an exact bound Tool Observation projection"
+                    break
+                if provider_event.event_kind != "harness.provider-call-completed":
+                    continue
+                retained = self._load_provider_from_event(provider_event)
+                if retained.result is None or not retained.result.tool_calls:
+                    continue
+                completed_tool_turns.append(
+                    (
+                        provider_event.sequence,
+                        {
+                            "role": "assistant",
+                            "content": retained.result.content,
+                            "toolCalls": [
+                                call.to_dict() for call in retained.result.tool_calls
+                            ],
+                        },
+                        retained.result,
                     )
-                cursor += 1
+                )
+
+            overlay_cursor = 0
+            provider_cursor = 0
+            observation_cursor = 0
+            while overlay_cursor < len(overlay_messages):
+                assistant_message = overlay_messages[overlay_cursor]
+                matched_turn: tuple[int, dict[str, JsonValue], AgentTurnResult] | None = None
+                while provider_cursor < len(completed_tool_turns):
+                    candidate = completed_tool_turns[provider_cursor]
+                    provider_cursor += 1
+                    if candidate[1] == assistant_message:
+                        matched_turn = candidate
+                        break
+                if matched_turn is None:
+                    raise HarnessProviderCallRequestMismatch(
+                        "Provider Working View overlay is not a completed Provider-authored Tool exchange"
+                    )
+                overlay_cursor += 1
+                for call in matched_turn[2].tool_calls:
+                    if overlay_cursor >= len(overlay_messages):
+                        raise HarnessProviderCallRequestMismatch(
+                            "Provider Working View Tool exchange omitted a Tool Observation"
+                        )
+                    matched_observation: HarnessToolObservation | None = None
+                    while observation_cursor < len(retained_observations):
+                        candidate_observation = retained_observations[observation_cursor]
+                        observation_cursor += 1
+                        if candidate_observation.tool_call_id == call.tool_call_id:
+                            matched_observation = candidate_observation
+                            break
+                    if (
+                        matched_observation is None
+                        or overlay_messages[overlay_cursor]
+                        != matched_observation.to_model_message()
+                    ):
+                        raise HarnessProviderCallRequestMismatch(
+                            "Provider Working View Tool exchange differs from its bound Tool Observation"
+                        )
+                    overlay_cursor += 1
         effective_view = HarnessWorkingView(
             attempt_id=spec.attempt_id,
             working_set_digest=spec.digest,
@@ -828,7 +883,7 @@ class SQLiteHarnessRunContinuityStore:
         )
         if request.context_digest != effective_view.digest:
             raise HarnessProviderCallRequestMismatch(
-                "Provider Call request digest differs from its current Working View plus overlay"
+                "Provider Call request digest differs from its current Working View plus Tool exchange"
             )
 
     def _require_current_working_view_request(
@@ -1786,6 +1841,7 @@ class SQLiteHarnessRunContinuityStore:
                         retained_provider.request,
                         previous_working_set,
                         retained_provider.state,
+                        before_event_sequence=event.sequence,
                     )
                 provider_records += 1
             if event.event_kind in _TOOL_EVENT_KINDS:

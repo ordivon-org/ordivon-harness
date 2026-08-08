@@ -76,7 +76,7 @@ def lower_runtime_tool(
     if call.name == "search_workspace":
         _only(arguments, {"query", "relativePath", "maxMatches"}, call.name)
         query = _required_string(arguments, "query", call.name)
-        relative_path = _required_string(arguments, "relativePath", call.name)
+        relative_path = _optional_string(arguments, "relativePath", ".")
         if len(query.encode("utf-8")) > 2_048:
             raise ToolBridgeError(
                 "search_workspace query exceeds 2048 UTF-8 bytes",

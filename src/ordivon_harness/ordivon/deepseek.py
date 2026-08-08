@@ -485,7 +485,11 @@ def _conclusion_tool(
             "name": _CONCLUSION_TOOL_NAME,
             "description": (
                 "Stop this bounded Harness Run and submit a candidate result for independent "
-                "caller or domain verification. This does not complete caller-owned work."
+                "caller or domain verification. Use candidate_completed when the available "
+                "bounded evidence supports the candidate result. Use needs_input when a "
+                "required fact remains unresolved after the useful available observations, "
+                "including when further observation-only searches would only repeat or "
+                "rephrase evidence already seen. This does not complete caller-owned work."
             ),
             "parameters": {
                 "type": "object",
@@ -494,6 +498,10 @@ def _conclusion_tool(
                     "status": {
                         "type": "string",
                         "enum": ["candidate_completed", "needs_input"],
+                        "description": (
+                            "Choose needs_input rather than continuing equivalent bounded "
+                            "searches when required evidence remains unavailable or unknown."
+                        ),
                     },
                     result_name: result_property,
                     "artifact_refs": string_array,
@@ -927,9 +935,28 @@ class DeepSeekTurnAdapter:
         if self.working_set_transitions:
             tools.append(_working_set_transition_tool())
         tools.append(_conclusion_tool(self._structured_result_schema))
+        execution_control = {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness-agent-turn-control",
+            "remainingBudget": request.remaining_budget,
+            "admittedRuntimeTools": [tool.name for tool in request.tools],
+        }
+        provider_messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Ordivon Harness execution control. These are authoritative execution "
+                    "constraints, not task evidence. Previously seen Runtime Tools that are "
+                    "not listed as admitted are unavailable for this turn. Harness cognition "
+                    "and conclusion control actions offered separately remain available. "
+                    + canonical_bytes(execution_control).decode("utf-8")
+                ),
+            },
+            *_provider_messages(request.messages),
+        ]
         body_value: dict[str, JsonValue] = {
             "model": self.settings.model,
-            "messages": _provider_messages(request.messages),
+            "messages": provider_messages,
             "tools": tools,
             "tool_choice": "required",
             "thinking": {"type": "disabled"},
@@ -1055,14 +1082,17 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments are invalid JSON"
                     )
-                if name != _CONCLUSION_TOOL_NAME and name not in allowed_tool_names:
-                    raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(
                     invalid_call(
                         call_id,
                         name,
                         raw_arguments,
-                        "invalid_json",
+                        (
+                            "unavailable_tool"
+                            if name != _CONCLUSION_TOOL_NAME
+                            and name not in allowed_tool_names
+                            else "invalid_json"
+                        ),
                     )
                 )
                 continue
@@ -1071,14 +1101,17 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments must be an object"
                     )
-                if name != _CONCLUSION_TOOL_NAME and name not in allowed_tool_names:
-                    raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
                 runtime_calls.append(
                     invalid_call(
                         call_id,
                         name,
                         raw_arguments,
-                        "arguments_not_object",
+                        (
+                            "unavailable_tool"
+                            if name != _CONCLUSION_TOOL_NAME
+                            and name not in allowed_tool_names
+                            else "arguments_not_object"
+                        ),
                     )
                 )
                 continue
@@ -1128,7 +1161,16 @@ class DeepSeekTurnAdapter:
                     ) from error
             else:
                 if name not in allowed_tool_names:
-                    raise ValueError(f"DeepSeek called an unavailable Tool: {name}")
+                    runtime_calls.append(
+                        invalid_call(
+                            call_id,
+                            name,
+                            raw_arguments,
+                            "unavailable_tool",
+                            dict(arguments),
+                        )
+                    )
+                    continue
                 runtime_calls.append(AgentToolCall(call_id, name, dict(arguments)))
 
         if working_set_transition is not None and (runtime_calls or conclusion is not None):

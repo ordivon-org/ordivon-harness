@@ -156,7 +156,7 @@ def _search_evidence(
     observation: ToolObservation,
 ) -> tuple[tuple[str, str], set[str]]:
     query = call.arguments.get("query")
-    relative_path = call.arguments.get("relativePath")
+    relative_path = call.arguments.get("relativePath", ".")
     if not isinstance(query, str) or not isinstance(relative_path, str):
         return (call.digest, "."), {
             _observation_evidence_signature(observation)

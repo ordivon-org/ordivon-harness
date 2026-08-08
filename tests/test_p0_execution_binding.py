@@ -129,6 +129,25 @@ class HarnessExecutionBindingTests(unittest.TestCase):
             {"ordivon.harness"},
         )
 
+    def test_search_lowering_honors_provider_visible_defaults(self) -> None:
+        call = AgentToolCall(
+            tool_call_id="tool-call:p0-execution-binding-search-defaults",
+            name="search_workspace",
+            arguments={"query": "HarnessExecutionBinding"},
+        )
+        operation, request, _ = lower_runtime_tool(
+            call,
+            step_id="turn-1-tool-search-defaults",
+            execution_binding=binding(),
+            tool_grant=None,
+            known_job_ids=frozenset(),
+            known_artifacts=frozenset(),
+        )
+        self.assertEqual(operation, "workspace.exec")
+        args = request["execution"]["args"]
+        self.assertIn("50", args)
+        self.assertEqual(args[-2:], ["HarnessExecutionBinding", "."])
+
     def test_patch_identity_is_binding_and_tool_call_bound(self) -> None:
         value = binding()
         first = value.patch_request_id("turn-1-tool-patch", DIGEST_E)

@@ -8,7 +8,11 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
-from ..working_view import WorkingSetTransitionHandler, WorkingViewProjector
+from ..working_view import (
+    WorkingSetTransitionHandler,
+    WorkingViewProjector,
+    overlay_working_view,
+)
 from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
@@ -493,6 +497,13 @@ class OrdivonAgentLoop:
             if callable(restorer):
                 restorer(tuple(sorted(seen_tool_call_ids)))
 
+        # Tool exchanges are short-lived cognition continuity, distinct from the
+        # durable Agent-selected WorkingSet. They are rebuilt only within this
+        # execution segment and are cleared when the selected WorkingSet changes.
+        transient_tool_exchange_messages: list[dict[str, JsonValue]] = []
+        transient_working_set_digest: str | None = None
+        external_observation_gate_reason: str | None = None
+
         retained_calls = _retained_tool_calls(messages)
         evidence_signatures: set[str] = set()
         search_evidence: dict[tuple[str, str], set[str]] = {}
@@ -660,9 +671,11 @@ class OrdivonAgentLoop:
             turn_observations: list[ToolObservation],
             step_id: str | None,
             reconciled: bool,
+            count_tool_call: bool = True,
         ) -> AgentLoopResult | None:
             nonlocal observation_bytes, tool_calls, tool_corrections
-            tool_calls += 1
+            if count_tool_call:
+                tool_calls += 1
             remaining_observation_bytes = (
                 self.budget.max_observation_bytes - observation_bytes
             )
@@ -804,12 +817,24 @@ class OrdivonAgentLoop:
                 step_id = f"turn-{sequence}-tool-{tool_calls + 1}:{call.tool_call_id}"
                 try:
                     if call.argument_error is not None:
-                        raise ToolBridgeError(
+                        detail = (
                             (
+                                f"Runtime Tool {call.name} is unavailable for this turn: "
+                                f"{external_observation_gate_reason}. No physical dispatch "
+                                "occurred. Do not substitute another Runtime Tool name; "
+                                "choose an available Harness cognition action or "
+                                "submit_run_conclusion instead."
+                            )
+                            if call.argument_error == "unavailable_tool"
+                            and external_observation_gate_reason is not None
+                            else (
                                 f"Provider Tool Call {call.name} arguments were "
                                 f"rejected ({call.argument_error}); raw digest "
                                 f"{call.raw_arguments_digest}"
-                            ),
+                            )
+                        )
+                        raise ToolBridgeError(
+                            detail,
                             kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
                         )
                     bind_run_state()
@@ -857,6 +882,8 @@ class OrdivonAgentLoop:
                                 "kind": error.kind.value,
                                 "message": str(error)[:2_048],
                                 "safeToCorrect": True,
+                                "physicalDispatch": False,
+                                "commitState": "not_started",
                                 "correction": tool_corrections,
                             }
                         },
@@ -897,6 +924,7 @@ class OrdivonAgentLoop:
                     turn_observations=turn_observations,
                     step_id=step_id,
                     reconciled=False,
+                    count_tool_call=(call.argument_error != "unavailable_tool"),
                 )
                 if stopped is not None:
                     return stopped
@@ -912,7 +940,7 @@ class OrdivonAgentLoop:
             *,
             turn_id: str,
         ) -> AgentLoopResult | None:
-            nonlocal no_progress_turns, observation_only_turns
+            nonlocal external_observation_gate_reason, no_progress_turns, observation_only_turns
             observed_tool_names = {
                 observation.tool_name
                 for observation in turn_observations
@@ -970,59 +998,29 @@ class OrdivonAgentLoop:
                     "noProgressTurns": no_progress_turns,
                 },
             )
-            intervention: str | None = None
+            gate_reason: str | None = None
             if (
                 self.budget.max_no_progress_turns > 0
                 and no_progress_turns >= self.budget.max_no_progress_turns
             ):
-                intervention = (
-                    "Harness stopped after "
+                gate_reason = (
+                    "external observation gate closed after "
                     f"{no_progress_turns} consecutive turns without a mutation, "
-                    "check, materially new bounded observation, or conclusion."
+                    "check, materially new bounded observation, or conclusion"
                 )
             elif (
                 self.budget.max_observation_only_turns > 0
                 and observation_only_turns
                 >= self.budget.max_observation_only_turns
             ):
-                intervention = (
-                    "Harness stopped after "
+                gate_reason = (
+                    "external observation gate closed after "
                     f"{observation_only_turns} consecutive observation-only turns "
-                    "without a mutation, check, or conclusion."
+                    "without a mutation, check, or conclusion"
                 )
-            if intervention is None:
-                return None
-            conclusion = AgentRunConclusion(
-                "needs_input",
-                intervention,
-                unresolved_unknowns=(
-                    "A revised plan or additional bounded input is required.",
-                ),
-            )
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": f"Harness intervention: {intervention}",
-                    "conclusion": conclusion.to_dict(),
-                }
-            )
-            try:
-                bind_run_state()
-                pause_recorder = getattr(self.tool_bridge, "record_pause", None)
-                if callable(pause_recorder):
-                    pause_recorder("needs_input")
-            except ToolBridgeError as error:
-                return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(error))
-            except Exception as error:  # noqa: BLE001 - pause persistence failure terminates the Run.
-                return stop(
-                    RunStopCode.HARNESS_FAILED,
-                    detail=f"{type(error).__name__}: {error}",
-                )
-            return stop(
-                RunStopCode.NO_PROGRESS,
-                conclusion=conclusion,
-                detail=intervention,
-            )
+            if gate_reason is not None:
+                external_observation_gate_reason = gate_reason
+            return None
 
         if remaining_wall_time_ms <= 0:
             return stop(
@@ -1198,12 +1196,20 @@ class OrdivonAgentLoop:
                 return stop(RunStopCode.BUDGET_EXHAUSTED)
             sequence = model_calls + 1
             turn_id = f"turn:{harness_run_id.removeprefix('harness-run:')}:{sequence}"
+            if (
+                tool_calls >= self.budget.max_tool_calls
+                and external_observation_gate_reason is None
+            ):
+                external_observation_gate_reason = (
+                    "external Tool Call budget is exhausted; choose cognition transition "
+                    "or conclusion without further external Tool effects"
+                )
             request_context_digest = context_digest
             request_messages = tuple(messages)
             working_view = None
             if self.working_view_projector is not None:
                 try:
-                    working_view = self.working_view_projector.project()
+                    base_working_view = self.working_view_projector.project()
                 except Exception as error:  # noqa: BLE001 - projection is a local Harness boundary.
                     return stop(
                         RunStopCode.HARNESS_FAILED,
@@ -1212,6 +1218,17 @@ class OrdivonAgentLoop:
                             f"{type(error).__name__}: {error}"
                         ),
                     )
+                if (
+                    transient_working_set_digest is not None
+                    and transient_working_set_digest
+                    != base_working_view.working_set_digest
+                ):
+                    transient_tool_exchange_messages.clear()
+                    transient_working_set_digest = None
+                working_view = overlay_working_view(
+                    base_working_view,
+                    tuple(transient_tool_exchange_messages),
+                )
                 request_context_digest = working_view.digest
                 request_messages = working_view.messages
                 recorder.record(
@@ -1220,7 +1237,11 @@ class OrdivonAgentLoop:
                         "turnId": turn_id,
                         "attemptId": working_view.attempt_id,
                         "workingSetDigest": working_view.working_set_digest,
+                        "baseWorkingViewDigest": base_working_view.digest,
                         "workingViewDigest": working_view.digest,
+                        "transientToolExchangeMessages": len(
+                            transient_tool_exchange_messages
+                        ),
                         "canonicalMessagesDigest": canonical_digest(messages),
                         "projectedMessagesDigest": canonical_digest(
                             list(working_view.messages)
@@ -1235,7 +1256,11 @@ class OrdivonAgentLoop:
                 context_digest=request_context_digest,
                 tool_catalog_digest=self.tool_bridge.catalog_digest,
                 messages=request_messages,
-                tools=self.tool_bridge.definitions(),
+                tools=(
+                    ()
+                    if external_observation_gate_reason is not None
+                    else self.tool_bridge.definitions()
+                ),
                 remaining_budget=self.budget.remaining(
                     model_calls=model_calls,
                     tool_calls=tool_calls,
@@ -1751,6 +1776,25 @@ class OrdivonAgentLoop:
                     detail=f"duplicate Model Call identity: {result.model_call_id}",
                 )
             seen_model_call_ids.add(result.model_call_id)
+            if external_observation_gate_reason is not None and any(
+                call.argument_error != "unavailable_tool"
+                for call in result.tool_calls
+            ):
+                fallback = AgentRunConclusion(
+                    "needs_input",
+                    external_observation_gate_reason,
+                    unresolved_unknowns=(
+                        "The Agent exhausted its admitted external observation budget without closing the Run.",
+                    ),
+                )
+                return stop(
+                    RunStopCode.NO_PROGRESS,
+                    conclusion=fallback,
+                    detail=(
+                        external_observation_gate_reason
+                        + "; the Agent requested another admitted external Tool after the gate closed"
+                    ),
+                )
             if result.working_set_transition is not None:
                 handler = self.working_set_transition_handler
                 if handler is None:
@@ -1785,6 +1829,9 @@ class OrdivonAgentLoop:
                             f"{type(error).__name__}: {error}"
                         ),
                     )
+                transient_tool_exchange_messages.clear()
+                transient_working_set_digest = None
+                external_observation_gate_reason = None
                 messages.append(
                     {
                         "role": "assistant",
@@ -1925,15 +1972,27 @@ class OrdivonAgentLoop:
                     )
                 return stop(RunStopCode.NEEDS_INPUT, conclusion=result.conclusion)
 
-            if tool_calls + len(result.tool_calls) > self.budget.max_tool_calls:
-                return stop(RunStopCode.BUDGET_EXHAUSTED)
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": result.content,
-                    "toolCalls": [call.to_dict() for call in result.tool_calls],
-                }
+            budgeted_tool_calls = tuple(
+                call
+                for call in result.tool_calls
+                if call.argument_error != "unavailable_tool"
             )
+            if tool_calls + len(budgeted_tool_calls) > self.budget.max_tool_calls:
+                return stop(RunStopCode.BUDGET_EXHAUSTED)
+            assistant_tool_message: dict[str, JsonValue] = {
+                "role": "assistant",
+                "content": result.content,
+                "toolCalls": [call.to_dict() for call in result.tool_calls],
+            }
+            messages.append(assistant_tool_message)
+            if working_view is not None:
+                if (
+                    transient_working_set_digest is not None
+                    and transient_working_set_digest != working_view.working_set_digest
+                ):
+                    transient_tool_exchange_messages.clear()
+                transient_working_set_digest = working_view.working_set_digest
+                transient_tool_exchange_messages.append(dict(assistant_tool_message))
             turn_observations: list[ToolObservation] = []
             stopped = execute_tool_calls(
                 result.tool_calls,
@@ -1943,6 +2002,11 @@ class OrdivonAgentLoop:
             )
             if stopped is not None:
                 return stopped
+            if working_view is not None:
+                transient_tool_exchange_messages.extend(
+                    observation.to_model_message()
+                    for observation in turn_observations
+                )
 
             stopped = evaluate_turn_progress(
                 result.tool_calls,

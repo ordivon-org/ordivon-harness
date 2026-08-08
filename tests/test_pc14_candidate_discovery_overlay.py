@@ -320,7 +320,7 @@ class DiscoveryOverlayRuntimeBridge(SQLiteHarnessRuntimeBridge):
 
 
 class CandidateOverlayProjector:
-    """Append a discovery observation only while its source WorkingSet is current."""
+    """Project only durable selected Context; Loop owns transient Tool exchanges."""
 
     def __init__(
         self,
@@ -332,13 +332,7 @@ class CandidateOverlayProjector:
         self.bridge = bridge
 
     def project(self) -> HarnessWorkingView:
-        base = self.base.project()
-        if (
-            self.bridge.overlay_message is None
-            or self.bridge.overlay_working_set_digest != base.working_set_digest
-        ):
-            return base
-        return overlay_working_view(base, (self.bridge.overlay_message,))
+        return self.base.project()
 
 
 class ArbitraryAppendingProjector:
@@ -513,9 +507,22 @@ class CandidateDiscoveryOverlayTests(unittest.TestCase):
                 self.assertIn(pin_b.resolved_digest, candidate_text)
                 self.assertIn(pin_c.resolved_digest, candidate_text)
                 self.assertNotEqual(request_two.context_digest, base_a.digest)
-                expected_overlay = overlay_working_view(
-                    base_a, (bridge.overlay_message,) if bridge.overlay_message else ()
+                first_result = discovery_turn(mode)
+                assistant_tool_message = {
+                    "role": "assistant",
+                    "content": first_result.content,
+                    "toolCalls": [call.to_dict() for call in first_result.tool_calls],
+                }
+                expected_exchange = (
+                    assistant_tool_message,
+                    bridge.overlay_message,
                 )
+                self.assertIsNotNone(bridge.overlay_message)
+                expected_overlay = overlay_working_view(
+                    base_a,
+                    tuple(message for message in expected_exchange if message is not None),
+                )
+                self.assertEqual(request_two.messages[1], assistant_tool_message)
                 self.assertEqual(request_two.context_digest, expected_overlay.digest)
 
                 current = continuity.load_current_working_set()
@@ -832,7 +839,7 @@ class CandidateDiscoveryOverlayTests(unittest.TestCase):
                 self.assertTrue(store.doctor(full=True)["healthy"])
                 with self.assertRaisesRegex(
                     HarnessProviderCallRequestMismatch,
-                    "not an exact bound Tool Observation projection",
+                    "not a completed Provider-authored Tool exchange",
                 ):
                     continuity.doctor()
 
@@ -867,7 +874,7 @@ class CandidateDiscoveryOverlayTests(unittest.TestCase):
                 )
                 with self.assertRaisesRegex(
                     HarnessProviderCallRequestMismatch,
-                    "not an exact bound Tool Observation projection",
+                    "not a completed Provider-authored Tool exchange",
                 ):
                     loop.run(
                         harness_run_id=run_contract.harness_run_id,

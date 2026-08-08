@@ -384,9 +384,15 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                 first_body = loads_strict(transport.bodies[0])
                 second_body = loads_strict(transport.bodies[1])
                 assert isinstance(first_body, dict) and isinstance(second_body, dict)
-                self.assertEqual(first_body["messages"], list(source_a.messages))
-                self.assertEqual(second_body["messages"], list(source_b.messages))
-                self.assertNotIn("View A", str(second_body["messages"]))
+                first_messages = first_body["messages"]
+                second_messages = second_body["messages"]
+                self.assertEqual(first_messages[0]["role"], "system")
+                self.assertEqual(second_messages[0]["role"], "system")
+                self.assertIn('"admittedRuntimeTools":[]', first_messages[0]["content"])
+                self.assertIn('"toolCalls":0', first_messages[0]["content"])
+                self.assertEqual(first_messages[1:], list(source_a.messages))
+                self.assertEqual(second_messages[1:], list(source_b.messages))
+                self.assertNotIn("View A", str(second_messages[1:]))
                 current = continuity.load_current_working_set()
                 self.assertEqual(current.attempt_id, proposal.next_attempt_id)
                 self.assertEqual(current.pins, proposal.pins)
