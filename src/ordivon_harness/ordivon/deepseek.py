@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
+from collections.abc import Mapping
 from typing import Protocol
 
 from anc_canonical import (
@@ -20,6 +21,11 @@ from anc_canonical import (
     validate_json_value,
 )
 
+from ..completion import (
+    encode_structured_completion_result,
+    structured_completion_contract_digest,
+    structured_completion_result_schema,
+)
 from .control import ExecutionControl
 from .model import (
     AgentRunConclusion,
@@ -452,19 +458,29 @@ class HttpClientDeepSeekTransport:
         return raw
 
 
-def _conclusion_tool() -> dict[str, JsonValue]:
+def _conclusion_tool(
+    structured_result_schema: dict[str, JsonValue] | None = None,
+) -> dict[str, JsonValue]:
     string_array: dict[str, JsonValue] = {
         "type": "array",
         "items": {"type": "string"},
         "maxItems": 128,
     }
+    result_property: dict[str, JsonValue]
+    result_name: str
+    if structured_result_schema is None:
+        result_name = "summary"
+        result_property = {"type": "string", "minLength": 1}
+    else:
+        result_name = "result"
+        result_property = structured_result_schema
     return {
         "type": "function",
         "function": {
             "name": _CONCLUSION_TOOL_NAME,
             "description": (
                 "Stop this bounded Harness Run and submit a candidate result for independent "
-                "Host verification. This does not complete the durable Task."
+                "caller or domain verification. This does not complete caller-owned work."
             ),
             "parameters": {
                 "type": "object",
@@ -474,14 +490,14 @@ def _conclusion_tool() -> dict[str, JsonValue]:
                         "type": "string",
                         "enum": ["candidate_completed", "needs_input"],
                     },
-                    "summary": {"type": "string", "minLength": 1},
+                    result_name: result_property,
                     "artifact_refs": string_array,
                     "evidence_refs": string_array,
                     "unresolved_unknowns": string_array,
                 },
                 "required": [
                     "status",
-                    "summary",
+                    result_name,
                     "artifact_refs",
                     "evidence_refs",
                     "unresolved_unknowns",
@@ -600,10 +616,20 @@ def _string_tuple(value: object, label: str) -> tuple[str, ...]:
     return tuple(value)
 
 
-def _parse_conclusion(arguments: dict[str, JsonValue]) -> AgentRunConclusion:
+def _parse_conclusion(
+    arguments: dict[str, JsonValue],
+    *,
+    completion_contract: Mapping[str, JsonValue] | None = None,
+) -> AgentRunConclusion:
+    structured = (
+        None
+        if completion_contract is None
+        else structured_completion_result_schema(completion_contract)
+    )
+    result_name = "result" if structured is not None else "summary"
     expected = {
         "status",
-        "summary",
+        result_name,
         "artifact_refs",
         "evidence_refs",
         "unresolved_unknowns",
@@ -611,9 +637,16 @@ def _parse_conclusion(arguments: dict[str, JsonValue]) -> AgentRunConclusion:
     if set(arguments) != expected:
         raise ValueError("DeepSeek conclusion fields differ")
     status = arguments["status"]
-    summary = arguments["summary"]
-    if not isinstance(status, str) or not isinstance(summary, str):
-        raise TypeError("DeepSeek conclusion status and summary must be strings")
+    if not isinstance(status, str):
+        raise TypeError("DeepSeek conclusion status must be a string")
+    if structured is None:
+        summary = arguments["summary"]
+        if not isinstance(summary, str):
+            raise TypeError("DeepSeek conclusion summary must be a string")
+    else:
+        summary = encode_structured_completion_result(
+            completion_contract, arguments["result"]
+        )
     return AgentRunConclusion(
         status=status,
         summary=summary,
@@ -661,10 +694,20 @@ class DeepSeekTurnAdapter:
         settings: DeepSeekSettings,
         *,
         transport: DeepSeekTransport | None = None,
+        completion_contract: Mapping[str, JsonValue] | None = None,
     ) -> None:
         self.settings = settings
         self.model_id = settings.model
         self.transport = transport or HttpClientDeepSeekTransport()
+        self._completion_contract = (
+            {} if completion_contract is None else dict(completion_contract)
+        )
+        self._structured_result_schema = structured_completion_result_schema(
+            self._completion_contract
+        )
+        self.structured_completion_contract_digest = (
+            structured_completion_contract_digest(self._completion_contract)
+        )
 
     @property
     def supports_call_handle(self) -> bool:
@@ -788,7 +831,7 @@ class DeepSeekTurnAdapter:
                 "Runtime Tool catalog collides with the Harness conclusion Tool"
             )
         tools = [_provider_tool(tool) for tool in request.tools]
-        tools.append(_conclusion_tool())
+        tools.append(_conclusion_tool(self._structured_result_schema))
         body_value: dict[str, JsonValue] = {
             "model": self.settings.model,
             "messages": _provider_messages(request.messages),
@@ -953,7 +996,9 @@ class DeepSeekTurnAdapter:
                     )
                     continue
                 try:
-                    conclusion = _parse_conclusion(arguments)
+                    conclusion = _parse_conclusion(
+                        arguments, completion_contract=self._completion_contract
+                    )
                 except (KeyError, TypeError, ValueError) as error:
                     runtime_calls.append(
                         invalid_call(

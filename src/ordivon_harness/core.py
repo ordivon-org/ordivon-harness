@@ -6,11 +6,17 @@ bridging. Importing it never requires ``ordivon-host``.
 """
 
 from .agent_tool_observation import HarnessArtifactReference, HarnessToolObservation
+from .completion import (
+    decode_structured_completion_result,
+    structured_completion_contract_digest,
+    structured_completion_result_schema,
+)
 from .core_contracts import (
     HarnessBoundReference,
     HarnessCorrelationContext,
     HarnessPrivacyPolicy,
     HarnessRunContract,
+    STRUCTURED_COMPLETION_MODE,
 )
 from .execution_binding import (
     HarnessExecutionBinding,
@@ -163,6 +169,7 @@ __all__ = [
     "HarnessRevisionConflict",
     "HarnessRunContinuityStore",
     "HarnessRunContract",
+    "STRUCTURED_COMPLETION_MODE",
     "HarnessRunEventRecord",
     "HarnessRunLease",
     "HarnessRunProjection",
@@ -197,8 +204,11 @@ __all__ = [
     "StoredIndependentRunResult",
     "backup_harness_store",
     "build_harness_workspace_exec_request_from_binding",
+    "decode_structured_completion_result",
     "find_runtime_jobs_by_client_request",
     "package_version",
     "restore_harness_backup",
+    "structured_completion_contract_digest",
+    "structured_completion_result_schema",
     "verify_harness_backup",
 ]

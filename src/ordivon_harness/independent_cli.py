@@ -175,7 +175,10 @@ def _adapter(contract: HarnessRunContract, args) -> AgentTurnAdapter:
             "independent CLI execution currently supports only "
             f"{DeepSeekTurnAdapter.adapter_id}; use the Host-free Python API for another Adapter"
         )
-    return DeepSeekTurnAdapter(DeepSeekSettings.from_secret_file(args.deepseek_secret))
+    return DeepSeekTurnAdapter(
+        DeepSeekSettings.from_secret_file(args.deepseek_secret),
+        completion_contract=contract.completion_contract,
+    )
 
 
 def _runner(

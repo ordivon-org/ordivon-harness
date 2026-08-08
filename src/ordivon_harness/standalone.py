@@ -6,6 +6,7 @@ from typing import Callable, Protocol
 
 from anc_canonical import JsonValue
 
+from .completion import structured_completion_contract_digest
 from .core_contracts import HarnessRunContract
 from .independent_result import (
     IndependentRunRecorder,
@@ -66,6 +67,15 @@ class StandaloneHarnessRunner:
             raise ValueError("Standalone Runner requested model differs from its Contract")
         if tool_bridge.catalog_digest != contract.tool_catalog_digest:
             raise ValueError("Standalone Runner Tool catalog differs from its Contract")
+        expected_completion_digest = structured_completion_contract_digest(
+            contract.completion_contract
+        )
+        if expected_completion_digest is not None and getattr(
+            adapter, "structured_completion_contract_digest", None
+        ) != expected_completion_digest:
+            raise ValueError(
+                "Standalone Runner structured completion differs from its Contract"
+            )
         self._validate_budget(contract.budget, budget)
         store = getattr(continuity, "store", None)
         if store is None:

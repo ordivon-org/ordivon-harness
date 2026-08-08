@@ -44,6 +44,8 @@ STABLE_API = {
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
+    "DeepSeekSettings",
+    "DeepSeekTurnAdapter",
     "HarnessBoundReference",
     "HarnessCorrelationContext",
     "HarnessExecutionBinding",
@@ -60,17 +62,23 @@ STABLE_API = {
     "HarnessRuntimeToolRejected",
     "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
     "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
+    "NO_TOOL_AGENT_GRANT_DIGEST",
+    "NO_TOOL_AGENT_SURFACE_DIGEST",
     "IndependentCompletionProposal",
     "IndependentHarnessRunReceipt",
     "OrdivonAgentLoop",
     "RunBudget",
     "RunStopCode",
+    "STRUCTURED_COMPLETION_MODE",
     "SQLiteHarnessRunContinuityStore",
     "SQLiteHarnessRuntimeBridge",
     "SQLiteHarnessStore",
     "StandaloneHarnessExecution",
     "StandaloneHarnessRunner",
     "StandaloneToolBridge",
+    "decode_structured_completion_result",
+    "structured_completion_contract_digest",
+    "structured_completion_result_schema",
 }
 LINK_PATTERN = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -305,6 +313,8 @@ def validate_public_contracts() -> list[str]:
         "8,192-token completion ceiling",
         "HarnessRuntimeToolRejected",
         "HarnessExecutionBinding",
+        "structured-result-v1",
+        "decode_structured_completion_result",
     ):
         if required not in quickstart:
             errors.append(f"QUICKSTART.md lacks Agent-first authoring guidance: {required}")

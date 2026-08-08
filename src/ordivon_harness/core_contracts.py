@@ -6,11 +6,18 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
-from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from anc_canonical import (
+    JsonValue,
+    canonical_bytes,
+    canonical_digest,
+    validate_json_value,
+)
 
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TRACEPARENT_RE = re.compile(r"^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-[0-9a-f]{2}$")
 _CONTENT_POLICIES = {"metadata-only", "bounded-private-content"}
+STRUCTURED_COMPLETION_MODE = "structured-result-v1"
+_MAX_STRUCTURED_RESULT_SCHEMA_BYTES = 65_536
 
 
 def _exact(value: dict[str, Any], expected: set[str], label: str) -> None:
@@ -36,6 +43,23 @@ def _identity(value: str, prefix: str, label: str) -> str:
 def _digest(value: str, label: str) -> str:
     if not isinstance(value, str) or _DIGEST_RE.fullmatch(value) is None:
         raise ValueError(f"{label} must be sha256:<64 lowercase hex>")
+    return value
+
+
+def _freeze_json(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _thaw_json(value: Any) -> JsonValue:
+    if isinstance(value, Mapping):
+        return {str(key): _thaw_json(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_thaw_json(item) for item in value]
+    validate_json_value(value)
     return value
 
 
@@ -208,11 +232,27 @@ class HarnessRunContract:
         _digest(self.tool_grant_digest, "Harness Tool grant digest")
         _json_object(self.budget, "Harness budget")
         _json_object(self.completion_contract, "Harness completion contract")
+        if self.completion_contract.get("mode") == STRUCTURED_COMPLETION_MODE:
+            result_schema = self.completion_contract.get("resultSchema")
+            if not isinstance(result_schema, Mapping):
+                raise ValueError(
+                    "structured completion resultSchema must be an object"
+                )
+            _json_object(
+                result_schema,
+                "structured completion resultSchema",
+            )
+            if len(canonical_bytes(dict(result_schema))) > _MAX_STRUCTURED_RESULT_SCHEMA_BYTES:
+                raise ValueError(
+                    "structured completion resultSchema exceeds 65536 canonical bytes"
+                )
         object.__setattr__(self, "budget", MappingProxyType(dict(self.budget)))
+        completion_snapshot = _thaw_json(self.completion_contract)
+        assert isinstance(completion_snapshot, dict)
         object.__setattr__(
             self,
             "completion_contract",
-            MappingProxyType(dict(self.completion_contract)),
+            _freeze_json(completion_snapshot),
         )
         if self.created_at_ms < 0:
             raise ValueError("Harness Run creation time must be non-negative")
@@ -246,7 +286,7 @@ class HarnessRunContract:
             "toolCatalogDigest": self.tool_catalog_digest,
             "toolGrantDigest": self.tool_grant_digest,
             "budget": dict(self.budget),
-            "completionContract": dict(self.completion_contract),
+            "completionContract": _thaw_json(self.completion_contract),
             "systemManifestRef": self.system_manifest_ref.to_dict(),
             "createdAtMs": self.created_at_ms,
             "sourceRefs": [item.to_dict() for item in self.source_refs],

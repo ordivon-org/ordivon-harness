@@ -54,7 +54,8 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - bounded Agent loop with DeepSeek and scripted adapters;
 - pause/resume snapshots, UNKNOWN handling and conservative recovery;
 - Host-free Runtime bridges supplied with a caller-owned `HarnessRuntimeClient`;
-- Run Receipt and CompletionProposal that remain proposals to the caller rather than domain completion authority.
+- Run Receipt and CompletionProposal that remain proposals to the caller rather than domain completion authority;
+- caller-defined `structured-result-v1` completion schemas for DeepSeek, bound by the Run Contract while caller/domain semantic admission remains external.
 
 ## What it does not do
 

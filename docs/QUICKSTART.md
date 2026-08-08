@@ -89,6 +89,35 @@ For the built-in DeepSeek profile, the Contract must bind the canonical no-Tool 
 
 A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI. `call_tool()` is only the success-shape Protocol. The caller must also translate its transport and Runtime rejection failures into `HarnessRuntimeClientError` / `HarnessRuntimeToolRejected` with a `HarnessRuntimeErrorDetail`. In particular, a Runtime rejection with `commit_state` `not_started` or `not_committed` remains model-correctable; passing an unrelated client exception through unchanged loses that recovery meaning and is treated as a Harness failure. The recommended API also exports `HarnessExecutionBinding`, `HarnessRuntimeReference`, and the independent search catalog/grant digests required by the current `SQLiteHarnessRuntimeBridge`.
 
+When a caller needs a typed semantic result instead of free-form summary text, bind the result shape into the existing completion authority:
+
+```python
+from ordivon_harness.api import (
+    DeepSeekTurnAdapter,
+    HarnessRunContract,
+    decode_structured_completion_result,
+)
+
+completion_contract = {
+    "mode": "structured-result-v1",
+    "resultKind": "my-domain-result",
+    "resultSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"choice": {"type": "string", "enum": ["a", "b"]}},
+        "required": ["choice"],
+    },
+}
+contract = HarnessRunContract(..., completion_contract=completion_contract, ...)
+adapter = DeepSeekTurnAdapter(
+    settings, completion_contract=contract.completion_contract
+)
+# after the Run, with a non-null conclusion:
+value = decode_structured_completion_result(contract, execution.loop_result.conclusion)
+```
+
+The exact completion Contract is part of `HarnessRunContract.digest`. `StandaloneHarnessRunner` fails closed if a `structured-result-v1` Contract is paired with an Adapter that was not bound to the same completion Contract. DeepSeek receives the caller schema as the `submit_run_conclusion.result` Tool schema, and Harness stores the canonical result JSON in the existing conclusion summary representation, so this adds no second durable result store or Host-specific result type. **Caller/domain verification remains mandatory**: `decode_structured_completion_result` is a codec, not semantic admission.
+
 ## Pause and resume
 
 ```bash

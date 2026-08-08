@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import unittest
 
@@ -68,6 +69,41 @@ class HarnessCoreContractTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "Tool Call budget must be non-negative"):
             RunBudget(2, -1, 4_096, 60_000)
+
+
+    def test_structured_completion_schema_is_validated_and_deeply_snapshotted(self) -> None:
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"choice": {"type": "string", "enum": ["a"]}},
+            "required": ["choice"],
+        }
+        value = replace(
+            contract(),
+            completion_contract={
+                "mode": "structured-result-v1",
+                "resultKind": "test-choice",
+                "resultSchema": schema,
+            },
+        )
+        digest = value.digest
+        schema["properties"]["choice"]["enum"].append("b")
+        self.assertEqual(value.digest, digest)
+        exported = value.to_dict()
+        self.assertEqual(
+            exported["completionContract"]["resultSchema"]["properties"]["choice"]["enum"],
+            ["a"],
+        )
+        with self.assertRaises(TypeError):
+            value.completion_contract["resultSchema"]["properties"]["choice"] = {}  # type: ignore[index]
+        with self.assertRaisesRegex(ValueError, "resultSchema must be an object"):
+            replace(
+                contract(),
+                completion_contract={
+                    "mode": "structured-result-v1",
+                    "resultSchema": ["not", "an", "object"],
+                },
+            )
 
     def test_contract_is_caller_neutral(self) -> None:
         rendered = str(contract().to_dict()).lower()

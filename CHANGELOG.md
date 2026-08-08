@@ -6,7 +6,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Changed
 
-- the recommended `ordivon_harness.api` facade is now closed over basic Run Contract authoring and the already-exported independent Runtime bridge: bound/correlation references, execution/runtime references, search capability digests, and Runtime error-contract types are available without dropping to `ordivon_harness.core`;
+- the recommended `ordivon_harness.api` facade is now closed over basic Run Contract authoring and the built-in execution paths: DeepSeek settings/adapter, no-Tool and search capability digests, bound/correlation references, execution/runtime references, and Runtime error-contract types are available without dropping to `ordivon_harness.core`;
 - no-Tool Runs may bind `maxToolCalls=0`; model, observation, wall-time and token budgets remain positive and Tool capability is still controlled only by the Contract Tool catalog/grant;
 - **Breaking pre-1.0 H3:** Ordivon Harness is now a single independent Agent Run product line. The SQLite Harness Journal/CAS is the only current Run writer and `HarnessRunContract` is the only current caller/execution contract.
 - the CLI has one `--state-root` meaning and only independent `capabilities`, Run/recovery, and `store-*` commands; the historical `host` namespace and all `cutover-*` commands were removed;
@@ -29,6 +29,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Fixed
 
+- the DeepSeek conclusion Tool now describes caller/domain verification rather than the removed Host-backed verification model, and Standalone execution fails closed when a structured completion Contract is not bound by the executing Adapter;
 - Quick Start now includes a caller-authored Contract construction path, the DeepSeek 8,192-token completion-ceiling preflight behavior, Runtime error-translation requirements for Tool-bearing callers, and a wheel-verification command that passes the actual wheel path;
 - canonical security, data/privacy, verification and domain-Tool guidance now describe the independent Harness Journal/CAS and current Host-free Run API instead of removed Host-backed Assignment/Runner persistence; documentation checks reject those stale current claims;
 - concurrent same-digest CAS publication now preserves one immutable published inode and tolerates publication-only `ctime` movement without weakening canonical digest, inode, size, mtime, mode, or no-follow checks;
@@ -46,6 +47,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Added
 
+- generic caller-defined `structured-result-v1` completion for DeepSeek: the Run Contract binds a result schema, the Provider conclusion Tool emits a structured result, and callers decode the canonical result without introducing Host/domain policy or a second durable result schema;
 - public `DomainToolCatalog`, `DomainToolBridge`, `DomainToolLoopPlan` and `DomainToolLoopRunner`;
 - deterministic domain catalog/grant identity and an inspectable execution identity binding Harness, Provider, domain Bridge and complete Loop budget;
 - fail-closed tests proving unknown grants are rejected before Provider invocation and non-Runtime domain Tools complete a full model/Tool/conclusion loop.

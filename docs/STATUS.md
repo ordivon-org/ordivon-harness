@@ -42,6 +42,7 @@ Ordivon Harness is an independent caller-neutral Run system. The current writer 
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
 - independent Run Receipt, CompletionProposal and recovery evidence;
+- caller-defined `structured-result-v1` completion schemas for DeepSeek, with exact completion-Contract binding and generic result decoding;
 - repository-repair read/edit bridge test surfaces;
 - Host-free external-executor adapter.
 
@@ -54,6 +55,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - primary CLI does not construct Tool-bearing Runtime clients;
 - the current Host-free external-executor adapter covers generic foreign Runs, not a direct `CognitionWorkRequest` → structured `ActionSelection`/`ActionProposal` bridge for Host cognition;
 - CompletionProposal is not caller/domain completion authority;
+- structured completion constrains Provider output shape but does not make Harness a JSON-Schema or domain verifier; callers must still decode and semantically admit the result under their own authority;
 - Provider/Tool UNKNOWN may require external reconciliation;
 - public API and owner-local schemas remain pre-1.0;
 - historical receipts prove the implementations they bind, not the current H3 source unless indexed as verified.

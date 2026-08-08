@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import threading
@@ -107,6 +108,42 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
                 self.assertEqual(event_kinds.count("harness.provider-call-dispatching"), 1)
                 self.assertEqual(event_kinds.count("harness.provider-call-completed"), 1)
                 self.assertEqual(event_kinds.count("harness.run-completed"), 1)
+
+
+    def test_structured_completion_requires_adapter_binding_to_exact_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            base = contract("structured-binding")
+            run_contract = replace(
+                base,
+                completion_contract={
+                    "mode": "structured-result-v1",
+                    "resultSchema": {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                    },
+                },
+            )
+            store = SQLiteHarnessStore.initialize(root)
+            store.create_run(run_contract)
+            continuity = SQLiteHarnessRunContinuityStore(
+                store, run_contract, clock_ms=clock
+            )
+            adapter = ScriptedTurnAdapter((completed_result("structured-binding"),))
+            bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
+            with self.assertRaisesRegex(ValueError, "structured completion differs"):
+                StandaloneHarnessRunner(
+                    run_contract,
+                    continuity,
+                    adapter,
+                    bridge,
+                    budget=budget(),
+                    clock_ms=clock,
+                    monotonic_ms=clock,
+                )
+            store.close()
 
     def test_candidate_completion_is_terminal_and_restart_inspectable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
