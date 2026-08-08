@@ -173,9 +173,16 @@
     {
       "claimId": "harness.cognition.ha5-structured-completion",
       "file": "harness-ha5-structured-completion-d7d5417.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "d7d5417c055f08d4d37b571cb7c9983adf37ddb7",
-      "scope": "Current H-A5 acceptance: generic caller-defined structured completion on independent DeepSeek Runs, exact completion-Contract binding, Host-free Harness core, and live closed-choice/open-proposal Host semantic admission without a Host-specific cognition bridge."
+      "scope": "Historical H-A5 acceptance for generic structured completion and Host semantic admission; retained unchanged after the Agent-first terminality and Mandate/attempt reforms superseded its source revision as current implementation evidence."
+    },
+    {
+      "claimId": "harness.execution.agent-first-mandate-attempts",
+      "file": "harness-agent-first-mandate-6daeee4.json",
+      "status": "verified",
+      "implementationRevision": "6daeee4b2345850cf193fb3edfe2ac7653634e3b",
+      "scope": "Current Agent-first acceptance: caller-delegated Mandate with allowed execution profiles and aggregate token/wall-time envelope, receipt-derived consumption across attempts, immutable Strategy-to-Run compilation, reuse of evidence from a budget-exhausted Runtime-search attempt, and a no-Tool follow-up attempt that completes without repeating Runtime observation. No built-in StrategyPolicy or second Mandate Store."
     }
   ]
 }

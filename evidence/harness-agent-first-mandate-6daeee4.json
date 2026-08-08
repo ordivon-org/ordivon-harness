@@ -1,0 +1,73 @@
+{
+  "attempt1": {
+    "contractDigest": "sha256:b445bb307b74827bcbbd3634b0115095624324616f458a29b3f61d7286595127",
+    "modelCalls": 1,
+    "observationDigests": [
+      "sha256:761d9524583724397d2d1598d8e336025423c9f670ecd9b2ee632da83607c2de"
+    ],
+    "profileDigest": "sha256:6795056474c2832895f4bc9568bdee9dbec418a38a756a6c6629f0d001845fd6",
+    "receiptDigest": "sha256:aebc3b7d61ff52c26f3fa611fff687d9a018892cbdf2461ce121955458adf874",
+    "stopCode": "budget_exhausted",
+    "strategyDigest": "sha256:56a23fac5c8851f62a05b48fac4474b780ec4b1f1c51f762974223c4522d4f60",
+    "toolCalls": 1,
+    "totalTokens": 725,
+    "wallTimeMs": 9147
+  },
+  "attempt2": {
+    "adoptedContextDigests": [
+      "sha256:aebc3b7d61ff52c26f3fa611fff687d9a018892cbdf2461ce121955458adf874",
+      "sha256:761d9524583724397d2d1598d8e336025423c9f670ecd9b2ee632da83607c2de"
+    ],
+    "contractDigest": "sha256:3103f5bda9b84fd3bfa16343bc66e02c248c261e46a75e564b2c08f4e24a0952",
+    "heading": "Ordivon Host",
+    "modelCalls": 1,
+    "profileDigest": "sha256:65ddf245d452814686c3e44a4c7e0d5b827e26aeceded274eb7a29620b4f106f",
+    "receiptDigest": "sha256:3499a1e5b19bf20f2ccb7e6dc8262096d5f440933578f6e3d64bb2417beea42d",
+    "stopCode": "candidate_completed",
+    "strategyDigest": "sha256:056918725e5283f945a8a337b7d9b9e059a33e406baaf345719a7f3b8f465a5c",
+    "toolCalls": 0,
+    "totalTokens": 3376
+  },
+  "checks": {
+    "aggregateEnvelopeEnforced": true,
+    "builtInStrategyPolicy": false,
+    "cliCommandsVerified": 14,
+    "deterministicTests": 166,
+    "durableMandateStore": false,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "priorEvidenceReused": true,
+    "runTerminalityDistinctFromEpistemicClosure": true,
+    "runtimeObservationRepeated": false,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "A caller-delegated Mandate can survive a budget-exhausted Run attempt, retain that attempt evidence, consume aggregate resource budget from its Receipt, switch execution profile, and compile a second exact Run attempt without repeating the Runtime observation.",
+  "consumption": {
+    "completedAttempts": 1,
+    "consumedTotalTokens": 725,
+    "consumedWallTimeMs": 9147,
+    "digest": "sha256:4fee31ec734ddf0aab86c99099e33e6cc5851007dd36ade86c3674b5b8e4f172",
+    "remainingTotalTokens": 64811,
+    "remainingWallTimeMs": 110853
+  },
+  "implementationSourceRevision": "6daeee4b2345850cf193fb3edfe2ac7653634e3b",
+  "kind": "ordivon.harness-agent-first-mandate-acceptance",
+  "knownLimits": [
+    "Harness does not yet provide a built-in StrategyPolicy or durable Mandate controller.",
+    "HarnessMandateConsumption is caller-supplied and must be reconstructed from authoritative prior Run receipts.",
+    "Current aggregate Mandate enforcement covers total-token and wall-time envelopes plus allowed profile IDs; other economic/risk dimensions remain future evidence-driven work."
+  ],
+  "mandate": {
+    "allowedProfiles": [
+      "profile:deepseek-runtime-search-v1",
+      "profile:deepseek-no-tool-v1"
+    ],
+    "digest": "sha256:bc46881502409408db7eec696b8813f27b1a15e6f41cee6f6ca6079416b13a76",
+    "maxTotalTokens": 65536,
+    "maxWallTimeMs": 120000
+  },
+  "model": "deepseek-v4-flash",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
