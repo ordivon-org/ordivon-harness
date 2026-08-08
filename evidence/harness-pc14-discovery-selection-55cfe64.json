@@ -1,0 +1,57 @@
+{
+  "architecture": {
+    "discoveryOwnership": "candidate discovery semantics remain outside generic Harness: a domain, World integration or Runtime Tool may discover raw paths, records, URLs or already-materialized source identities",
+    "materializationBoundary": "raw discovered content is not a WorkingSet pin; domain integration must materialize exact HarnessWorkingViewSource content through the Run privacy boundary and use the returned Harness CAS object digest as resolvedDigest",
+    "selectionOwnership": "the Agent remains the owner of successor WorkingSet selection; transient discovery evidence can inform that decision without becoming selected Context automatically",
+    "transientModelView": "a durable Provider request may equal the exact committed WorkingView prefix plus ordered exact model projections of Tool Observations already bound in that Provider Call's RunState",
+    "dualSourceIdentity": "provider-authored cognition transitions now bind sourceWorkingSetDigest for durable selected Context separately from sourceModelViewDigest for the exact effective Provider-visible view including admitted transient observation overlays"
+  },
+  "behavior": {
+    "preMaterializedDiscovery": "the Agent first sees insufficient WorkingView A, performs one Runtime search_workspace observation, next sees A plus exact candidate B/C Tool Observation, selects only B, then sees B alone after commit",
+    "runtimeResponseLoss": "the same discovery path under Runtime response loss performs one physical workspace.exec and reconciles through existing task.list/task.observe before Agent selection; no duplicate search effect occurs",
+    "rawDiscoveryMaterialization": "B/C begin as raw domain records absent from Harness CAS; domain integration materializes them through store_working_view_source before the Tool Receipt is recorded, exposes the actual returned CAS identities in that exact Tool Observation, and the Agent selects the pin it actually observed",
+    "overlayLifetime": "transient discovery overlay is keyed by its source WorkingSet in the validated integration; after B commits, the next projected request contains B and not A, C or stale discovery evidence",
+    "prefixFence": "a projector that replaces committed WorkingView A is rejected before physical Provider dispatch",
+    "observationProvenanceFence": "a projector that preserves A but appends arbitrary unbound user content is rejected before physical Provider dispatch because the suffix is not an exact bound Tool Observation projection",
+    "transitionProvenance": "an overlay-backed WorkingSet transition cannot be admitted from a fabricated model-view digest without exact completed Provider request/result evidence",
+    "doctorReplay": "a low-level mechanically valid Provider claim containing A plus an invented overlay with no corresponding bound Tool Observation passes Store Doctor but fails Continuity Doctor semantic provenance replay",
+    "casIdentityLesson": "HarnessWorkingViewSource semantic digest is distinct from the StoredHarnessObject CAS envelope digest; the first raw-materialization experiment failed when these identities were intentionally conflated, and the corrected path uses the actual materialization return identity"
+  },
+  "checks": {
+    "cliCommandsVerified": 14,
+    "dependencyContractPassed": true,
+    "deterministicTests": 207,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "newGenericCandidateSetAdded": false,
+    "newGenericContextServiceAdded": false,
+    "newGenericRagOrRankingPolicyAdded": false,
+    "newSQLiteSchemaRequired": false,
+    "pc14FocusedTests": 7,
+    "rawCandidateExistsInHarnessCasBeforeDiscovery": false,
+    "rawDiscoveryPhysicalWorkspaceExecs": 1,
+    "runtimeResponseLossPhysicalWorkspaceExecs": 1,
+    "arbitraryAppendOverlayPhysicalProviderDispatches": 0,
+    "replacementOverlayPhysicalProviderDispatches": 0,
+    "recommendedApiExportsDiscoverySeam": false,
+    "ruffPassed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.4 validates a discovery-selection boundary rather than a Harness-owned discovery engine. External/domain discovery can surface transient candidate evidence to an Agent without silently mutating its durable WorkingSet; Harness proves the committed base view, bound Tool-observation provenance, exact Provider-visible model view, privacy-aware source materialization and the later Agent-selected successor transition. This supports keeping search/relevance policy outside generic Harness while retaining a narrow authority protocol between discovery evidence and cognition selection.",
+  "implementationSourceRevision": "55cfe64197f2605a9db26776d4b5cf7112e6267b",
+  "kind": "ordivon.harness-pc14-discovery-selection-acceptance",
+  "knownLimits": [
+    "Harness still has no generic discovery engine, CandidateSet, Context Service, relevance ranking, RAG, Memory, summarization or automatic Context scheduler.",
+    "The experiments establish protocol/authority boundaries with deterministic/mock Provider behavior; they do not claim a real model will reliably recognize when to discover, formulate good searches or select epistemically good candidates.",
+    "Raw candidate interpretation and materialization policy are domain integration responsibilities. The proof uses test-specific bridge subclasses; no first-class recommended domain materialization hook was added in this slice.",
+    "The transient overlay rule admits an ordered subset of exact Tool Observation model projections. Harness proves provenance, not relevance or the semantic reason that a particular observation should be shown on a particular turn.",
+    "The validated integration expires an overlay when its source WorkingSet changes, but generic overlay lifetime/scheduling policy remains outside Harness and is not encoded as a new Context scheduler.",
+    "Overlay-backed durable cognition proof requires exact Provider request/result and Tool Observation content; metadata-only or other content policies that intentionally omit those bytes cannot reconstruct that exact cross-process proof without authorized rehydration.",
+    "Harness proves that a materialized pin resolves to an authorized exact source object; it does not prove that domain discovery transformed raw external data into the semantically correct source representation.",
+    "No Runtime, World, Finance or Host repository was changed. The existing Runtime search_workspace Tool was sufficient to test the boundary."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}

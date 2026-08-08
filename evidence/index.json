@@ -215,9 +215,16 @@
     {
       "claimId": "harness.cognition.pc13-agent-owned-working-set",
       "file": "harness-pc13-agent-owned-working-set-fa23bfc.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "fa23bfc817ce4c63fc5eadc398d044eb6817b7ae",
-      "scope": "Current P-C1.3 acceptance: the mature Agent path can normalize a Provider-authored WorkingSet transition, atomically replan/select/commit exact already-known successor pins against the WorkingView that produced the proposal, project the successor on the next turn with maxToolCalls=0, fence competing transitions, replay idempotently across fresh Store instances and consume a durably completed transition result without Provider redispatch. Context discovery/ranking/RAG/Memory remain outside this slice."
+      "scope": "Historical P-C1.3 Agent-owned WorkingSet acceptance retained unchanged after P-C1.4 established the discovery-selection boundary. Its Agent successor-selection, non-Tool cognition, atomic transition, concurrency and replay proofs remain valid for fa23bfc, while P-C1.4 supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc14-discovery-selection-boundary",
+      "file": "harness-pc14-discovery-selection-55cfe64.json",
+      "status": "verified",
+      "implementationRevision": "55cfe64197f2605a9db26776d4b5cf7112e6267b",
+      "scope": "Current P-C1.4 acceptance: external/domain Runtime discovery can expose transient candidate evidence without silently selecting Context; Provider admission preserves the committed WorkingView as exact prefix and admits only bound Tool Observation projections, raw candidates cross privacy-aware materialization before becoming exact pins, overlay-backed Agent transitions bind both source WorkingSet and exact model view, Runtime response loss reconciles without duplicate search, and Continuity Doctor replays overlay provenance. Harness still owns no generic discovery/ranking/RAG/Memory policy."
     }
   ]
 }
