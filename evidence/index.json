@@ -222,9 +222,16 @@
     {
       "claimId": "harness.cognition.pc14-discovery-selection-boundary",
       "file": "harness-pc14-discovery-selection-55cfe64.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "55cfe64197f2605a9db26776d4b5cf7112e6267b",
-      "scope": "Current P-C1.4 acceptance: external/domain Runtime discovery can expose transient candidate evidence without silently selecting Context; Provider admission preserves the committed WorkingView as exact prefix and admits only bound Tool Observation projections, raw candidates cross privacy-aware materialization before becoming exact pins, overlay-backed Agent transitions bind both source WorkingSet and exact model view, Runtime response loss reconciles without duplicate search, and Continuity Doctor replays overlay provenance. Harness still owns no generic discovery/ranking/RAG/Memory policy."
+      "scope": "Historical P-C1.4 discovery-selection acceptance retained unchanged after P-C1.5 real-Provider experiments corrected its observation-only transient projection to complete Provider-authored Tool exchanges. Its discovery/materialization/Agent-selection, Runtime response-loss and provenance-boundary results remain valid for 55cfe64, while P-C1.5 supersedes it as whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.cognition.pc15-epistemic-control",
+      "file": "harness-pc15-epistemic-control-9e65feb.json",
+      "status": "verified",
+      "implementationRevision": "9e65feb5045aa64ab2da69dc2645bb80bfa93866",
+      "scope": "Current P-C1.5 acceptance: Provider-visible Tool defaults match lowering, projected current-attempt Tool evidence is a complete Provider-authored exchange, DeepSeek receives current budget/capability execution control separately from task Context, observation/no-progress and exhausted-Tool limits close external effect capability before an Agent closure turn, revoked historical Runtime Tool calls are locally correctable with zero dispatch, and real deepseek-v4-flash authored bounded candidate_completed/needs_input outcomes without a Harness-owned epistemic evaluator."
     }
   ]
 }

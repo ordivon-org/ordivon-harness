@@ -1,0 +1,60 @@
+{
+  "architecture": {
+    "agentOwnedClosure": "Harness bounds external effects but does not decide whether evidence is semantically sufficient; after observation capability closes, the Agent retains the choice to conclude candidate_completed, report needs_input with concrete unresolved unknowns, or perform an admitted cognition transition",
+    "completeToolExchange": "transient Tool evidence is projected as a Provider-faithful exchange: exact Provider-authored assistant toolCalls followed by the exact bound Tool Observations; orphan Tool Observation messages are not valid model-view continuity",
+    "executionControlSeparation": "DeepSeek receives exact per-turn remaining budget and currently admitted Runtime Tool names as a Harness-authored execution-control system envelope distinct from task WorkingSet/WorkingView evidence",
+    "effectGate": "no-progress, observation-only and hard Tool-budget limits close new external observation capability for the next Agent turn rather than immediately synthesizing a Harness-authored epistemic conclusion",
+    "revokedCapabilityCorrection": "a historical Runtime Tool name used after capability withdrawal becomes a bounded model-correctable local rejection with physicalDispatch=false and commitState=not_started; it consumes correction budget but cannot exceed the external Tool budget",
+    "epistemicNonOwnership": "no generic EpistemicState, evidence-sufficiency evaluator, Context Engine, CandidateSet, RAG, Memory, relevance ranking or automatic epistemic scheduler was added"
+  },
+  "behavior": {
+    "sufficientLiveCase": "real deepseek-v4-flash received an authoritative current record in its selected view, performed zero Runtime searches and authored candidate_completed directly",
+    "missingLiveCase": "real deepseek-v4-flash recognized missing information, performed one physical search_workspace call, observed the authoritative current value and authored candidate_completed",
+    "staleHintLiveCase": "real deepseek-v4-flash performed two physical searches, distinguished stale historical RED-9 from current BLUE-17, revised the stale belief and authored candidate_completed",
+    "insufficientLiveCase": "real deepseek-v4-flash performed exactly four admitted physical searches, then two attempts to reuse now-unavailable Runtime search capability were corrected locally with zero further physical dispatch; the Agent subsequently authored needs_input with the concrete unresolved current launch-code fact",
+    "toolDefaultDiscovery": "the first live baseline exposed that provider-visible search_workspace declared relativePath optional with default '.', while Runtime lowering incorrectly required it; lowering and progress identity now honor the same canonical default",
+    "providerTranscriptDiscovery": "the first real post-search DeepSeek continuation returned HTTP 400 because P-C1.4 projected an orphan Tool Observation without the preceding assistant tool_calls message; P-C1.5 replaced that representation with complete Provider-authored Tool exchanges",
+    "hiddenBudgetDiscovery": "AgentTurnRequest already carried remaining budget but DeepSeek did not see it; execution-control projection now makes budget and capability withdrawal explicit without inserting those constraints into task Context",
+    "closureDiscovery": "the old observation-only/no-progress intervention immediately wrote a Harness-authored needs_input before the Agent could inspect the final evidence batch; the new gate closes external observation and returns control to the Agent for semantic closure",
+    "concurrencyAcceptance": "one official acceptance attempt saw a single transient failure in the existing concurrent Runtime-dispatch test; the exact test then passed five independent reruns and a source-unchanged official local-acceptance rerun passed the full 212-test suite, so no reproducible P-C1.5 concurrency regression was established"
+  },
+  "checks": {
+    "acceptanceRerunPassedWithoutSourceChange": true,
+    "cliCommandsVerified": 14,
+    "concurrencyFocusedRerunsPassed": 5,
+    "dependencyContractPassed": true,
+    "deterministicTests": 212,
+    "documentationContractPassed": true,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "liveDeepSeekCases": 4,
+    "liveInsufficientPhysicalSearches": 4,
+    "liveInsufficientLocalUnavailableToolCorrections": 2,
+    "liveInsufficientFinalStatus": "needs_input",
+    "newGenericCandidateSetAdded": false,
+    "newGenericContextEngineAdded": false,
+    "newGenericEpistemicStateAdded": false,
+    "newGenericRagMemoryRankingAdded": false,
+    "pc15FocusedTests": 4,
+    "recommendedApiExportsNewEpistemicSurface": false,
+    "ruffExplicitVersion": "0.15.14",
+    "ruffPassed": true,
+    "skippedTests": 3,
+    "wheelSmokePassed": true
+  },
+  "conclusion": "P-C1.5 supports an agent-first capability-visible closure law rather than a Harness-owned epistemic evaluator. The decisive failures were lower-level: Tool defaults were inconsistent with lowering, transient Tool evidence was not Provider-faithful, execution constraints were hidden from the Agent, and observation limits caused Harness to author the epistemic conclusion prematurely. After repairing those laws, real deepseek-v4-flash independently demonstrated four useful behaviors: no search when evidence was already sufficient, bounded discovery when evidence was missing, correction of stale evidence, and an Agent-authored concrete needs_input when bounded discovery could not establish the required current fact. Harness now constrains external effects and exposes the active laws while leaving semantic closure with the Agent.",
+  "implementationSourceRevision": "9e65feb5045aa64ab2da69dc2645bb80bfa93866",
+  "kind": "ordivon.harness-pc15-epistemic-control-acceptance",
+  "knownLimits": [
+    "Harness still does not semantically determine whether evidence is sufficient, relevant or equivalent across differently phrased searches.",
+    "The real-model experiments cover deepseek-v4-flash only; other Providers may react differently to capability withdrawal, execution-control projection or correction feedback.",
+    "Transient complete Tool exchanges are current-process cognition continuity in this slice. Arbitrary later-process reconstruction of an unfinished Tool-exchange conversation is not proven.",
+    "If an Agent repeatedly ignores withdrawn capability until correction/model budget is exhausted, Harness may still terminate mechanically; Agent-authored closure is preferred and demonstrated, not guaranteed for every Provider trajectory.",
+    "Hard external Tool budget remains global across WorkingSet transitions; cognition replan does not revive exhausted effect authority.",
+    "DeepSeek execution-control projection is currently Adapter-local wire behavior rather than a new public Protocol object or recommended API surface.",
+    "The first official acceptance execution observed one non-reproducible concurrency-test scheduling failure; the exact test passed five subsequent isolated runs and the unchanged official acceptance rerun passed completely.",
+    "No Runtime, World, Finance or Host repository was changed."
+  ],
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
