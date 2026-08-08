@@ -167,8 +167,15 @@
       "claimId": "harness.operational.h4-stress-hardening",
       "file": "harness-h4-stress-ce7e861.json",
       "implementationRevision": "ce7e861f59cccb43bcb78b3d7aa05dacf90ebe73",
-      "scope": "Current H4 high-intensity acceptance: multi-process shared-root Runs, exactly-once physical Provider/Tool fencing under worker races, immutable concurrent CAS publication, targeted Run history validation, scale/open-cost pressure and four concurrent real DeepSeek Runs",
-      "status": "verified"
+      "scope": "Historical H4 high-intensity acceptance for multi-process shared-root Runs, physical Provider/Tool fencing, immutable CAS publication and targeted reopen; retained unchanged after H-A1 re-regression and superseded as current implementation verification by H-A5 structured-completion acceptance.",
+      "status": "historical"
+    },
+    {
+      "claimId": "harness.cognition.ha5-structured-completion",
+      "file": "harness-ha5-structured-completion-d7d5417.json",
+      "status": "verified",
+      "implementationRevision": "d7d5417c055f08d4d37b571cb7c9983adf37ddb7",
+      "scope": "Current H-A5 acceptance: generic caller-defined structured completion on independent DeepSeek Runs, exact completion-Contract binding, Host-free Harness core, and live closed-choice/open-proposal Host semantic admission without a Host-specific cognition bridge."
     }
   ]
 }

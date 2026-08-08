@@ -1,0 +1,55 @@
+{
+  "checks": {
+    "callerDomainAdmissionRemainsExternal": true,
+    "cliCommandsVerified": 14,
+    "deterministicTests": 157,
+    "durableSchemaAdded": false,
+    "fullRegressionPassed": true,
+    "hostFreeCoreVerified": true,
+    "hostImportsInHarness": false,
+    "hostSpecificBridgeAdded": false,
+    "skippedTests": 3,
+    "structuredCompletionContractBound": true,
+    "wheelSmokePassed": true
+  },
+  "closedChoice": {
+    "actionId": "action:observe-original",
+    "completionContractDigest": "sha256:609c976ba9919eb8a35fa237a01f7f9cb8875c576d2449fb649cf324c14462f2",
+    "harnessRunId": "harness-run:ha5-evidence-closed",
+    "hostAdmissionRevision": 3,
+    "hostState": "ready",
+    "modelCalls": 1,
+    "runContractDigest": "sha256:1513ac8885b4671be9d199717afe5b71fc06f9a1d6b492c900f527ca5e466de1",
+    "stopCode": "candidate_completed",
+    "structuredResultDigest": "sha256:5e9c24623c96bb80d929b8426e4db98f0b418a9faf5ef11805960978bc8a3f83",
+    "toolCalls": 0,
+    "totalTokens": 1710
+  },
+  "conclusion": "Host cognition integration needs external execution policy plus generic caller-defined structured completion; no Host-specific Harness bridge is required by the tested closed-choice and open-proposal slices.",
+  "hostSourceRevision": "e48ad7e770ceef504fb5b936b46a60c9e4b9ab68",
+  "implementationSourceRevision": "d7d5417c055f08d4d37b571cb7c9983adf37ddb7",
+  "kind": "ordivon.harness-ha5-structured-completion-acceptance",
+  "knownLimits": [
+    "structured-result-v1 constrains the DeepSeek Provider Tool result shape but is not caller/domain semantic verification",
+    "Provider/model/budget/Tool authority is still selected by the external caller or executor policy, not by Host CognitionWorkRequest",
+    "this acceptance proves the tested DeepSeek closed-choice and open-proposal slices, not a universal schema capability across all Providers"
+  ],
+  "model": "deepseek-v4-flash",
+  "openProposal": {
+    "childTaskId": "task:open-proposal:read-a33d9226354760d7",
+    "completionContractDigest": "sha256:f1f4655b1fc0c66db473a7d41b782574adcc15ce5b59931e8d8f96c20398d289",
+    "harnessRunId": "harness-run:ha5-evidence-open",
+    "hostAdmissionRevision": 3,
+    "hostState": "waiting",
+    "modelCalls": 1,
+    "proposalId": "proposal:ha5-evidence-read-host",
+    "resolutionKind": "lowered",
+    "runContractDigest": "sha256:2dc39e295900d9198484edfbc047ba4e40b620a0d1c2424270e4d82c2107e427",
+    "stopCode": "candidate_completed",
+    "structuredResultDigest": "sha256:a33d9226354760d79870de20cd5fb79f4d5e9888298d57a10484214b5908c44e",
+    "toolCalls": 0,
+    "totalTokens": 2206
+  },
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "schemaVersion": 1
+}
