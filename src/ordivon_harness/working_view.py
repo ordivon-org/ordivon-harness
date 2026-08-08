@@ -5,6 +5,25 @@ from typing import Any, Protocol
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
+WORKING_SET_HISTORY_CONTROL_NAME = "inspect_working_set_history"
+
+
+def parse_working_set_history_query(
+    arguments: dict[str, JsonValue],
+) -> tuple[int, int | None]:
+    """Parse one bounded mechanical historical WorkingSet catalog request."""
+    if set(arguments) not in ({"limit"}, {"limit", "before_sequence"}):
+        raise ValueError("Working Set history query fields differ")
+    limit = arguments.get("limit")
+    before_sequence = arguments.get("before_sequence")
+    if type(limit) is not int or not 1 <= limit <= 32:
+        raise ValueError("Working Set history query limit must be an integer from 1 to 32")
+    if "before_sequence" in arguments and (
+        type(before_sequence) is not int or before_sequence < 1
+    ):
+        raise ValueError("Working Set history before_sequence must be a positive integer")
+    return limit, before_sequence if isinstance(before_sequence, int) else None
+
 
 def _text(value: Any, label: str, *, max_bytes: int = 500) -> str:
     if not isinstance(value, str) or not value or value != value.strip():
@@ -390,6 +409,17 @@ class WorkingSetTransitionHandler(Protocol):
     ) -> HarnessWorkingSetSpec: ...
 
 
+class WorkingSetHistoryReader(Protocol):
+    """Expose bounded exact identities from earlier committed Working Sets."""
+
+    def inspect_working_set_history(
+        self,
+        *,
+        limit: int,
+        before_sequence: int | None = None,
+    ) -> dict[str, JsonValue]: ...
+
+
 @dataclass(frozen=True, slots=True)
 class WorkingSetViewProjector:
     """Compile each Provider turn from the current committed Working Set.
@@ -465,9 +495,12 @@ __all__ = [
     "HarnessWorkingSetSpec",
     "HarnessWorkingView",
     "HarnessWorkingViewSource",
+    "WORKING_SET_HISTORY_CONTROL_NAME",
+    "WorkingSetHistoryReader",
     "WorkingSetTransitionHandler",
     "WorkingSetViewProjector",
     "WorkingViewProjector",
     "compile_working_view",
     "overlay_working_view",
+    "parse_working_set_history_query",
 ]

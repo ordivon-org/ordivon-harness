@@ -22,11 +22,13 @@ from ..protocol import (
 )
 from ..run_state import HarnessRunState, state_from_dict
 from ..working_view import (
+    WORKING_SET_HISTORY_CONTROL_NAME,
     AgentWorkingSetTransitionProposal,
     HarnessWorkingSetSpec,
     HarnessWorkingView,
     HarnessWorkingViewSource,
     compile_working_view,
+    parse_working_set_history_query,
 )
 from ..sqlite_store import (
     HarnessEventConflict,
@@ -49,7 +51,7 @@ from .continuity_records import (
     HarnessProviderCallRecordV3,
     HarnessProviderCallRecordV4,
 )
-from .model import AgentTurnRequest, AgentTurnResult
+from .model import AgentToolCall, AgentTurnRequest, AgentTurnResult
 from .run_store_port import (
     HarnessDispatchFenceView,
     HarnessProviderCallClaimHeld,
@@ -618,6 +620,114 @@ class SQLiteHarnessRunContinuityStore:
             raise KeyError("Harness Run has no Working Set")
         return value
 
+    def inspect_working_set_history(
+        self,
+        *,
+        limit: int,
+        before_sequence: int | None = None,
+    ) -> dict[str, JsonValue]:
+        """List exact identities from earlier committed Working Sets only."""
+        limit, before_sequence = parse_working_set_history_query(
+            {
+                "limit": limit,
+                **(
+                    {}
+                    if before_sequence is None
+                    else {"before_sequence": before_sequence}
+                ),
+            }
+        )
+        if not self.contract.privacy.allow_model_content:
+            raise ValueError(
+                "Working Set history inspection requires model-content authority"
+            )
+        if not self.contract.privacy.allow_tool_content:
+            raise ValueError(
+                "Working Set history inspection requires Tool-content authority because its Provider-faithful response uses a Tool channel"
+            )
+        current = self.load_current_working_set()
+        return self._working_set_history_for(
+            current,
+            limit=limit,
+            before_sequence=before_sequence,
+        )
+
+    def _working_set_history_for(
+        self,
+        current: HarnessWorkingSetSpec,
+        *,
+        limit: int,
+        before_sequence: int | None,
+    ) -> dict[str, JsonValue]:
+        """Project a mechanical history catalog relative to one exact cognition head."""
+        if not current.committed:
+            raise ValueError(
+                "Working Set history inspection requires a committed cognition head"
+            )
+        current_sequence = self._working_set_event_sequence(current)
+        cutoff = (
+            current_sequence
+            if before_sequence is None
+            else min(current_sequence, before_sequence)
+        )
+        candidates = [
+            event
+            for event in self.store.list_run_events(self.harness_run_id)
+            if event.event_kind == "harness.working-set-recorded"
+            and event.sequence < cutoff
+            and event.data.get("committed") is True
+        ]
+        candidates.reverse()
+        selected_events = candidates[:limit]
+        selections: list[JsonValue] = []
+        for event in selected_events:
+            spec = self._working_set_from_event(event)
+            if not spec.committed:
+                raise ValueError(
+                    "Working Set history committed event decoded as mutable state"
+                )
+            selections.append(
+                {
+                    "eventSequence": event.sequence,
+                    "attemptId": spec.attempt_id,
+                    "workingSetDigest": spec.digest,
+                    "pins": [pin.to_dict() for pin in spec.pins],
+                }
+            )
+        return {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness-working-set-history",
+            "currentAttemptId": current.attempt_id,
+            "currentWorkingSetDigest": current.digest,
+            "currentWorkingSetEventSequence": current_sequence,
+            "selections": selections,
+            "nextBeforeSequence": (
+                selected_events[-1].sequence
+                if len(candidates) > len(selected_events) and selected_events
+                else None
+            ),
+        }
+
+    def _expected_working_set_history_observation(
+        self,
+        call: AgentToolCall,
+        *,
+        current: HarnessWorkingSetSpec,
+    ) -> HarnessToolObservation:
+        if call.name != WORKING_SET_HISTORY_CONTROL_NAME:
+            raise ValueError("Working Set history observation requires its reserved control")
+        limit, before_sequence = parse_working_set_history_query(call.arguments)
+        return HarnessToolObservation(
+            tool_call_id=call.tool_call_id,
+            tool_name=call.name,
+            status="observed",
+            structured_content=self._working_set_history_for(
+                current,
+                limit=limit,
+                before_sequence=before_sequence,
+            ),
+        )
+
     def _load_current_working_set_or_none(self) -> HarnessWorkingSetSpec | None:
         event = self._heads().working_set
         return None if event is None else self._working_set_from_event(event)
@@ -744,21 +854,31 @@ class SQLiteHarnessRunContinuityStore:
                         "current-attempt Provider Tool call lacks its recovered exact Observation"
                     )
                 if call.argument_error is None:
-                    evidence = terminal_tool_evidence.get(
-                        (retained.record.turn_id, call.tool_call_id)
-                    )
-                    if evidence is None:
-                        raise HarnessProviderCallRecoveryRequired(
-                            "current-attempt Provider Tool call lacks terminal durable Tool evidence"
+                    if call.name == WORKING_SET_HISTORY_CONTROL_NAME:
+                        expected_history = self._expected_working_set_history_observation(
+                            call,
+                            current=current,
                         )
-                    intent, durable_observation = evidence
-                    if (
-                        intent.tool_call_digest != call.digest
-                        or durable_observation != observation
-                    ):
-                        raise HarnessProviderCallRequestMismatch(
-                            "recovered Tool exchange differs from durable Provider/Tool evidence"
+                        if observation != expected_history:
+                            raise HarnessProviderCallRequestMismatch(
+                                "recovered Working Set history Observation differs from deterministic Journal projection"
+                            )
+                    else:
+                        evidence = terminal_tool_evidence.get(
+                            (retained.record.turn_id, call.tool_call_id)
                         )
+                        if evidence is None:
+                            raise HarnessProviderCallRecoveryRequired(
+                                "current-attempt Provider Tool call lacks terminal durable Tool evidence"
+                            )
+                        intent, durable_observation = evidence
+                        if (
+                            intent.tool_call_digest != call.digest
+                            or durable_observation != observation
+                        ):
+                            raise HarnessProviderCallRequestMismatch(
+                                "recovered Tool exchange differs from durable Provider/Tool evidence"
+                            )
                 else:
                     error = observation.structured_content.get("error")
                     if (
@@ -1010,6 +1130,15 @@ class SQLiteHarnessRunContinuityStore:
                         "Provider Working View overlay is not a completed Provider-authored Tool exchange"
                     )
                 overlay_cursor += 1
+                history_calls = [
+                    call
+                    for call in matched_turn[2].tool_calls
+                    if call.name == WORKING_SET_HISTORY_CONTROL_NAME
+                ]
+                if history_calls and len(matched_turn[2].tool_calls) != 1:
+                    raise HarnessProviderCallRequestMismatch(
+                        "Working Set history cognition control cannot mix with Runtime Tool Calls"
+                    )
                 for call in matched_turn[2].tool_calls:
                     if overlay_cursor >= len(overlay_messages):
                         raise HarnessProviderCallRequestMismatch(
@@ -1030,6 +1159,15 @@ class SQLiteHarnessRunContinuityStore:
                         raise HarnessProviderCallRequestMismatch(
                             "Provider Working View Tool exchange differs from its bound Tool Observation"
                         )
+                    if call.name == WORKING_SET_HISTORY_CONTROL_NAME:
+                        expected_history = self._expected_working_set_history_observation(
+                            call,
+                            current=spec,
+                        )
+                        if matched_observation != expected_history:
+                            raise HarnessProviderCallRequestMismatch(
+                                "Working Set history Observation differs from deterministic Journal projection"
+                            )
                     overlay_cursor += 1
         effective_view = HarnessWorkingView(
             attempt_id=spec.attempt_id,

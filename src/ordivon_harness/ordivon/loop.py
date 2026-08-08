@@ -9,9 +9,12 @@ from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
 from ..working_view import (
+    WORKING_SET_HISTORY_CONTROL_NAME,
+    WorkingSetHistoryReader,
     WorkingSetTransitionHandler,
     WorkingViewProjector,
     overlay_working_view,
+    parse_working_set_history_query,
 )
 from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
@@ -43,6 +46,7 @@ _OBSERVATION_ONLY_TOOLS = frozenset(
         "diff_workspace",
         "observe_job",
         "read_artifact",
+        WORKING_SET_HISTORY_CONTROL_NAME,
     }
 )
 
@@ -262,15 +266,21 @@ class OrdivonAgentLoop:
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
         working_view_projector: WorkingViewProjector | None = None,
         working_set_transition_handler: WorkingSetTransitionHandler | None = None,
+        working_set_history_reader: WorkingSetHistoryReader | None = None,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
         self.budget = budget
         self.working_view_projector = working_view_projector
         self.working_set_transition_handler = working_set_transition_handler
+        self.working_set_history_reader = working_set_history_reader
         if working_set_transition_handler is not None and working_view_projector is None:
             raise ValueError(
                 "Agent Working Set transitions require a Working View projector"
+            )
+        if working_set_history_reader is not None and working_view_projector is None:
+            raise ValueError(
+                "Working Set history inspection requires a Working View projector"
             )
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
@@ -672,6 +682,7 @@ class OrdivonAgentLoop:
             step_id: str | None,
             reconciled: bool,
             count_tool_call: bool = True,
+            physical_dispatch: bool = True,
         ) -> AgentLoopResult | None:
             nonlocal observation_bytes, tool_calls, tool_corrections
             if count_tool_call:
@@ -710,6 +721,17 @@ class OrdivonAgentLoop:
                         "runtimeJobRef": observation.runtime_job_ref,
                         "status": observation.status,
                         "encodedBytes": encoded_size,
+                    },
+                )
+            elif not physical_dispatch:
+                recorder.record(
+                    "working_set_history_observed",
+                    {
+                        "toolCallId": call.tool_call_id,
+                        "toolName": call.name,
+                        "observationDigest": observation.digest,
+                        "encodedBytes": encoded_size,
+                        "physicalDispatch": False,
                     },
                 )
             else:
@@ -794,6 +816,27 @@ class OrdivonAgentLoop:
             turn_observations: list[ToolObservation],
         ) -> AgentLoopResult | None:
             nonlocal tool_calls, tool_corrections
+            history_calls = [
+                call
+                for call in calls
+                if call.name == WORKING_SET_HISTORY_CONTROL_NAME
+            ]
+            if history_calls and len(calls) != 1:
+                return stop(
+                    RunStopCode.INVALID_MODEL_OUTPUT,
+                    detail=(
+                        "Working Set history cognition control cannot mix with "
+                        "Runtime Tool Calls"
+                    ),
+                )
+            if history_calls and self.working_set_history_reader is None:
+                return stop(
+                    RunStopCode.INVALID_MODEL_OUTPUT,
+                    detail=(
+                        "Agent requested Working Set history but this Loop did not "
+                        "grant a history cognition surface"
+                    ),
+                )
             for call in calls:
                 if call.tool_call_id in seen_tool_call_ids:
                     return stop(
@@ -814,6 +857,57 @@ class OrdivonAgentLoop:
                         "toolCall": call.to_dict(),
                     },
                 )
+                if call.name == WORKING_SET_HISTORY_CONTROL_NAME:
+                    if call.argument_error is not None:
+                        return stop(
+                            RunStopCode.INVALID_MODEL_OUTPUT,
+                            detail=(
+                                "Working Set history cognition control carried an "
+                                f"argument error: {call.argument_error}"
+                            ),
+                        )
+                    try:
+                        history_limit, history_before_sequence = (
+                            parse_working_set_history_query(call.arguments)
+                        )
+                    except (TypeError, ValueError) as error:
+                        return stop(
+                            RunStopCode.INVALID_MODEL_OUTPUT,
+                            detail=f"Working Set history query rejected: {error}",
+                        )
+                    history_reader = self.working_set_history_reader
+                    assert history_reader is not None
+                    try:
+                        history_content = history_reader.inspect_working_set_history(
+                            limit=history_limit,
+                            before_sequence=history_before_sequence,
+                        )
+                    except Exception as error:  # noqa: BLE001 - cognition authority boundary.
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                "Working Set history inspection failed: "
+                                f"{type(error).__name__}: {error}"
+                            ),
+                        )
+                    history_observation = ToolObservation(
+                        call.tool_call_id,
+                        call.name,
+                        "observed",
+                        history_content,
+                    )
+                    stopped = retain_tool_observation(
+                        call,
+                        history_observation,
+                        turn_observations=turn_observations,
+                        step_id=None,
+                        reconciled=False,
+                        count_tool_call=False,
+                        physical_dispatch=False,
+                    )
+                    if stopped is not None:
+                        return stopped
+                    continue
                 step_id = f"turn-{sequence}-tool-{tool_calls + 1}:{call.tool_call_id}"
                 try:
                     if call.argument_error is not None:
@@ -1831,7 +1925,8 @@ class OrdivonAgentLoop:
                 )
             seen_model_call_ids.add(result.model_call_id)
             if external_observation_gate_reason is not None and any(
-                call.argument_error != "unavailable_tool"
+                call.name != WORKING_SET_HISTORY_CONTROL_NAME
+                and call.argument_error != "unavailable_tool"
                 for call in result.tool_calls
             ):
                 fallback = AgentRunConclusion(
@@ -2029,7 +2124,8 @@ class OrdivonAgentLoop:
             budgeted_tool_calls = tuple(
                 call
                 for call in result.tool_calls
-                if call.argument_error != "unavailable_tool"
+                if call.name != WORKING_SET_HISTORY_CONTROL_NAME
+                and call.argument_error != "unavailable_tool"
             )
             if tool_calls + len(budgeted_tool_calls) > self.budget.max_tool_calls:
                 return stop(RunStopCode.BUDGET_EXHAUSTED)

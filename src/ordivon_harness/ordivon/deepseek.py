@@ -27,8 +27,10 @@ from ..completion import (
     structured_completion_result_schema,
 )
 from ..working_view import (
+    WORKING_SET_HISTORY_CONTROL_NAME,
     AgentWorkingSetTransitionProposal,
     HarnessWorkingSetPin,
+    parse_working_set_history_query,
 )
 from .control import ExecutionControl
 from .model import (
@@ -567,6 +569,37 @@ def _working_set_transition_tool() -> dict[str, JsonValue]:
     }
 
 
+def _working_set_history_tool() -> dict[str, JsonValue]:
+    return {
+        "type": "function",
+        "function": {
+            "name": WORKING_SET_HISTORY_CONTROL_NAME,
+            "description": (
+                "Inspect a bounded reverse-chronological catalog of exact source pins "
+                "from earlier committed Working Sets. This does not read source content, "
+                "rank memories, or change cognition. Use propose_working_set_transition "
+                "separately if you choose to recall one of the returned pins."
+            ),
+            "parameters": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "limit": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 32,
+                    },
+                    "before_sequence": {
+                        "type": "integer",
+                        "minimum": 1,
+                    },
+                },
+                "required": ["limit"],
+            },
+        },
+    }
+
+
 def _parse_working_set_transition(
     arguments: dict[str, JsonValue],
 ) -> AgentWorkingSetTransitionProposal:
@@ -792,9 +825,11 @@ class DeepSeekTurnAdapter:
         transport: DeepSeekTransport | None = None,
         completion_contract: Mapping[str, JsonValue] | None = None,
         working_set_transitions: bool = False,
+        working_set_history: bool = False,
     ) -> None:
         self.settings = settings
         self.working_set_transitions = working_set_transitions
+        self.working_set_history = working_set_history
         self.model_id = settings.model
         self.transport = transport or HttpClientDeepSeekTransport()
         self._completion_contract = (
@@ -924,7 +959,11 @@ class DeepSeekTurnAdapter:
         self, request: AgentTurnRequest
     ) -> tuple[set[str], str, dict[str, str], bytes]:
         allowed_tool_names = {tool.name for tool in request.tools}
-        reserved = {_CONCLUSION_TOOL_NAME, _WORKING_SET_TRANSITION_TOOL_NAME}
+        reserved = {
+            _CONCLUSION_TOOL_NAME,
+            _WORKING_SET_TRANSITION_TOOL_NAME,
+            WORKING_SET_HISTORY_CONTROL_NAME,
+        }
         collisions = allowed_tool_names & reserved
         if collisions:
             raise ValueError(
@@ -934,6 +973,8 @@ class DeepSeekTurnAdapter:
         tools = [_provider_tool(tool) for tool in request.tools]
         if self.working_set_transitions:
             tools.append(_working_set_transition_tool())
+        if self.working_set_history:
+            tools.append(_working_set_history_tool())
         tools.append(_conclusion_tool(self._structured_result_schema))
         execution_control = {
             "schemaVersion": 1,
@@ -1075,12 +1116,18 @@ class DeepSeekTurnAdapter:
                 raise TypeError("DeepSeek Tool Call name or arguments are invalid")
             cognition_call = name == _WORKING_SET_TRANSITION_TOOL_NAME
             cognition_allowed = cognition_call and self.working_set_transitions
+            history_call = name == WORKING_SET_HISTORY_CONTROL_NAME
+            history_allowed = history_call and self.working_set_history
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
             except ValueError:
                 if cognition_allowed:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments are invalid JSON"
+                    )
+                if history_allowed:
+                    raise ValueError(
+                        "DeepSeek Working Set history arguments are invalid JSON"
                     )
                 runtime_calls.append(
                     invalid_call(
@@ -1100,6 +1147,10 @@ class DeepSeekTurnAdapter:
                 if cognition_allowed:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments must be an object"
+                    )
+                if history_allowed:
+                    raise ValueError(
+                        "DeepSeek Working Set history arguments must be an object"
                     )
                 runtime_calls.append(
                     invalid_call(
@@ -1159,6 +1210,18 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         f"invalid DeepSeek Working Set transition: {error}"
                     ) from error
+            elif history_call:
+                if not self.working_set_history:
+                    raise ValueError(
+                        "DeepSeek called the unavailable Working Set history control"
+                    )
+                try:
+                    parse_working_set_history_query(dict(arguments))
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"invalid DeepSeek Working Set history query: {error}"
+                    ) from error
+                runtime_calls.append(AgentToolCall(call_id, name, dict(arguments)))
             else:
                 if name not in allowed_tool_names:
                     runtime_calls.append(
@@ -1176,6 +1239,16 @@ class DeepSeekTurnAdapter:
         if working_set_transition is not None and (runtime_calls or conclusion is not None):
             raise ValueError(
                 "DeepSeek Working Set transition cannot be mixed with Tools or conclusion"
+            )
+        history_calls = [
+            call
+            for call in runtime_calls
+            if call.name == WORKING_SET_HISTORY_CONTROL_NAME
+            and call.argument_error is None
+        ]
+        if history_calls and (len(runtime_calls) != 1 or conclusion is not None):
+            raise ValueError(
+                "DeepSeek Working Set history control cannot be mixed with Runtime Tools or conclusion"
             )
         invalid_calls = [
             call for call in runtime_calls if call.argument_error is not None
