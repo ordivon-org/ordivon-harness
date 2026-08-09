@@ -292,9 +292,16 @@
     {
       "claimId": "harness.capability.r1-single-turn-truth",
       "file": "harness-r1-single-capability-truth-716cc4b.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "716cc4b4c4bcd34584df362d3c268899fadeca92",
-      "scope": "Current R1 acceptance: AgentTurnRequest.tools plus provider-neutral AgentTurnCapabilities are the exact per-turn action authority; capability changes alter dispatch and Provider request identity, existing Continuity fences changed capability truth, DeepSeek owns no cognition feature flags, and real deepseek-v4-flash probes exercised dynamic caller-promotion withdrawal and request-bound WorkingSet transition."
+      "scope": "Historical R1 single-turn capability-truth acceptance retained after the DeepSeek physical transport gained bounded loopback CONNECT support. Its request-bound action-authority and capability-digest laws remain valid for 716cc4b; the 51825aa GLOBAL_SECONDARY acceptance supersedes it as current implementation verification."
+    },
+    {
+      "claimId": "harness.transport.global-secondary-deepseek",
+      "file": "harness-global-secondary-deepseek-51825aa.json",
+      "status": "verified",
+      "implementationRevision": "51825aaef6f68f2cae491f8ab77d5cbc89c2ad9a",
+      "scope": "Current live acceptance for explicit Agent provider continuity: the canonical DeepSeek cancellable transport preserves direct behavior without a proxy, accepts only a validated IPv4-loopback HTTP CONNECT sidecar, completed a real deepseek-v4-flash Run through native-a, and syscall/policy-route evidence proved the Harness process connected to 127.0.0.1:19081 while the sidecar egress authority used Workstation table 201 rather than ambient Surfshark. This is explicit composition, not automatic Provider migration."
     }
   ]
 }

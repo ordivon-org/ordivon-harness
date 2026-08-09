@@ -1,0 +1,89 @@
+{
+  "accepted": true,
+  "canonicalRun": {
+    "contractDigest": "sha256:52865ca45cd5cac846fa43094e7b80c29f7d85a1c79cfb71ce8a5afd83ea749b",
+    "effectiveModelIds": [
+      "deepseek-v4-flash"
+    ],
+    "harnessRunId": "harness-run:global-secondary-canonical-1786264814047",
+    "modelCalls": 1,
+    "modelRetries": 0,
+    "providerAttempts": 1,
+    "terminationCode": "candidate_completed",
+    "toolCalls": 0,
+    "totalTokens": 842,
+    "traceDigest": "sha256:21a78c788ed7e21316eb50f4cf38599913aff53bb2d4bfbb362d1405c1f5fcb8",
+    "wallTimeMs": 2918
+  },
+  "checks": {
+    "ambiguousProxyEnvironmentRejectedBeforeDispatch": true,
+    "automaticProviderMigrationAdded": false,
+    "canonicalLiveDeepSeekRunCompleted": true,
+    "canonicalLiveHarnessConnectedToLoopbackSidecar": true,
+    "dependencyContractPassed": true,
+    "directTransportBehaviorRetainedWithoutProxy": true,
+    "documentationContractPassed": true,
+    "evidenceContractPassedBeforeReceiptPromotion": true,
+    "fullUnittestSuitePassed": true,
+    "providerRequestIdentityChangedByNetworkProfile": false,
+    "remoteOrCredentialedProxyRejectedBeforeDispatch": true,
+    "runtimeExecutionProfileChanged": false,
+    "targetedLoopbackProxyTestsPassed": true
+  },
+  "claim": {
+    "adapterId": "deepseek.chat-completions.non-thinking.v1",
+    "networkProfile": "native-a",
+    "networkProfileDigest": "sha256:1ac39a9ea6d0ad82c9837de86646361e8e768cd917db2f51175c74af0e92bb22",
+    "providerId": "provider:deepseek",
+    "requestedModelId": "deepseek-v4-flash",
+    "statement": "The built-in cancellable DeepSeek transport can consume the Workstation native-a loopback CONNECT profile while preserving Harness Provider semantics and end-to-end Provider TLS."
+  },
+  "implementationSourceRevision": "51825aaef6f68f2cae491f8ab77d5cbc89c2ad9a",
+  "kind": "ordivon.harness-global-secondary-live-acceptance",
+  "knownLimits": [
+    "This acceptance proves an explicit DeepSeek plus native-a Agent provider path; it does not claim that every global destination is reachable through native-a.",
+    "Surfshark was not physically shut down during the canonical Run. Failure-domain separation is evidenced by the Harness syscall targeting the loopback sidecar and UID 951 policy routing the sidecar through table 201/eth4 while the ambient comparison for the same Provider address used eth3.",
+    "Network reachability remains point-in-time physical truth; Workstation capability observations must be refreshed rather than treated as durable current truth.",
+    "The live canonical Run was a no-Tool DeepSeek Run. Tool authority and Runtime effects remain governed by their existing independent contracts.",
+    "This change does not provide an OpenAI secondary path and does not add automatic Provider failover."
+  ],
+  "physicalEvidence": {
+    "ambientComparison": {
+      "callerUid": 0,
+      "device": "eth3",
+      "providerAddress": "3.173.21.63",
+      "source": "10.14.0.2"
+    },
+    "harnessConnect": {
+      "address": "127.0.0.1",
+      "port": 19081,
+      "syscallResult": "EINPROGRESS"
+    },
+    "nativeComparison": {
+      "device": "eth4",
+      "providerAddress": "3.173.21.63",
+      "sidecarUid": 951,
+      "source": "192.168.0.122",
+      "table": 201
+    },
+    "observedNativeRoute": {
+      "device": "eth4",
+      "source": "192.168.0.122",
+      "table": 201
+    },
+    "policyRule": {
+      "preference": 10201,
+      "table": 201,
+      "uid": 951
+    },
+    "sidecar": {
+      "active": true,
+      "service": "ordivon-network-proxy-a.service",
+      "uid": 951,
+      "user": "cloudflared-direct-a"
+    }
+  },
+  "schemaVersion": 1,
+  "truthRole": "verified-implementation-acceptance",
+  "workstationSourceRevision": "b02d62e9fca1ea92ee0b943316ad23d994e89697"
+}
