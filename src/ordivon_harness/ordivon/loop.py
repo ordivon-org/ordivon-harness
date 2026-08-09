@@ -28,6 +28,7 @@ from .model import (
     AgentTurnDispatchSafety,
     AgentTurnFailureCode,
 )
+from .provider_lifecycle import ProviderCallLifecycle, ProviderLifecycleError
 from .run_store_port import StoredHarnessRunSnapshot
 from .run_recovery import (
     _observation_evidence_signature,
@@ -51,14 +52,6 @@ _OBSERVATION_ONLY_TOOLS = frozenset(
     }
 )
 
-
-def _is_sha256_digest(value: object) -> bool:
-    return (
-        isinstance(value, str)
-        and len(value) == 71
-        and value.startswith("sha256:")
-        and all(character in "0123456789abcdef" for character in value[7:])
-    )
 
 
 def _validated_projected_caller_ingress(
@@ -279,7 +272,7 @@ class AgentLoopResult:
 
 
 class OrdivonAgentLoop:
-    """Sequential Run coordinator over separate Agent, cognition and effect seams."""
+    """Sequential Run coordinator over separate Agent, cognition and Provider seams."""
 
     def __init__(
         self,
@@ -337,16 +330,10 @@ class OrdivonAgentLoop:
             raise ValueError("Assignment deadline must be non-negative")
         self.assignment_deadline_ms = assignment_deadline_ms
         self.event_sink = event_sink
-        configure_provider = getattr(
-            self.tool_bridge,
-            "configure_provider_call",
-            None,
+        self.provider_lifecycle = ProviderCallLifecycle(
+            bridge=self.tool_bridge,
+            adapter=self.adapter,
         )
-        if callable(configure_provider):
-            configure_provider(
-                adapter_id=self.adapter.adapter_id,
-                requested_model_id=self.adapter.model_id,
-            )
 
     def run(
         self,
@@ -1598,54 +1585,13 @@ class OrdivonAgentLoop:
                     RunStopCode.BUDGET_EXHAUSTED,
                     detail="effective Run deadline expired before Provider dispatch",
                 )
-            begin_provider_call = getattr(
-                self.tool_bridge,
-                "begin_provider_call",
-                None,
-            )
-            durable_provider_call = callable(begin_provider_call) and bool(
-                getattr(
-                    self.tool_bridge,
-                    "durable_provider_calls_enabled",
-                    True,
+            durable_provider_call = self.provider_lifecycle.durable
+            try:
+                provider_request_digest = self.provider_lifecycle.request_digest(
+                    request
                 )
-            )
-            provider_request_digest: str | None = None
-            if durable_provider_call:
-                provider_request_identity = getattr(
-                    self.adapter,
-                    "provider_request_digest",
-                    None,
-                )
-                if not callable(provider_request_identity):
-                    return stop(
-                        RunStopCode.HARNESS_FAILED,
-                        detail=(
-                            "durable Provider Call Adapter omitted "
-                            "provider_request_digest"
-                        ),
-                    )
-                try:
-                    candidate_provider_request_digest = (
-                        provider_request_identity(request)
-                    )
-                except Exception as error:  # noqa: BLE001 - Adapter identity failure is local.
-                    return stop(
-                        RunStopCode.HARNESS_FAILED,
-                        detail=(
-                            "Provider request identity failed before dispatch: "
-                            f"{type(error).__name__}: {error}"
-                        ),
-                    )
-                if not _is_sha256_digest(candidate_provider_request_digest):
-                    return stop(
-                        RunStopCode.HARNESS_FAILED,
-                        detail=(
-                            "Provider request identity must be "
-                            "sha256:<64 lowercase hex>"
-                        ),
-                    )
-                provider_request_digest = candidate_provider_request_digest
+            except ProviderLifecycleError as error:
+                return stop(RunStopCode.HARNESS_FAILED, detail=str(error))
             if cancellation.cancelled:
                 return stop(RunStopCode.CANCELLED)
             if execution_deadline_expired():
@@ -1657,17 +1603,10 @@ class OrdivonAgentLoop:
                     ),
                 )
             bind_run_state()
-            if callable(begin_provider_call):
-                provider_outcome = (
-                    begin_provider_call(
-                        request,
-                        provider_request_digest=provider_request_digest,
-                    )
-                    if durable_provider_call
-                    else begin_provider_call(request)
-                )
-            else:
-                provider_outcome = None
+            provider_outcome = self.provider_lifecycle.begin(
+                request,
+                provider_request_digest=provider_request_digest,
+            )
             replayed_failure = (
                 provider_outcome
                 if isinstance(
@@ -1714,33 +1653,13 @@ class OrdivonAgentLoop:
                 )
                 if not failure_was_replayed:
                     bind_run_state()
-                    admit_provider_call = getattr(
-                        self.tool_bridge,
-                        "admit_provider_call",
-                        None,
-                    )
                     if durable_provider_call:
-                        if not callable(admit_provider_call):
-                            return stop(
-                                RunStopCode.HARNESS_FAILED,
-                                detail=(
-                                    "durable Provider Call bridge omitted "
-                                    "dispatch admission"
-                                ),
-                            )
                         try:
-                            admitted = admit_provider_call(
-                                request,
-                                control=control,
+                            admitted = self.provider_lifecycle.admit(
+                                request, control=control
                             )
-                        except Exception as error:  # noqa: BLE001 - admission is local durable state.
-                            return stop(
-                                RunStopCode.HARNESS_FAILED,
-                                detail=(
-                                    "Provider dispatch admission failed: "
-                                    f"{type(error).__name__}: {error}"
-                                ),
-                            )
+                        except ProviderLifecycleError as error:
+                            return stop(RunStopCode.HARNESS_FAILED, detail=str(error))
                         if not admitted:
                             return stop(
                                 (
@@ -1799,17 +1718,10 @@ class OrdivonAgentLoop:
                                         AgentTurnDispatchSafety.DISPATCH_AMBIGUOUS
                                     ),
                                 )
-                                failure_recorder = getattr(
-                                    self.tool_bridge,
-                                    "fail_provider_call",
-                                    None,
-                                )
-                                if callable(failure_recorder):
+                                if self.provider_lifecycle.records_failures:
                                     bind_run_state()
-                                    failure_recorder(
-                                        request,
-                                        interrupted,
-                                        unknown=True,
+                                    self.provider_lifecycle.fail(
+                                        request, interrupted, unknown=True
                                     )
                                 return stop(
                                     (
@@ -1841,14 +1753,12 @@ class OrdivonAgentLoop:
                         error.dispatch_safety
                         is AgentTurnDispatchSafety.DISPATCH_AMBIGUOUS
                     )
-                    failure_recorder = getattr(
-                        self.tool_bridge,
-                        "fail_provider_call",
-                        None,
-                    )
-                    if callable(failure_recorder) and not failure_was_replayed:
+                    if (
+                        not failure_was_replayed
+                        and self.provider_lifecycle.records_failures
+                    ):
                         bind_run_state()
-                        failure_recorder(request, error, unknown=unknown)
+                        self.provider_lifecycle.fail(request, error, unknown=unknown)
                     recorder.record(
                         "model_call_attempt_failed",
                         {
@@ -1909,13 +1819,7 @@ class OrdivonAgentLoop:
                             time.sleep(slice_ms / 1_000)
                             slept_ms += slice_ms
                         bind_run_state()
-                        retry_provider_call = getattr(
-                            self.tool_bridge,
-                            "retry_provider_call",
-                            None,
-                        )
-                        if callable(retry_provider_call):
-                            retry_provider_call(request)
+                        self.provider_lifecycle.retry(request)
                         continue
                     if unknown:
                         return stop(
@@ -1940,14 +1844,9 @@ class OrdivonAgentLoop:
                             AgentTurnDispatchSafety.PROVIDER_REJECTED
                         ),
                     )
-                    failure_recorder = getattr(
-                        self.tool_bridge,
-                        "fail_provider_call",
-                        None,
-                    )
-                    if callable(failure_recorder):
+                    if self.provider_lifecycle.records_failures:
                         bind_run_state()
-                        failure_recorder(request, malformed, unknown=False)
+                        self.provider_lifecycle.fail(request, malformed, unknown=False)
                     return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
                 except Exception as error:  # noqa: BLE001 - unknown dispatch must not retry.
                     ambiguous = AgentTurnAdapterError(
@@ -1957,26 +1856,16 @@ class OrdivonAgentLoop:
                             AgentTurnDispatchSafety.DISPATCH_AMBIGUOUS
                         ),
                     )
-                    failure_recorder = getattr(
-                        self.tool_bridge,
-                        "fail_provider_call",
-                        None,
-                    )
-                    if callable(failure_recorder):
+                    if self.provider_lifecycle.records_failures:
                         bind_run_state()
-                        failure_recorder(request, ambiguous, unknown=True)
+                        self.provider_lifecycle.fail(request, ambiguous, unknown=True)
                     return stop(
                         RunStopCode.PROVIDER_STATE_UNKNOWN,
                         detail=str(ambiguous),
                     )
-                complete_provider_call = getattr(
-                    self.tool_bridge,
-                    "complete_provider_call",
-                    None,
-                )
-                if callable(complete_provider_call):
+                if self.provider_lifecycle.records_completions:
                     bind_run_state()
-                    complete_provider_call(request, result)
+                    self.provider_lifecycle.complete(request, result)
             if cancellation.cancelled:
                 return stop(
                     RunStopCode.CANCELLED,

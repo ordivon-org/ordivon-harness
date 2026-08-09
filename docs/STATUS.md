@@ -51,13 +51,10 @@ Ordivon Harness is an independent caller-neutral **durable cognitive execution s
 - current WorkingSet source addressability for lawful retain/drop/correction decisions;
 - experimental `StandaloneHarnessRunner` cognition composition with exact caller-authored initial seed, automatic WorkingView/transition/promotion/history wiring and partial-bootstrap replay recovery;
 - provider-neutral per-turn `AgentTurnCapabilities` bound into each exact `AgentTurnRequest`: the Loop derives current Harness-native action authority, DeepSeek renders/parses only that request-bound surface, capability changes alter dispatch/Provider request identity, and caller promotion disappears when no exact promotable caller ref remains;
-- R2 internal recomposition now extracts `AgentTurnProjector` for exact read-side turn construction and `CognitionAdmissionKernel` for source-current durable cognition admission; the Loop no longer owns caller-ref/range assembly, WorkingView overlay composition or direct current-WorkingSet handler calls, while Continuity's independent Journal/CAS verifier remains unchanged;
-- R2 deliberately stops before speculative Provider/effect/progress extraction: remaining Loop size is known debt, but no additional owner is promoted until real execution friction proves a boundary stronger than file-size pressure;
-- DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool
-  dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are
-  admitted from the ambiguous turn;
-- Harness-owned `no_progress` stops carry execution reason in stop detail/Trace and
-  do not synthesize an Agent conclusion, preserving structured-completion shape;
+- R2 internal recomposition now extracts `AgentTurnProjector` for exact read-side turn construction, `CognitionAdmissionKernel` for source-current durable cognition admission, and `ProviderCallLifecycle` for optional durable Provider identity/begin/admit/fail/retry/complete bridge addressing; retry/budget/stop/semantic policy remains in the sequential Loop and Continuity's independent Journal/CAS verifier remains unchanged;
+- the complete R2 lineage reduces `_run()` from 2,083 to 1,876 lines on the no-progress-ownership lineage (the Provider port removes 98 lines from the current no-progress/two-kernel coordinator, 1,974 → 1,876) without adding a persistence schema or public service; Tool-effect/progress extraction remains deferred until real friction proves another boundary stronger than file-size pressure;
+- DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are admitted from the ambiguous turn;
+- Harness-owned `no_progress` stops carry execution reason in stop detail/Trace and do not synthesize an Agent conclusion, preserving structured-completion shape;
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
 - independent Run Receipt, CompletionProposal and recovery evidence;
