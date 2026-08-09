@@ -14,8 +14,8 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-08
-summary: Stable maturity claim, proven capabilities, support boundary and known limits for Ordivon Harness.
+updated: 2026-08-09
+summary: Current maturity claim for Harness as a durable cognitive execution substrate, including proven cognition, continuity, execution and support boundaries.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -30,7 +30,7 @@ related:
 
 ## Current state
 
-Ordivon Harness is an independent caller-neutral Run system. The current writer is the Harness SQLite Journal/CAS; the default and only CLI authority is `independent-harness-run`.
+Ordivon Harness is an independent caller-neutral **durable cognitive execution substrate** for bounded Agent Runs. The current writer is the Harness SQLite Journal/CAS; the default and only CLI authority is `independent-harness-run`.
 
 ## Operational
 
@@ -40,6 +40,14 @@ Ordivon Harness is an independent caller-neutral Run system. The current writer 
 - durable Provider Call continuity and response-loss recovery;
 - durable Tool-step intents/fences/receipts and Runtime reconciliation;
 - Agent loop budgets, pause/resume and no-progress handling;
+- model-visible WorkingView projection separated from canonical Run history;
+- Agent-owned durable WorkingSet transitions with exact replay/concurrency fencing;
+- explicit discovery/materialization versus Agent selection boundary;
+- attempt-local Provider/Tool cognition that survives clean/fault recovery but expires on successor cognition attempts;
+- caller-owned interaction cognition after `needs_input`, with role/provenance admission and exact recovery;
+- Agent-owned exact caller-ingress promotion into durable cognition without generic Memory extraction;
+- bounded historical committed-cognition recall and exact-pin re-selection;
+- current WorkingSet source addressability for lawful retain/drop/correction decisions;
 - DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are admitted from the ambiguous turn;
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
@@ -62,7 +70,10 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - structured completion constrains Provider output shape but does not make Harness a JSON-Schema or domain verifier; callers must still decode and semantically admit the result under their own authority;
 - Provider/Tool UNKNOWN may require external reconciliation;
 - public API and owner-local schemas remain pre-1.0;
-- historical receipts prove the implementations they bind, not the current H3 source unless indexed as verified.
+- historical receipts prove the implementations they bind, not the current source unless indexed as verified;
+- WorkingSet cognition controls remain experimental/internal rather than part of the recommended `ordivon_harness.api` facade;
+- there is no generic Memory/RAG/ranking/summarization layer, cross-Run cognition orchestrator, semantic supersession graph or automatic relevance policy;
+- large-WorkingSet discovery/inspection strategy, initial cognition bootstrap and cross-Run cognition reuse remain open Agent-side/system-boundary questions rather than solved Harness policy.
 
 ## Operator check
 

@@ -14,8 +14,8 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-05
-summary: Public entry to caller-neutral Agent Run execution, durable Harness-owned continuity, Runtime bridging, and explicit Host compatibility.
+updated: 2026-08-09
+summary: Public entry to the durable cognitive execution substrate for caller-neutral Agent Runs, with explicit cognition, action, continuity, Runtime and Host boundaries.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -33,11 +33,26 @@ related:
 ---
 # Ordivon Harness
 
-Ordivon Harness is an independent Agent execution authority. A caller may submit one exact `HarnessRunContract`, or delegate a broader `HarnessExecutionMandate` that is compiled with a chosen `HarnessExecutionStrategy` into one immutable Run attempt. Harness turns each admitted attempt into durable model/Tool execution with explicit Provider-call continuity, Tool-step fencing, pause/resume, conservative recovery, Trace evidence, a Run Receipt, and a CompletionProposal.
+Ordivon Harness is the **durable cognitive execution substrate of an Agent**. A caller may submit one exact `HarnessRunContract`, or delegate a broader `HarnessExecutionMandate` that is compiled with a chosen `HarnessExecutionStrategy` into one immutable Run attempt. Within that attempt, the Agent owns semantic reasoning, cognition selection and action choice; Harness turns those choices into exact, provenance-bound, recoverable cognition transitions, Provider calls, Tool intents and durable Run evidence.
+
+Harness deliberately separates **history from cognition, observation from retention, caller interaction from durable knowledge, cognition from execution control, and physical effects from semantic success**. It does not build the Agent's world model for it. It provides a trustworthy substrate on which the Agent can build, revise and act from its own world model.
 
 ## Responsibility boundary
 
-Harness owns **how admitted Agent execution attempts run**: Provider calls, model/Tool turns, Run-local state, per-attempt strategy/budgets, retries, pause/resume and recovery. A Mandate constrains aggregate capability/resource delegation without dictating exact cognitive step counts. It does not own the caller's Task truth, domain commitments, final verification, or physical Runtime Workspace/Job truth.
+Harness owns **how admitted Agent execution attempts become durable and executable**: Run semantics, current cognition state, Provider lifecycle, Agent action normalization, Tool intent/admission, pause/resume and recovery. A Mandate constrains aggregate capability/resource delegation without dictating exact cognitive step counts. It does not own the caller's Task truth, domain commitments, final verification, external-world truth, or physical Runtime Workspace/Job truth.
+
+Its current state model is intentionally multi-domain:
+
+```text
+Canonical History        what actually happened
+Durable Cognition        Agent-selected WorkingSet
+Interaction Cognition    current caller ingress
+Attempt Cognition        Provider-authored Tool exchange
+Execution Control        current capabilities, provenance and budgets
+Effects                  exact admitted actions and physical consequences
+```
+
+The effective model view is compiled from the cognition domains plus execution control; it is not a replay of the complete canonical history.
 
 A Host may call Harness, but Host is not a Harness dependency and does not store Harness Run state. The optional `ordivon_harness.host_external_adapter` module is duck-typed and Host-free; it connects two independent authorities without sharing persistence.
 
@@ -53,6 +68,7 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - durable Provider Call claim/dispatch/completion/failure state with response-loss reconciliation;
 - durable Tool intents, dispatch fences, observations and recovery-sensitive receipts;
 - bounded Agent loop with DeepSeek and scripted adapters;
+- Agent-owned WorkingSet/WorkingView cognition selection, exact current-source addressability, caller interaction ingress, attempt-local Tool cognition, explicit caller-to-durable promotion and bounded historical cognition recall;
 - pause/resume snapshots, UNKNOWN handling and conservative recovery;
 - Host-free Runtime bridges supplied with a caller-owned `HarnessRuntimeClient`;
 - Run Receipt and CompletionProposal that remain proposals to the caller rather than domain completion authority; a completed bounded Run may retain explicit unresolved unknowns for caller/domain judgment;
@@ -65,7 +81,8 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - migrate or decode the removed Host-backed Harness state model;
 - infer success from an ambiguous Provider or Tool delivery;
 - provide a built-in Tool-bearing Runtime transport in the primary CLI; applications supply a Runtime client through the Python API;
-- choose execution strategy for a Mandate with a built-in planner, or persist a second Mandate state machine. Current Mandate support is a caller-delegated contract plus pure compiler into independently durable Run attempts.
+- choose execution strategy for a Mandate with a built-in planner, or persist a second Mandate state machine. Current Mandate support is a caller-delegated contract plus pure compiler into independently durable Run attempts;
+- provide a generic Memory/RAG/semantic-ranking service, automatically select or summarize cognition, infer that one source semantically supersedes another, or silently inject historical sources into the Agent's current view.
 
 ## Requirements
 
@@ -133,7 +150,8 @@ There is no `host` namespace and no `cutover-*` surface.
 
 ## Documentation map
 
-- `ARCHITECTURE.md` — semantic ownership and Run lifecycle;
+- `ARCHITECTURE.md` — current Harness world model, semantic ownership and Run lifecycle;
+- `docs/ORDIVON_HARNESS_PC1_COGNITION_CLOSEOUT.md` — historical P-C1.1–P-C1.12 experimental path that established the current cognition model;
 - `docs/QUICKSTART.md` — deterministic setup and first Run;
 - `docs/OPERATIONS.md` — state, recovery, backup and escalation;
 - `docs/STATUS.md` — implemented capability and known limits;

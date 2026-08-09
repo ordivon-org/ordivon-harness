@@ -285,8 +285,21 @@ def validate_public_contracts() -> list[str]:
     ):
         if stale in architecture:
             errors.append(f"ARCHITECTURE.md retains stale claim: {stale}")
-    if "independent Agent Run authority" not in architecture:
-        errors.append("ARCHITECTURE.md lacks the independent Harness authority boundary")
+    for required in (
+        "durable cognitive execution substrate",
+        "independent authority for one bounded Agent Run",
+        "Canonical History",
+        "Durable Cognition",
+        "Interaction Cognition",
+        "Attempt Cognition",
+        "Execution Control",
+        "History ≠ Cognition",
+        "Semantic meaning belongs to the Agent; structural truth belongs to Harness",
+    ):
+        if required not in architecture:
+            errors.append(
+                f"ARCHITECTURE.md lacks current Harness world-model marker: {required}"
+            )
 
     data_privacy = (ROOT / "docs/DATA_AND_PRIVACY.md").read_text(encoding="utf-8")
     for stale in (

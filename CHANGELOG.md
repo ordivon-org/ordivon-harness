@@ -4,6 +4,8 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- closed the P-C1.1–P-C1.12 cognition research line at the documentation/architecture level: the canonical Harness description now treats the product as a durable cognitive execution substrate with separate History, Durable Cognition, Interaction Cognition, Attempt Cognition, Execution Control and Effects domains; the closeout explicitly freezes the Agent-owned selection/provenance laws and avoids promoting generic Memory/RAG/supersession policy into Harness;
+
 ### Changed
 
 - `candidate_completed` now means bounded Run completion rather than epistemic closure: conclusions may retain honest unresolved unknowns, and new `IndependentCompletionProposal` v2 records them while still reading v1 proposals as having no recorded unknowns;

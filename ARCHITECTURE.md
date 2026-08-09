@@ -13,8 +13,8 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-08
-summary: Canonical architecture for caller-neutral independent Harness Runs, execution-instance fencing, and targeted durable-state validation.
+updated: 2026-08-09
+summary: Canonical world model for Harness as the durable cognitive execution substrate of an Agent, including cognition, control, effects, continuity and caller/Runtime/Host boundaries.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -27,7 +27,81 @@ related:
 
 ## Purpose
 
-Ordivon Harness is an **independent Agent Run authority**. A caller supplies immutable semantic/execution authority in a `HarnessRunContract`; Harness owns the bounded execution lifecycle required to produce durable Run evidence.
+Ordivon Harness is the **durable cognitive execution substrate of an Agent** and the independent authority for one bounded Agent Run. A caller supplies immutable semantic/execution authority in a `HarnessRunContract`; the Agent owns semantic reasoning, cognition selection and action choice; Harness turns those choices into exact, provenance-bound, recoverable state transitions and effect intents.
+
+Harness does not build the Agent's world model for it. It preserves the structural truth required for an Agent to build, revise, inspect and act from its own world model without conflating history, cognition, observation, control or physical effects.
+
+## Harness world model
+
+The current architecture is not a `messages[]` transcript machine. It has six distinct state domains:
+
+| Domain | Question it answers | Current owner/mechanism |
+| --- | --- | --- |
+| **Canonical History** | What actually happened? | append-only Harness Journal/CAS, Provider/Tool/WorkingSet events and receipts |
+| **Durable Cognition** | What has the Agent explicitly selected as current long-lived cognition? | committed `HarnessWorkingSetSpec` over exact `HarnessWorkingViewSource` pins |
+| **Interaction Cognition** | What is the caller currently saying to the Agent? | exact plain caller ingress after the latest `needs_input` boundary |
+| **Attempt Cognition** | What has the Agent just observed during this cognition attempt? | Provider-authored Tool-call/result exchange reconstructed from durable evidence |
+| **Execution Control** | What may the Agent lawfully do now, and which authority objects may it address? | admitted Tools/cognition controls, budgets, caller provenance and current WorkingSet addressability |
+| **Effects** | What action was admitted and what physically happened? | durable Tool/Provider intent/fence/receipt chains plus Runtime/external authority |
+
+These domains compose into one effective Agent turn without collapsing into one authority:
+
+```text
+                         Canonical History
+                               │
+            ┌──────────────────┼──────────────────┐
+            ▼                  ▼                  ▼
+   Durable Cognition   Interaction Cognition   Attempt Cognition
+      WorkingSet            caller ingress        Tool exchange
+            └──────────────────┬──────────────────┘
+                               ▼
+                      Effective Model View
+                               │
+                     + Execution Control
+                               │
+                               ▼
+                             Agent
+                 ┌─────────────┼─────────────┐
+                 ▼             ▼             ▼
+           cognition       external       conclusion
+           transition       action
+                 │             │
+                 ▼             ▼
+            WorkingSet      Runtime / World
+                 └──────┬──────┘
+                        ▼
+                   new History
+```
+
+The core inequalities are architectural laws, not documentation slogans:
+
+```text
+History ≠ Cognition
+Storage ≠ Selection
+Observation ≠ Retention
+Caller Input ≠ Durable Cognition
+Attempt Change ≠ Cognition Change
+Cognition Change ≠ Progress
+Progress ≠ External Effect
+Tool Intent ≠ Physical Effect
+Physical Effect ≠ Semantic Success
+Source Identity ≠ Source Truth
+Provenance ≠ Semantic Validity
+Exact Replay ≠ Redispatch
+```
+
+Harness therefore owns **structural cognition and execution truth** while the Agent owns **semantic cognition and choice**. Harness may validate, materialize, persist, recover, fence and make authority addressable; it must not rank relevance, choose memories, infer semantic correction, silently summarize sources or conclude world truth on the Agent's behalf.
+
+### Cognition sovereignty laws
+
+1. **History is not cognition.** Past Run events remain durable without being replayed automatically into the model view.
+2. **Observation is not retention.** Tool results, caller messages and discovered/materialized sources do not become durable cognition merely because they exist or were observed.
+3. **Durable cognition selection belongs to the Agent.** A source becomes current durable cognition only through an Agent-owned WorkingSet selection/promotion path.
+4. **Semantic meaning belongs to the Agent; structural truth belongs to Harness.** Harness proves exact identity/provenance/transitions, not relevance, truth or semantic supersession.
+5. **Authority required for lawful Agent choice must be visible and addressable.** Hidden current authority that an action must reference is an Agent-usability defect; execution control therefore exposes currently promotable caller indexes, admitted capabilities and exact current WorkingSet identities when those actions are granted.
+6. **Cognition, interaction, control and effects remain distinct state domains.** They may be composed for one turn but cannot be treated as interchangeable facts.
+7. **Recovery restores proven state, never invented continuity.** Lost Provider/Runtime responses are replayed/reconciled from durable authority; uncertain effects are not blindly redispatched.
+8. **New Harness mechanisms require an otherwise inexpressible Agent state transition.** Generic Memory, RAG, ranking, summarization or supersession subsystems are not architectural defaults.
 
 ## Ownership
 

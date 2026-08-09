@@ -29,4 +29,4 @@ enforcement: strict
 maintainers:
   - zycxfyh
 public_projection: ordivon-web
-description: Independent Agent Run execution, Provider continuity, Tool checkpointing, evidence, resume, and recovery.
+description: Durable cognitive execution substrate for Agent Runs, with explicit cognition, Provider/Tool continuity, evidence, Runtime effects, resume, and recovery.
