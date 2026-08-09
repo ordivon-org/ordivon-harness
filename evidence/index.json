@@ -264,9 +264,16 @@
     {
       "claimId": "harness.cognition.pc110-caller-cognition-ingress",
       "file": "harness-pc110-caller-cognition-ingress-b640f2d.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "b640f2dbbd78cbd645f4adbedc9465fd2218876f",
-      "scope": "Current P-C1.10 acceptance: after a needs_input Snapshot, exact plain caller user messages form a caller-owned projected cognition layer distinct from Agent WorkingSet selection, attempt-local Tool exchange and Harness execution control; caller ingress persists across WorkingSet transitions until the next needs_input boundary, interleaves deterministically with Tool exchanges by Journal sequence, resets soft progress only once model-visible, survives Tool process loss and Provider response loss without caller resend, and is revalidated from Snapshot/RunState authority before Provider dispatch. Model-content authority is sufficient when no Tool channel is present. No new SQLite/Protocol schema, Conversation Store, Memory subsystem or recommended public API was added."
+      "scope": "Historical P-C1.10 projected caller-ingress acceptance retained unchanged after P-C1.11 added an explicit Agent-owned path from interaction cognition to durable WorkingSet cognition. Its Snapshot interaction boundary, caller-vs-Tool authority, role admission, process-loss and Provider-response-loss laws remain valid for b640f2d."
+    },
+    {
+      "claimId": "harness.cognition.pc111-interaction-durable-promotion",
+      "file": "harness-pc111-interaction-durable-promotion-9e6f7dd.json",
+      "status": "verified",
+      "implementationRevision": "9e6f7dd891276474ed217f81ca7355c58b20a6b7",
+      "scope": "Current P-C1.11 acceptance: Agent-owned exact caller-ingress promotion mechanically materializes selected current caller bytes and additively extends the current WorkingSet; promotion provenance is carried as optional AgentTurnRequest caller-ingress refs and exposed to DeepSeek execution control, promoted caller overlays are provenance-suppressed only while their durable source remains selected, dropping the pin re-exposes active caller authority, repeated promotion is rejected, response-loss replay applies promotion exactly once, and the promotion control is dynamically withdrawn when no caller ingress is promotable. Real deepseek-v4-flash probes validated later-interaction durable reuse. No generic Memory/Conversation Store, SQLite/Ordivon Protocol schema or recommended public API was added."
     }
   ]
 }
