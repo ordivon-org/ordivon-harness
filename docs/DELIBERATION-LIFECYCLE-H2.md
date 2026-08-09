@@ -235,3 +235,62 @@ H2 does not establish:
 - population-level model behavior.
 
 Public promotion remains evidence-gated by a real independent consumer.
+
+## Post-merge closeout: stale prepare lease race
+
+The first post-merge full-suite run exposed one unrelated but real concurrency race in the existing `SQLiteHarnessRuntimeBridge` path. H2 did not modify the bridge/store/test files involved; their Git blobs were identical to the pre-H2 base. The H2 scheduling changes nevertheless made the latent race easier to observe, so closeout did not classify it as harmless noise.
+
+The failing interleaving was:
+
+```text
+worker A
+  prepare Tool Step at Run revision R
+  release prepare lease
+  dispatch one physical Runtime call
+
+worker B/C
+  observed the earlier Run state
+  reacquire tool-prepare after A advanced the Run to R+1
+  attempt stale duplicate prepare
+  temporarily occupy the Run lease
+
+worker A
+  Runtime returns
+  receipt admission can collide with the stale prepare lease
+```
+
+The physical effect invariant remained intact (`workspace.exec` was dispatched exactly once), but no worker was guaranteed to finish durable receipt recording. A diagnostic failure showed one `harness.tool-step-prepared` Event, one physical Runtime call, and no terminal Tool receipt.
+
+The repair adds an optional expected-Run-revision fence to lease admission. `prepare_tool_step` now binds its observed Run revision before acquiring the prepare lease. If another execution advances the Run first, the stale prepare cannot acquire new authority on the newer revision.
+
+Repair commit:
+
+```text
+d4d21cdc404f3af30b7641ea8e8132eff58918e6
+```
+
+This adds the more general invariant:
+
+```text
+observed Run revision R
+!=
+authority to acquire a lease on later Run revision R+1
+```
+
+Validation on the committed repair revision:
+
+```text
+original concurrent RuntimeBridge test: 100 / 100 consecutive passes
+Harness full suite:                316 tests passed
+skipped:                           3
+compileall:                        passed
+```
+
+Final main validation Runtime Job:
+
+```text
+job-019fe719-98b8-7a43-b06b-ae0b7d855dd3
+terminal evidence = sha256:b90bdfafc04209da5d2614884eb91dd5fd50c2c2d79ea2aea437c4dc3e206fd8
+```
+
+The repair does not change H2's product boundary. Deliberation lifecycle composition remains advanced/internal, and no recommended public API is forced without an independent domain consumer.
