@@ -343,6 +343,7 @@ class OrdivonAgentLoop:
         context_digest: str,
         initial_messages: tuple[dict[str, JsonValue], ...],
         cancellation: CancellationToken | None = None,
+        deadline: RunDeadline | None = None,
     ) -> AgentLoopResult:
         return self._run(
             harness_run_id=harness_run_id,
@@ -350,6 +351,7 @@ class OrdivonAgentLoop:
             context_digest=context_digest,
             initial_messages=initial_messages,
             cancellation=cancellation,
+            external_deadline=deadline,
             retained=None,
         )
 
@@ -361,6 +363,7 @@ class OrdivonAgentLoop:
         context_digest: str,
         additional_messages: tuple[dict[str, JsonValue], ...] = (),
         cancellation: CancellationToken | None = None,
+        deadline: RunDeadline | None = None,
     ) -> AgentLoopResult:
         return self._run(
             harness_run_id=retained.snapshot.harness_run_id,
@@ -368,6 +371,7 @@ class OrdivonAgentLoop:
             context_digest=context_digest,
             initial_messages=additional_messages,
             cancellation=cancellation,
+            external_deadline=deadline,
             retained=retained,
         )
 
@@ -387,6 +391,7 @@ class OrdivonAgentLoop:
         context_digest: str,
         initial_messages: tuple[dict[str, JsonValue], ...],
         cancellation: CancellationToken | None,
+        external_deadline: RunDeadline | None,
         retained: StoredHarnessRunSnapshot | None,
     ) -> AgentLoopResult:
         cancellation = cancellation or CancellationToken(monotonic_ms=self.monotonic_ms)
@@ -622,10 +627,20 @@ class OrdivonAgentLoop:
             effective_remaining_ms = assignment_remaining_ms
             deadline_source = "assignment_deadline"
         started_at_ms = self.monotonic_ms()
-        deadline = RunDeadline(
-            started_at_ms + effective_remaining_ms,
-            self.monotonic_ms,
-        )
+        internal_deadline_expires_at_ms = started_at_ms + effective_remaining_ms
+        if (
+            external_deadline is not None
+            and external_deadline.expires_at_ms <= internal_deadline_expires_at_ms
+        ):
+            deadline = external_deadline
+            effective_remaining_ms = max(0, deadline.expires_at_ms - started_at_ms)
+            deadline_source = "external_deadline"
+        else:
+            deadline = RunDeadline(
+                internal_deadline_expires_at_ms,
+                self.monotonic_ms,
+            )
+        effective_total_wall_budget_ms = prior_elapsed_ms + effective_remaining_ms
         control = ExecutionControl(cancellation, deadline)
         recorder = TraceRecorder(
             harness_run_id, clock_ms=self.clock_ms, event_sink=self.event_sink
@@ -713,6 +728,9 @@ class OrdivonAgentLoop:
                 "providerResultsReplayed": provider_result_replays,
                 "elapsedMs": elapsed,
                 "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
+                "effectiveDeadlineOverrunMs": max(
+                    0, elapsed - effective_total_wall_budget_ms
+                ),
             }
             if detail is not None:
                 payload["detail"] = detail[:2_048]
@@ -748,6 +766,9 @@ class OrdivonAgentLoop:
                     "providerResultsReplayed": provider_result_replays,
                     "wallTimeMs": elapsed,
                     "deadlineOverrunMs": max(0, elapsed - self.budget.max_wall_time_ms),
+                    "effectiveDeadlineOverrunMs": max(
+                        0, elapsed - effective_total_wall_budget_ms
+                    ),
                     "requestedModelId": self.adapter.model_id,
                     "effectiveModelIds": list(dict.fromkeys(effective_models)),
                     "providerUsage": provider_usage,

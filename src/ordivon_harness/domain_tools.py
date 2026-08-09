@@ -13,7 +13,7 @@ from typing import Callable, Protocol
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from .ordivon.control import CancellationToken
+from .ordivon.control import CancellationToken, RunDeadline
 from .ordivon.events import HarnessRunEvent
 from .ordivon.loop import AgentLoopResult, OrdivonAgentLoop, RunBudget, RunStopCode
 from .ordivon.model import (
@@ -211,6 +211,7 @@ class DomainToolLoopRunner:
         plan: DomainToolLoopPlan,
         *,
         cancellation: CancellationToken | None = None,
+        deadline: RunDeadline | None = None,
     ) -> AgentLoopResult:
         bound_bridge = _GrantedDomainToolBridge(self.bridge, plan.allowed_tools)
         loop = OrdivonAgentLoop(
@@ -228,6 +229,7 @@ class DomainToolLoopRunner:
             context_digest=plan.context_digest,
             initial_messages=plan.initial_messages,
             cancellation=cancellation,
+            deadline=deadline,
         )
 
 
