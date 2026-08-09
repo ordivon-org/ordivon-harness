@@ -271,9 +271,16 @@
     {
       "claimId": "harness.cognition.pc111-interaction-durable-promotion",
       "file": "harness-pc111-interaction-durable-promotion-9e6f7dd.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9e6f7dd891276474ed217f81ca7355c58b20a6b7",
-      "scope": "Current P-C1.11 acceptance: Agent-owned exact caller-ingress promotion mechanically materializes selected current caller bytes and additively extends the current WorkingSet; promotion provenance is carried as optional AgentTurnRequest caller-ingress refs and exposed to DeepSeek execution control, promoted caller overlays are provenance-suppressed only while their durable source remains selected, dropping the pin re-exposes active caller authority, repeated promotion is rejected, response-loss replay applies promotion exactly once, and the promotion control is dynamically withdrawn when no caller ingress is promotable. Real deepseek-v4-flash probes validated later-interaction durable reuse. No generic Memory/Conversation Store, SQLite/Ordivon Protocol schema or recommended public API was added."
+      "scope": "Historical P-C1.11 interaction-to-durable promotion acceptance retained unchanged after P-C1.12 exposed exact current WorkingSet addressability for ordinary retain/drop transitions. Its exact caller promotion, provenance visibility, projection suppression, dynamic capability and later-interaction reuse laws remain valid for 9e6f7dd."
+    },
+    {
+      "claimId": "harness.cognition.pc112-durable-cognition-supersession",
+      "file": "harness-pc112-durable-cognition-supersession-425373c.json",
+      "status": "verified",
+      "implementationRevision": "425373cef659177c2a564242560c9061dd6bb22c",
+      "scope": "Current P-C1.12 acceptance: transition-capable projected turns expose exact current WorkingSet pins aligned to their exact Provider-message ranges as model-authorized execution-control provenance; Continuity recomputes and rejects forged mappings before Provider dispatch. This closes durable correction without a new supersession primitive: exact caller correction can be promoted, then ordinary Agent-owned WorkingSet selection drops the stale pin while retaining task/correction pins. Real deepseek-v4-flash paired probes performed [task, RED-9, GREEN-42] -> [task, GREEN-42] in one Provider turn, while RED-9 remained committed historical cognition. No Memory CRUD/supersede service, SQLite/Ordivon Protocol schema or recommended public API was added."
     }
   ]
 }
