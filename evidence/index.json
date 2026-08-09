@@ -278,9 +278,16 @@
     {
       "claimId": "harness.cognition.pc112-durable-cognition-supersession",
       "file": "harness-pc112-durable-cognition-supersession-425373c.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "425373cef659177c2a564242560c9061dd6bb22c",
-      "scope": "Current P-C1.12 acceptance: transition-capable projected turns expose exact current WorkingSet pins aligned to their exact Provider-message ranges as model-authorized execution-control provenance; Continuity recomputes and rejects forged mappings before Provider dispatch. This closes durable correction without a new supersession primitive: exact caller correction can be promoted, then ordinary Agent-owned WorkingSet selection drops the stale pin while retaining task/correction pins. Real deepseek-v4-flash paired probes performed [task, RED-9, GREEN-42] -> [task, GREEN-42] in one Provider turn, while RED-9 remained committed historical cognition. No Memory CRUD/supersede service, SQLite/Ordivon Protocol schema or recommended public API was added."
+      "scope": "Historical P-C1.12 current-cognition-addressability acceptance retained unchanged after R0 composed the cognition mechanisms into the Standalone product path. Its correction/addressability and real DeepSeek supersession proofs remain valid for 425373c, while R0 supersedes it as whole-current cognition/product-composition verification."
+    },
+    {
+      "claimId": "harness.cognition.r0-product-composition",
+      "file": "harness-r0-cognition-product-composition-debb576.json",
+      "status": "verified",
+      "implementationRevision": "debb5760b6352eaaaed25aeb51432f0e882d38f8",
+      "scope": "Current R0 acceptance: StandaloneHarnessRunner mechanically composes exact cognition bootstrap, WorkingView projection, Agent-owned WorkingSet transitions, caller-ingress promotion and optional bounded history from one explicit profile; deterministic replay/resume/history tests pass and real deepseek-v4-flash product-path probes performed caller promotion and an ordinary transition to final [caller-fact] without test-only handler wiring."
     }
   ]
 }

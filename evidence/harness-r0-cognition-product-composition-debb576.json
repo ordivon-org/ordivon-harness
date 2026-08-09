@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r0-cognition-product-composition-acceptance",
+  "implementationSourceRevision": "debb5760b6352eaaaed25aeb51432f0e882d38f8",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "architecture": {
+    "compositionLaw": "Already-proven cognition mechanisms are composed by the Standalone product path rather than hand-wired by each application. The Runner may construct WorkingSetViewProjector and bind existing Continuity transition, caller-promotion and history mechanisms from one explicit profile.",
+    "bootstrapLaw": "StandaloneCognitionSeed is exact caller-authored bootstrap material only: explicit slots plus exact HarnessWorkingViewSource objects and a basis. Harness materializes exact bytes, derives exact pins and commits the initial WorkingSet; it performs no discovery, ranking, summarization or memory extraction.",
+    "replayLaw": "Bootstrap re-entry is deterministic across the existing WorkingSet Journal boundary. Repeating after only the initial uncommitted WorkingSet was recorded commits the exact same seed; repeating after the committed seed returns the existing current WorkingSet rather than creating a second bootstrap state machine.",
+    "capabilityMismatchLaw": "When an Adapter exposes the current DeepSeek cognition feature booleans, Standalone composition requires exact agreement with the profile in both directions before Provider execution. A Provider cannot advertise a cognition action the Loop will not admit, and an enabled Runner cognition action cannot rely on a DeepSeek surface that is disabled.",
+    "authorityLaw": "Continuity remains the writer and verifier of WorkingSet, caller ingress, Provider and history truth. R0 adds composition only; it does not move cognition authority into StandaloneHarnessRunner.",
+    "publicApiLaw": "R0 remains an experimental Standalone composition proof. The profile and seed are not added to the recommended ordivon_harness.api facade; stable public-surface promotion remains a later decision after product evidence."
+  },
+  "deterministicBehavior": {
+    "bootstrapProjection": "A normal StandaloneHarnessRunner accepted one exact task seed, materialized and committed the WorkingSet, automatically projected that WorkingSet into the first Provider request, and exposed exact current workingSetRefs without manually passing WorkingView/transition/promotion/history handlers.",
+    "partialBootstrapRecovery": "A test stopped after the exact initial WorkingSet revision was already recorded. Re-entering the same product Runner with the same seed admitted only the missing commit revision and continued the Run with a healthy Continuity Doctor.",
+    "promotionTransitionResume": "A normal product Run paused at needs_input, resumed with exact caller ingress, promoted the exact caller message into slot caller-fact, then performed an ordinary WorkingSet transition dropping the bootstrap task. The final current WorkingSet contained only caller-fact and Doctor remained healthy.",
+    "historyComposition": "With the full cognition profile and the existing Runtime bridge, the Runner automatically wired historical cognition inspection. A same-selection attempt reset created an earlier committed WorkingSet, inspect_working_set_history returned bounded Journal-derived history to the next Provider turn, no application-supplied history reader was required, and no physical Runtime Tool effect was dispatched for the history control.",
+    "providerMismatch": "DeepSeek with cognition disabled plus an enabled Standalone profile was rejected before execution. DeepSeek with cognition enabled plus no Standalone cognition profile was also rejected before execution."
+  },
+  "realModelExperiments": {
+    "model": "deepseek-v4-flash",
+    "probe1": "A live Standalone product Run bootstrapped exact task cognition and real DeepSeek correctly concluded needs_input. On resume the real model used the product-composed caller promotion path, changing current slots from [task] to [caller-fact, task]. It then chose needs_input instead of the requested transition. Three Provider calls completed in total and Continuity Doctor was healthy.",
+    "probe2": "A second independent live probe strengthened the exact caller/source instructions. Real DeepSeek again reached needs_input, promoted caller ingress and then performed an ordinary product-composed WorkingSet transition that removed task, proving final current slots [caller-fact]. The Run later exhausted its seven-call Provider budget rather than concluding; the final WorkingSet remained structurally correct and Continuity Doctor was healthy.",
+    "liveConclusion": "R0 therefore proves live product composition of bootstrap, caller promotion and ordinary WorkingSet transition. It does not claim that deepseek-v4-flash will always choose needs_input instead of repeated lawful cognition-attempt resets after the desired selection is reached."
+  },
+  "checks": {
+    "r0FocusedTests": 5,
+    "deterministicTests": 260,
+    "skippedTests": 3,
+    "fullRegressionPassed": true,
+    "ruff01517OfflinePassed": true,
+    "compileAllPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "liveDeepSeekProbes": 2,
+    "liveDeepSeekBootstrapNeedsInputSuccesses": 2,
+    "liveDeepSeekCallerPromotionSuccesses": 2,
+    "liveDeepSeekWorkingSetTransitionSuccesses": 1,
+    "liveDeepSeekFinalDoctorHealthy": true,
+    "newSQLiteSchemaAdded": false,
+    "newOrdivonProtocolCodecAdded": false,
+    "newRecommendedApiAdded": false,
+    "newMemoryServiceAdded": false,
+    "newRagRankingPolicyAdded": false
+  },
+  "conclusion": "R0 closes the immediate research-to-product integration gap for cognition. A normal StandaloneHarnessRunner can now bootstrap exact caller-selected cognition and mechanically compose the previously proven WorkingView, WorkingSet transition, caller promotion and bounded history mechanisms through one explicit profile, while Continuity remains the authority. Deterministic tests prove replay, resume and full-profile history composition; real deepseek-v4-flash probes prove that the normal product path can perform exact caller promotion and an ordinary WorkingSet transition without test-only handler wiring. R0 does not yet promote this experimental composition into the recommended API and does not solve provider-neutral capability truth or model policy for repeated lawful attempt resets.",
+  "knownLimits": [
+    "StandaloneCognitionSeed is explicit bootstrap, not an answer to autonomous initial source discovery. R4-style bootstrap research remains open.",
+    "The profile checks DeepSeek-style boolean feature flags when present, but there is not yet one provider-neutral durable capability object shared by Adapter, Loop, Continuity and privacy authority.",
+    "Historical cognition inspection still uses a Provider-faithful Tool channel and therefore retains the P-C1.8 Tool-content privacy requirement; a no-Tool bridge that rejects Tool observations is not automatically made history-capable merely by selecting full().",
+    "Real DeepSeek probe 2 reached the desired [caller-fact] selection but then consumed the remaining Provider budget instead of concluding. P-C1.9 intentionally permits same-selection cognition-attempt reset, and R0 does not change that law solely to compensate for one model policy failure.",
+    "The new profile and seed are experimental standalone-module types and are intentionally not exported from the recommended ordivon_harness.api facade yet.",
+    "R0 does not split the 2053-line Agent Loop or the large Continuity Store; implementation-kernel extraction remains later work after product composition evidence.",
+    "No Runtime, World, Finance, Host or other Ordivon repository was changed."
+  ]
+}
