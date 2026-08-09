@@ -187,6 +187,15 @@ class ChoiceBridge:
         )
 
 
+
+
+class H0PhaseFailure(RuntimeError):
+    def __init__(self, phase: str, stop_code: str, evidence: dict[str, JsonValue]) -> None:
+        super().__init__(f"H0 {phase} phase stopped before completion: {stop_code}")
+        self.phase = phase
+        self.stop_code = stop_code
+        self.evidence = evidence
+
 @dataclass(frozen=True, slots=True)
 class Equipment:
     secret: Path
@@ -262,14 +271,28 @@ def _run_authority_phase(
     )
     result = runner.run(plan)
     stop_code = str(getattr(result.stop_code, "value", result.stop_code))
+    usage = cast(dict[str, JsonValue], dict(result.usage))
+    effective = usage.get("effectiveModelIds")
     if stop_code != "candidate_completed":
-        raise RuntimeError(f"H0 authority phase did not candidate_complete: {stop_code}")
+        failure: dict[str, JsonValue] = {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness.h0-authority-phase-failure",
+            "label": label,
+            "stopCode": stop_code,
+            "choiceRevisions": list(bridge.revisions),
+            "trace": result.trace.to_dict(),
+            "traceDigest": canonical_digest(result.trace.to_dict()),
+            "usage": usage,
+            "requestedModelId": str(adapter.model_id),
+            "credentialScopeId": str(settings.credential_scope_id),
+            "externalEffectPerformed": False,
+        }
+        validate_json_value(failure)
+        raise H0PhaseFailure("authority", stop_code, failure)
     if result.conclusion is None:
         raise RuntimeError("H0 authority phase lacks conclusion")
     if not bridge.revisions:
         raise RuntimeError("H0 authority phase did not submit a choice")
-    usage = cast(dict[str, JsonValue], dict(result.usage))
-    effective = usage.get("effectiveModelIds")
     if isinstance(effective, list) and effective and any(x != adapter.model_id for x in effective):
         raise RuntimeError("H0 effective model differs from requested model")
     record: dict[str, JsonValue] = {
@@ -397,17 +420,90 @@ def _classify(baseline: list[dict[str, JsonValue]], treatment: list[dict[str, Js
     return "mixed"
 
 
+def _incomplete_receipt(
+    *,
+    baseline: list[dict[str, JsonValue]],
+    treatment: list[dict[str, JsonValue]],
+    failed_treatment: str,
+    failed_replicate: int,
+    error: Exception,
+) -> dict[str, JsonValue]:
+    failure_evidence: dict[str, JsonValue]
+    if isinstance(error, H0PhaseFailure):
+        failure_evidence = error.evidence
+        stop_code: JsonValue = error.stop_code
+        phase: JsonValue = error.phase
+    else:
+        failure_evidence = {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness.h0-unclassified-experiment-failure",
+            "errorType": type(error).__name__,
+            "message": str(error),
+        }
+        stop_code = "UNKNOWN"
+        phase = "unknown"
+    receipt: dict[str, JsonValue] = {
+        "schemaVersion": 1,
+        "kind": "ordivon.harness.deliberation-authority-h0",
+        "status": "incomplete",
+        "researchOutcome": "incomplete-equipment-or-protocol",
+        "implementationRevision": _git_revision(Path.cwd()),
+        "experimentRevision": EXPERIMENT_REVISION,
+        "task": TASK,
+        "taskDigest": canonical_digest(TASK),
+        "scoreTable": score_table(),
+        "oracleChoice": oracle_choice(),
+        "replicatesPerTreatment": MODEL_REPLICATES_PER_TREATMENT,
+        "baseline": baseline,
+        "deliberationFirst": treatment,
+        "failedDuring": {
+            "treatment": failed_treatment,
+            "replicate": failed_replicate,
+            "phase": phase,
+            "stopCode": stop_code,
+            "evidence": failure_evidence,
+        },
+        "interpretation": {
+            "behavioralComparisonComplete": False,
+            "genericHarnessPrimitiveForced": False,
+            "populationLevelCausalityEstablished": False,
+        },
+    }
+    validate_json_value(receipt)
+    return receipt
+
+
 def run(*, equipment: Equipment) -> dict[str, JsonValue]:
     oracle = oracle_choice()
     table = score_table()
-    baseline = [
-        _run_replicate(equipment=equipment, treatment="immediate-tool", replicate=i)
-        for i in range(1, MODEL_REPLICATES_PER_TREATMENT + 1)
-    ]
-    treatment = [
-        _run_replicate(equipment=equipment, treatment="deliberation-first", replicate=i)
-        for i in range(1, MODEL_REPLICATES_PER_TREATMENT + 1)
-    ]
+    baseline: list[dict[str, JsonValue]] = []
+    treatment: list[dict[str, JsonValue]] = []
+    for i in range(1, MODEL_REPLICATES_PER_TREATMENT + 1):
+        try:
+            baseline.append(
+                _run_replicate(equipment=equipment, treatment="immediate-tool", replicate=i)
+            )
+        except Exception as error:
+            return _incomplete_receipt(
+                baseline=baseline,
+                treatment=treatment,
+                failed_treatment="immediate-tool",
+                failed_replicate=i,
+                error=error,
+            )
+    for i in range(1, MODEL_REPLICATES_PER_TREATMENT + 1):
+        try:
+            treatment.append(
+                _run_replicate(equipment=equipment, treatment="deliberation-first", replicate=i)
+            )
+        except Exception as error:
+            return _incomplete_receipt(
+                baseline=baseline,
+                treatment=treatment,
+                failed_treatment="deliberation-first",
+                failed_replicate=i,
+                error=error,
+            )
     all_records = baseline + treatment
     requested_models = {
         str(cast(dict[str, JsonValue], x["authority"])["requestedModelId"])
@@ -485,6 +581,8 @@ def main() -> None:
     args.receipt.parent.mkdir(parents=True, exist_ok=True)
     args.receipt.write_bytes(canonical_bytes(receipt) + b"\n")
     print(json.dumps(receipt, ensure_ascii=False, sort_keys=True, indent=2))
+    if receipt.get("status") != "completed":
+        raise SystemExit(3)
 
 
 if __name__ == "__main__":
