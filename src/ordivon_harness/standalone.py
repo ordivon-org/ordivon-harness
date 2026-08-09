@@ -289,22 +289,6 @@ class StandaloneHarnessRunner:
 
     def _validate_cognition_composition(self) -> None:
         profile = self.cognition_profile
-        provider_flags = (
-            ("working_set_transitions", False if profile is None else profile.working_set_transitions),
-            ("caller_ingress_promotions", False if profile is None else profile.caller_ingress_promotions),
-            ("working_set_history", False if profile is None else profile.working_set_history),
-        )
-        for attribute, expected in provider_flags:
-            observed = getattr(self.adapter, attribute, None)
-            if observed is not None:
-                if type(observed) is not bool:
-                    raise ValueError(
-                        f"Provider cognition capability {attribute} must be boolean when exposed"
-                    )
-                if observed is not expected:
-                    raise ValueError(
-                        f"Provider cognition capability {attribute} differs from Standalone composition"
-                    )
         if profile is None:
             return
         if not self.contract.privacy.allow_model_content:

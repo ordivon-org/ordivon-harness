@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,7 @@ from anc_canonical import canonical_digest
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.ordivon.loop import OrdivonAgentLoop, RunStopCode
 from ordivon_harness.ordivon.model import (
+    AgentTurnCapabilities,
     AgentTurnRequest,
     AgentTurnResult,
     ScriptedTurnAdapter,
@@ -224,6 +226,7 @@ class DurableCognitionSupersessionTests(unittest.TestCase):
             tool_catalog_digest=canonical_digest({"pc112": "tools"}),
             messages=({"role": "user", "content": "Current durable launch code: RED-9."},),
             tools=(),
+            capabilities=AgentTurnCapabilities(working_set_transition=True),
             remaining_budget=run_budget(max_model_calls=2, max_tool_calls=0).remaining(
                 model_calls=0, tool_calls=0, observation_bytes=0, elapsed_ms=0
             ),
@@ -237,7 +240,6 @@ class DurableCognitionSupersessionTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc112-test-secret"),
             transport=transport,
-            working_set_transitions=True,
         )
         adapter.invoke(request)
         control = transport.requests[0]["messages"][0]["content"]
@@ -255,12 +257,14 @@ class DurableCognitionSupersessionTests(unittest.TestCase):
         self.assertIn("needs_input conclusion", transition_description)
 
         hidden_transport = CaptureTransport(deepseek_needs_input_response("selection not disclosed"))
+        hidden_request = replace(
+            request, capabilities=AgentTurnCapabilities()
+        )
         hidden = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc112-test-secret"),
             transport=hidden_transport,
-            working_set_transitions=False,
         )
-        hidden.invoke(request)
+        hidden.invoke(hidden_request)
         self.assertNotIn("workingSetSelection", hidden_transport.requests[0]["messages"][0]["content"])
 
     def test_forged_current_source_identity_is_rejected_before_provider_dispatch(self) -> None:

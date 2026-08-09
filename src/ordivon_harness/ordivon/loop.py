@@ -27,6 +27,7 @@ from .model import (
     AgentTurnAdapter,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
+    AgentTurnCapabilities,
     AgentTurnDispatchSafety,
     AgentTurnFailureCode,
     AgentTurnRequest,
@@ -1556,6 +1557,18 @@ class OrdivonAgentLoop:
                     ()
                     if external_observation_gate_reason is not None
                     else self.tool_bridge.definitions()
+                ),
+                capabilities=AgentTurnCapabilities(
+                    working_set_transition=(
+                        self.working_set_transition_handler is not None
+                    ),
+                    caller_ingress_promotion=(
+                        self.caller_ingress_promotion_handler is not None
+                        and bool(caller_ingress_refs)
+                    ),
+                    working_set_history=(
+                        self.working_set_history_reader is not None
+                    ),
                 ),
                 remaining_budget=self.budget.remaining(
                     model_calls=model_calls,

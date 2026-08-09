@@ -270,6 +270,9 @@ class R0CognitionProductCompositionTests(unittest.TestCase):
             self.assertEqual(execution.loop_result.stop_code, RunStopCode.NEEDS_INPUT)
             self.assertEqual(len(adapter.requests), 1)
             request = adapter.requests[0]
+            self.assertTrue(request.capabilities.working_set_transition)
+            self.assertFalse(request.capabilities.caller_ingress_promotion)
+            self.assertFalse(request.capabilities.working_set_history)
             self.assertEqual(
                 request.messages,
                 self.seed().sources[0].source.messages,
@@ -347,6 +350,12 @@ class R0CognitionProductCompositionTests(unittest.TestCase):
 
             self.assertEqual(resumed.loop_result.stop_code, RunStopCode.NEEDS_INPUT)
             self.assertEqual(len(adapter.requests), 3)
+            self.assertTrue(adapter.requests[0].capabilities.caller_ingress_promotion)
+            self.assertFalse(adapter.requests[1].capabilities.caller_ingress_promotion)
+            self.assertFalse(adapter.requests[2].capabilities.caller_ingress_promotion)
+            self.assertTrue(
+                all(request.capabilities.working_set_transition for request in adapter.requests)
+            )
             current = continuity.load_current_working_set()
             self.assertEqual(current.attempt_id, "working-attempt:r0-c")
             self.assertEqual(tuple(pin.slot for pin in current.pins), ("caller-fact",))
@@ -398,10 +407,10 @@ class R0CognitionProductCompositionTests(unittest.TestCase):
             self.assertTrue(continuity.doctor()["healthy"])
             store.close()
 
-    def test_product_runner_rejects_provider_capability_mismatch_before_execution(self) -> None:
+    def test_product_runner_composes_cognition_without_provider_feature_flags(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
-            base = cognition_contract("capability-mismatch")
+            base = cognition_contract("request-bound-capability")
             adapter = DeepSeekTurnAdapter(DeepSeekSettings(api_key="r0-test-secret"))
             run_contract = replace(
                 base,
@@ -414,42 +423,24 @@ class R0CognitionProductCompositionTests(unittest.TestCase):
             clock = FixedClock()
             continuity = SQLiteHarnessRunContinuityStore(store, run_contract, clock_ms=clock)
             bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
-            with self.assertRaisesRegex(
-                ValueError, "working_set_transitions differs from Standalone composition"
-            ):
-                StandaloneHarnessRunner(
-                    run_contract,
-                    continuity,
-                    adapter,
-                    bridge,
-                    budget=cognition_budget(),
-                    clock_ms=clock,
-                    monotonic_ms=clock,
-                    cognition_profile=StandaloneCognitionProfile(
-                        working_set_transitions=True,
-                        caller_ingress_promotions=True,
-                        working_set_history=False,
-                    ),
-                )
-
-            provider_exposes_cognition = DeepSeekTurnAdapter(
-                DeepSeekSettings(api_key="r0-test-secret"),
-                working_set_transitions=True,
-                caller_ingress_promotions=True,
-                working_set_history=False,
+            runner = StandaloneHarnessRunner(
+                run_contract,
+                continuity,
+                adapter,
+                bridge,
+                budget=cognition_budget(),
+                clock_ms=clock,
+                monotonic_ms=clock,
+                cognition_profile=StandaloneCognitionProfile(
+                    working_set_transitions=True,
+                    caller_ingress_promotions=True,
+                    working_set_history=False,
+                ),
             )
-            with self.assertRaisesRegex(
-                ValueError, "working_set_transitions differs from Standalone composition"
-            ):
-                StandaloneHarnessRunner(
-                    run_contract,
-                    continuity,
-                    provider_exposes_cognition,
-                    bridge,
-                    budget=cognition_budget(),
-                    clock_ms=clock,
-                    monotonic_ms=clock,
-                )
+            loop = runner._loop()
+            self.assertIs(loop.working_set_transition_handler, continuity)
+            self.assertIs(loop.caller_ingress_promotion_handler, continuity)
+            self.assertIsNone(loop.working_set_history_reader)
             store.close()
 
 

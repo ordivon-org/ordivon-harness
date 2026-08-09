@@ -13,6 +13,7 @@ from anc_canonical import canonical_bytes, canonical_digest, loads_strict
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.ordivon.loop import OrdivonAgentLoop, RunBudget, RunStopCode
 from ordivon_harness.ordivon.model import (
+    AgentTurnCapabilities,
     AgentRunConclusion,
     AgentTurnRequest,
     AgentTurnResult,
@@ -295,7 +296,6 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="k" * 40, max_output_tokens=512),
             transport=transport,
-            working_set_transitions=True,
         )
         request = AgentTurnRequest(
             harness_run_id="harness-run:pc13-provider",
@@ -306,6 +306,7 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
             tool_catalog_digest="sha256:" + "c" * 64,
             messages=({"role": "user", "content": "choose your next view"},),
             tools=(),
+            capabilities=AgentTurnCapabilities(working_set_transition=True),
             remaining_budget={"modelCalls": 2, "toolCalls": 0, "totalTokens": 4096},
         )
         result = adapter.invoke(request)
@@ -357,7 +358,6 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                 adapter = DeepSeekTurnAdapter(
                     DeepSeekSettings(api_key="k" * 40, max_output_tokens=512),
                     transport=transport,
-                    working_set_transitions=True,
                 )
                 loop = OrdivonAgentLoop(
                     adapter,
@@ -526,6 +526,9 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                     initial_messages=initial_messages,
                 )
             self.assertEqual(len(first_adapter.requests), 1)
+            self.assertTrue(
+                first_adapter.requests[0].capabilities.working_set_transition
+            )
             self.assertEqual(
                 continuity.load_current_working_set().attempt_id,
                 "working-attempt:pc13-a",
@@ -562,6 +565,9 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                 self.assertEqual(result.usage["providerResultsReplayed"], 1)
                 self.assertEqual(len(second_adapter.requests), 1)
                 self.assertEqual(second_adapter.requests[0].sequence, 2)
+                self.assertTrue(
+                    second_adapter.requests[0].capabilities.working_set_transition
+                )
                 self.assertEqual(second_adapter.requests[0].messages, source_b.messages)
                 current = reopened.load_current_working_set()
                 self.assertEqual(current.attempt_id, proposal.next_attempt_id)
@@ -833,7 +839,6 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="k" * 40, max_output_tokens=128),
             transport=transport,
-            working_set_transitions=True,
         )
         from ordivon_harness.ordivon.model import AgentToolDefinition
 
@@ -856,6 +861,7 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                     },
                 ),
             ),
+            capabilities=AgentTurnCapabilities(working_set_transition=True),
             remaining_budget={"modelCalls": 1, "toolCalls": 1},
         )
         with self.assertRaisesRegex(

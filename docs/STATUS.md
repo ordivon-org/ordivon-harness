@@ -48,7 +48,8 @@ Ordivon Harness is an independent caller-neutral **durable cognitive execution s
 - Agent-owned exact caller-ingress promotion into durable cognition without generic Memory extraction;
 - bounded historical committed-cognition recall and exact-pin re-selection;
 - current WorkingSet source addressability for lawful retain/drop/correction decisions;
-- experimental `StandaloneHarnessRunner` cognition composition with exact caller-authored initial seed, automatic WorkingView/transition/promotion/history wiring, partial-bootstrap replay recovery, and fail-closed DeepSeek capability/profile mismatch detection;
+- experimental `StandaloneHarnessRunner` cognition composition with exact caller-authored initial seed, automatic WorkingView/transition/promotion/history wiring and partial-bootstrap replay recovery;
+- provider-neutral per-turn `AgentTurnCapabilities` bound into each exact `AgentTurnRequest`: the Loop derives current Harness-native action authority, DeepSeek renders/parses only that request-bound surface, capability changes alter dispatch/Provider request identity, and caller promotion disappears when no exact promotable caller ref remains;
 - DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are admitted from the ambiguous turn;
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
@@ -73,7 +74,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - public API and owner-local schemas remain pre-1.0;
 - historical receipts prove the implementations they bind, not the current source unless indexed as verified;
 - WorkingSet cognition controls and the new Standalone composition profile/seed remain experimental and are not yet part of the recommended `ordivon_harness.api` facade;
-- current product composition validates DeepSeek-style feature booleans when present, but Harness does not yet have one provider-neutral durable capability object shared by Adapter, Loop, Continuity and privacy authority;
+- `StandaloneCognitionProfile` remains an installed-mechanism configuration rather than per-turn authority; `AgentTurnRequest.tools + capabilities` are the exact current action surface. R1 intentionally adds no global Capability Service or new SQLite schema;
 - there is no generic Memory/RAG/ranking/summarization layer, cross-Run cognition orchestrator, semantic supersession graph or automatic relevance policy;
 - large-WorkingSet discovery/inspection strategy, initial cognition bootstrap and cross-Run cognition reuse remain open Agent-side/system-boundary questions rather than solved Harness policy.
 

@@ -259,6 +259,63 @@ class AgentCallerIngressRef:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentTurnCapabilities:
+    """Provider-neutral Harness-native actions admitted for one exact turn.
+
+    Runtime/World Tool actions remain represented by ``AgentTurnRequest.tools``.
+    Together those two request fields are the exact per-turn Agent action truth.
+    """
+
+    conclusion: bool = True
+    working_set_transition: bool = False
+    caller_ingress_promotion: bool = False
+    working_set_history: bool = False
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("conclusion", self.conclusion),
+            ("working_set_transition", self.working_set_transition),
+            ("caller_ingress_promotion", self.caller_ingress_promotion),
+            ("working_set_history", self.working_set_history),
+        ):
+            if type(value) is not bool:
+                raise ValueError(f"Agent turn capability {name} must be boolean")
+        if not self.conclusion:
+            raise ValueError("Agent turn conclusion capability is a Harness invariant")
+
+    @property
+    def default(self) -> bool:
+        return self == AgentTurnCapabilities()
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "conclusion": self.conclusion,
+            "workingSetTransition": self.working_set_transition,
+            "callerIngressPromotion": self.caller_ingress_promotion,
+            "workingSetHistory": self.working_set_history,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "AgentTurnCapabilities":
+        _exact(
+            value,
+            {
+                "conclusion",
+                "workingSetTransition",
+                "callerIngressPromotion",
+                "workingSetHistory",
+            },
+            "AgentTurnCapabilities",
+        )
+        return cls(
+            conclusion=value["conclusion"],
+            working_set_transition=value["workingSetTransition"],
+            caller_ingress_promotion=value["callerIngressPromotion"],
+            working_set_history=value["workingSetHistory"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class AgentTurnRequest:
     harness_run_id: str
     turn_id: str
@@ -269,6 +326,7 @@ class AgentTurnRequest:
     messages: tuple[dict[str, JsonValue], ...]
     tools: tuple[AgentToolDefinition, ...]
     remaining_budget: dict[str, JsonValue]
+    capabilities: AgentTurnCapabilities = AgentTurnCapabilities()
     caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
     working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
 
@@ -286,6 +344,8 @@ class AgentTurnRequest:
         if len(names) != len(set(names)):
             raise ValueError("Agent turn Tool names must be unique")
         validate_json_value(self.remaining_budget)
+        if not isinstance(self.capabilities, AgentTurnCapabilities):
+            raise ValueError("Agent turn capabilities must be AgentTurnCapabilities")
         caller_indexes = [ref.caller_message_index for ref in self.caller_ingress_refs]
         request_indexes = [ref.request_message_index for ref in self.caller_ingress_refs]
         if len(caller_indexes) != len(set(caller_indexes)):
@@ -296,6 +356,10 @@ class AgentTurnRequest:
             raise ValueError("Agent turn caller ingress refs must be sorted by caller index")
         if any(index >= len(self.messages) for index in request_indexes):
             raise ValueError("Agent turn caller ingress request position is outside messages")
+        if self.capabilities.caller_ingress_promotion and not self.caller_ingress_refs:
+            raise ValueError(
+                "caller ingress promotion capability requires exact promotable refs"
+            )
         working_slots = [ref.pin.slot for ref in self.working_set_refs]
         if len(working_slots) != len(set(working_slots)):
             raise ValueError("Agent turn WorkingSet source slots must be unique")
@@ -336,6 +400,8 @@ class AgentTurnRequest:
             "tools": [tool.to_dict() for tool in self.tools],
             "remainingBudget": self.remaining_budget,
         }
+        if not self.capabilities.default:
+            value["capabilities"] = self.capabilities.to_dict()
         if self.caller_ingress_refs:
             value["callerIngressRefs"] = [
                 ref.to_dict() for ref in self.caller_ingress_refs
@@ -359,7 +425,7 @@ class AgentTurnRequest:
             "tools",
             "remainingBudget",
         }
-        optional_fields = {"callerIngressRefs", "workingSetRefs"}
+        optional_fields = {"capabilities", "callerIngressRefs", "workingSetRefs"}
         if not base_fields.issubset(value) or not set(value).issubset(
             base_fields | optional_fields
         ):
@@ -369,6 +435,7 @@ class AgentTurnRequest:
         raw_messages = value["messages"]
         raw_tools = value["tools"]
         raw_budget = value["remainingBudget"]
+        raw_capabilities = value.get("capabilities")
         raw_caller_refs = value.get("callerIngressRefs", [])
         raw_working_refs = value.get("workingSetRefs", [])
         if (
@@ -377,6 +444,7 @@ class AgentTurnRequest:
             or not isinstance(raw_tools, list)
             or any(not isinstance(item, dict) for item in raw_tools)
             or not isinstance(raw_budget, dict)
+            or (raw_capabilities is not None and not isinstance(raw_capabilities, dict))
             or not isinstance(raw_caller_refs, list)
             or any(not isinstance(item, dict) for item in raw_caller_refs)
             or not isinstance(raw_working_refs, list)
@@ -393,6 +461,11 @@ class AgentTurnRequest:
             messages=tuple(dict(item) for item in raw_messages),
             tools=tuple(AgentToolDefinition.from_dict(item) for item in raw_tools),
             remaining_budget=dict(raw_budget),
+            capabilities=(
+                AgentTurnCapabilities()
+                if raw_capabilities is None
+                else AgentTurnCapabilities.from_dict(raw_capabilities)
+            ),
             caller_ingress_refs=tuple(
                 AgentCallerIngressRef.from_dict(item) for item in raw_caller_refs
             ),

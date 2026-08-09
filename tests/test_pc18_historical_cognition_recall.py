@@ -11,6 +11,7 @@ from ordivon_harness.core_contracts import HarnessPrivacyPolicy
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.ordivon.loop import OrdivonAgentLoop, RunStopCode
 from ordivon_harness.ordivon.model import (
+    AgentTurnCapabilities,
     AgentToolCall,
     AgentTurnRequest,
     AgentTurnResult,
@@ -263,6 +264,7 @@ class HistoricalCognitionRecallTests(unittest.TestCase):
                 },
             ),
             tools=(),
+            capabilities=AgentTurnCapabilities(working_set_history=True),
             remaining_budget=run_budget(
                 max_model_calls=2,
                 max_tool_calls=0,
@@ -277,7 +279,6 @@ class HistoricalCognitionRecallTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc18-test-secret"),
             transport=transport,
-            working_set_history=True,
         )
         result = adapter.invoke(request)
         self.assertEqual(len(result.tool_calls), 1)
@@ -297,16 +298,18 @@ class HistoricalCognitionRecallTests(unittest.TestCase):
         self.assertIn('"admittedRuntimeTools":[]', control_text)
         self.assertIn('"toolCalls":0', control_text)
 
+        disabled_request = replace(
+            request, capabilities=AgentTurnCapabilities()
+        )
         disabled = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc18-test-secret"),
             transport=CaptureTransport(history_provider_response()),
-            working_set_history=False,
         )
         with self.assertRaisesRegex(
             ValueError,
             "unavailable Working Set history control",
         ):
-            disabled.invoke(request)
+            disabled.invoke(disabled_request)
 
     def test_agent_recalls_prior_selected_pin_without_runtime_effect_or_tool_budget(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -40,6 +40,7 @@ from .model import (
     AgentToolDefinition,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
+    AgentTurnCapabilities,
     AgentTurnDispatchSafety,
     AgentTurnFailureCode,
     AgentTurnRequest,
@@ -873,10 +874,12 @@ class _DeepSeekTurnCallHandle:
         post_handle: DeepSeekPostHandle,
         *,
         allowed_tool_names: set[str],
+        capabilities: AgentTurnCapabilities,
     ) -> None:
         self._adapter = adapter
         self._post_handle = post_handle
         self._allowed_tool_names = allowed_tool_names
+        self._capabilities = capabilities
         self._result: AgentTurnResult | None = None
 
     def poll(self, timeout_seconds: float) -> AgentTurnResult | None:
@@ -886,7 +889,9 @@ class _DeepSeekTurnCallHandle:
         if raw is None:
             return None
         self._result = self._adapter._decode_response(
-            raw, allowed_tool_names=self._allowed_tool_names
+            raw,
+            allowed_tool_names=self._allowed_tool_names,
+            capabilities=self._capabilities,
         )
         return self._result
 
@@ -903,14 +908,8 @@ class DeepSeekTurnAdapter:
         *,
         transport: DeepSeekTransport | None = None,
         completion_contract: Mapping[str, JsonValue] | None = None,
-        working_set_transitions: bool = False,
-        caller_ingress_promotions: bool = False,
-        working_set_history: bool = False,
     ) -> None:
         self.settings = settings
-        self.working_set_transitions = working_set_transitions
-        self.caller_ingress_promotions = caller_ingress_promotions
-        self.working_set_history = working_set_history
         self.model_id = settings.model
         self.transport = transport or HttpClientDeepSeekTransport()
         self._completion_contract = (
@@ -953,7 +952,10 @@ class DeepSeekTurnAdapter:
             max_response_bytes=self.settings.max_response_bytes,
         )
         return _DeepSeekTurnCallHandle(
-            self, post_handle, allowed_tool_names=allowed_tool_names
+            self,
+            post_handle,
+            allowed_tool_names=allowed_tool_names,
+            capabilities=request.capabilities,
         )
 
     def invoke(self, request: AgentTurnRequest) -> AgentTurnResult:
@@ -1034,11 +1036,16 @@ class DeepSeekTurnAdapter:
             timeout_seconds=timeout_seconds,
             max_response_bytes=self.settings.max_response_bytes,
         )
-        return self._decode_response(raw, allowed_tool_names=allowed_tool_names)
+        return self._decode_response(
+            raw,
+            allowed_tool_names=allowed_tool_names,
+            capabilities=request.capabilities,
+        )
 
     def _prepare_request(
         self, request: AgentTurnRequest
     ) -> tuple[set[str], str, dict[str, str], bytes]:
+        capabilities = request.capabilities
         allowed_tool_names = {tool.name for tool in request.tools}
         reserved = {
             _CONCLUSION_TOOL_NAME,
@@ -1053,23 +1060,40 @@ class DeepSeekTurnAdapter:
                 + ", ".join(sorted(collisions))
             )
         tools = [_provider_tool(tool) for tool in request.tools]
-        if self.working_set_transitions:
+        if capabilities.working_set_transition:
             tools.append(_working_set_transition_tool())
         promotion_indexes = tuple(
             ref.caller_message_index for ref in request.caller_ingress_refs
         )
-        if self.caller_ingress_promotions and promotion_indexes:
+        if capabilities.caller_ingress_promotion and promotion_indexes:
             tools.append(_caller_ingress_promotion_tool(promotion_indexes))
-        if self.working_set_history:
+        if capabilities.working_set_history:
             tools.append(_working_set_history_tool())
-        tools.append(_conclusion_tool(self._structured_result_schema))
+        if capabilities.conclusion:
+            tools.append(_conclusion_tool(self._structured_result_schema))
         execution_control: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.harness-agent-turn-control",
             "remainingBudget": request.remaining_budget,
             "admittedRuntimeTools": [tool.name for tool in request.tools],
+            "harnessActions": [
+                name
+                for name, admitted in (
+                    (_CONCLUSION_TOOL_NAME, capabilities.conclusion),
+                    (
+                        _WORKING_SET_TRANSITION_TOOL_NAME,
+                        capabilities.working_set_transition,
+                    ),
+                    (
+                        _CALLER_INGRESS_PROMOTION_TOOL_NAME,
+                        capabilities.caller_ingress_promotion,
+                    ),
+                    (WORKING_SET_HISTORY_CONTROL_NAME, capabilities.working_set_history),
+                )
+                if admitted
+            ],
         }
-        if self.caller_ingress_promotions:
+        if capabilities.caller_ingress_promotion:
             execution_control["callerIngress"] = {
                 "promotable": [
                     {
@@ -1079,7 +1103,7 @@ class DeepSeekTurnAdapter:
                     for ref in request.caller_ingress_refs
                 ]
             }
-        if self.working_set_transitions:
+        if capabilities.working_set_transition:
             execution_control["workingSetSelection"] = [
                 {
                     "pin": ref.pin.to_dict(),
@@ -1101,7 +1125,7 @@ class DeepSeekTurnAdapter:
                         "callerIngress.promotable are current caller-ingress messages eligible "
                         "for promotion; other user-role messages are selected or otherwise "
                         "non-promotable cognition. "
-                        if self.caller_ingress_promotions
+                        if capabilities.caller_ingress_promotion
                         else ""
                     )
                     + (
@@ -1109,7 +1133,7 @@ class DeepSeekTurnAdapter:
                         "exact currently selected durable pins and the half-open Provider-message "
                         "ranges [start,end) that each pin produced. Use those exact identities for retain/drop "
                         "decisions; do not infer or invent pin identities from message text. "
-                        if self.working_set_transitions
+                        if capabilities.working_set_transition
                         else ""
                     )
                     + canonical_bytes(execution_control).decode("utf-8")
@@ -1139,7 +1163,11 @@ class DeepSeekTurnAdapter:
         )
 
     def _decode_response(
-        self, raw: bytes, *, allowed_tool_names: set[str]
+        self,
+        raw: bytes,
+        *,
+        allowed_tool_names: set[str],
+        capabilities: AgentTurnCapabilities,
     ) -> AgentTurnResult:
         try:
             value = loads_strict(raw)
@@ -1148,7 +1176,12 @@ class DeepSeekTurnAdapter:
         if not isinstance(value, dict):
             raise TypeError("DeepSeek response must be an object")
         validate_json_value(value)
-        return self._parse_response(value, raw, allowed_tool_names=allowed_tool_names)
+        return self._parse_response(
+            value,
+            raw,
+            allowed_tool_names=allowed_tool_names,
+            capabilities=capabilities,
+        )
 
     @staticmethod
     def _cancel_and_drain(handle: AgentTurnCallHandle | DeepSeekPostHandle) -> None:
@@ -1164,6 +1197,7 @@ class DeepSeekTurnAdapter:
         raw: bytes,
         *,
         allowed_tool_names: set[str],
+        capabilities: AgentTurnCapabilities,
     ) -> AgentTurnResult:
         response_id = value.get("id")
         choices = value.get("choices")
@@ -1238,11 +1272,11 @@ class DeepSeekTurnAdapter:
             if not isinstance(name, str) or not isinstance(raw_arguments, str):
                 raise TypeError("DeepSeek Tool Call name or arguments are invalid")
             cognition_call = name == _WORKING_SET_TRANSITION_TOOL_NAME
-            cognition_allowed = cognition_call and self.working_set_transitions
+            cognition_allowed = cognition_call and capabilities.working_set_transition
             promotion_call = name == _CALLER_INGRESS_PROMOTION_TOOL_NAME
-            promotion_allowed = promotion_call and self.caller_ingress_promotions
+            promotion_allowed = promotion_call and capabilities.caller_ingress_promotion
             history_call = name == WORKING_SET_HISTORY_CONTROL_NAME
-            history_allowed = history_call and self.working_set_history
+            history_allowed = history_call and capabilities.working_set_history
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
             except ValueError:
@@ -1327,7 +1361,7 @@ class DeepSeekTurnAdapter:
                         )
                     )
             elif cognition_call:
-                if not self.working_set_transitions:
+                if not capabilities.working_set_transition:
                     raise ValueError(
                         "DeepSeek called the unavailable Working Set transition control"
                     )
@@ -1344,7 +1378,7 @@ class DeepSeekTurnAdapter:
                         f"invalid DeepSeek Working Set transition: {error}"
                     ) from error
             elif promotion_call:
-                if not self.caller_ingress_promotions:
+                if not capabilities.caller_ingress_promotion:
                     raise ValueError(
                         "DeepSeek called the unavailable caller ingress promotion control"
                     )
@@ -1361,7 +1395,7 @@ class DeepSeekTurnAdapter:
                         f"invalid DeepSeek caller ingress promotion: {error}"
                     ) from error
             elif history_call:
-                if not self.working_set_history:
+                if not capabilities.working_set_history:
                     raise ValueError(
                         "DeepSeek called the unavailable Working Set history control"
                     )

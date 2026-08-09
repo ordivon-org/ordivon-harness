@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,7 @@ from anc_canonical import canonical_bytes, canonical_digest
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.ordivon.loop import OrdivonAgentLoop, RunStopCode
 from ordivon_harness.ordivon.model import (
+    AgentTurnCapabilities,
     AgentCallerIngressRef,
     AgentTurnRequest,
     AgentTurnResult,
@@ -868,6 +870,7 @@ class InteractionDurablePromotionTests(unittest.TestCase):
                 {"role": "user", "content": "Caller message zero should persist."},
             ),
             tools=(),
+            capabilities=AgentTurnCapabilities(caller_ingress_promotion=True),
             remaining_budget=run_budget(
                 max_model_calls=2,
                 max_tool_calls=0,
@@ -888,7 +891,6 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc111-test-secret"),
             transport=transport,
-            caller_ingress_promotions=True,
         )
         result = adapter.invoke(request)
         self.assertEqual(result.tool_calls, ())
@@ -907,16 +909,18 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         self.assertIn('"callerMessageIndex":0', body["messages"][0]["content"])
         self.assertIn('"providerMessageIndex":1', body["messages"][0]["content"])
 
+        disabled_request = replace(
+            request, capabilities=AgentTurnCapabilities()
+        )
         disabled = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc111-test-secret"),
             transport=CaptureTransport(deepseek_promotion_response(proposal)),
-            caller_ingress_promotions=False,
         )
         with self.assertRaisesRegex(
             ValueError,
             "unavailable caller ingress promotion control",
         ):
-            disabled.invoke(request)
+            disabled.invoke(disabled_request)
 
     def test_deepseek_withdraws_promotion_control_when_no_caller_ingress_is_promotable(self) -> None:
         request = AgentTurnRequest(
@@ -948,7 +952,6 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc111-test-secret"),
             transport=transport,
-            caller_ingress_promotions=True,
         )
         result = adapter.invoke(request)
         self.assertIsNotNone(result.conclusion)
@@ -960,7 +963,7 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         self.assertNotIn("promote_caller_ingress", names)
         self.assertIn("submit_run_conclusion", names)
         control = body["messages"][0]["content"]
-        self.assertIn('"callerIngress":{"promotable":[]}', control)
+        self.assertNotIn('"callerIngress"', control)
 
     def test_deepseek_rejects_promotion_mixed_with_conclusion(self) -> None:
         proposal = AgentCallerIngressPromotionProposal(
@@ -978,6 +981,7 @@ class InteractionDurablePromotionTests(unittest.TestCase):
             tool_catalog_digest=canonical_digest({"pc111": "mixed-no-tools"}),
             messages=({"role": "user", "content": "do one cognition action"},),
             tools=(),
+            capabilities=AgentTurnCapabilities(caller_ingress_promotion=True),
             remaining_budget=run_budget(
                 max_model_calls=2,
                 max_tool_calls=0,
@@ -987,13 +991,17 @@ class InteractionDurablePromotionTests(unittest.TestCase):
                 observation_bytes=0,
                 elapsed_ms=0,
             ),
+            caller_ingress_refs=(
+                AgentCallerIngressRef(
+                    caller_message_index=0, request_message_index=0
+                ),
+            ),
         )
         adapter = DeepSeekTurnAdapter(
             DeepSeekSettings(api_key="pc111-test-secret"),
             transport=CaptureTransport(
                 deepseek_promotion_response(proposal, mixed_conclusion=True)
             ),
-            caller_ingress_promotions=True,
         )
         with self.assertRaisesRegex(
             ValueError,
