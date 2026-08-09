@@ -12,25 +12,21 @@ from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
     CallerIngressPromotionHandler,
     WorkingSetHistoryReader,
-    HarnessWorkingSetSourceRef,
     WorkingSetTransitionHandler,
     WorkingViewProjector,
-    overlay_working_view,
     parse_working_set_history_query,
 )
 from .control import CancellationToken, ExecutionControl, RunDeadline
+from .cognition_admission import CognitionAdmissionKernel, CognitionSurfaceUnavailable
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
-    AgentCallerIngressRef,
     AgentRunConclusion,
     AgentToolCall,
     AgentTurnAdapter,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
-    AgentTurnCapabilities,
     AgentTurnDispatchSafety,
     AgentTurnFailureCode,
-    AgentTurnRequest,
 )
 from .run_store_port import StoredHarnessRunSnapshot
 from .run_recovery import (
@@ -42,6 +38,7 @@ from .run_recovery import (
 )
 from .tool_bridge import ToolBridge, ToolObservation
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
+from .turn_projection import AgentTurnProjectionError, AgentTurnProjector
 
 _OBSERVATION_ONLY_TOOLS = frozenset(
     {
@@ -282,7 +279,7 @@ class AgentLoopResult:
 
 
 class OrdivonAgentLoop:
-    """Thin sequential Loop. Host Task and Runtime Job lifecycles remain external."""
+    """Sequential Run coordinator over separate Agent, cognition and effect seams."""
 
     def __init__(
         self,
@@ -306,6 +303,10 @@ class OrdivonAgentLoop:
         self.working_set_transition_handler = working_set_transition_handler
         self.caller_ingress_promotion_handler = caller_ingress_promotion_handler
         self.working_set_history_reader = working_set_history_reader
+        self.cognition_admission = CognitionAdmissionKernel(
+            working_set_transition_handler=working_set_transition_handler,
+            caller_ingress_promotion_handler=caller_ingress_promotion_handler,
+        )
         if working_set_transition_handler is not None and working_view_projector is None:
             raise ValueError(
                 "Agent Working Set transitions require a Working View projector"
@@ -318,6 +319,16 @@ class OrdivonAgentLoop:
             raise ValueError(
                 "Working Set history inspection requires a Working View projector"
             )
+        self.turn_projector = AgentTurnProjector(
+            tool_surface=tool_bridge,
+            working_view_projector=working_view_projector,
+            caller_ingress_projector=caller_ingress_promotion_handler,
+            working_set_transition_installed=(working_set_transition_handler is not None),
+            caller_ingress_promotion_installed=(
+                caller_ingress_promotion_handler is not None
+            ),
+            working_set_history_installed=(working_set_history_reader is not None),
+        )
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
             lambda: time.monotonic_ns() // 1_000_000
@@ -1468,144 +1479,67 @@ class OrdivonAgentLoop:
                     "external Tool Call budget is exhausted; choose cognition transition "
                     "or conclusion without further external Tool effects"
                 )
-            request_context_digest = context_digest
-            request_messages = tuple(messages)
-            caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
-            working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
-            working_view = None
-            if self.working_view_projector is not None:
-                try:
-                    project_with_refs = getattr(
-                        self.working_view_projector, "project_with_refs", None
-                    )
-                    if callable(project_with_refs):
-                        base_working_view, working_set_refs = project_with_refs()
-                    else:
-                        base_working_view = self.working_view_projector.project()
-                except Exception as error:  # noqa: BLE001 - projection is a local Harness boundary.
-                    return stop(
-                        RunStopCode.HARNESS_FAILED,
-                        detail=(
-                            "Working View projection failed: "
-                            f"{type(error).__name__}: {error}"
-                        ),
-                    )
-                if (
-                    transient_working_set_digest is not None
-                    and transient_working_set_digest
-                    != base_working_view.working_set_digest
-                ):
-                    pre_caller_tool_exchange_messages.clear()
-                    post_caller_tool_exchange_messages.clear()
-                    transient_working_set_digest = None
-                projected_caller_entries = tuple(
-                    (index, dict(message))
-                    for index, message in enumerate(caller_ingress_messages)
+            try:
+                projection = self.turn_projector.project(
+                    harness_run_id=harness_run_id,
+                    turn_id=turn_id,
+                    sequence=sequence,
+                    assignment_id=assignment_id,
+                    canonical_context_digest=context_digest,
+                    canonical_messages=tuple(messages),
+                    remaining_budget=self.budget.remaining(
+                        model_calls=model_calls,
+                        tool_calls=tool_calls,
+                        observation_bytes=observation_bytes,
+                        elapsed_ms=elapsed_ms(),
+                        total_tokens=total_tokens,
+                        model_retries=model_retries,
+                        tool_corrections=tool_corrections,
+                        conclusion_corrections=conclusion_corrections,
+                        observation_only_turns=observation_only_turns,
+                        no_progress_turns=no_progress_turns,
+                    ),
+                    admit_runtime_tools=(external_observation_gate_reason is None),
+                    transient_working_set_digest=transient_working_set_digest,
+                    caller_ingress_messages=tuple(caller_ingress_messages),
+                    pre_caller_tool_exchange_messages=tuple(
+                        pre_caller_tool_exchange_messages
+                    ),
+                    post_caller_tool_exchange_messages=tuple(
+                        post_caller_tool_exchange_messages
+                    ),
                 )
-                caller_projector = getattr(
-                    self.caller_ingress_promotion_handler,
-                    "project_current_caller_ingress",
-                    None,
-                )
-                if callable(caller_projector):
-                    try:
-                        projected_caller_entries = caller_projector(tuple(messages))
-                    except Exception as error:  # noqa: BLE001 - cognition projection is a Harness boundary.
-                        return stop(
-                            RunStopCode.HARNESS_FAILED,
-                            detail=(
-                                "caller ingress projection failed: "
-                                f"{type(error).__name__}: {error}"
-                            ),
-                        )
-                projected_caller_messages = tuple(
-                    message for _caller_index, message in projected_caller_entries
-                )
-                caller_message_offset = (
-                    len(base_working_view.messages)
-                    + len(pre_caller_tool_exchange_messages)
-                )
-                caller_ingress_refs = tuple(
-                    AgentCallerIngressRef(
-                        caller_message_index=caller_index,
-                        request_message_index=caller_message_offset + position,
-                    )
-                    for position, (caller_index, _message) in enumerate(
-                        projected_caller_entries
-                    )
-                )
-                projected_overlay = (
-                    tuple(pre_caller_tool_exchange_messages)
-                    + projected_caller_messages
-                    + tuple(post_caller_tool_exchange_messages)
-                )
-                working_view = overlay_working_view(
-                    base_working_view,
-                    projected_overlay,
-                )
-                request_context_digest = working_view.digest
-                request_messages = working_view.messages
+            except AgentTurnProjectionError as error:
+                return stop(RunStopCode.HARNESS_FAILED, detail=str(error))
+            if projection.discarded_stale_transient_tool_exchange:
+                pre_caller_tool_exchange_messages.clear()
+                post_caller_tool_exchange_messages.clear()
+                transient_working_set_digest = None
+            request = projection.request
+            working_view = projection.effective_working_view
+            if working_view is not None:
                 recorder.record(
                     "model_view_projected",
                     {
                         "turnId": turn_id,
                         "attemptId": working_view.attempt_id,
                         "workingSetDigest": working_view.working_set_digest,
-                        "baseWorkingViewDigest": base_working_view.digest,
+                        "baseWorkingViewDigest": projection.base_working_view_digest,
                         "workingViewDigest": working_view.digest,
                         "transientToolExchangeMessages": (
-                            len(pre_caller_tool_exchange_messages)
-                            + len(post_caller_tool_exchange_messages)
+                            projection.transient_tool_exchange_messages
                         ),
-                        "callerCognitionIngressMessages": len(
-                            projected_caller_messages
+                        "callerCognitionIngressMessages": (
+                            projection.caller_cognition_ingress_messages
                         ),
-                        "canonicalMessagesDigest": canonical_digest(messages),
-                        "projectedMessagesDigest": canonical_digest(
-                            list(working_view.messages)
+                        "canonicalMessagesDigest": (
+                            projection.canonical_messages_digest
+                        ),
+                        "projectedMessagesDigest": (
+                            projection.projected_messages_digest
                         ),
                     },
                 )
-            request = AgentTurnRequest(
-                harness_run_id=harness_run_id,
-                turn_id=turn_id,
-                sequence=sequence,
-                assignment_id=assignment_id,
-                context_digest=request_context_digest,
-                tool_catalog_digest=self.tool_bridge.catalog_digest,
-                messages=request_messages,
-                tools=(
-                    ()
-                    if external_observation_gate_reason is not None
-                    else self.tool_bridge.definitions()
-                ),
-                capabilities=AgentTurnCapabilities(
-                    working_set_transition=(
-                        self.working_set_transition_handler is not None
-                    ),
-                    caller_ingress_promotion=(
-                        self.caller_ingress_promotion_handler is not None
-                        and bool(caller_ingress_refs)
-                    ),
-                    working_set_history=(
-                        self.working_set_history_reader is not None
-                    ),
-                ),
-                remaining_budget=self.budget.remaining(
-                    model_calls=model_calls,
-                    tool_calls=tool_calls,
-                    observation_bytes=observation_bytes,
-                    elapsed_ms=elapsed_ms(),
-                    total_tokens=total_tokens,
-                    model_retries=model_retries,
-                    tool_corrections=tool_corrections,
-                    conclusion_corrections=conclusion_corrections,
-                    observation_only_turns=observation_only_turns,
-                    no_progress_turns=no_progress_turns,
-                ),
-                caller_ingress_refs=caller_ingress_refs,
-                working_set_refs=working_set_refs,
-            )
             token_bounder = getattr(
                 self.adapter, "request_token_upper_bound", None
             )
@@ -2130,32 +2064,21 @@ class OrdivonAgentLoop:
                     ),
                 )
             if result.caller_ingress_promotion is not None:
-                handler = self.caller_ingress_promotion_handler
-                if handler is None:
-                    return stop(
-                        RunStopCode.INVALID_MODEL_OUTPUT,
-                        detail=(
-                            "Agent proposed caller ingress promotion but this Loop "
-                            "did not grant that cognition surface"
-                        ),
-                    )
                 if working_view is None:
                     return stop(
                         RunStopCode.HARNESS_FAILED,
                         detail="caller ingress promotion omitted its source Working View",
                     )
                 try:
-                    source_working_set = handler.load_current_working_set()
-                    if source_working_set.digest != working_view.working_set_digest:
-                        raise ValueError(
-                            "caller ingress promotion source is no longer current selected cognition"
-                        )
-                    committed_working_set = handler.apply_caller_ingress_promotion(
+                    admission = self.cognition_admission.apply_caller_ingress_promotion(
                         result.caller_ingress_promotion,
                         source_working_set_digest=working_view.working_set_digest,
                         source_model_view_digest=request.context_digest,
                     )
-                    selection_changed = committed_working_set.pins != source_working_set.pins
+                    committed_working_set = admission.committed_working_set
+                    selection_changed = admission.selection_changed
+                except CognitionSurfaceUnavailable as error:
+                    return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
                 except ValueError as error:
                     return stop(
                         RunStopCode.INVALID_MODEL_OUTPUT,
@@ -2224,34 +2147,21 @@ class OrdivonAgentLoop:
                 continue
 
             if result.working_set_transition is not None:
-                handler = self.working_set_transition_handler
-                if handler is None:
-                    return stop(
-                        RunStopCode.INVALID_MODEL_OUTPUT,
-                        detail=(
-                            "Agent proposed a Working Set transition but this Loop "
-                            "did not grant a cognition transition surface"
-                        ),
-                    )
                 if working_view is None:
                     return stop(
                         RunStopCode.HARNESS_FAILED,
                         detail="Working Set transition omitted its source Working View",
                     )
                 try:
-                    source_working_set = handler.load_current_working_set()
-                    if source_working_set.digest != working_view.working_set_digest:
-                        raise ValueError(
-                            "Working Set transition source is no longer the current selected cognition"
-                        )
-                    selection_changed = (
-                        source_working_set.pins != result.working_set_transition.pins
-                    )
-                    committed_working_set = handler.apply_working_set_transition(
+                    admission = self.cognition_admission.apply_working_set_transition(
                         result.working_set_transition,
                         source_working_set_digest=working_view.working_set_digest,
                         source_model_view_digest=request.context_digest,
                     )
+                    committed_working_set = admission.committed_working_set
+                    selection_changed = admission.selection_changed
+                except CognitionSurfaceUnavailable as error:
+                    return stop(RunStopCode.INVALID_MODEL_OUTPUT, detail=str(error))
                 except ValueError as error:
                     return stop(
                         RunStopCode.INVALID_MODEL_OUTPUT,
