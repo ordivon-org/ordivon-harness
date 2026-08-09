@@ -7,6 +7,7 @@ from typing import Callable, TypeAlias
 
 from anc_canonical import JsonValue
 
+from .completion import structured_completion_contract_digest
 from .core_contracts import HarnessRunContract
 from .execution_binding import HarnessExecutionBinding
 from .ordivon.model import AgentTurnAdapter
@@ -76,7 +77,12 @@ class HarnessAgentRun:
         clock_ms: Callable[[], int] | None = None,
         monotonic_ms: Callable[[], int] | None = None,
     ) -> HarnessAgentRun:
-        cls._validate_structure(contract, execution_binding=execution_binding, runtime=runtime)
+        cls._validate_structure(
+            contract,
+            cognition_profile=cognition_profile,
+            execution_binding=execution_binding,
+            runtime=runtime,
+        )
         adapter = cls._resolve_adapter(contract, adapter_factory)
         root = Path(state_root).expanduser().resolve()
         with SQLiteHarnessStore.initialize(root) as store:
@@ -123,7 +129,12 @@ class HarnessAgentRun:
                 store, harness_run_id, clock_ms=clock_ms
             )
             contract = continuity.contract
-        cls._validate_structure(contract, execution_binding=execution_binding, runtime=runtime)
+        cls._validate_structure(
+            contract,
+            cognition_profile=cognition_profile,
+            execution_binding=execution_binding,
+            runtime=runtime,
+        )
         adapter = cls._resolve_adapter(contract, adapter_factory)
         return cls._bind(
             root,
@@ -295,16 +306,47 @@ class HarnessAgentRun:
             raise HarnessAgentRunCompositionError(
                 "Harness Agent Run requested model differs from its Contract"
             )
+        expected_completion_digest = structured_completion_contract_digest(
+            contract.completion_contract
+        )
+        if (
+            expected_completion_digest is not None
+            and getattr(adapter, "structured_completion_contract_digest", None)
+            != expected_completion_digest
+        ):
+            raise HarnessAgentRunCompositionError(
+                "Harness Agent Run structured completion differs from its Contract"
+            )
         return adapter
 
     @staticmethod
     def _validate_structure(
         contract: HarnessRunContract,
         *,
+        cognition_profile: HarnessCognitionProfile | None,
         execution_binding: HarnessExecutionBinding | None,
         runtime: HarnessRuntimeClient | None,
     ) -> None:
+        """Admit every supported composition fact provable before state creation.
+
+        This does not probe Provider or Runtime availability. It only rejects exact
+        caller inputs that cannot lawfully compose the persisted Contract.
+        """
+
         RunBudget.from_contract_dict(contract.budget)
+        if cognition_profile is not None:
+            if not contract.privacy.allow_model_content:
+                raise HarnessAgentRunCompositionError(
+                    "Harness cognition requires Contract permission to retain model content"
+                )
+            if (
+                cognition_profile.working_set_history
+                and not contract.privacy.allow_tool_content
+            ):
+                raise HarnessAgentRunCompositionError(
+                    "Harness cognition history requires Tool-content authority"
+                )
+
         no_tool = (
             contract.tool_catalog_digest == NO_TOOL_AGENT_SURFACE_DIGEST
             and contract.tool_grant_digest == NO_TOOL_AGENT_GRANT_DIGEST
@@ -324,11 +366,59 @@ class HarnessAgentRun:
                 raise HarnessAgentRunCompositionError(
                     "Runtime Tool Harness Agent Run requires exact execution binding and Runtime client"
                 )
+            HarnessAgentRun._validate_execution_binding(contract, execution_binding)
             return
         raise HarnessAgentRunCompositionError(
             "Harness Agent Run does not implement the Contract's exact Tool surface; "
             "use advanced core composition for custom Tool bridges"
         )
+
+    @staticmethod
+    def _validate_execution_binding(
+        contract: HarnessRunContract,
+        execution_binding: HarnessExecutionBinding,
+    ) -> None:
+        token = contract.digest[7:31]
+        if (
+            execution_binding.harness_run_id != contract.harness_run_id
+            or execution_binding.assignment_id != f"assignment:external:{token}"
+            or execution_binding.assignment_generation != 1
+            or execution_binding.assignment_digest != contract.digest
+        ):
+            raise HarnessAgentRunCompositionError(
+                "Harness Execution Binding differs from the independent Run binding"
+            )
+        if (
+            execution_binding.tool_catalog_digest
+            != INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST
+            or execution_binding.tool_catalog_digest != contract.tool_catalog_digest
+        ):
+            raise HarnessAgentRunCompositionError(
+                "Harness Execution Binding Tool catalog differs"
+            )
+        if (
+            execution_binding.tool_grant_digest != INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST
+            or contract.tool_grant_digest != INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST
+        ):
+            raise HarnessAgentRunCompositionError(
+                "Harness Execution Binding Tool Grant differs"
+            )
+        if execution_binding.deadline_ms != contract.deadline_ms:
+            raise HarnessAgentRunCompositionError(
+                "Harness Execution Binding deadline differs"
+            )
+        if not execution_binding.runtime_references:
+            raise HarnessAgentRunCompositionError(
+                "independent Runtime execution requires foreign references"
+            )
+        if any(
+            reference.namespace != "ordivon.harness"
+            for reference in execution_binding.runtime_references
+        ):
+            raise HarnessAgentRunCompositionError(
+                "independent Runtime execution may reference only ordivon.harness authority"
+            )
+
 
 
 __all__ = [

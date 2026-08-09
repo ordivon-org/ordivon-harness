@@ -50,7 +50,15 @@ def digest(label: str) -> str:
     return canonical_digest({"r3": label})
 
 
-def contract(suffix: str, *, tools: bool = False, model_id: str = ScriptedTurnAdapter.model_id):
+def contract(
+    suffix: str,
+    *,
+    tools: bool = False,
+    model_id: str = ScriptedTurnAdapter.model_id,
+    allow_model_content: bool = True,
+    allow_tool_content: bool | None = None,
+    completion_contract=None,
+):
     return HarnessRunContract(
         harness_run_id=f"harness-run:r3-{suffix}",
         harness_implementation_id="ordivon-harness@r3",
@@ -79,15 +87,15 @@ def contract(suffix: str, *, tools: bool = False, model_id: str = ScriptedTurnAd
             "maxObservationOnlyTurns": 4,
             "maxNoProgressTurns": 3,
         },
-        completion_contract={"mode": "record"},
+        completion_contract=completion_contract or {"mode": "record"},
         system_manifest_ref=HarnessBoundReference(
             "manifest:r3", "system-manifest", digest("manifest")
         ),
         created_at_ms=1000,
         privacy=HarnessPrivacyPolicy(
             content_policy="bounded-private-content",
-            allow_model_content=True,
-            allow_tool_content=tools,
+            allow_model_content=allow_model_content,
+            allow_tool_content=(tools if allow_tool_content is None else allow_tool_content),
         ),
     )
 
@@ -347,6 +355,121 @@ class R3SupportedAgentRunTests(unittest.TestCase):
             wrong.model_id = "model:r3-wrong"
             with self.assertRaisesRegex(HarnessAgentRunCompositionError, "requested model differs"):
                 HarnessAgentRun.create(root, value, lambda _contract: wrong)
+            self.assertFalse(root.exists())
+
+    def test_cognition_privacy_fails_before_provider_factory_or_state_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            value = contract("cognition-privacy", allow_model_content=False)
+            calls = 0
+
+            def provider_factory(_contract):
+                nonlocal calls
+                calls += 1
+                raise AssertionError("Provider factory must not run")
+
+            with self.assertRaisesRegex(
+                HarnessAgentRunCompositionError,
+                "cognition requires Contract permission",
+            ):
+                HarnessAgentRun.create(
+                    root,
+                    value,
+                    provider_factory,
+                    cognition_profile=HarnessCognitionProfile(),
+                )
+            self.assertEqual(calls, 0)
+            self.assertFalse(root.exists())
+
+    def test_cognition_history_privacy_fails_before_provider_factory_or_state_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            value = contract("cognition-history-privacy")
+            calls = 0
+
+            def provider_factory(_contract):
+                nonlocal calls
+                calls += 1
+                raise AssertionError("Provider factory must not run")
+
+            with self.assertRaisesRegex(
+                HarnessAgentRunCompositionError,
+                "history requires Tool-content authority",
+            ):
+                HarnessAgentRun.create(
+                    root,
+                    value,
+                    provider_factory,
+                    cognition_profile=HarnessCognitionProfile.full(),
+                )
+            self.assertEqual(calls, 0)
+            self.assertFalse(root.exists())
+
+    def test_runtime_binding_mismatch_fails_before_provider_factory_or_state_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            value = contract("binding-preflight", tools=True)
+            binding = execution_binding(value)
+            invalid = HarnessExecutionBinding(
+                harness_run_id=binding.harness_run_id,
+                workspace_ref=binding.workspace_ref,
+                assignment_id=binding.assignment_id,
+                assignment_generation=2,
+                assignment_digest=binding.assignment_digest,
+                runtime_binding_digest=binding.runtime_binding_digest,
+                tool_catalog_digest=binding.tool_catalog_digest,
+                tool_grant_digest=binding.tool_grant_digest,
+                deadline_ms=binding.deadline_ms,
+                runtime_references=binding.runtime_references,
+            )
+            calls = 0
+
+            def provider_factory(_contract):
+                nonlocal calls
+                calls += 1
+                raise AssertionError("Provider factory must not run")
+
+            with self.assertRaisesRegex(
+                HarnessAgentRunCompositionError, "differs from the independent Run binding"
+            ):
+                HarnessAgentRun.create(
+                    root,
+                    value,
+                    provider_factory,
+                    execution_binding=invalid,
+                    runtime=FakeRuntime(),
+                )
+            self.assertEqual(calls, 0)
+            self.assertFalse(root.exists())
+
+    def test_structured_completion_mismatch_fails_before_state_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            value = contract(
+                "structured-preflight",
+                completion_contract={
+                    "mode": "structured-result-v1",
+                    "resultKind": "r3-preflight",
+                    "resultSchema": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {"choice": {"type": "string"}},
+                        "required": ["choice"],
+                    },
+                },
+            )
+            calls = 0
+
+            def provider_factory(_contract):
+                nonlocal calls
+                calls += 1
+                return ScriptedTurnAdapter((completed(),))
+
+            with self.assertRaisesRegex(
+                HarnessAgentRunCompositionError, "structured completion differs"
+            ):
+                HarnessAgentRun.create(root, value, provider_factory)
+            self.assertEqual(calls, 1)
             self.assertFalse(root.exists())
 
     def test_unknown_tool_surface_fails_instead_of_guessing_a_bridge(self):

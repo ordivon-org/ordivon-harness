@@ -4,6 +4,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- strengthened the R3 supported Agent Run surface with static composition admission: `HarnessAgentRun.create()` now rejects cognition privacy/history authority mismatch and exact Runtime-binding mismatch before Adapter construction, and rejects structured-completion binding mismatch before durable Run creation; lower-layer validation remains defense-in-depth and no Provider/Runtime liveness is inferred;
 - began R3 supported Agent surface: `HarnessAgentRun` now owns state-root Store/Continuity/Bridge/Runner composition and Snapshot-bound resume wiring for the built-in no-Tool and explicitly bound Runtime-search surfaces; caller policy still owns Contract, Provider factory, Runtime binding/client and exact cognition selection, and invalid structural composition fails before Provider construction; the primary no-Tool CLI now executes through this handle;
 - Stop synthesizing `AgentRunConclusion` for Harness-owned `no_progress` execution
   disposition so structured completion callers never receive a plain-text fallback
