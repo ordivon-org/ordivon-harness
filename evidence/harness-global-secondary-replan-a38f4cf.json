@@ -1,0 +1,191 @@
+{
+  "accepted": true,
+  "attempts": {
+    "primary": {
+      "attemptIndex": 1,
+      "contractDigest": "sha256:4e5ece006624d4c1a9e886a62b7b60a57db68c41365750bee3b8ce89fe6f7173",
+      "harnessRunId": "harness-run:global-secondary-current-a1-1786265646176",
+      "networkProfile": "ambient",
+      "networkProfileDigest": "sha256:58231f863b2b3b252a756c108db0ac3639464f32f5a312d38da38907203c0f85",
+      "profileDigest": "sha256:332677ae64770cb1c39e61dffec9661808c88f29eca04ee5d8edaac10bf23a46",
+      "profileId": "profile:deepseek-ambient-current",
+      "runReceiptDigest": "sha256:56e1c9b1fa5d3445777eddfd39f5cc53ef9f2f34ad2b1965ef52d4e39e9e31e4",
+      "runtimeClientRequestId": "request:harness:g1:97fc9fd108493fd1822e5323ccc5aa5b",
+      "runtimeJobId": "job-019fe5ba-f2ca-7940-9f12-5500750e97ea",
+      "runtimeTerminalEvidenceDigest": "sha256:8a0a510fa9a9c17567cf0c93eea39a92c203bc903e65715fa54a7825fd178e9c",
+      "strategyDigest": "sha256:94557cab540140f53c47643a6aede3407a30252824df39942c51aa1404031bf2",
+      "systemManifestDigest": "sha256:9169402d2fafcc23e45a8162c8632aedd1198cd728fdba31c32045532a49fc49",
+      "terminationCode": "candidate_completed",
+      "traceDigest": "sha256:11a23e6e5a4914eca9a6ede15e201e7126d0b6b94dba3d72109e81b3e29af12f",
+      "usage": {
+        "conclusionCorrectionLimit": 3,
+        "conclusionCorrections": 0,
+        "modelCalls": 1,
+        "modelRetries": 0,
+        "providerAttempts": 1,
+        "toolCalls": 0,
+        "totalTokens": 811,
+        "wallTimeMs": 1264
+      }
+    },
+    "secondary": {
+      "attemptIndex": 2,
+      "contractDigest": "sha256:cfc8b3b76fe0d0368ddfb65e1002041c2972a4ef7b4a2e3263c91eff33be497d",
+      "harnessRunId": "harness-run:global-secondary-current-a2-1786265692657",
+      "networkProfile": "native-a",
+      "networkProfileDigest": "sha256:1ac39a9ea6d0ad82c9837de86646361e8e768cd917db2f51175c74af0e92bb22",
+      "profileDigest": "sha256:93d4e314cd09f1089636118024557352792675a6b46939e33c59f2289047b279",
+      "profileId": "profile:deepseek-native-a-current",
+      "runReceiptDigest": "sha256:2f4738b02dd9f1d63177b2154cd84fc8f65d9e577bed0eede983a040acc6a172",
+      "runtimeClientRequestId": "request:harness:g2:e4e29fd244c7365332ed3298e7f83aaf",
+      "runtimeJobId": "job-019fe5bb-c09f-7e70-b267-07c346baf8c8",
+      "runtimeTerminalEvidenceDigest": "sha256:ec67a9cb72eacd10398881c9822e0d7aa3a064b17309b7ccb84f11a6bcb834a5",
+      "strategyDigest": "sha256:9157ee0db1a519c1652af3424d79fc2319cb8510bba5fe6af701a7a308be79b3",
+      "systemManifestDigest": "sha256:658ad45590fca4c5d945cbef4a49ede4a2649981c32c86f3d6c2d42130641ed5",
+      "terminationCode": "candidate_completed",
+      "traceDigest": "sha256:065aa39f88c9f3047ccfcd38ad024f50eac2963bf92a8b82e4ae0b953d65136e",
+      "usage": {
+        "conclusionCorrectionLimit": 3,
+        "conclusionCorrections": 0,
+        "modelCalls": 1,
+        "modelRetries": 0,
+        "providerAttempts": 1,
+        "toolCalls": 0,
+        "totalTokens": 827,
+        "wallTimeMs": 1937
+      }
+    }
+  },
+  "checks": {
+    "automaticProviderFailoverAdded": false,
+    "currentConclusionCorrectionBudgetPresent": true,
+    "hostProviderAuthorityAdded": false,
+    "primaryReceiptConsumedBySecondary": true,
+    "profileChangedExplicitly": true,
+    "profileDigestChanged": true,
+    "runtimeNetworkProfileSchemaAdded": false,
+    "sameMandateAcrossAttempts": true,
+    "secondaryContextAdoptedPriorReceipt": true,
+    "secondaryHarnessConnectedToLoopbackSidecar": true,
+    "secondaryRuntimeRequestBoundSevenReferences": true,
+    "strategyDigestChanged": true
+  },
+  "claim": {
+    "mandateDigest": "sha256:9f5e338de432358857e99f58d6a3d3170336a1a370b1348e9b55c89c825ad86b",
+    "mandateId": "mandate:global-secondary-current-1786265646176",
+    "statement": "The current Harness can consume a real primary Attempt receipt and explicitly replan the same immutable Mandate onto an allowed DeepSeek native-a execution profile; the existing HarnessExecutionBinding lowers that choice into Runtime workspace.exec with digest-bound Workstation network-profile authority, and the Provider socket physically connects through the native-a loopback CONNECT sidecar."
+  },
+  "implementationSourceRevision": "a38f4cfde3b20c64219ab00d911cac738da8961e",
+  "kind": "ordivon.harness-global-secondary-replan-live-acceptance",
+  "knownLimits": [
+    "This acceptance proves explicit receipt-bound replan, not automatic failover detection or an automatic Provider router.",
+    "Attempt 1 completed successfully; primary failure was not physically forced in this acceptance.",
+    "Both Attempts used DeepSeek. Exact OpenAI continuity remains unproven; Cloudflare Worker relay and AI Gateway BYOK probes were rejected by OpenAI region policy.",
+    "Network reachability is point-in-time physical truth. The Workstation profile digest binds transport semantics, not perpetual destination reachability.",
+    "The temporary Cloudflare AI Gateway probe cleanup was not confirmed at the time of this acceptance; it had no Provider credential, collect_logs was disabled, and it was not part of either Harness Attempt."
+  ],
+  "physicalEvidence": {
+    "observedRoute": {
+      "device": "eth4",
+      "source": "192.168.0.122",
+      "table": 201
+    },
+    "policyRule": {
+      "preference": 10201,
+      "table": 201,
+      "uid": 951
+    },
+    "secondaryHarnessConnect": {
+      "address": "127.0.0.1",
+      "port": 19081,
+      "syscallResult": "EINPROGRESS"
+    },
+    "sidecar": {
+      "active": true,
+      "service": "ordivon-network-proxy-a.service",
+      "uid": 951,
+      "user": "cloudflared-direct-a"
+    }
+  },
+  "replan": {
+    "adoptedContextDigests": [
+      "sha256:56e1c9b1fa5d3445777eddfd39f5cc53ef9f2f34ad2b1965ef52d4e39e9e31e4"
+    ],
+    "completedAttempts": 1,
+    "consumedTotalTokens": 811,
+    "consumedWallTimeMs": 1264,
+    "consumptionDigest": "sha256:e6b768f5bcc07a4f8c1779041cf6f7c6c8664751c82d9abb1b9ffa1124dc189e",
+    "priorReceiptDigest": "sha256:56e1c9b1fa5d3445777eddfd39f5cc53ef9f2f34ad2b1965ef52d4e39e9e31e4",
+    "priorReceiptDigests": [
+      "sha256:56e1c9b1fa5d3445777eddfd39f5cc53ef9f2f34ad2b1965ef52d4e39e9e31e4"
+    ],
+    "remainingEconomicEnvelope": {
+      "maxTotalTokens": 64725,
+      "maxWallTimeMs": 58736
+    }
+  },
+  "runtimeBinding": {
+    "foreignReferenceCount": 7,
+    "foreignReferences": [
+      {
+        "digest": "sha256:9f5e338de432358857e99f58d6a3d3170336a1a370b1348e9b55c89c825ad86b",
+        "id": "mandate:global-secondary-current-1786265646176",
+        "namespace": "ordivon.harness",
+        "type": "execution_mandate"
+      },
+      {
+        "digest": "sha256:93d4e314cd09f1089636118024557352792675a6b46939e33c59f2289047b279",
+        "id": "profile:deepseek-native-a-current",
+        "namespace": "ordivon.harness",
+        "type": "execution_profile"
+      },
+      {
+        "digest": "sha256:9157ee0db1a519c1652af3424d79fc2319cb8510bba5fe6af701a7a308be79b3",
+        "generation": "2",
+        "id": "strategy:harness-run:global-secondary-current-a2-1786265692657",
+        "namespace": "ordivon.harness",
+        "type": "execution_strategy"
+      },
+      {
+        "digest": "sha256:e6b768f5bcc07a4f8c1779041cf6f7c6c8664751c82d9abb1b9ffa1124dc189e",
+        "generation": "2",
+        "id": "mandate:global-secondary-current-1786265646176",
+        "namespace": "ordivon.harness",
+        "type": "mandate_consumption"
+      },
+      {
+        "digest": "sha256:56e1c9b1fa5d3445777eddfd39f5cc53ef9f2f34ad2b1965ef52d4e39e9e31e4",
+        "generation": "1",
+        "id": "harness-run:global-secondary-current-a1-1786265646176",
+        "namespace": "ordivon.harness",
+        "type": "prior_run_receipt"
+      },
+      {
+        "digest": "sha256:cfc8b3b76fe0d0368ddfb65e1002041c2972a4ef7b4a2e3263c91eff33be497d",
+        "id": "harness-run:global-secondary-current-a2-1786265692657",
+        "namespace": "ordivon.harness",
+        "type": "run_contract"
+      },
+      {
+        "digest": "sha256:1ac39a9ea6d0ad82c9837de86646361e8e768cd917db2f51175c74af0e92bb22",
+        "id": "native-a",
+        "namespace": "ordivon.workstation",
+        "type": "network_profile"
+      }
+    ],
+    "requestIdentityChangedAcrossAttempts": true,
+    "secondaryExecutable": "/root/tools/bin/netprofile",
+    "secondaryNetworkArgsPrefix": [
+      "run",
+      "--expect",
+      "sha256:1ac39a9ea6d0ad82c9837de86646361e8e768cd917db2f51175c74af0e92bb22",
+      "native-a",
+      "--"
+    ],
+    "terminalEvidencePreservedForeignReferences": true
+  },
+  "runtimeObservedRevision": "49f73d04e7421ae30045b36609c179b65e254cd3",
+  "schemaVersion": 1,
+  "truthRole": "verified-cross-authority-acceptance",
+  "workstationSourceRevision": "b02d62e9fca1ea92ee0b943316ad23d994e89697"
+}

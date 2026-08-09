@@ -299,9 +299,9 @@
     {
       "claimId": "harness.transport.global-secondary-deepseek",
       "file": "harness-global-secondary-deepseek-51825aa.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "51825aaef6f68f2cae491f8ab77d5cbc89c2ad9a",
-      "scope": "Current live acceptance for explicit Agent provider continuity: the canonical DeepSeek cancellable transport preserves direct behavior without a proxy, accepts only a validated IPv4-loopback HTTP CONNECT sidecar, completed a real deepseek-v4-flash Run through native-a, and syscall/policy-route evidence proved the Harness process connected to 127.0.0.1:19081 while the sidecar egress authority used Workstation table 201 rather than ambient Surfshark. This is explicit composition, not automatic Provider migration."
+      "scope": "Historical live acceptance for the initial bounded loopback DeepSeek transport at 51825aa. A later Harness implementation changed src/ordivon_harness/ordivon/loop.py, so this receipt remains historical evidence rather than current verification; the a38f4cf receipt-bound replan acceptance supersedes it for current implementation truth."
     },
     {
       "claimId": "harness.execution.conclusion-correction-separation",
@@ -309,6 +309,13 @@
       "status": "verified",
       "implementationRevision": "9e47ee615b2db77e274921ef5a043e429ba04c56",
       "scope": "Current acceptance for domain-neutral conclusion correction separation: independent maxConclusionCorrections/conclusionCorrections authority, owner-reason feedback, backward-compatible schema-v1 budget materialization, 273-test regression on an identical src+tests tree, and exact final Finance admission correction with zero Tool calls/effects."
+    },
+    {
+      "claimId": "harness.strategy.global-secondary-replan",
+      "file": "harness-global-secondary-replan-a38f4cf.json",
+      "status": "verified",
+      "implementationRevision": "a38f4cfde3b20c64219ab00d911cac738da8961e",
+      "scope": "Current cross-authority live acceptance: one Harness ExecutionMandate completed an ambient DeepSeek Attempt, consumed its exact Run receipt and economic usage, compiled Attempt 2 under an allowed native-a profile, and lowered that selection through the existing HarnessExecutionBinding into Runtime workspace.exec. Runtime terminal evidence preserved seven mandate/profile/strategy/consumption/prior-receipt/run-contract/network-profile references, while syscall and UID-policy evidence proved the Provider process used the Workstation loopback CONNECT sidecar and table 201/eth4. This is explicit replan, not automatic failover."
     }
   ]
 }
