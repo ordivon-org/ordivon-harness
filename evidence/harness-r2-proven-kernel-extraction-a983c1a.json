@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r2-proven-kernel-extraction-acceptance",
+  "implementationSourceRevision": "a983c1a6189191ff758572619c20659de365b119",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "integrationBase": {
+    "revision": "79c144193cd503ddb38981b56206df3984133a01",
+    "implementationBaseRevision": "a38f4cfde3b20c64219ab00d911cac738da8961e",
+    "transportImplementationRevision": "51825aaef6f68f2cae491f8ab77d5cbc89c2ad9a",
+    "transportEvidenceClaim": "harness.transport.global-secondary-deepseek",
+    "conclusionCorrectionImplementationRevision": "9e47ee615b2db77e274921ef5a043e429ba04c56",
+    "conclusionCorrectionEvidenceClaim": "harness.execution.conclusion-correction-separation",
+    "globalSecondaryReplanEvidenceClaim": "harness.strategy.global-secondary-replan",
+    "globalSecondaryReplanEvidenceRevision": "79c144193cd503ddb38981b56206df3984133a01",
+    "statement": "R2 was replayed on top of the full current lineage after GLOBAL_SECONDARY transport, conclusion-correction separation, and explicit GLOBAL_SECONDARY replan evidence had all landed. The 79c144 parent is evidence-only relative to the a38f4cf implementation, so the resulting R2 source/tests/docs trees are byte-identical to the fully validated f599df9 composition."
+  },
+  "architecture": {
+    "methodLaw": "Extract only boundaries already demonstrated by real R0/R1/P-C1 friction. Large function/store size alone is not an extraction criterion.",
+    "agentTurnProjectionOwner": "AgentTurnProjector owns read-side construction of one exact Agent-visible turn: current WorkingView projection, exact selected pin refs, caller-ingress addressability, pre/caller/post transient Tool ordering, predecessor-attempt transient withdrawal, Runtime Tool inclusion and request-bound Harness capabilities plus exact remaining-budget projection.",
+    "cognitionAdmissionOwner": "CognitionAdmissionKernel owns only the structural law shared by Agent-authored durable cognition mutations: reload current WorkingSet, require exact source digest still current, invoke the action-specific durable handler, and report selection change.",
+    "semanticSeparation": "Caller promotion and ordinary WorkingSet transition remain distinct actions with distinct evidence/progress semantics in the sequential coordinator. Same-pin transition remains attempt reset rather than progress.",
+    "correctionSeparation": "Tool correction and caller/domain conclusion correction remain independent authorities. AgentTurnProjector receives the already-computed remaining budget including both toolCorrections and conclusionCorrections; R2 does not merge, reinterpret or own either counter.",
+    "constructionVerificationSeparation": "AgentTurnProjector constructs from read-side authorities. SQLiteHarnessRunContinuityStore remains unchanged by R2 and independently reconstructs the permitted WorkingView prefix, caller provenance, Tool exchange chronology, current pin ranges and exact request identity from Journal/CAS before Provider admission.",
+    "transportSeparation": "The bounded loopback CONNECT implementation remains a Provider physical-transport concern and composes without entering Agent capability/cognition authority. Direct Provider behavior remains available when no proxy is projected.",
+    "stopRule": "R2 stops at turn projection and cognition admission. Provider lifecycle, Tool-effect coordination and progress/control remain in the sequential coordinator until equivalent real execution friction proves a stronger boundary.",
+    "nonGoals": "No SQLite schema, Protocol codec, public API, generic Capability/Memory service, semantic ranking, Provider routing policy or automatic transport migration was added by R2."
+  },
+  "structuralMeasurements": {
+    "preR2RunFunctionLines": 2065,
+    "r2RunFunctionLinesAfterConcurrentIntegration": 1969,
+    "approximateRunFunctionLineReduction": 96,
+    "sqliteRunContinuityStoreChangedByR2": false,
+    "loopProjectionSpecificKnowledgeRemoved": [
+      "AgentCallerIngressRef construction",
+      "HarnessWorkingSetSourceRef handling",
+      "WorkingView overlay composition",
+      "project_with_refs dispatch detail",
+      "project_current_caller_ingress dispatch detail",
+      "AgentTurnCapabilities construction"
+    ],
+    "loopDirectDurableCognitionCallsRemoved": [
+      "load_current_working_set",
+      "apply_caller_ingress_promotion",
+      "apply_working_set_transition"
+    ],
+    "semanticMergeFact": "The concurrent conclusion-correction change added conclusion_corrections to remaining-budget construction. R2 preserved that authority by supplying it to AgentTurnProjector rather than restoring the removed inline AgentTurnRequest constructor."
+  },
+  "deterministicBehavior": {
+    "plainTurn": "Non-projected turns preserve canonical messages/context and Runtime Tool definitions without inventing WorkingView authority.",
+    "projectedOrdering": "Projected turns preserve base WorkingView prefix followed by pre-caller Tool exchange, exact caller ingress and post-caller Tool exchange, with exact caller request positions and selected pin refs.",
+    "projectionFailClosed": "Projected-only refs/caller/transient inputs require a base WorkingView and fail closed otherwise.",
+    "staleAttemptWithdrawal": "Transient Tool exchanges from a predecessor WorkingSet attempt are excluded and the coordinator clears its process-local transient cache.",
+    "dynamicPromotionCapability": "Installed promotion remains distinct from current capability; promotion is true only while exact addressable caller refs survive projection.",
+    "staleCognitionSource": "CognitionAdmissionKernel rejects stale source WorkingSet identity before the durable action-specific handler is called.",
+    "sameSelectionReset": "Ordinary transition with identical pins remains lawful with selectionChanged=false.",
+    "loopbackTransportContracts": "Four bounded loopback transport contract tests pass: direct path unchanged without proxy, proxy variables must be unambiguous, CONNECT tunnels the fixed target, and only plain IPv4-loopback proxy endpoints are accepted.",
+    "conclusionCorrectionContracts": "Four conclusion-correction tests pass: independent exhaustion, no Tool-budget consumption, explicit Contract authority and schema-v1 default materialization.",
+    "crossSurfaceBudgetProbe": "A direct RunBudget probe with one Tool correction consumed and two conclusion corrections consumed returned toolCorrections=1 and conclusionCorrections=1 simultaneously, proving the two budgets remain independent after projection extraction."
+  },
+  "realModelExperiments": {
+    "model": "deepseek-v4-flash",
+    "transport": "Direct Provider path with all proxy environment variables explicitly removed.",
+    "promotionOwnerRegression": "Sequence 1 exposed promotion=false and remaining conclusionCorrections=3; real DeepSeek concluded needs_input. After CURRENT_TOKEN=R2-FINAL-107 arrived, sequence 2 exposed callerRefs=[0], promotion=true and conclusionCorrections=3; real DeepSeek promoted exact caller input. Sequence 3 exposed promotion=false, current slots [caller-fact, task] and conclusionCorrections=3. Final stop was needs_input and Continuity Doctor was healthy.",
+    "transitionOwnerRegression": "A real one-Provider-turn Run exposed workingSetTransition=true, exact current [drop, keep] refs and conclusionCorrections=3. DeepSeek proposed the ordinary transition to [keep]; Doctor was healthy. budget_exhausted afterward was expected because maxModelCalls=1 bounded the probe.",
+    "parentLoopbackLiveAcceptance": "Historical parent receipt at 51825aa retains the real loopback CONNECT/syscall/policy-route proof through 127.0.0.1:19081 and Workstation table 201. R2 does not falsely claim that syscall experiment was rerun; the exact transport code is inherited and its four contract tests pass on the combined revision.",
+    "parentConclusionCorrectionAcceptance": "Historical parent receipt at 9e47ee6 retains its exact final Finance admission correction proof with zero Tool effects. R2 re-runs the full conclusion-correction contract tests and proves the independent conclusionCorrections budget is present in real DeepSeek requests on the combined revision.",
+    "lineageTransfer": "The real deepseek-v4-flash promotion/transition probes and 282-test acceptance were executed on f599df9. Git tree identity proves a983c1a has exactly the same src, tests and docs bytes; its only inherited delta before R2 is the 79c144 evidence/index addition. The executable proof therefore transfers without claiming a second physical Provider run.",
+    "parentGlobalSecondaryReplanAcceptance": "The 79c144 parent receipt preserves explicit cross-authority replan evidence for a38f4cf: ambient Attempt receipt/usage was consumed, native-a selected, and Runtime lowering retained mandate/profile/strategy/receipt/network references. R2 changes no Runtime or network replan semantics and retains that receipt as historical parent evidence."
+  },
+  "checks": {
+    "combinedDiscoveredTests": 282,
+    "crossLineFocusedTests": 32,
+    "fullRegressionPassed": true,
+    "ruff01517OfflinePassed": true,
+    "compileAllPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "deepSeekLoopbackContractTests": 4,
+    "conclusionCorrectionTests": 4,
+    "dedicatedR2TurnProjectionTests": 5,
+    "dedicatedR2CognitionAdmissionTests": 4,
+    "liveDeepSeekFinalPromotionPassed": true,
+    "liveDeepSeekFinalTransitionPassed": true,
+    "liveDeepSeekRequestsExposedIndependentConclusionCorrectionBudget": true,
+    "continuityVerifierChangedByR2": false,
+    "newSQLiteSchemaAdded": false,
+    "newOrdivonProtocolCodecAdded": false,
+    "newRecommendedApiAdded": false,
+    "validatedExecutableTreeRevision": "f599df9dfb6acac9cc506b147e839264f2c82b70",
+    "sourceTreeObject": "858bad69f6c0e626e0b686339529a94a836ae74d",
+    "testsTreeObject": "dbaa81d913c7fbbd0036fab91087881f929cf5ba",
+    "docsTreeObject": "1e27bf229f54daba0396d9a4b737403e1263f5ad",
+    "sourceTestsDocsByteIdenticalToValidatedRevision": true
+  },
+  "conclusion": "R2 is current on the complete Harness lineage containing bounded DeepSeek secondary egress, independent conclusion correction, and explicit GLOBAL_SECONDARY replan evidence. AgentTurnProjector owns exact read-side turn construction, CognitionAdmissionKernel owns common source-current cognition admission, tool/conclusion correction budgets remain independent, and SQLite Continuity remains an unchanged independent verifier. a983c1a has byte-identical src/tests/docs trees to fully validated f599df9, which passed 282 tests and real direct deepseek-v4-flash promotion/transition probes; the only lineage delta is inherited evidence metadata.",
+  "knownLimits": [
+    "OrdivonAgentLoop._run remains roughly 1.97k lines. Remaining size is known debt, not sufficient evidence for another immediate extraction.",
+    "AgentTurnProjector and CognitionAdmissionKernel remain internal execution components rather than public APIs or global services.",
+    "Provider lifecycle, Tool effect/reconciliation, progress gates, conclusion validation and pause/stop assembly remain in the sequential Run coordinator.",
+    "Construction and Continuity verification intentionally retain separate algorithms as independent authorities.",
+    "The loopback syscall/policy-route and Finance conclusion-correction live proofs are inherited historical parent evidence; R2 revalidates their current contracts and real direct Provider composition without pretending to rerun those exact external experiments.",
+    "No Runtime, World, Finance, Host or other Ordivon repository was changed by R2.",
+    "The final lineage revision a983c1a was not subjected to a redundant second physical DeepSeek run because its src/tests/docs trees are Git-object-identical to the fully live-tested f599df9 revision; only parent evidence/index bytes differ."
+  ]
+}

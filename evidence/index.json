@@ -306,16 +306,23 @@
     {
       "claimId": "harness.execution.conclusion-correction-separation",
       "file": "harness-conclusion-correction-separation-9e47ee6.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9e47ee615b2db77e274921ef5a043e429ba04c56",
-      "scope": "Current acceptance for domain-neutral conclusion correction separation: independent maxConclusionCorrections/conclusionCorrections authority, owner-reason feedback, backward-compatible schema-v1 budget materialization, 273-test regression on an identical src+tests tree, and exact final Finance admission correction with zero Tool calls/effects."
+      "scope": "Historical conclusion-correction separation acceptance retained unchanged after R2 was composed on top of exact 9e47ee6. Its independent correction-budget and Finance final-admission proof remain exact; lineage-final R2 supersedes it only as whole-current Harness verification."
     },
     {
       "claimId": "harness.strategy.global-secondary-replan",
       "file": "harness-global-secondary-replan-a38f4cf.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "a38f4cfde3b20c64219ab00d911cac738da8961e",
-      "scope": "Current cross-authority live acceptance: one Harness ExecutionMandate completed an ambient DeepSeek Attempt, consumed its exact Run receipt and economic usage, compiled Attempt 2 under an allowed native-a profile, and lowered that selection through the existing HarnessExecutionBinding into Runtime workspace.exec. Runtime terminal evidence preserved seven mandate/profile/strategy/consumption/prior-receipt/run-contract/network-profile references, while syscall and UID-policy evidence proved the Provider process used the Workstation loopback CONNECT sidecar and table 201/eth4. This is explicit replan, not automatic failover."
+      "scope": "Historical explicit GLOBAL_SECONDARY replan acceptance retained unchanged after R2 was layered onto the same a38f4cf implementation lineage. Its mandate/receipt/strategy/network-profile Runtime lowering and live route proof remain exact; lineage-final R2 supersedes it only as whole-current Harness verification."
+    },
+    {
+      "claimId": "harness.recomposition.r2-proven-kernel-extraction",
+      "file": "harness-r2-proven-kernel-extraction-a983c1a.json",
+      "status": "verified",
+      "implementationRevision": "a983c1a6189191ff758572619c20659de365b119",
+      "scope": "Current lineage-final R2 acceptance over bounded secondary DeepSeek egress, independent conclusion correction, and explicit GLOBAL_SECONDARY replan evidence: Agent-turn projection and source-current cognition admission have friction-proven internal owners; SQLite Continuity remains independent; a983c1a src/tests/docs are byte-identical to fully validated f599df9, which passed 282 tests and real direct deepseek-v4-flash promotion/transition probes."
     }
   ]
 }
