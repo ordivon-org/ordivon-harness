@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r3-static-composition-admission-acceptance",
+  "implementationSourceRevision": "4e9d4b91d34ea39cdd8e2f7d7a11729b99b303c5",
+  "baseRevision": "6aa58e840e59d9db0d331d6cc046fa62ade6c563",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "worldModel": {
+    "supportedSurfaceLaw": "HarnessAgentRun is the caller-facing product composition boundary. Mechanical incompatibilities provable from the exact Contract and caller-supplied composition inputs must fail before durable Run creation rather than leaving a Run that can never execute.",
+    "effectOrdering": "create() now orders effects as exact Contract/caller-input static admission -> caller-owned Adapter factory -> Adapter/Contract binding admission -> durable Run creation. Composition facts that do not require an Adapter fail before the factory; Adapter/model/structured-completion mismatches fail after the factory returns but before harness.run-created.",
+    "staticOnlyLaw": "Static admission does not probe Provider availability, Runtime liveness, external-world truth or semantic completion correctness. Those remain later physical/semantic authorities.",
+    "cognitionAuthority": "Cognition-enabled supported composition requires Contract model-content authority; WorkingSet-history composition additionally requires Tool-content authority. These are Contract authority facts, not Provider recommendations.",
+    "runtimeBindingAuthority": "The built-in Runtime-search surface mechanically checks the exact independent Run binding derivable from the Contract: harnessRunId, assignment identity/generation/digest, Tool catalog/grant, deadline and non-empty ordivon.harness runtime references. Workspace/runtime-binding content is not inferred.",
+    "adapterBindingAuthority": "Adapter identity/model and structured-completion Contract digest are admitted before durable Run creation. Provider choice remains caller policy because Harness only validates the Adapter returned by the caller factory.",
+    "defenseInDepth": "StandaloneHarnessRunner and concrete SQLite bridges retain their validation. R3.2 moves static supported-surface admission earlier without making lower layers trust the facade.",
+    "compatibilityLaw": "R3.2 changes effect ordering and failure timing for invalid supported compositions but does not remove low-level API exports or alter custom core composition."
+  },
+  "counterexamplesBeforeR32": {
+    "cognitionPrivacyMismatch": {
+      "adapterFactoryCalls": 1,
+      "durableRunCreated": true,
+      "lateFailure": "Standalone cognition requires Contract permission to retain model content"
+    },
+    "structuredCompletionMismatch": {
+      "adapterFactoryCalls": 1,
+      "durableRunCreated": true,
+      "lateFailure": "Standalone Runner structured completion differs from its Contract"
+    },
+    "runtimeBindingMismatch": {
+      "adapterFactoryCalls": 1,
+      "durableRunCreated": true,
+      "lateFailure": "Harness Execution Binding differs from the independent Run binding"
+    },
+    "runtimeJobId": "job-019fe663-53a0-7d30-b665-21bb2db9c4e6",
+    "runtimeAttemptId": "attempt-019fe663-53a0-7d30-b665-21cb34092cf5"
+  },
+  "checks": {
+    "discoveredTests": 298,
+    "fullRegressionPassed": true,
+    "fullRegressionSkipped": 3,
+    "r32FocusedTests": 23,
+    "r32FocusedPassed": true,
+    "newStaticAdmissionTests": 4,
+    "cognitionPrivacyFailsBeforeAdapterFactory": true,
+    "cognitionHistoryPrivacyFailsBeforeAdapterFactory": true,
+    "runtimeBindingMismatchFailsBeforeAdapterFactory": true,
+    "structuredCompletionMismatchFailsBeforeDurableRun": true,
+    "ruff01517OfflinePassed": true,
+    "compileAllPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "evidenceContractPassedBeforeReceipt": true,
+    "gitDiffCheckPassed": true,
+    "recommendedApiSymbolCount": 51,
+    "r2KernelsExported": false,
+    "sourceTreeObject": "173292e6996b043e742b9890a1a995b37bd82772",
+    "testsTreeObject": "2bc97f45dc5c63e7da2e214714c416bb5f56f3ab",
+    "docsTreeObject": "27830bc8cb5137ad3e64d28cdb2d50d340f307a1"
+  },
+  "runtimeEvidence": {
+    "fullRegressionJobId": "job-019fe665-1656-7f81-863c-628b7a85c567",
+    "fullRegressionAttemptId": "attempt-019fe665-1656-7f81-863c-6297b9278e0b",
+    "liveDirectPublicApiJobId": "job-019fe668-8bce-7a00-9645-9652c8789691",
+    "liveDirectPublicApiAttemptId": "attempt-019fe668-8bce-7a00-9645-96681fee03f0",
+    "secondaryTransportFailureJobId": "job-019fe667-4f13-72d0-9b85-6daacb0b684c",
+    "secondaryTransportFailureAttemptId": "attempt-019fe667-4f13-72d0-9b85-6db7b371f057"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek-v4-flash",
+    "executionEntryPoint": "ordivon_harness.api.HarnessAgentRun",
+    "networkProfile": "ambient direct HTTPS after DNS/TCP preflight; loopback secondary was not reused after a separate 502 CONNECT failure",
+    "callerExecutionPath": "HarnessAgentRun.create -> run -> fresh HarnessAgentRun.open -> resume; no caller-supplied SQLite Store, Continuity, Bridge, RunBudget or provider_source",
+    "trajectory": [
+      {
+        "sequence": 1,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "needs_input"
+      },
+      {
+        "sequence": 2,
+        "callerRefs": 1,
+        "callerIngressPromotion": true,
+        "conclusionCorrections": 5,
+        "action": "promote exact caller index 0"
+      },
+      {
+        "sequence": 3,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "candidate_completed"
+      }
+    ],
+    "doctorHealthy": true,
+    "terminalStatus": "completed",
+    "providerAttempts": 3,
+    "providerResultReplays": 0
+  },
+  "transportIncident": {
+    "secondaryResult": "The first R3.2 live attempt used the existing 127.0.0.1:19081 native-a CONNECT sidecar and received 502 Bad Gateway during CONNECT. Durable Provider recovery then required explicit resume.",
+    "handling": "The uncertain Run was not retried or resumed. Sidecar process health was inspected separately; ambient DNS/TCP was then proven healthy and a fresh direct-path Run was used for live R3.2 acceptance.",
+    "significance": "This is network-path evidence, not a static-composition failure, and confirms that R3.2 did not bypass existing Provider recovery semantics."
+  },
+  "conclusion": "R3.2 turns HarnessAgentRun.create into a reliable static composition admission boundary. Invalid cognition privacy/history authority and exact Runtime-binding inputs now fail before Adapter construction; Adapter/model/structured-completion mismatch fails before durable Run creation. Valid composition remains caller-owned and the recommended public handle completed a fresh real DeepSeek cognition pause/open/resume trajectory. The 298-test/full build gate passes.",
+  "knownLimits": [
+    "Static admission proves only composition facts available from Contract and caller inputs. It does not prove Provider availability, Runtime liveness, external effects or caller/domain semantic success.",
+    "Automatic bridge composition remains limited to canonical no-Tool and the existing independent Runtime-search surface; custom/domain bridges remain advanced core composition.",
+    "The recommended API still exports 51 symbols including earlier low-level Store/Continuity/StandaloneRunner components for compatibility. Facade narrowing remains a later evidence-gated R3 question.",
+    "HarnessAgentRun remains per-Run composition, not cross-Run memory, orchestration or Provider recommendation.",
+    "The native-a loopback sidecar returned 502 during this R3.2 session; the final live acceptance therefore used the independently healthy ambient direct Provider path."
+  ]
+}

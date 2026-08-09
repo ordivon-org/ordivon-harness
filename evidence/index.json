@@ -348,9 +348,16 @@
     {
       "claimId": "harness.product.r3-supported-agent-surface",
       "file": "harness-r3-supported-agent-surface-fe6fc1a.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "fe6fc1a589aace5b695f817501b66d69ea5b49e0",
-      "scope": "Current R3.1 product acceptance: HarnessAgentRun is the recommended state-root execution handle; it hides Store/Continuity/Bridge/RunBudget/provider-source wiring, performs structural/Adapter admission before durable create, keeps Contract/Provider/Runtime/cognition authority explicit, is used by CLI run/resume, keeps R2 kernels internal, passes 294 tests/full wheel/local acceptance on a byte-identical validated tree, and completes real deepseek-v4-flash pause/reopen/resume through the public API."
+      "scope": "Current R3.1 product acceptance: HarnessAgentRun is the recommended state-root execution handle; it hides Store/Continuity/Bridge/RunBudget/provider-source wiring, performs structural/Adapter admission before durable create, keeps Contract/Provider/Runtime/cognition authority explicit, is used by CLI run/resume, keeps R2 kernels internal, passes 294 tests/full wheel/local acceptance on a byte-identical validated tree, and completes real deepseek-v4-flash pause/reopen/resume through the public API. Superseded as current-source verification by R3.2 static composition admission; this receipt remains historical evidence for its bound implementation."
+    },
+    {
+      "claimId": "harness.product.r3-static-composition-admission",
+      "file": "harness-r3-static-composition-admission-4e9d4b9.json",
+      "status": "verified",
+      "implementationRevision": "4e9d4b91d34ea39cdd8e2f7d7a11729b99b303c5",
+      "scope": "Current R3.2 acceptance: HarnessAgentRun owns static supported-composition admission before durable Run creation; cognition privacy/history and exact Runtime-binding incompatibilities fail before Adapter construction, structured completion binding fails before state creation, lower layers retain defense-in-depth, 298 tests/full build gate pass, and a fresh real deepseek-v4-flash pause/open/resume trajectory succeeds through the recommended public API."
     }
   ]
 }
