@@ -53,7 +53,11 @@ Ordivon Harness is an independent caller-neutral **durable cognitive execution s
 - provider-neutral per-turn `AgentTurnCapabilities` bound into each exact `AgentTurnRequest`: the Loop derives current Harness-native action authority, DeepSeek renders/parses only that request-bound surface, capability changes alter dispatch/Provider request identity, and caller promotion disappears when no exact promotable caller ref remains;
 - R2 internal recomposition now extracts `AgentTurnProjector` for exact read-side turn construction and `CognitionAdmissionKernel` for source-current durable cognition admission; the Loop no longer owns caller-ref/range assembly, WorkingView overlay composition or direct current-WorkingSet handler calls, while Continuity's independent Journal/CAS verifier remains unchanged;
 - R2 deliberately stops before speculative Provider/effect/progress extraction: remaining Loop size is known debt, but no additional owner is promoted until real execution friction proves a boundary stronger than file-size pressure;
-- DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are admitted from the ambiguous turn;
+- DeepSeek mixed Tool+conclusion turns are model-correctable before physical Tool
+  dispatch: neither the ordinary Tool actions nor the simultaneous conclusion are
+  admitted from the ambiguous turn;
+- Harness-owned `no_progress` stops carry execution reason in stop detail/Trace and
+  do not synthesize an Agent conclusion, preserving structured-completion shape;
 - no-Tool DeepSeek CLI profile;
 - caller-supplied Runtime client Python API for Tool-bearing Runs;
 - independent Run Receipt, CompletionProposal and recovery evidence;

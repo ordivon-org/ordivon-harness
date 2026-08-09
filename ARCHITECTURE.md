@@ -243,7 +243,10 @@ separate mechanic: it consumes `maxConclusionCorrections`, not
 `maxToolCorrections`, and Harness forwards the owner rejection reason without
 assuming that evidence is missing. Harness therefore bounds effects while the Agent
 still owns whether to conclude `candidate_completed`, report concrete
-`needs_input`, or perform an admitted cognition transition.
+`needs_input`, or perform an admitted cognition transition. A Harness-owned
+`no_progress` execution stop is not an Agent semantic conclusion: its reason
+remains in Run stop detail/Trace and Harness does not synthesize an
+`AgentRunConclusion` for that disposition.
 
 The cognition mechanisms now have one **experimental product composition proof** in `StandaloneHarnessRunner`. A `StandaloneCognitionProfile` selects which already-proven cognition mechanisms are wired for the Run, and the Runner constructs the `WorkingSetViewProjector` plus exact Continuity handlers mechanically rather than requiring an application to hand-wire four seams. `StandaloneCognitionSeed` is an explicit caller-authored bootstrap only: it contains exact slot/source pairs and a basis, which the Runner materializes and commits through the existing WorkingSet authority. It performs no discovery, ranking, summarization or memory extraction. Re-entry after a response loss between the initial and committed WorkingSet records is idempotent against the exact seed.
 

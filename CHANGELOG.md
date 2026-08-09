@@ -4,6 +4,10 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- Stop synthesizing `AgentRunConclusion` for Harness-owned `no_progress` execution
+  disposition so structured completion callers never receive a plain-text fallback
+  masquerading as their result schema.
+
 - began R2 friction-driven kernel extraction without changing external contracts: `AgentTurnProjector` now owns exact read-side Agent-turn construction and dynamic action-surface projection, while `CognitionAdmissionKernel` owns only the shared source-current admission law for caller promotion and ordinary WorkingSet transitions; the sequential Loop keeps action-specific progress/evidence semantics and SQLite Continuity remains an independent verifier rather than sharing constructor logic;
 - Separate caller/domain conclusion correction from Tool-call correction with `maxConclusionCorrections`, independent accounting, and reason-neutral rejection feedback.
 - DeepSeek's cancellable `http.client` transport can now consume a Workstation-projected HTTPS CONNECT path without changing Provider semantics: only an unauthenticated `http://127.0.0.1:<port>` proxy is accepted, TLS remains end-to-end to the official DeepSeek endpoint, direct execution is unchanged when no proxy is projected, and arbitrary inherited remote proxies fail before Provider dispatch. Live syscall acceptance proved the same no-Tool Agent Run connecting directly to a public DeepSeek address under `ambient` and to `127.0.0.1:19081` under `native-a`, with both Runs completing through one Provider attempt.

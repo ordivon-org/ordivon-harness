@@ -2048,16 +2048,8 @@ class OrdivonAgentLoop:
                 and call.argument_error != "unavailable_tool"
                 for call in result.tool_calls
             ):
-                fallback = AgentRunConclusion(
-                    "needs_input",
-                    external_observation_gate_reason,
-                    unresolved_unknowns=(
-                        "The Agent exhausted its admitted external observation budget without closing the Run.",
-                    ),
-                )
                 return stop(
                     RunStopCode.NO_PROGRESS,
-                    conclusion=fallback,
                     detail=(
                         external_observation_gate_reason
                         + "; the Agent requested another admitted external Tool after the gate closed"
