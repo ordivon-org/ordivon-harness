@@ -33,11 +33,9 @@ class StandaloneToolBridge(Protocol):
     catalog_digest: str
 
 
-
-
 @dataclass(frozen=True, slots=True)
-class StandaloneCognitionProfile:
-    """Explicit cognition surfaces composed into one Standalone Agent Run.
+class HarnessCognitionProfile:
+    """Explicit cognition surfaces composed into one Harness Agent Run.
 
     This profile selects structural Harness mechanisms only. It does not choose
     sources, rank relevance, summarize content, or author Agent semantic policy.
@@ -54,10 +52,10 @@ class StandaloneCognitionProfile:
             ("working_set_history", self.working_set_history),
         ):
             if type(value) is not bool:
-                raise ValueError(f"Standalone cognition {name} must be boolean")
+                raise ValueError(f"Harness cognition {name} must be boolean")
 
     @classmethod
-    def full(cls) -> "StandaloneCognitionProfile":
+    def full(cls) -> "HarnessCognitionProfile":
         return cls(
             working_set_transitions=True,
             caller_ingress_promotions=True,
@@ -66,7 +64,7 @@ class StandaloneCognitionProfile:
 
 
 @dataclass(frozen=True, slots=True)
-class StandaloneCognitionSeedSource:
+class HarnessCognitionSeedSource:
     """One caller-selected exact source and the slot it should initially occupy."""
 
     slot: str
@@ -74,27 +72,29 @@ class StandaloneCognitionSeedSource:
 
     def __post_init__(self) -> None:
         if not isinstance(self.source, HarnessWorkingViewSource):
-            raise ValueError("Standalone cognition seed source must be a HarnessWorkingViewSource")
+            raise ValueError(
+                "Harness cognition seed source must be a HarnessCognitionSource-compatible value"
+            )
         if (
             not isinstance(self.slot, str)
             or not self.slot
             or self.slot != self.slot.strip()
             or len(self.slot.encode("utf-8")) > 160
         ):
-            raise ValueError("Standalone cognition seed slot must be non-empty and trimmed")
+            raise ValueError("Harness cognition seed slot must be non-empty and trimmed")
 
 
 @dataclass(frozen=True, slots=True)
-class StandaloneCognitionSeed:
+class HarnessCognitionSeed:
     """Exact caller-authored bootstrap for the first committed WorkingSet.
 
-    Seed material is not discovered or ranked by Harness. The Runner only
+    Seed material is not discovered or ranked by Harness. The Agent Run only
     materializes the supplied exact sources, derives exact pins, and commits the
     initial selection through the existing Continuity authority.
     """
 
     attempt_id: str
-    sources: tuple[StandaloneCognitionSeedSource, ...]
+    sources: tuple[HarnessCognitionSeedSource, ...]
     basis: str
 
     def __post_init__(self) -> None:
@@ -108,16 +108,16 @@ class StandaloneCognitionSeed:
                 or value != value.strip()
                 or len(value.encode("utf-8")) > limit
             ):
-                raise ValueError(f"Standalone cognition seed {label} is invalid")
+                raise ValueError(f"Harness cognition seed {label} is invalid")
         if not self.sources:
-            raise ValueError("Standalone cognition seed requires at least one source")
+            raise ValueError("Harness cognition seed requires at least one source")
         slots = [item.slot for item in self.sources]
         if len(slots) != len(set(slots)):
-            raise ValueError("Standalone cognition seed slots must be unique")
+            raise ValueError("Harness cognition seed slots must be unique")
 
 
 @dataclass(frozen=True, slots=True)
-class StandaloneHarnessExecution:
+class HarnessAgentExecution:
     loop_result: AgentLoopResult
     terminal_result: StoredIndependentRunResult | None
 
@@ -145,7 +145,7 @@ class StandaloneHarnessRunner:
         budget: RunBudget,
         clock_ms: Callable[[], int],
         monotonic_ms: Callable[[], int] | None = None,
-        cognition_profile: StandaloneCognitionProfile | None = None,
+        cognition_profile: HarnessCognitionProfile | None = None,
     ) -> None:
         if continuity.harness_run_id != contract.harness_run_id:
             raise ValueError("Standalone Runner continuity belongs to another Run")
@@ -160,12 +160,12 @@ class StandaloneHarnessRunner:
         expected_completion_digest = structured_completion_contract_digest(
             contract.completion_contract
         )
-        if expected_completion_digest is not None and getattr(
-            adapter, "structured_completion_contract_digest", None
-        ) != expected_completion_digest:
-            raise ValueError(
-                "Standalone Runner structured completion differs from its Contract"
-            )
+        if (
+            expected_completion_digest is not None
+            and getattr(adapter, "structured_completion_contract_digest", None)
+            != expected_completion_digest
+        ):
+            raise ValueError("Standalone Runner structured completion differs from its Contract")
         self._validate_budget(contract.budget, budget)
         store = getattr(continuity, "store", None)
         if store is None:
@@ -192,8 +192,8 @@ class StandaloneHarnessRunner:
         initial_messages: tuple[dict[str, JsonValue], ...],
         *,
         cancellation: CancellationToken | None = None,
-        cognition_seed: StandaloneCognitionSeed | None = None,
-    ) -> StandaloneHarnessExecution:
+        cognition_seed: HarnessCognitionSeed | None = None,
+    ) -> HarnessAgentExecution:
         projection = self.recorder.store.load_run(self.contract.harness_run_id)
         if projection.status.terminal:
             raise RuntimeError("Standalone Harness Run is already terminal")
@@ -213,14 +213,14 @@ class StandaloneHarnessRunner:
             started_at_ms=self.contract.created_at_ms,
             finished_at_ms=result.trace.events[-1].occurred_at_ms,
         )
-        return StandaloneHarnessExecution(result, terminal)
+        return HarnessAgentExecution(result, terminal)
 
     def resume(
         self,
         *,
         additional_messages: tuple[dict[str, JsonValue], ...] = (),
         cancellation: CancellationToken | None = None,
-    ) -> StandaloneHarnessExecution:
+    ) -> HarnessAgentExecution:
         projection = self.recorder.store.load_run(self.contract.harness_run_id)
         if projection.status.terminal:
             raise RuntimeError("Standalone Harness Run is already terminal")
@@ -238,7 +238,7 @@ class StandaloneHarnessRunner:
             started_at_ms=self.contract.created_at_ms,
             finished_at_ms=result.trace.events[-1].occurred_at_ms,
         )
-        return StandaloneHarnessExecution(result, terminal)
+        return HarnessAgentExecution(result, terminal)
 
     def inspect_terminal(self) -> StoredIndependentRunResult:
         return self.recorder.load_terminal_result()
@@ -282,9 +282,7 @@ class StandaloneHarnessRunner:
             caller_ingress_promotion_handler=(
                 self.continuity if profile.caller_ingress_promotions else None
             ),
-            working_set_history_reader=(
-                self.continuity if profile.working_set_history else None
-            ),
+            working_set_history_reader=(self.continuity if profile.working_set_history else None),
         )
 
     def _validate_cognition_composition(self) -> None:
@@ -307,9 +305,7 @@ class StandaloneHarnessRunner:
         if profile.working_set_transitions:
             required.add("apply_working_set_transition")
         if profile.caller_ingress_promotions:
-            required.update(
-                {"apply_caller_ingress_promotion", "project_current_caller_ingress"}
-            )
+            required.update({"apply_caller_ingress_promotion", "project_current_caller_ingress"})
         if profile.working_set_history:
             required.add("inspect_working_set_history")
         missing = sorted(
@@ -317,19 +313,16 @@ class StandaloneHarnessRunner:
         )
         if missing:
             raise TypeError(
-                "Standalone cognition Continuity lacks required mechanisms: "
-                + ", ".join(missing)
+                "Standalone cognition Continuity lacks required mechanisms: " + ", ".join(missing)
             )
 
     def _ensure_cognition_ready(
-        self, seed: StandaloneCognitionSeed | None
+        self, seed: HarnessCognitionSeed | None
     ) -> HarnessWorkingSetSpec | None:
         profile = self.cognition_profile
         if profile is None:
             if seed is not None:
-                raise ValueError(
-                    "Standalone cognition seed requires an enabled cognition profile"
-                )
+                raise ValueError("Standalone cognition seed requires an enabled cognition profile")
             return None
 
         loader = getattr(self.continuity, "load_current_working_set")
@@ -385,7 +378,18 @@ class StandaloneHarnessRunner:
         budget.require_contract_match(contract)
 
 
+# R0-R2 experimental names remain import-compatible while R3 promotes caller-facing names.
+StandaloneCognitionProfile = HarnessCognitionProfile
+StandaloneCognitionSeedSource = HarnessCognitionSeedSource
+StandaloneCognitionSeed = HarnessCognitionSeed
+StandaloneHarnessExecution = HarnessAgentExecution
+
+
 __all__ = [
+    "HarnessAgentExecution",
+    "HarnessCognitionProfile",
+    "HarnessCognitionSeed",
+    "HarnessCognitionSeedSource",
     "StandaloneCognitionProfile",
     "StandaloneCognitionSeed",
     "StandaloneCognitionSeedSource",

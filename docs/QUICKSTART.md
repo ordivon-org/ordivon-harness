@@ -126,6 +126,38 @@ ordivon-harness --state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
 
 For the built-in DeepSeek profile, the Contract must bind the canonical no-Tool catalog/grant and the configured DeepSeek Adapter/model. The current adapter reserves a conservative request-token upper bound equal to the serialized Provider request bytes plus its 8,192-token completion ceiling. A small Contract such as `max_total_tokens=4_096` can therefore be rejected safely before the first Provider dispatch; `16_384` is a practical starting bound for a small no-Tool Run, not a universal required value.
 
+### Supported Python Agent Run surface
+
+For normal Python execution, use `HarnessAgentRun` rather than composing the SQLite Store, Continuity, Provider bridge and `StandaloneHarnessRunner` yourself. The caller still owns the exact Contract and Provider choice; Harness passes the persisted Contract to the caller-supplied Adapter factory before execution. On reopen/resume, Harness mechanically reconstructs Continuity and the exact Snapshot-bound Provider source.
+
+```python
+from ordivon_harness.api import HarnessAgentRun, DeepSeekTurnAdapter
+
+run = HarnessAgentRun.create(
+    "/var/lib/ordivon/harness",
+    contract,
+    lambda exact_contract: DeepSeekTurnAdapter(
+        settings, completion_contract=exact_contract.completion_contract
+    ),
+)
+execution = run.run(({"role": "user", "content": "Start the bounded Run"},))
+
+run = HarnessAgentRun.open(
+    "/var/lib/ordivon/harness",
+    contract.harness_run_id,
+    lambda exact_contract: DeepSeekTurnAdapter(
+        settings, completion_contract=exact_contract.completion_contract
+    ),
+)
+execution = run.resume(
+    additional_messages=({"role": "user", "content": "Additional caller input"},)
+)
+```
+
+The Adapter factory is caller policy, not Harness policy. Structural composition is validated before the factory is called, so an unsupported Tool surface or missing Runtime authority fails without constructing the Provider.
+
+For Agent-owned durable cognition, the same surface accepts `HarnessCognitionProfile` plus an exact caller-authored `HarnessCognitionSeed`. Build seed sources with `HarnessCognitionSource`/`HarnessCognitionSeedSource`; Harness does not discover, rank or summarize them.
+
 A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI. `call_tool()` is only the success-shape Protocol. The caller must also translate its transport and Runtime rejection failures into `HarnessRuntimeClientError` / `HarnessRuntimeToolRejected` with a `HarnessRuntimeErrorDetail`. In particular, a Runtime rejection with `commit_state` `not_started` or `not_committed` remains model-correctable; passing an unrelated client exception through unchanged loses that recovery meaning and is treated as a Harness failure. The recommended API also exports `HarnessExecutionBinding`, `HarnessRuntimeReference`, and the independent search catalog/grant digests required by the current `SQLiteHarnessRuntimeBridge`.
 
 When a caller needs a typed semantic result instead of free-form summary text, bind the result shape into the existing completion authority:

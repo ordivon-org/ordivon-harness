@@ -41,6 +41,13 @@ REQUIRED_README_HEADINGS = {
     "License",
 }
 STABLE_API = {
+    "HarnessAgentExecution",
+    "HarnessAgentRun",
+    "HarnessAgentRunCompositionError",
+    "HarnessCognitionProfile",
+    "HarnessCognitionSeed",
+    "HarnessCognitionSeedSource",
+    "HarnessCognitionSource",
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
@@ -108,21 +115,15 @@ def parse_frontmatter(path: Path) -> dict[str, object] | None:
             continue
         if raw.startswith("  - "):
             if active is None:
-                raise DocumentError(
-                    f"{path.relative_to(ROOT)}:{line_number} list item has no key"
-                )
+                raise DocumentError(f"{path.relative_to(ROOT)}:{line_number} list item has no key")
             value = values.setdefault(active, [])
             if not isinstance(value, list):
-                raise DocumentError(
-                    f"{path.relative_to(ROOT)}:{line_number} mixes list and scalar"
-                )
+                raise DocumentError(f"{path.relative_to(ROOT)}:{line_number} mixes list and scalar")
             value.append(raw[4:].strip())
             continue
         match = re.fullmatch(r"([a-z][a-z0-9_]*)\s*:\s*(.*)", raw)
         if match is None:
-            raise DocumentError(
-                f"{path.relative_to(ROOT)}:{line_number} unsupported frontmatter"
-            )
+            raise DocumentError(f"{path.relative_to(ROOT)}:{line_number} unsupported frontmatter")
         key, scalar = match.groups()
         if key in values:
             raise DocumentError(f"{path.relative_to(ROOT)} repeats {key}")
@@ -160,9 +161,7 @@ def validate_frontmatter() -> list[str]:
             continue
         missing = sorted(REQUIRED_FRONTMATTER - values.keys())
         if missing:
-            errors.append(
-                f"{path.relative_to(ROOT)} lacks keys: {', '.join(missing)}"
-            )
+            errors.append(f"{path.relative_to(ROOT)} lacks keys: {', '.join(missing)}")
         identifier = values.get("id")
         if not isinstance(identifier, str) or not identifier:
             errors.append(f"{path.relative_to(ROOT)} has no scalar id")
@@ -206,8 +205,7 @@ def module_api_exports(relative: str) -> set[str]:
     tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
     for node in tree.body:
         if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "__all__"
-            for target in node.targets
+            isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
         ):
             return {
                 item.value
@@ -251,9 +249,7 @@ def validate_public_contracts() -> list[str]:
         errors.append("canonical setup omits isolated wheel verification")
 
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    release = (ROOT / ".github/workflows/release-acceptance.yml").read_text(
-        encoding="utf-8"
-    )
+    release = (ROOT / ".github/workflows/release-acceptance.yml").read_text(encoding="utf-8")
     for label, workflow in (("CI", ci), ("release acceptance", release)):
         if "scripts/check_wheel.py" not in workflow:
             errors.append(f"{label} does not verify the built wheel")
@@ -262,9 +258,7 @@ def validate_public_contracts() -> list[str]:
     if "actions/upload-artifact@" not in release:
         errors.append("release acceptance does not retain the verified wheel")
 
-    pull_request = (ROOT / ".github/pull_request_template.md").read_text(
-        encoding="utf-8"
-    )
+    pull_request = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
     for heading in ("## Boundary", "## Evidence", "## Compatibility", "## Security and data"):
         if heading not in pull_request:
             errors.append(f"pull-request contract lacks heading: {heading}")
@@ -297,9 +291,7 @@ def validate_public_contracts() -> list[str]:
         "Semantic meaning belongs to the Agent; structural truth belongs to Harness",
     ):
         if required not in architecture:
-            errors.append(
-                f"ARCHITECTURE.md lacks current Harness world-model marker: {required}"
-            )
+            errors.append(f"ARCHITECTURE.md lacks current Harness world-model marker: {required}")
 
     data_privacy = (ROOT / "docs/DATA_AND_PRIVACY.md").read_text(encoding="utf-8")
     for stale in (

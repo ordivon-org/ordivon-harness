@@ -14,6 +14,13 @@ from ordivon_harness.version import package_version
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
     "AgentTurnAdapter",
+    "HarnessAgentExecution",
+    "HarnessAgentRun",
+    "HarnessAgentRunCompositionError",
+    "HarnessCognitionProfile",
+    "HarnessCognitionSeed",
+    "HarnessCognitionSeedSource",
+    "HarnessCognitionSource",
     "AgentTurnRequest",
     "AgentTurnResult",
     "CompiledHarnessAttempt",
@@ -59,6 +66,7 @@ EXPECTED_API = {
     "structured_completion_result_schema",
 }
 
+
 class PublicApiTests(unittest.TestCase):
     def test_recommended_facade_is_host_free_and_exact(self) -> None:
         self.assertEqual(set(api.__all__), EXPECTED_API)
@@ -82,7 +90,6 @@ class PublicApiTests(unittest.TestCase):
         observed = json.loads(probe.stdout)
         self.assertFalse(observed["hostLoaded"])
         self.assertEqual(set(observed["api"]), EXPECTED_API)
-
 
     def test_recommended_facade_is_closed_over_contract_and_runtime_bridge_authoring(self) -> None:
         reference = api.HarnessBoundReference(
@@ -156,8 +163,6 @@ class PublicApiTests(unittest.TestCase):
             "HostHarnessRunStore",
         ):
             self.assertFalse(hasattr(ordivon_harness, removed))
-
-
 
 
 if __name__ == "__main__":

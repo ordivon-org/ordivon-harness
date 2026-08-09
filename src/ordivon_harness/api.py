@@ -51,6 +51,15 @@ from .core import (
     structured_completion_contract_digest,
     structured_completion_result_schema,
 )
+from .agent_run import (
+    HarnessAgentExecution,
+    HarnessAgentRun,
+    HarnessAgentRunCompositionError,
+    HarnessCognitionProfile,
+    HarnessCognitionSeed,
+    HarnessCognitionSeedSource,
+    HarnessCognitionSource,
+)
 from .domain_tools import (
     DomainToolBridge,
     DomainToolCatalog,
@@ -60,6 +69,13 @@ from .domain_tools import (
 
 __all__ = [
     "AgentTurnAdapter",
+    "HarnessAgentExecution",
+    "HarnessAgentRun",
+    "HarnessAgentRunCompositionError",
+    "HarnessCognitionProfile",
+    "HarnessCognitionSeed",
+    "HarnessCognitionSeedSource",
+    "HarnessCognitionSource",
     "AgentTurnRequest",
     "AgentTurnResult",
     "CompiledHarnessAttempt",

@@ -77,8 +77,9 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - Provider/Tool UNKNOWN may require external reconciliation;
 - public API and owner-local schemas remain pre-1.0;
 - historical receipts prove the implementations they bind, not the current source unless indexed as verified;
-- WorkingSet cognition controls and the new Standalone composition profile/seed remain experimental and are not yet part of the recommended `ordivon_harness.api` facade;
-- `StandaloneCognitionProfile` remains an installed-mechanism configuration rather than per-turn authority; `AgentTurnRequest.tools + capabilities` are the exact current action surface. R1 intentionally adds no global Capability Service or new SQLite schema;
+- R3 introduces `HarnessAgentRun` as the supported state-root based Python execution handle. It hides SQLite Store/Continuity/Bridge/Runner wiring, rebuilds exact Snapshot-bound Provider source on resume, reconstructs budget from the Contract, and calls the caller-selected Adapter factory only after structural composition is admitted; the primary no-Tool CLI now uses this surface for `run`/`resume`;
+- caller-facing `HarnessCognitionProfile`, `HarnessCognitionSeed`, `HarnessCognitionSeedSource` and `HarnessCognitionSource` are now recommended API values for exact Agent-owned cognition bootstrap; the old `Standalone*` names remain compatibility aliases, while `AgentTurnRequest.tools + capabilities` remain the exact per-turn action authority and no global Capability Service is introduced;
+- R3.1 is additive rather than a breaking facade cleanup: existing low-level recommended exports remain available while CLI/Python adoption moves to `HarnessAgentRun`; removing `StandaloneHarnessRunner`, concrete SQLite composition objects or other advanced exports is a later evidence-gated decision, not part of this slice;
 - there is no generic Memory/RAG/ranking/summarization layer, cross-Run cognition orchestrator, semantic supersession graph or automatic relevance policy;
 - large-WorkingSet discovery/inspection strategy, initial cognition bootstrap and cross-Run cognition reuse remain open Agent-side/system-boundary questions rather than solved Harness policy.
 

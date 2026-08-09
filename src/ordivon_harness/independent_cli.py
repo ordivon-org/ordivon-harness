@@ -7,19 +7,18 @@ from typing import Any
 from anc_canonical import JsonValue, validate_json_value
 
 from .core_contracts import HarnessRunContract
+from .agent_run import HarnessAgentRun
 from .independent_result import IndependentRunRecorder, StoredIndependentRunResult
 from .ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
-from .ordivon.loop import RunBudget
 from .ordivon.model import AgentTurnAdapter
 from .ordivon.sqlite_agent_bridge import (
     NO_TOOL_AGENT_GRANT_DIGEST,
     NO_TOOL_AGENT_SURFACE_DIGEST,
-    SQLiteHarnessAgentBridge,
 )
 from .ordivon.sqlite_run_store import SQLiteHarnessRunContinuityStore
 from .protocol import HarnessProviderCallStatus
 from .sqlite_store import SQLiteHarnessStore
-from .standalone import StandaloneHarnessExecution, StandaloneHarnessRunner
+from .standalone import HarnessAgentExecution
 from .store import HarnessRunStatus
 
 
@@ -51,7 +50,7 @@ def capabilities() -> dict[str, JsonValue]:
             "durableMandateStore": False,
             "aggregateEconomicEnvelope": ["maxTotalTokens", "maxWallTimeMs"],
         },
-            }
+    }
 
 
 def dispatch(args, *, clock_ms) -> dict[str, object]:
@@ -80,53 +79,49 @@ def dispatch(args, *, clock_ms) -> dict[str, object]:
             return _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
     if command == "run":
         contract = _load_contract(args.contract)
+        if (
+            contract.tool_catalog_digest != NO_TOOL_AGENT_SURFACE_DIGEST
+            or contract.tool_grant_digest != NO_TOOL_AGENT_GRANT_DIGEST
+        ):
+            raise ValueError(
+                "independent CLI execution currently supports only the canonical "
+                "no-Tool profile; Tool-bearing Runs require an application-supplied "
+                "HarnessRuntimeClient through ordivon_harness.api or ordivon_harness.core"
+            )
         messages = _load_messages(args)
         if not messages:
             raise ValueError("independent run requires at least one input message")
+        handle = HarnessAgentRun.create(
+            root,
+            contract,
+            lambda exact_contract: _adapter(exact_contract, args),
+            clock_ms=clock_ms,
+            monotonic_ms=clock_ms,
+        )
+        status = handle.status()
+        if status["status"] in {
+            HarnessRunStatus.STOPPED.value,
+            HarnessRunStatus.COMPLETED.value,
+            HarnessRunStatus.FAILED.value,
+            HarnessRunStatus.ABANDONED.value,
+        }:
+            with SQLiteHarnessStore(root) as store:
+                return _inspect(store, contract.harness_run_id, root=root, clock_ms=clock_ms)
+        if status["status"] == HarnessRunStatus.PAUSED.value:
+            raise ValueError("paused independent Harness Run requires resume")
+        execution = handle.run(messages)
         with SQLiteHarnessStore(root) as store:
-            try:
-                projection = store.load_run(contract.harness_run_id)
-            except KeyError:
-                store.create_run(contract)
-            else:
-                if projection.contract_digest != contract.digest:
-                    raise ValueError("existing Harness Run differs from supplied Contract")
-                if projection.status.terminal:
-                    return _inspect(
-                        store,
-                        contract.harness_run_id,
-                        root=root,
-                        clock_ms=clock_ms,
-                    )
-                if projection.status is HarnessRunStatus.PAUSED:
-                    raise ValueError("paused independent Harness Run requires resume")
-            continuity = SQLiteHarnessRunContinuityStore.open(
-                store,
-                contract.harness_run_id,
-                clock_ms=clock_ms,
-            )
-            execution = _runner(
-                contract,
-                continuity,
-                args=args,
-                clock_ms=clock_ms,
-            ).run(messages)
             return _execution_value(execution, root=root, store=store)
     if command == "resume":
+        handle = HarnessAgentRun.open(
+            root,
+            args.harness_run_id,
+            lambda exact_contract: _adapter(exact_contract, args),
+            clock_ms=clock_ms,
+            monotonic_ms=clock_ms,
+        )
+        execution = handle.resume(additional_messages=_load_messages(args))
         with SQLiteHarnessStore(root) as store:
-            continuity = SQLiteHarnessRunContinuityStore.open(
-                store,
-                args.harness_run_id,
-                clock_ms=clock_ms,
-            )
-            retained = continuity.load_current_snapshot()
-            execution = _runner(
-                continuity.contract,
-                continuity,
-                args=args,
-                clock_ms=clock_ms,
-                provider_source=continuity.snapshot_provider_source(retained),
-            ).resume(additional_messages=_load_messages(args))
             return _execution_value(execution, root=root, store=store)
     if command == "recover":
         with SQLiteHarnessStore(root) as store:
@@ -189,42 +184,8 @@ def _adapter(contract: HarnessRunContract, args) -> AgentTurnAdapter:
     )
 
 
-def _runner(
-    contract: HarnessRunContract,
-    continuity: SQLiteHarnessRunContinuityStore,
-    *,
-    args,
-    clock_ms,
-    provider_source=None,
-) -> StandaloneHarnessRunner:
-    if (
-        contract.tool_catalog_digest != NO_TOOL_AGENT_SURFACE_DIGEST
-        or contract.tool_grant_digest != NO_TOOL_AGENT_GRANT_DIGEST
-    ):
-        raise ValueError(
-            "independent CLI execution currently supports only the canonical no-Tool profile; "
-            "Tool-bearing Runs require an application-supplied HarnessRuntimeClient through "
-            "ordivon_harness.api or ordivon_harness.core"
-        )
-    adapter = _adapter(contract, args)
-    bridge = SQLiteHarnessAgentBridge(
-        contract,
-        continuity,
-        provider_source=provider_source,
-    )
-    budget = RunBudget.from_contract_dict(contract.budget)
-    return StandaloneHarnessRunner(
-        contract,
-        continuity,
-        adapter,
-        bridge,
-        budget=budget,
-        clock_ms=clock_ms,
-    )
-
-
 def _execution_value(
-    execution: StandaloneHarnessExecution,
+    execution: HarnessAgentExecution,
     *,
     root: Path,
     store: SQLiteHarnessStore,
@@ -340,7 +301,9 @@ def _recover(
             "run": projection.to_dict(),
             "providerCall": provider.record.to_dict(),
             "recovery": None,
-            "requiredAction": "resume" if projection.status is HarnessRunStatus.PAUSED else "retry-run",
+            "requiredAction": "resume"
+            if projection.status is HarnessRunStatus.PAUSED
+            else "retry-run",
             "reason": "durable Provider state can be reconciled by the normal execution path",
         }
 

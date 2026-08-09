@@ -126,6 +126,8 @@ python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -pr
 ## Public API
 
 Use `ordivon_harness.api` for the recommended application surface. `ordivon_harness.core` exposes the wider Host-free persistence, Provider, Runtime and recovery primitives. The package root mirrors the recommended API plus `package_version` and deliberately has no historical lazy compatibility exports.
+`HarnessAgentRun` is now the supported Python execution handle for one exact Agent Run. It owns mechanical state-root → Continuity → Bridge → Runner composition, exact pause/resume Provider-source rebinding and Contract-budget reconstruction. The caller still supplies the Contract, a Contract-bound Adapter factory, and any exact Runtime execution authority; custom bridge composition remains an advanced `core` concern.
+R3.1 adds this surface without removing the existing low-level exports; applications should prefer the handle for normal execution, while advanced integrations may continue to compose the lower layers directly.
 
 Tool-bearing applications supply `HarnessRuntimeClient` explicitly. Repository-repair bridges and other domain-specific execution surfaces remain explicit modules rather than package-root policy.
 

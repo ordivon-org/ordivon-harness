@@ -17,47 +17,103 @@ from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_API = {
-    "AgentTurnAdapter", "AgentTurnRequest", "AgentTurnResult",
-    "CompiledHarnessAttempt", "DeepSeekSettings", "DeepSeekTurnAdapter",
-    "HarnessBoundReference", "HarnessCorrelationContext", "HarnessExecutionBinding",
-    "HarnessExecutionMandate", "HarnessMandateConsumption",
-    "HarnessExecutionProfile", "HarnessExecutionStrategy",
-    "DomainToolBridge", "DomainToolCatalog", "DomainToolLoopPlan", "DomainToolLoopRunner",
-    "HarnessPrivacyPolicy", "HarnessRunContract", "HarnessRuntimeClient",
-    "HarnessRuntimeClientError", "HarnessRuntimeErrorDetail", "HarnessRuntimeReference",
-    "HarnessRuntimeToolRejected", "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
+    "HarnessAgentExecution",
+    "HarnessAgentRun",
+    "HarnessAgentRunCompositionError",
+    "HarnessCognitionProfile",
+    "HarnessCognitionSeed",
+    "HarnessCognitionSeedSource",
+    "HarnessCognitionSource",
+    "AgentTurnAdapter",
+    "AgentTurnRequest",
+    "AgentTurnResult",
+    "CompiledHarnessAttempt",
+    "DeepSeekSettings",
+    "DeepSeekTurnAdapter",
+    "HarnessBoundReference",
+    "HarnessCorrelationContext",
+    "HarnessExecutionBinding",
+    "HarnessExecutionMandate",
+    "HarnessMandateConsumption",
+    "HarnessExecutionProfile",
+    "HarnessExecutionStrategy",
+    "DomainToolBridge",
+    "DomainToolCatalog",
+    "DomainToolLoopPlan",
+    "DomainToolLoopRunner",
+    "HarnessPrivacyPolicy",
+    "HarnessRunContract",
+    "HarnessRuntimeClient",
+    "HarnessRuntimeClientError",
+    "HarnessRuntimeErrorDetail",
+    "HarnessRuntimeReference",
+    "HarnessRuntimeToolRejected",
+    "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
     "INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST",
-    "NO_TOOL_AGENT_GRANT_DIGEST", "NO_TOOL_AGENT_SURFACE_DIGEST",
-    "IndependentCompletionProposal", "IndependentHarnessRunReceipt",
-    "OrdivonAgentLoop", "RunBudget", "RunStopCode", "STRUCTURED_COMPLETION_MODE",
-    "SQLiteHarnessRunContinuityStore", "SQLiteHarnessRuntimeBridge", "SQLiteHarnessStore",
-    "StandaloneHarnessExecution", "StandaloneHarnessRunner", "StandaloneToolBridge",
-    "compile_harness_attempt", "decode_structured_completion_result",
+    "NO_TOOL_AGENT_GRANT_DIGEST",
+    "NO_TOOL_AGENT_SURFACE_DIGEST",
+    "IndependentCompletionProposal",
+    "IndependentHarnessRunReceipt",
+    "OrdivonAgentLoop",
+    "RunBudget",
+    "RunStopCode",
+    "STRUCTURED_COMPLETION_MODE",
+    "SQLiteHarnessRunContinuityStore",
+    "SQLiteHarnessRuntimeBridge",
+    "SQLiteHarnessStore",
+    "StandaloneHarnessExecution",
+    "StandaloneHarnessRunner",
+    "StandaloneToolBridge",
+    "compile_harness_attempt",
+    "decode_structured_completion_result",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",
 }
 REQUIRED_MEMBERS = {
-    "ordivon_harness/api.py", "ordivon_harness/completion.py", "ordivon_harness/core.py",
+    "ordivon_harness/agent_run.py",
+    "ordivon_harness/api.py",
+    "ordivon_harness/completion.py",
+    "ordivon_harness/core.py",
     "ordivon_harness/mandate.py",
-    "ordivon_harness/core_contracts.py", "ordivon_harness/independent_cli.py",
-    "ordivon_harness/independent_result.py", "ordivon_harness/host_external_adapter.py",
-    "ordivon_harness/sqlite_store.py", "ordivon_harness/standalone.py",
-    "ordivon_harness/store.py", "ordivon_harness/store_ops.py",
-    "ordivon_harness/ordivon/loop.py", "ordivon_harness/ordivon/model.py",
+    "ordivon_harness/core_contracts.py",
+    "ordivon_harness/independent_cli.py",
+    "ordivon_harness/independent_result.py",
+    "ordivon_harness/host_external_adapter.py",
+    "ordivon_harness/sqlite_store.py",
+    "ordivon_harness/standalone.py",
+    "ordivon_harness/store.py",
+    "ordivon_harness/store_ops.py",
+    "ordivon_harness/ordivon/loop.py",
+    "ordivon_harness/ordivon/model.py",
     "ordivon_harness/ordivon/sqlite_agent_bridge.py",
     "ordivon_harness/ordivon/sqlite_run_store.py",
     "ordivon_harness/ordivon/sqlite_runtime_bridge.py",
 }
 FORBIDDEN_MEMBERS = {
-    "ordivon_harness/host.py", "ordivon_harness/host_api.py",
-    "ordivon_harness/runner.py", "ordivon_harness/cutover.py",
-    "ordivon_harness/history.py", "ordivon_harness/contracts.py",
-    "ordivon_harness/models.py", "ordivon_harness/ordivon/run_store.py",
+    "ordivon_harness/host.py",
+    "ordivon_harness/host_api.py",
+    "ordivon_harness/runner.py",
+    "ordivon_harness/cutover.py",
+    "ordivon_harness/history.py",
+    "ordivon_harness/contracts.py",
+    "ordivon_harness/models.py",
+    "ordivon_harness/ordivon/run_store.py",
 }
 CLI_COMMANDS = (
-    "capabilities", "doctor", "status", "inspect", "run", "resume", "recover",
-    "store-init", "store-doctor", "store-backup", "store-verify-backup",
-    "store-restore", "store-inspect", "store-events",
+    "capabilities",
+    "doctor",
+    "status",
+    "inspect",
+    "run",
+    "resume",
+    "recover",
+    "store-init",
+    "store-doctor",
+    "store-backup",
+    "store-verify-backup",
+    "store-restore",
+    "store-inspect",
+    "store-events",
 )
 
 
@@ -125,13 +181,18 @@ def install_smoke(wheel: Path, version: str) -> dict[str, object]:
         python = root / "bin/python"
         cli = root / "bin/ordivon-harness"
         checked([uv, "pip", "install", "--link-mode", "copy", "--python", str(python), str(wheel)])
-        probe = json.loads(checked([
-            str(python), "-c",
-            "import importlib.metadata as m,importlib.util,json,sys; import ordivon_harness,ordivon_harness.api as api; "
-            "print(json.dumps({'version':m.version('ordivon-harness'),'api':sorted(api.__all__),"
-            "'root':sorted(ordivon_harness.__all__),'hostInstalled':importlib.util.find_spec('ordivon_host') is not None,"
-            "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules)}))"
-        ]).stdout)
+        probe = json.loads(
+            checked(
+                [
+                    str(python),
+                    "-c",
+                    "import importlib.metadata as m,importlib.util,json,sys; import ordivon_harness,ordivon_harness.api as api; "
+                    "print(json.dumps({'version':m.version('ordivon-harness'),'api':sorted(api.__all__),"
+                    "'root':sorted(ordivon_harness.__all__),'hostInstalled':importlib.util.find_spec('ordivon_host') is not None,"
+                    "'hostLoaded':any(k=='ordivon_host' or k.startswith('ordivon_host.') for k in sys.modules)}))",
+                ]
+            ).stdout
+        )
         if probe["version"] != version or set(probe["api"]) != EXPECTED_API:
             fail("installed API/version differs")
         if set(probe["root"]) != EXPECTED_API | {"package_version"}:
@@ -166,7 +227,9 @@ def main() -> int:
     wheel = resolve(args.wheel)
     version = validate_archive(wheel)
     result: dict[str, object] = {
-        "status": "passed", "wheel": wheel.name, "version": version,
+        "status": "passed",
+        "wheel": wheel.name,
+        "version": version,
         "metadataOnly": bool(args.metadata_only),
     }
     if not args.metadata_only:
