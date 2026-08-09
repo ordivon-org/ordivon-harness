@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-no-progress-conclusion-ownership-acceptance",
+  "implementationSourceRevision": "8170e65778ba40a1e6cdc2b526b2b753f7387317",
+  "baseRevision": "dd52f97e4ed528eb4e4e92abb69eddae6e86bca7",
+  "architecture": {
+    "ownershipLaw": "Harness execution disposition is not Agent semantic conclusion. Harness-owned no_progress carries its reason in Run stop detail/Trace and does not synthesize AgentRunConclusion.",
+    "structuredCompletionLaw": "A non-null AgentRunConclusion under structured-result-v1 remains caller-schema structured output. Harness execution stop reasons must not masquerade as that result representation.",
+    "recorderLaw": "NO_PROGRESS remains pause-like for IndependentRunRecorder and does not create a terminal result/CompletionProposal; this patch changes only the Loop conclusion surface.",
+    "modeNeutralityLaw": "The fix does not make OrdivonAgentLoop completion-mode aware and does not special-case structured-result-v1. It removes a Harness-authored semantic conclusion from one Harness-owned execution stop for all modes.",
+    "effectLaw": "The observation gate, Tool availability, Tool accounting, WorkingSet transition semantics and physical Runtime dispatch behavior remain unchanged."
+  },
+  "reproduction": {
+    "prePatchHarnessRevision": "a38f4cfde3b20c64219ab00d911cac738da8961e",
+    "jobId": "job-019fe5c0-1088-7351-b454-470e8336c7ec",
+    "attemptId": "attempt-019fe5c0-1088-7351-b454-471747517356",
+    "jobExitDisposition": "failed-only-because-final-probe-assertion-assumed-durable-paused-status",
+    "structuredContractDigest": "sha256:b62fbb73cf1f6c3e63443c36ed569eedb7d3016171e0fbc30dcf2a8dfc9fcb03",
+    "stopCode": "no_progress",
+    "conclusionStatus": "needs_input",
+    "rawConclusionSummary": "external observation gate closed after 1 consecutive observation-only turns without a mutation, check, or conclusion",
+    "structuredDecodeSucceeded": false,
+    "structuredDecodeError": "CanonicalError: invalid JSON",
+    "runtimeWorkspaceExecCount": 1,
+    "toolCalls": 1,
+    "modelCalls": 3,
+    "requestToolAvailability": [
+      1,
+      0,
+      0
+    ],
+    "standalonePaused": true,
+    "terminalResultPresent": false,
+    "durableProjectionStatus": "active",
+    "doctorHealthy": true,
+    "interpretation": "The structured representation failure was printed before the probe assertion failed. The failed process status does not invalidate the reproduced output; the later assertion only showed that StandaloneHarnessExecution.paused is not the same fact as durable HarnessRunStatus.PAUSED."
+  },
+  "implementation": {
+    "changedProductionPath": "src/ordivon_harness/ordivon/loop.py",
+    "removedBehavior": "external-observation-gate NO_PROGRESS no longer synthesizes needs_input AgentRunConclusion",
+    "retainedBehavior": "NO_PROGRESS detail still includes the closed-gate reason plus the attempted post-gate Tool request; Trace still records run_stopped.",
+    "newRegressionTest": "tests/test_structured_no_progress_completion.py"
+  },
+  "checks": {
+    "focusedLatestBaseTests": 17,
+    "focusedLatestBasePassed": true,
+    "fullRegressionTests": 283,
+    "fullRegressionSkipped": 3,
+    "fullRegressionPassed": true,
+    "exactImplementationTargetedTests": 17,
+    "exactImplementationTargetedPassed": true,
+    "implementationTree": "b0fae687eca83346b9190d408c5f3b90a47e44d3",
+    "postPatchStructuredStopCode": "no_progress",
+    "postPatchConclusionPresent": false,
+    "postPatchRuntimeWorkspaceExecCount": 1,
+    "postPatchToolCalls": 1,
+    "postPatchModelCalls": 3,
+    "postPatchRequestToolAvailability": [
+      1,
+      0,
+      0
+    ],
+    "postPatchStopDetailRetained": true,
+    "postPatchDoctorHealthy": true,
+    "pythonCompilePassed": true,
+    "ruff01514ChangedPythonPassed": true,
+    "newTestRuffFormatPassed": true,
+    "uvLockOfflinePassed": true,
+    "markdownBaselineIssuesBefore": 176,
+    "markdownBaselineIssuesAfter": 175,
+    "addedProseCSpellPassed": true,
+    "gitDiffCheckPassed": true,
+    "externalEffectAttempted": false
+  },
+  "runtimeEvidence": {
+    "latestFocusedJobId": "job-019fe5c7-c205-72e0-a782-6ee2b96fe95b",
+    "latestFocusedAttemptId": "attempt-019fe5c7-c205-72e0-a782-6ef7c27ff280",
+    "fullRegressionJobId": "job-019fe5c8-1b8b-7621-9b13-ca9db45e9c98",
+    "fullRegressionAttemptId": "attempt-019fe5c8-1b8b-7621-9b13-caa3155893fc",
+    "staticValidationJobId": "job-019fe5ca-1a6e-74c3-adee-2ca49f7a0f56",
+    "staticValidationAttemptId": "attempt-019fe5ca-1a6e-74c3-adee-2cb43c549762",
+    "exactImplementationTargetedJobId": "job-019fe5ca-d8c4-7ff1-87ed-42d4daebd3aa",
+    "exactImplementationTargetedAttemptId": "attempt-019fe5ca-d8c4-7ff1-87ed-42ef05713627"
+  },
+  "conclusion": "The Finance dogfood non-decodable structured conclusion is now reproduced deterministically as a Harness-owned NO_PROGRESS fallback. The smallest repair is ownership-correct rather than structured-mode-specific: NO_PROGRESS is execution disposition, so Harness retains its reason in stop detail/Trace and returns no Agent conclusion. This removes the plain-text fallback that violated caller-bound structured result representation while preserving the existing observation gate and resume mechanics.",
+  "knownLimits": [
+    "StandaloneHarnessExecution.paused remains defined as terminal_result is None and can coexist with a durable Run projection still marked active. This task observed that naming/state distinction but does not classify it as a bug.",
+    "The durable recorder remains pause-like for NO_PROGRESS and does not produce a terminal result. This patch does not change recorder status transitions.",
+    "The fix does not guarantee an Agent will eventually submit candidate_completed or needs_input; it only prevents Harness from fabricating that semantic conclusion on the Agent's behalf.",
+    "The patch is mode-neutral. Plain completion callers also no longer receive the synthetic NO_PROGRESS needs_input conclusion."
+  ]
+}

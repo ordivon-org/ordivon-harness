@@ -323,6 +323,13 @@
       "status": "verified",
       "implementationRevision": "a983c1a6189191ff758572619c20659de365b119",
       "scope": "Current lineage-final R2 acceptance over bounded secondary DeepSeek egress, independent conclusion correction, and explicit GLOBAL_SECONDARY replan evidence: Agent-turn projection and source-current cognition admission have friction-proven internal owners; SQLite Continuity remains independent; a983c1a src/tests/docs are byte-identical to fully validated f599df9, which passed 282 tests and real direct deepseek-v4-flash promotion/transition probes."
+    },
+    {
+      "claimId": "harness.execution.no-progress-conclusion-ownership",
+      "file": "harness-no-progress-conclusion-ownership-8170e65.json",
+      "status": "verified",
+      "implementationRevision": "8170e65778ba40a1e6cdc2b526b2b753f7387317",
+      "scope": "Verified ownership boundary for Harness no_progress: deterministic structured-result-v1 reproduction proved the old plain-text needs_input fallback was non-decodable; current implementation leaves NO_PROGRESS as stop detail/Trace with no synthesized AgentRunConclusion, while PC1.9 observation-gate/WorkingSet behavior and full Harness regression remain intact."
     }
   ]
 }
