@@ -159,6 +159,7 @@ There is no `host` namespace and no `cutover-*` surface.
 
 - `ARCHITECTURE.md` — current Harness world model, semantic ownership and Run lifecycle;
 - `docs/ORDIVON_HARNESS_PC1_COGNITION_CLOSEOUT.md` — historical P-C1.1–P-C1.12 experimental path that established the current cognition model;
+- `docs/DELIBERATION-BEFORE-TOOLS-H0.md` — current Harness-native research evidence for deliberation/Tool-exposure sequencing;
 - `docs/QUICKSTART.md` — deterministic setup and first Run;
 - `docs/OPERATIONS.md` — state, recovery, backup and escalation;
 - `docs/STATUS.md` — implemented capability and known limits;

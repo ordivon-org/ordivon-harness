@@ -358,6 +358,13 @@
       "status": "verified",
       "implementationRevision": "4e9d4b91d34ea39cdd8e2f7d7a11729b99b303c5",
       "scope": "Current R3.2 acceptance: HarnessAgentRun owns static supported-composition admission before durable Run creation; cognition privacy/history and exact Runtime-binding incompatibilities fail before Adapter construction, structured completion binding fails before state creation, lower layers retain defense-in-depth, 298 tests/full build gate pass, and a fresh real deepseek-v4-flash pause/open/resume trajectory succeeds through the recommended public API."
+    },
+    {
+      "claimId": "harness.cognition.h0-deliberation-before-tools",
+      "file": "harness-h0-deliberation-authority-9576039.json",
+      "status": "verified",
+      "implementationRevision": "95760397caea9785b5374cd7f0a134e618c2cad5",
+      "scope": "Harness-native neutral 2+2 research experiment independently reproducing one Tool-first/later-correct-reasoning mismatch in the immediate-Tool baseline while both no-domain-Tool-deliberation-first replicates later submit the unique mechanical oracle. This is scoped research evidence, not whole-product verification or a population-level causal estimate."
     }
   ]
 }
