@@ -324,3 +324,6 @@ Can one caller-owned aggregate budget be consumed across deliberation + Tool loo
 ```
 
 If the existing AgentTurnAdapter/DomainToolLoop contracts cannot support those semantics cleanly, H1 should remain internal rather than widening the API.
+## H2 follow-up
+
+H2 closes the aggregate-budget, cancellation and absolute-deadline lifecycle gaps left open here. The lifecycle-bound composition is deterministically validated but remains advanced/internal pending a fresh independent domain consumer. See [`DELIBERATION-LIFECYCLE-H2.md`](DELIBERATION-LIFECYCLE-H2.md).

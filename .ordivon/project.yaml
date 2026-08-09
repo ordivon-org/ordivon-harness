@@ -26,6 +26,7 @@ managed_paths:
   - docs/DOMAIN-TOOL-BRIDGE-P0.md
   - docs/DELIBERATION-BEFORE-TOOLS-H0.md
   - docs/DELIBERATION-COMPOSITION-H1.md
+  - docs/DELIBERATION-LIFECYCLE-H2.md
   - docs/authority.md
 enforcement: strict
 maintainers:

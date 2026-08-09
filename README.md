@@ -161,6 +161,7 @@ There is no `host` namespace and no `cutover-*` surface.
 - `docs/ORDIVON_HARNESS_PC1_COGNITION_CLOSEOUT.md` — historical P-C1.1–P-C1.12 experimental path that established the current cognition model;
 - `docs/DELIBERATION-BEFORE-TOOLS-H0.md` — current Harness-native research evidence for deliberation/Tool-exposure sequencing;
 - `docs/DELIBERATION-COMPOSITION-H1.md` — validated advanced/internal composition of no-Tool cognition into a later caller-owned Tool loop;
+- `docs/DELIBERATION-LIFECYCLE-H2.md` — deterministic lifecycle closeout for aggregate budget, cancellation and absolute-deadline authority across that advanced/internal composition;
 - `docs/QUICKSTART.md` — deterministic setup and first Run;
 - `docs/OPERATIONS.md` — state, recovery, backup and escalation;
 - `docs/STATUS.md` — implemented capability and known limits;

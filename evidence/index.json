@@ -372,6 +372,13 @@
       "status": "verified",
       "implementationRevision": "89a7fa125bb8b1facc51bd89cb7eb1cdae3f0b4e",
       "scope": "Two predeclared H1 replicates reuse the exact H0 neutral task and caller-owned ChoiceBridge through the generic DeliberationThenToolRunner; both choose cobalt and all 10 gates pass. This validates the narrow composition in the H0 consumer, not a recommended universal API, aggregate budget model or cross-phase cancellation contract."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle",
+      "file": "harness-h2-deliberation-lifecycle-8100879.json",
+      "status": "verified",
+      "implementationRevision": "8100879e8ea7823b9ae231a681598dada2ea5c3c",
+      "scope": "Deterministic H2 acceptance validating one aggregate RunBudget, one cancellation authority and one absolute deadline across no-Tool deliberation and the later caller-owned Tool loop; all 12 gates pass. H2 remains advanced/internal and does not make deliberation a hidden default or move domain strategy/admission into Harness."
     }
   ]
 }
