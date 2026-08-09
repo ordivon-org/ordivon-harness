@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import http.client
+import os
 import socket
 import stat
 import threading
@@ -225,6 +226,43 @@ class UrllibDeepSeekTransport:
         return raw
 
 
+def _validated_loopback_https_proxy(value: str | None) -> str | None:
+    """Accept only the Workstation-owned loopback HTTP CONNECT surface.
+
+    DeepSeek credentials must never be redirected by an arbitrary inherited
+    proxy environment. A network transport profile may therefore project only
+    a plain HTTP proxy on IPv4 loopback; TLS remains end-to-end to DeepSeek.
+    """
+    if value is None or value == "":
+        return None
+    parsed = urllib.parse.urlsplit(value)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "127.0.0.1"
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.port is None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(
+            "DeepSeek HTTPS proxy must be an unauthenticated "
+            "http://127.0.0.1:<port> loopback CONNECT endpoint"
+        )
+    if not 1 <= parsed.port <= 65535:
+        raise ValueError("DeepSeek HTTPS proxy port is invalid")
+    return f"http://127.0.0.1:{parsed.port}"
+
+
+def _loopback_https_proxy_from_environment() -> str | None:
+    upper = os.environ.get("HTTPS_PROXY")
+    lower = os.environ.get("https_proxy")
+    if upper and lower and upper != lower:
+        raise ValueError("HTTPS_PROXY and https_proxy disagree")
+    return _validated_loopback_https_proxy(upper or lower)
+
+
 class DeepSeekPostHandle(Protocol):
     def poll(self, timeout_seconds: float) -> bytes | None: ...
 
@@ -273,12 +311,14 @@ class _HttpClientPostHandle:
         body: bytes,
         timeout_seconds: float,
         max_response_bytes: int,
+        https_proxy: str | None = None,
     ) -> None:
         self._url = url
         self._headers = dict(headers)
         self._body = body
         self._timeout_seconds = timeout_seconds
         self._max_response_bytes = max_response_bytes
+        self._https_proxy = _validated_loopback_https_proxy(https_proxy)
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._lock = threading.Lock()
@@ -331,16 +371,29 @@ class _HttpClientPostHandle:
             parsed = urllib.parse.urlsplit(self._url)
             if parsed.scheme not in {"http", "https"} or not parsed.hostname:
                 raise ValueError("DeepSeek URL must be absolute HTTP(S)")
-            connection_type = (
-                http.client.HTTPSConnection
-                if parsed.scheme == "https"
-                else http.client.HTTPConnection
-            )
-            connection = connection_type(
-                parsed.hostname,
-                port=parsed.port,
-                timeout=self._timeout_seconds,
-            )
+            target_port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            if self._https_proxy is not None:
+                if parsed.scheme != "https":
+                    raise ValueError("DeepSeek loopback CONNECT proxy requires an HTTPS target")
+                proxy = urllib.parse.urlsplit(self._https_proxy)
+                assert proxy.hostname == "127.0.0.1" and proxy.port is not None
+                connection = http.client.HTTPSConnection(
+                    proxy.hostname,
+                    port=proxy.port,
+                    timeout=self._timeout_seconds,
+                )
+                connection.set_tunnel(parsed.hostname, port=target_port)
+            else:
+                connection_type = (
+                    http.client.HTTPSConnection
+                    if parsed.scheme == "https"
+                    else http.client.HTTPConnection
+                )
+                connection = connection_type(
+                    parsed.hostname,
+                    port=parsed.port,
+                    timeout=self._timeout_seconds,
+                )
             with self._lock:
                 if self._cancelled.is_set():
                     raise AgentTurnAdapterError(
@@ -422,7 +475,19 @@ class _HttpClientPostHandle:
 
 
 class HttpClientDeepSeekTransport:
-    """One-request-per-handle transport with active socket cancellation."""
+    """One-request-per-handle transport with active socket cancellation.
+
+    The optional proxy is deliberately restricted to a Workstation-owned IPv4
+    loopback CONNECT endpoint. This preserves end-to-end TLS and prevents an
+    arbitrary inherited proxy from becoming a credential exfiltration path.
+    """
+
+    def __init__(self, *, https_proxy: str | None = None) -> None:
+        self.https_proxy = _validated_loopback_https_proxy(https_proxy)
+
+    @classmethod
+    def from_environment(cls) -> HttpClientDeepSeekTransport:
+        return cls(https_proxy=_loopback_https_proxy_from_environment())
 
     def start_post(
         self,
@@ -439,6 +504,7 @@ class HttpClientDeepSeekTransport:
             body=body,
             timeout_seconds=timeout_seconds,
             max_response_bytes=max_response_bytes,
+            https_proxy=self.https_proxy,
         )
 
     def post(
@@ -911,7 +977,7 @@ class DeepSeekTurnAdapter:
     ) -> None:
         self.settings = settings
         self.model_id = settings.model
-        self.transport = transport or HttpClientDeepSeekTransport()
+        self.transport = transport or HttpClientDeepSeekTransport.from_environment()
         self._completion_contract = (
             {} if completion_contract is None else dict(completion_contract)
         )

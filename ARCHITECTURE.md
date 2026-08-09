@@ -248,6 +248,8 @@ A Provider Call is durable before uncertain physical delivery. Live claims exclu
 
 Provider identity belongs to Harness execution. A higher-level caller does not need to model Provider sessions or retry state.
 
+DeepSeek physical egress may be supplied by an external workstation transport without turning Harness into a network router. The cancellable `http.client` transport preserves its historical direct path when no HTTPS proxy is projected. If `HTTPS_PROXY`/`https_proxy` is present, Harness accepts only one unauthenticated `http://127.0.0.1:<port>` CONNECT endpoint, connects to that loopback sidecar, tunnels the fixed official DeepSeek HTTPS origin, and performs TLS end-to-end to DeepSeek. Remote proxies, proxy credentials, non-loopback hosts, conflicting proxy variables and proxy URL paths fail before Provider dispatch. The physical transport is deliberately not part of Provider request identity: changing a safe pre-dispatch route is analogous to changing an IP path, while an ambiguous Provider delivery remains fenced by the existing Provider Call lifecycle and is never permission for automatic mid-call migration.
+
 A Provider turn that simultaneously requests ordinary Tools and submits a Run conclusion is treated as a **model-correctable action conflict**, not as permission to choose on the model's behalf and not as a Harness failure. Harness dispatches none of those ordinary Tools and admits no conclusion from that mixed turn; the next model turn must choose whether to continue acting or conclude.
 
 ## Tool lifecycle

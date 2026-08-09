@@ -66,6 +66,7 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - immutable `HarnessRunContract` attempt authority, including Context refs, Provider/Adapter identity, Tool catalog/grant digests, budget and completion contract;
 - independent SQLite Journal/CAS with caller binding, revision fencing, leases, backup/restore and full Doctor;
 - durable Provider Call claim/dispatch/completion/failure state with response-loss reconciliation;
+- explicit physical DeepSeek egress composition: the cancellable transport remains direct by default and may consume only a validated loopback HTTPS CONNECT sidecar projected by the execution environment, preserving end-to-end Provider TLS without adding automatic Provider routing;
 - durable Tool intents, dispatch fences, observations and recovery-sensitive receipts;
 - bounded Agent loop with DeepSeek and scripted adapters;
 - Agent-owned WorkingSet/WorkingView cognition selection, exact current-source addressability, caller interaction ingress, attempt-local Tool cognition, explicit caller-to-durable promotion and bounded historical cognition recall;

@@ -33,6 +33,8 @@ Providers may receive bounded caller-supplied Context, prior messages, Tool defi
 
 DeepSeek API keys are loaded from private regular files. Codex and Hermes adapters may start local child processes and inherit only the environment deliberately supplied by their driver configuration. Hidden Provider sessions are disposable and are not durable continuity.
 
+The built-in cancellable DeepSeek transport does not trust an arbitrary inherited proxy. A projected HTTPS proxy is accepted only as an unauthenticated IPv4-loopback HTTP CONNECT endpoint. The CONNECT sidecar receives the target host/port but TLS is established to DeepSeek after the tunnel, so Provider Authorization headers and request bodies are not intentionally disclosed to the sidecar. A non-loopback proxy, embedded proxy credential, conflicting `HTTPS_PROXY`/`https_proxy`, or malformed proxy URL is rejected before Provider dispatch. This is physical egress selection, not Provider migration or expanded Run authority.
+
 Mid-call Provider migration is unsupported. An ambiguous Provider delivery remains UNKNOWN and is not automatically repeated.
 
 ## Tool and Runtime boundary
