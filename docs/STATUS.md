@@ -83,7 +83,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - R3.1 is additive rather than a breaking facade cleanup: existing low-level recommended exports remain available while CLI/Python adoption moves to `HarnessAgentRun`; removing `StandaloneHarnessRunner`, concrete SQLite composition objects or other advanced exports is a later evidence-gated decision, not part of this slice;
 - there is no generic Memory/RAG/ranking/summarization layer, cross-Run cognition orchestrator, semantic supersession graph or automatic relevance policy;
 - large-WorkingSet discovery/inspection strategy, initial cognition bootstrap and cross-Run cognition reuse remain open Agent-side/system-boundary questions rather than solved Harness policy.
-- H0 neutral research independently observed one immediate-Tool run whose recorded Tool choice contradicted its later correct conclusion, while two predeclared no-Tool-deliberation-first replicates chose correctly; this creates an active cognition/Tool-exposure sequencing research pressure, but Harness does not yet expose a generic deliberation-before-Tools composition API and does not treat H0 as a universal default policy.
+- H0 neutral research independently observed one immediate-Tool run whose recorded Tool choice contradicted its later correct conclusion, while two predeclared no-Tool-deliberation-first replicates chose correctly; this establishes an active cognition/Tool-exposure sequencing pressure. H1 now validates an advanced/internal generic `DeliberationThenToolRunner` composition on the same neutral consumer, but it is not yet a recommended `ordivon_harness.api` surface because aggregate cross-phase budget and cancellation semantics remain unresolved.
 
 ## Operator check
 

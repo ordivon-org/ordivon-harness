@@ -365,6 +365,13 @@
       "status": "verified",
       "implementationRevision": "95760397caea9785b5374cd7f0a134e618c2cad5",
       "scope": "Harness-native neutral 2+2 research experiment independently reproducing one Tool-first/later-correct-reasoning mismatch in the immediate-Tool baseline while both no-domain-Tool-deliberation-first replicates later submit the unique mechanical oracle. This is scoped research evidence, not whole-product verification or a population-level causal estimate."
+    },
+    {
+      "claimId": "harness.cognition.h1-deliberation-composition",
+      "file": "harness-h1-deliberation-composition-89a7fa1.json",
+      "status": "verified",
+      "implementationRevision": "89a7fa125bb8b1facc51bd89cb7eb1cdae3f0b4e",
+      "scope": "Two predeclared H1 replicates reuse the exact H0 neutral task and caller-owned ChoiceBridge through the generic DeliberationThenToolRunner; both choose cobalt and all 10 gates pass. This validates the narrow composition in the H0 consumer, not a recommended universal API, aggregate budget model or cross-phase cancellation contract."
     }
   ]
 }

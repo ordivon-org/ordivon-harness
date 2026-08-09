@@ -359,3 +359,7 @@ physical effect execution
 ```
 
 If H1 can reproduce H0 using the generic composition with less domain glue, the primitive is justified. If not, retain H0 as research evidence and leave sequencing to applications.
+
+## Follow-up
+
+H1 validates a narrow generic Harness composition that replaces H0's hand-written phase glue while preserving caller-owned Tool semantics. It remains advanced/internal pending aggregate-budget and cross-phase-cancellation semantics. See [`DELIBERATION-COMPOSITION-H1.md`](DELIBERATION-COMPOSITION-H1.md).
