@@ -551,7 +551,11 @@ def _working_set_transition_tool() -> dict[str, JsonValue]:
             "description": (
                 "Choose the exact already-known sources that should form the next "
                 "committed Working Set. This changes only your model-visible cognition "
-                "view; it is not an external Tool effect and does not discover sources."
+                "view; it is not an external Tool effect and does not discover sources. "
+                "Use an unchanged exact pin selection only when you intentionally want "
+                "a new cognition attempt with the same durable sources; that is an "
+                "attempt reset, not progress and not a way to wait for caller input. "
+                "When waiting for caller input, submit a needs_input conclusion instead."
             ),
             "parameters": {
                 "type": "object",
@@ -1075,6 +1079,15 @@ class DeepSeekTurnAdapter:
                     for ref in request.caller_ingress_refs
                 ]
             }
+        if self.working_set_transitions:
+            execution_control["workingSetSelection"] = [
+                {
+                    "pin": ref.pin.to_dict(),
+                    "providerMessageStartIndex": ref.request_message_start_index + 1,
+                    "providerMessageEndExclusiveIndex": ref.request_message_end_index + 1,
+                }
+                for ref in request.working_set_refs
+            ]
         provider_messages = [
             {
                 "role": "system",
@@ -1089,6 +1102,14 @@ class DeepSeekTurnAdapter:
                         "for promotion; other user-role messages are selected or otherwise "
                         "non-promotable cognition. "
                         if self.caller_ingress_promotions
+                        else ""
+                    )
+                    + (
+                        "When WorkingSet transition is available, workingSetSelection lists the "
+                        "exact currently selected durable pins and the half-open Provider-message "
+                        "ranges [start,end) that each pin produced. Use those exact identities for retain/drop "
+                        "decisions; do not infer or invent pin identities from message text. "
+                        if self.working_set_transitions
                         else ""
                     )
                     + canonical_bytes(execution_control).decode("utf-8")

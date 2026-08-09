@@ -12,6 +12,7 @@ from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
     CallerIngressPromotionHandler,
     WorkingSetHistoryReader,
+    HarnessWorkingSetSourceRef,
     WorkingSetTransitionHandler,
     WorkingViewProjector,
     overlay_working_view,
@@ -1448,10 +1449,17 @@ class OrdivonAgentLoop:
             request_context_digest = context_digest
             request_messages = tuple(messages)
             caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
+            working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
             working_view = None
             if self.working_view_projector is not None:
                 try:
-                    base_working_view = self.working_view_projector.project()
+                    project_with_refs = getattr(
+                        self.working_view_projector, "project_with_refs", None
+                    )
+                    if callable(project_with_refs):
+                        base_working_view, working_set_refs = project_with_refs()
+                    else:
+                        base_working_view = self.working_view_projector.project()
                 except Exception as error:  # noqa: BLE001 - projection is a local Harness boundary.
                     return stop(
                         RunStopCode.HARNESS_FAILED,
@@ -1561,6 +1569,7 @@ class OrdivonAgentLoop:
                     no_progress_turns=no_progress_turns,
                 ),
                 caller_ingress_refs=caller_ingress_refs,
+                working_set_refs=working_set_refs,
             )
             token_bounder = getattr(
                 self.adapter, "request_token_upper_bound", None

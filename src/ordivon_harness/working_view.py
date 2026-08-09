@@ -138,6 +138,55 @@ class HarnessWorkingSetPin:
 
 
 @dataclass(frozen=True, slots=True)
+class HarnessWorkingSetSourceRef:
+    """One exact current WorkingSet pin aligned to its model-message range."""
+
+    pin: HarnessWorkingSetPin
+    request_message_start_index: int
+    request_message_end_index: int
+
+    def __post_init__(self) -> None:
+        if (
+            type(self.request_message_start_index) is not int
+            or self.request_message_start_index < 0
+        ):
+            raise ValueError(
+                "WorkingSet source request start index must be a non-negative integer"
+            )
+        if (
+            type(self.request_message_end_index) is not int
+            or self.request_message_end_index <= self.request_message_start_index
+        ):
+            raise ValueError(
+                "WorkingSet source request end index must be greater than its start"
+            )
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "pin": self.pin.to_dict(),
+            "requestMessageStartIndex": self.request_message_start_index,
+            "requestMessageEndIndex": self.request_message_end_index,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> HarnessWorkingSetSourceRef:
+        if set(value) != {
+            "pin",
+            "requestMessageStartIndex",
+            "requestMessageEndIndex",
+        }:
+            raise ValueError("HarnessWorkingSetSourceRef fields differ")
+        raw_pin = value["pin"]
+        if not isinstance(raw_pin, dict):
+            raise ValueError("HarnessWorkingSetSourceRef pin must be an object")
+        return cls(
+            pin=HarnessWorkingSetPin.from_dict(raw_pin),
+            request_message_start_index=value["requestMessageStartIndex"],
+            request_message_end_index=value["requestMessageEndIndex"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class AgentWorkingSetTransitionProposal:
     """One Agent-authored proposal for the next committed cognition attempt.
 
@@ -523,12 +572,18 @@ class WorkingSetViewProjector:
     working_sets: WorkingSetReader
 
     def project(self) -> HarnessWorkingView:
+        view, _refs = self.project_with_refs()
+        return view
+
+    def project_with_refs(
+        self,
+    ) -> tuple[HarnessWorkingView, tuple[HarnessWorkingSetSourceRef, ...]]:
         spec = self.working_sets.load_current_working_set()
         if not spec.committed:
             raise ValueError(
                 "Provider Working View requires a committed Working Set"
             )
-        return compile_working_view(spec, self.objects)
+        return compile_working_view_with_refs(spec, self.objects)
 
 
 def overlay_working_view(
@@ -553,11 +608,12 @@ def overlay_working_view(
     )
 
 
-def compile_working_view(
+def compile_working_view_with_refs(
     spec: HarnessWorkingSetSpec,
     objects: WorkingViewObjects,
-) -> HarnessWorkingView:
+) -> tuple[HarnessWorkingView, tuple[HarnessWorkingSetSourceRef, ...]]:
     messages: list[dict[str, JsonValue]] = []
+    refs: list[HarnessWorkingSetSourceRef] = []
     for pin in spec.pins:
         raw = objects.get_object(
             pin.resolved_digest,
@@ -571,18 +627,38 @@ def compile_working_view(
             or source.logical_generation != pin.logical_generation
         ):
             raise ValueError("Working Set pin differs from its exact source object")
+        start = len(messages)
         messages.extend(dict(message) for message in source.messages)
-    return HarnessWorkingView(
-        attempt_id=spec.attempt_id,
-        working_set_digest=spec.digest,
-        messages=tuple(messages),
+        refs.append(
+            HarnessWorkingSetSourceRef(
+                pin=pin,
+                request_message_start_index=start,
+                request_message_end_index=len(messages),
+            )
+        )
+    return (
+        HarnessWorkingView(
+            attempt_id=spec.attempt_id,
+            working_set_digest=spec.digest,
+            messages=tuple(messages),
+        ),
+        tuple(refs),
     )
+
+
+def compile_working_view(
+    spec: HarnessWorkingSetSpec,
+    objects: WorkingViewObjects,
+) -> HarnessWorkingView:
+    view, _refs = compile_working_view_with_refs(spec, objects)
+    return view
 
 
 __all__ = [
     "AgentCallerIngressPromotionProposal",
     "AgentWorkingSetTransitionProposal",
     "HarnessWorkingSetPin",
+    "HarnessWorkingSetSourceRef",
     "HarnessWorkingSetSpec",
     "HarnessWorkingView",
     "HarnessWorkingViewSource",
@@ -593,6 +669,7 @@ __all__ = [
     "WorkingSetViewProjector",
     "WorkingViewProjector",
     "compile_working_view",
+    "compile_working_view_with_refs",
     "overlay_working_view",
     "parse_working_set_history_query",
 ]

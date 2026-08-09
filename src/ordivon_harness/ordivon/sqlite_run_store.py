@@ -30,6 +30,7 @@ from ..working_view import (
     HarnessWorkingView,
     HarnessWorkingViewSource,
     compile_working_view,
+    compile_working_view_with_refs,
     parse_working_set_history_query,
 )
 from ..sqlite_store import (
@@ -1759,7 +1760,9 @@ class SQLiteHarnessRunContinuityStore:
         *,
         before_event_sequence: int | None = None,
     ) -> None:
-        base_view = compile_working_view(spec, self.store)
+        base_view, expected_working_set_refs = compile_working_view_with_refs(
+            spec, self.store
+        )
         if request.messages[: len(base_view.messages)] != base_view.messages:
             raise HarnessProviderCallRequestMismatch(
                 "Provider Call request does not preserve the current committed Working View prefix"
@@ -1834,6 +1837,10 @@ class SQLiteHarnessRunContinuityStore:
         ):
             raise HarnessProviderCallRequestMismatch(
                 "Provider caller ingress provenance differs from durable cognition authority"
+            )
+        if request.working_set_refs and request.working_set_refs != expected_working_set_refs:
+            raise HarnessProviderCallRequestMismatch(
+                "Provider current WorkingSet provenance differs from durable cognition authority"
             )
         effective_view = HarnessWorkingView(
             attempt_id=spec.attempt_id,

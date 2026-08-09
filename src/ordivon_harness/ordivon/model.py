@@ -9,6 +9,7 @@ from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from ..working_view import (
     AgentCallerIngressPromotionProposal,
     AgentWorkingSetTransitionProposal,
+    HarnessWorkingSetSourceRef,
 )
 
 
@@ -269,6 +270,7 @@ class AgentTurnRequest:
     tools: tuple[AgentToolDefinition, ...]
     remaining_budget: dict[str, JsonValue]
     caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
+    working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
 
     def __post_init__(self) -> None:
         _text(self.harness_run_id, "Harness Run identity", max_bytes=300)
@@ -294,6 +296,18 @@ class AgentTurnRequest:
             raise ValueError("Agent turn caller ingress refs must be sorted by caller index")
         if any(index >= len(self.messages) for index in request_indexes):
             raise ValueError("Agent turn caller ingress request position is outside messages")
+        working_slots = [ref.pin.slot for ref in self.working_set_refs]
+        if len(working_slots) != len(set(working_slots)):
+            raise ValueError("Agent turn WorkingSet source slots must be unique")
+        if tuple(sorted(self.working_set_refs, key=lambda ref: ref.pin.slot)) != self.working_set_refs:
+            raise ValueError("Agent turn WorkingSet source refs must be sorted by slot")
+        previous_end = 0
+        for ref in self.working_set_refs:
+            if ref.request_message_start_index != previous_end:
+                raise ValueError("Agent turn WorkingSet source message ranges must be contiguous")
+            if ref.request_message_end_index > len(self.messages):
+                raise ValueError("Agent turn WorkingSet source message range exceeds messages")
+            previous_end = ref.request_message_end_index
 
     @property
     def digest(self) -> str:
@@ -326,6 +340,8 @@ class AgentTurnRequest:
             value["callerIngressRefs"] = [
                 ref.to_dict() for ref in self.caller_ingress_refs
             ]
+        if self.working_set_refs:
+            value["workingSetRefs"] = [ref.to_dict() for ref in self.working_set_refs]
         return value
 
     @classmethod
@@ -343,7 +359,10 @@ class AgentTurnRequest:
             "tools",
             "remainingBudget",
         }
-        if set(value) not in {frozenset(base_fields), frozenset(base_fields | {"callerIngressRefs"})}:
+        optional_fields = {"callerIngressRefs", "workingSetRefs"}
+        if not base_fields.issubset(value) or not set(value).issubset(
+            base_fields | optional_fields
+        ):
             raise ValueError("AgentTurnRequest fields differ")
         if value["schemaVersion"] != 1 or value["kind"] != "ordivon.agent-turn-request":
             raise ValueError("AgentTurnRequest version or kind is invalid")
@@ -351,6 +370,7 @@ class AgentTurnRequest:
         raw_tools = value["tools"]
         raw_budget = value["remainingBudget"]
         raw_caller_refs = value.get("callerIngressRefs", [])
+        raw_working_refs = value.get("workingSetRefs", [])
         if (
             not isinstance(raw_messages, list)
             or any(not isinstance(item, dict) for item in raw_messages)
@@ -359,6 +379,8 @@ class AgentTurnRequest:
             or not isinstance(raw_budget, dict)
             or not isinstance(raw_caller_refs, list)
             or any(not isinstance(item, dict) for item in raw_caller_refs)
+            or not isinstance(raw_working_refs, list)
+            or any(not isinstance(item, dict) for item in raw_working_refs)
         ):
             raise ValueError("AgentTurnRequest collections are invalid")
         return cls(
@@ -373,6 +395,9 @@ class AgentTurnRequest:
             remaining_budget=dict(raw_budget),
             caller_ingress_refs=tuple(
                 AgentCallerIngressRef.from_dict(item) for item in raw_caller_refs
+            ),
+            working_set_refs=tuple(
+                HarnessWorkingSetSourceRef.from_dict(item) for item in raw_working_refs
             ),
         )
 
