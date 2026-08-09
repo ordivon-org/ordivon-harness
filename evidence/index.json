@@ -320,16 +320,23 @@
     {
       "claimId": "harness.recomposition.r2-proven-kernel-extraction",
       "file": "harness-r2-proven-kernel-extraction-a983c1a.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "a983c1a6189191ff758572619c20659de365b119",
-      "scope": "Current lineage-final R2 acceptance over bounded secondary DeepSeek egress, independent conclusion correction, and explicit GLOBAL_SECONDARY replan evidence: Agent-turn projection and source-current cognition admission have friction-proven internal owners; SQLite Continuity remains independent; a983c1a src/tests/docs are byte-identical to fully validated f599df9, which passed 282 tests and real direct deepseek-v4-flash promotion/transition probes."
+      "scope": "Current lineage-final R2 acceptance over bounded secondary DeepSeek egress, independent conclusion correction, and explicit GLOBAL_SECONDARY replan evidence: Agent-turn projection and source-current cognition admission have friction-proven internal owners; SQLite Continuity remains independent; a983c1a src/tests/docs are byte-identical to fully validated f599df9, which passed 282 tests and real direct deepseek-v4-flash promotion/transition probes. Superseded as current-source verification by the complete three-kernel R2 lineage; this receipt remains historical evidence for its bound implementation."
     },
     {
       "claimId": "harness.execution.no-progress-conclusion-ownership",
       "file": "harness-no-progress-conclusion-ownership-8170e65.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "8170e65778ba40a1e6cdc2b526b2b753f7387317",
-      "scope": "Verified ownership boundary for Harness no_progress: deterministic structured-result-v1 reproduction proved the old plain-text needs_input fallback was non-decodable; current implementation leaves NO_PROGRESS as stop detail/Trace with no synthesized AgentRunConclusion, while PC1.9 observation-gate/WorkingSet behavior and full Harness regression remain intact."
+      "scope": "Verified ownership boundary for Harness no_progress: deterministic structured-result-v1 reproduction proved the old plain-text needs_input fallback was non-decodable; current implementation leaves NO_PROGRESS as stop detail/Trace with no synthesized AgentRunConclusion, while PC1.9 observation-gate/WorkingSet behavior and full Harness regression remain intact. Superseded as current-source verification by the complete three-kernel R2 lineage; this receipt remains historical evidence for its bound implementation."
+    },
+    {
+      "claimId": "harness.recomposition.r2-three-kernel-lineage",
+      "file": "harness-r2-three-kernel-lineage-badae55.json",
+      "status": "verified",
+      "implementationRevision": "badae5543261678a836d1f410c188743f53ac87a",
+      "scope": "Current Harness R2 acceptance: AgentTurnProjector + CognitionAdmissionKernel + ProviderCallLifecycle are distinct internal seams; Loop keeps policy/action semantics; Continuity remains independent Journal/CAS verifier; inherited no-progress conclusion ownership and conclusion-correction authority are preserved; 287 discovered tests/full build gate pass; exact current source completed a real deepseek-v4-flash caller-promotion trajectory through native-a."
     }
   ]
 }

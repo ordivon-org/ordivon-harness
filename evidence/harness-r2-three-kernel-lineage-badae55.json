@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r2-three-kernel-lineage-acceptance",
+  "implementationSourceRevision": "badae5543261678a836d1f410c188743f53ac87a",
+  "baseRevision": "a4b28963ee7a0196df961a7409c599da90d26ec0",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "architecture": {
+    "kernelExtractionLaw": "Extract only responsibilities proven by execution friction and independent acceptance; large-function size alone does not create a new authority owner.",
+    "agentTurnProjector": "AgentTurnProjector owns deterministic read-side construction of the exact Agent-visible request, including WorkingView/caller/Tool overlay order, addressability, Runtime Tool surface and request-bound Harness capabilities.",
+    "cognitionAdmissionKernel": "CognitionAdmissionKernel owns the shared source-current structural admission law for caller promotion and ordinary WorkingSet transition. Action-specific progress/evidence meaning remains in the sequential Run coordinator.",
+    "providerCallLifecycle": "ProviderCallLifecycle freezes the optional Provider-continuity surface at Loop construction, validates exact provider_request_digest identity for durable calls and normalizes begin/admit/fail/retry/complete bridge addressing.",
+    "providerPolicyBoundary": "ProviderCallLifecycle owns neither retry/backoff policy nor Run stop semantics, token accounting, model semantic interpretation or physical transport. Those remain Loop/Adapter responsibilities; durable Provider truth remains Continuity authority.",
+    "constructorVerifierSeparation": "Construction and execution ports do not certify their own durable truth. SQLiteHarnessRunContinuityStore remains the independent Journal/CAS verifier and was not modified by this extraction.",
+    "noProgressOwnership": "The inherited no-progress ownership law remains current: Harness-owned NO_PROGRESS stops carry execution reason in stop detail/Trace and do not synthesize an Agent needs_input conclusion.",
+    "conclusionCorrectionCompatibility": "Independent conclusion-correction budget remains request-visible through AgentTurnProjector; the final live trajectory exposed conclusionCorrections=5 on all three exact Provider requests.",
+    "nonServiceLaw": "No Kernel Manager, Provider Manager service, generic Capability/Memory/RAG layer, SQLite schema, Protocol codec or recommended public API was added."
+  },
+  "metrics": {
+    "preR2RunFunctionLines": 2083,
+    "twoKernelR2RunFunctionLines": 1982,
+    "twoKernelPlusNoProgressRunFunctionLines": 1974,
+    "threeKernelCurrentRunFunctionLines": 1876,
+    "providerLifecyclePortLinesRemoved": 98,
+    "currentLineageCumulativeRunLinesRemoved": 207,
+    "currentLoopModuleLines": 2293,
+    "providerLifecycleModuleLines": 137,
+    "sqliteContinuityStoreLines": 3837,
+    "sqliteContinuityStoreModified": false
+  },
+  "checks": {
+    "discoveredTests": 287,
+    "fullRegressionPassed": true,
+    "currentFocusedKernelAndProviderTests": 27,
+    "currentFocusedKernelAndProviderPassed": true,
+    "compileAllPassed": true,
+    "ruff01517OfflinePassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "gitDiffCheckPassed": true,
+    "liveDeepSeekCurrentLineagePassed": true,
+    "newSQLiteSchemaAdded": false,
+    "newOrdivonProtocolCodecAdded": false,
+    "newRecommendedApiAdded": false,
+    "sourceTreeObject": "ed4c5585b8d4beedee40b8b2168c61c3e1b347e9",
+    "testsTreeObject": "56de975ceea4b5aaeb16fcd7de18e247c7d44fb8",
+    "docsTreeObject": "e0c6a09f9ec4d5f201fe117fc3dcb0754adeaa4b"
+  },
+  "runtimeEvidence": {
+    "fullRegressionJobId": "job-019fe5d0-8a98-7c33-91dd-a537dce83f5d",
+    "fullRegressionAttemptId": "attempt-019fe5d0-8a98-7c33-91dd-a54f68df7efa",
+    "liveProviderJobId": "job-019fe5d2-943a-7bf2-aab2-2dd01defb046",
+    "liveProviderAttemptId": "attempt-019fe5d2-943a-7bf2-aab2-2de9df0a046d"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek-v4-flash",
+    "networkProfile": "native-a through explicit loopback CONNECT http://127.0.0.1:19081",
+    "trajectory": [
+      {
+        "sequence": 1,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "needs_input"
+      },
+      {
+        "sequence": 2,
+        "callerRefs": 1,
+        "callerIngressPromotion": true,
+        "conclusionCorrections": 5,
+        "action": "promote caller index 0"
+      },
+      {
+        "sequence": 3,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "needs_input"
+      }
+    ],
+    "finalWorkingSetSlots": [
+      "caller-fact",
+      "task"
+    ],
+    "doctorHealthy": true,
+    "providerAttempts": 3,
+    "providerResultReplays": 0,
+    "conclusion": "The exact current lineage containing AgentTurnProjector, CognitionAdmissionKernel, ProviderCallLifecycle, independent conclusion correction and no-progress ownership completed a real DeepSeek promotion/resume trajectory. Dynamic promotion authority changed false→true→false, exact conclusion-correction authority remained visible, Provider lifecycle was mediated through the extracted port, and Continuity remained healthy."
+  },
+  "recoveryCoverage": [
+    "durable Provider completion replay after bridge response loss",
+    "metadata-only response-loss fencing without retained Provider result content",
+    "ambiguous dispatched Provider failure becomes UNKNOWN instead of retry",
+    "safe pre-dispatch retry only after bounded retry admission",
+    "stale Provider completion loser cannot write result object",
+    "caller-ingress Provider response-loss replay without caller resend",
+    "caller-promotion response-loss replay without redispatch",
+    "WorkingSet-transition Provider-completion replay without redispatch"
+  ],
+  "conclusion": "The current R2 lineage has three complementary internal kernels. AgentTurnProjector constructs exact Agent-visible requests, CognitionAdmissionKernel admits source-current cognition mutations, and ProviderCallLifecycle normalizes optional durable Provider lifecycle identity/hooks. The Loop retains policy and action-specific semantics; Continuity remains independent verification authority. On the current no-progress ownership lineage _run is 1876 lines, the full 287-test/build gate passes, and real native-a DeepSeek promotion succeeds on the exact source.",
+  "knownLimits": [
+    "OrdivonAgentLoop._run remains 1876 lines. Tool-effect/reconciliation, progress gates, conclusion validation and pause/stop assembly remain inside the coordinator until real friction demonstrates another boundary.",
+    "SQLiteHarnessRunContinuityStore remains 3837 lines and intentionally unchanged; constructor/verifier independence takes priority over superficial DRY.",
+    "ProviderCallLifecycle freezes bridge hook presence at Loop construction. Dynamic mutation of that surface is not a supported current contract.",
+    "All three kernels remain internal execution components rather than public APIs or global services.",
+    "No Runtime, World, Finance, Host or other Ordivon repository was changed by this extraction."
+  ]
+}
