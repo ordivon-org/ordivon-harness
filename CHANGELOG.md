@@ -4,6 +4,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- added the R0 experimental Standalone cognition composition proof: callers can provide an exact non-ranking `StandaloneCognitionSeed`, while `StandaloneCognitionProfile` makes `StandaloneHarnessRunner` mechanically compose WorkingView projection, WorkingSet transitions, caller-ingress promotion and optional bounded history against existing Continuity authority; partial seed admission is replay-safe and DeepSeek cognition feature/profile mismatches fail before Provider execution;
 - closed the P-C1.1–P-C1.12 cognition research line at the documentation/architecture level: the canonical Harness description now treats the product as a durable cognitive execution substrate with separate History, Durable Cognition, Interaction Cognition, Attempt Cognition, Execution Control and Effects domains; the closeout explicitly freezes the Agent-owned selection/provenance laws and avoids promoting generic Memory/RAG/supersession policy into Harness;
 
 ### Changed

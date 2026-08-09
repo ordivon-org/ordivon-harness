@@ -69,6 +69,7 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - durable Tool intents, dispatch fences, observations and recovery-sensitive receipts;
 - bounded Agent loop with DeepSeek and scripted adapters;
 - Agent-owned WorkingSet/WorkingView cognition selection, exact current-source addressability, caller interaction ingress, attempt-local Tool cognition, explicit caller-to-durable promotion and bounded historical cognition recall;
+- experimental Standalone cognition composition: one `StandaloneCognitionProfile` lets the Runner mechanically wire WorkingView projection, Agent-owned transitions, caller promotion and bounded history against the existing Continuity authority, while an exact caller-authored `StandaloneCognitionSeed` bootstraps the first committed WorkingSet without ranking or memory extraction;
 - pause/resume snapshots, UNKNOWN handling and conservative recovery;
 - Host-free Runtime bridges supplied with a caller-owned `HarnessRuntimeClient`;
 - Run Receipt and CompletionProposal that remain proposals to the caller rather than domain completion authority; a completed bounded Run may retain explicit unresolved unknowns for caller/domain judgment;
