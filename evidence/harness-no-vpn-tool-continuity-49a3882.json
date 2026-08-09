@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-no-vpn-tool-continuity-live-acceptance",
+  "truthRole": "verified-live-acceptance",
+  "accepted": true,
+  "implementationSourceRevision": "49a388238ed5df9d50be182f06bb86e3e2ff2e5b",
+  "claim": {
+    "statement": "A current Harness Run can force DeepSeek Provider traffic through the Workstation native-a loopback CONNECT transport, execute one real observation-only Runtime workspace Tool through loopback MCP, consume the Tool observation, and complete on the next Provider turn without changing Runtime ExecutionProfile or adding automatic Provider failover.",
+    "providerId": "provider:deepseek",
+    "adapterId": "deepseek.chat-completions.non-thinking.v1",
+    "requestedModelId": "deepseek-v4-flash",
+    "networkProfile": "native-a",
+    "networkProfileDigest": "sha256:1ac39a9ea6d0ad82c9837de86646361e8e768cd917db2f51175c74af0e92bb22"
+  },
+  "liveRun": {
+    "harnessRunId": "harness-run:no-vpn-tool-live-v3-1786271409607",
+    "candidateCompleted": true,
+    "terminationCode": "candidate_completed",
+    "modelCalls": 2,
+    "providerAttempts": 2,
+    "toolCalls": 1,
+    "totalTokens": 3984,
+    "wallTimeMs": 5632,
+    "measuredElapsedMs": 5636,
+    "effectiveModelIds": [
+      "deepseek-v4-flash"
+    ],
+    "traceDigest": "sha256:102bc8e27daa0a49d8afa976934ad1a5135fa837c9de30ceac7f8d74ab9fa06c",
+    "finalConclusion": {
+      "status": "candidate_completed",
+      "summary": "The symbol HarnessRuntimeClient is defined in src/ordivon_harness/runtime_port.py at line 10."
+    }
+  },
+  "toolEvidence": {
+    "toolName": "search_workspace",
+    "query": "HarnessRuntimeClient",
+    "relativePath": "src/ordivon_harness/runtime_port.py",
+    "maxMatches": 3,
+    "status": "observed",
+    "runtimeWorkspaceId": "harness-global-secondary-tool-target-20260809",
+    "runtimeWorkspaceSourceRevision": "49a388238ed5df9d50be182f06bb86e3e2ff2e5b",
+    "runtimeClientRequestId": "request:harness:g1:7088de0cc7c77ff45e0c3ff1d9af53c3",
+    "runtimeJobId": "job-019fe612-afe2-77c2-8a21-c1ea0c90ef70",
+    "runtimeAttemptId": "attempt-019fe612-afe2-77c2-8a21-c1f293c09f23",
+    "runtimeExecutionProfile": "trusted_local",
+    "runtimeDeliveryDisposition": "committed",
+    "runtimeProcessTreeDisposition": "terminal_clean",
+    "runtimeTerminalEvidenceDigest": "sha256:0925e137ead40136b11d3e306882a10738707d3f8e18ce71fd89dc2426988163",
+    "runtimeExecutionResultDigest": "sha256:f34f8cb83a01ad2aa9083842870f48fc96bfce9dc4be2a3cdc201d7d6f8e0d76",
+    "observationDigest": "sha256:a9994b5ab26222c1504c2991dbb57286f42b0a3e16c9ca910747feb7b88e0658",
+    "observedMatch": {
+      "relativePath": "src/ordivon_harness/runtime_port.py",
+      "lineNumber": 10,
+      "lineText": "class HarnessRuntimeClient(Protocol):"
+    },
+    "foreignReferences": [
+      {
+        "namespace": "ordivon.harness",
+        "type": "harness_run",
+        "digest": "sha256:a1401dd277d348fa75d726430356526d51d02ebbaf206a1e89ba312c40294dd1"
+      },
+      {
+        "namespace": "ordivon.harness",
+        "type": "run_contract",
+        "digest": "sha256:95b558233f42a0bd46af10ec3d4e5682802c4580b95ff2166bbb45ae650c3c6f"
+      },
+      {
+        "namespace": "ordivon.harness",
+        "type": "tool_grant",
+        "digest": "sha256:60e583fbfb20c344fd5a6aeecbcde59f5a6d159c368aea9a851b8b2f802b8451"
+      },
+      {
+        "namespace": "ordivon.harness",
+        "type": "dispatch_fence",
+        "digest": "sha256:34762b57d4c889f62f9d502ae23f565cc7646eb0f4d586edf627bf85e650d92e"
+      }
+    ]
+  },
+  "checks": {
+    "deepSeekProviderUsed": true,
+    "nativeNetworkProfileBoundByDigest": true,
+    "realRuntimeToolExecuted": true,
+    "runtimeToolObservationConsumedBySecondProviderTurn": true,
+    "candidateCompletedAfterToolObservation": true,
+    "runtimeExecutionProfileChanged": false,
+    "automaticProviderFailoverAdded": false,
+    "hostDependencyAddedToHarness": false,
+    "toolWasObservationOnly": true,
+    "runtimeDispatchFencePresent": true,
+    "runtimeTerminalEvidenceVerified": true
+  },
+  "composition": {
+    "providerPath": "Harness DeepSeek adapter -> HTTPS_PROXY 127.0.0.1:19081 -> Workstation native-a sidecar -> external DeepSeek",
+    "toolPath": "Harness SQLiteRuntimeBridge -> application-supplied Host McpRuntimeClient -> http://127.0.0.1:8897/mcp -> Runtime workspace.exec",
+    "note": "Host McpRuntimeClient was used only as the application-supplied live RuntimeClient implementation; Harness source gained no Host dependency."
+  },
+  "knownLimits": [
+    "Surfshark was not physically disabled. Provider-path separation is established by the digest-bound native-a environment and the previously verified loopback CONNECT transport semantics, not by a destructive VPN shutdown.",
+    "This acceptance proves functional inference-plus-Tool continuity through DeepSeek native-a; it does not provide an OpenAI secondary path or generic global Internet reachability.",
+    "OpenAI direct native egress remained unavailable in point-in-time observations, and separate Cloudflare Worker and AI Gateway probes reached OpenAI but were rejected with unsupported_country_region_territory.",
+    "Network reachability remains point-in-time physical truth. The network profile digest binds transport semantics, not perpetual destination reachability.",
+    "The Runtime Tool was observation-only search_workspace. Effectful Tool continuity remains governed by the existing Runtime effect/recovery contracts and was not re-proven here.",
+    "A broader independent external egress/VPS would add failure-domain diversity but is not required for this demonstrated Ordivon functional continuity path."
+  ]
+}
