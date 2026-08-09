@@ -4,6 +4,10 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- Separate caller/domain conclusion correction from Tool-call correction with
+  `maxConclusionCorrections`, independent accounting, and reason-neutral rejection
+  feedback.
+
 - DeepSeek's cancellable `http.client` transport can now consume a Workstation-projected HTTPS CONNECT path without changing Provider semantics: only an unauthenticated `http://127.0.0.1:<port>` proxy is accepted, TLS remains end-to-end to the official DeepSeek endpoint, direct execution is unchanged when no proxy is projected, and arbitrary inherited remote proxies fail before Provider dispatch. Live syscall acceptance proved the same no-Tool Agent Run connecting directly to a public DeepSeek address under `ambient` and to `127.0.0.1:19081` under `native-a`, with both Runs completing through one Provider attempt.
 - bound the Agent's Harness-native action authority into each exact `AgentTurnRequest`: new provider-neutral `AgentTurnCapabilities` complements the existing per-turn Runtime Tool list, participates in dispatch/Provider request identity and Continuity fencing, dynamically withdraws caller promotion when no exact promotable ref remains, and replaces DeepSeek adapter-local cognition feature flags;
 - added the R0 experimental Standalone cognition composition proof: callers can provide an exact non-ranking `StandaloneCognitionSeed`, while `StandaloneCognitionProfile` makes `StandaloneHarnessRunner` mechanically compose WorkingView projection, WorkingSet transitions, caller-ingress promotion and optional bounded history against existing Continuity authority; partial seed admission is replay-safe and DeepSeek cognition feature/profile mismatches fail before Provider execution;

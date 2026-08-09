@@ -109,6 +109,7 @@ class RunBudget:
     max_total_tokens: int = 131_072
     max_model_retries: int = 2
     max_tool_corrections: int = 3
+    max_conclusion_corrections: int = 3
     max_observation_only_turns: int = 6
     max_no_progress_turns: int = 3
     max_model_observation_bytes: int = 32_768
@@ -129,6 +130,7 @@ class RunBudget:
         if (
             self.max_model_retries < 0
             or self.max_tool_corrections < 0
+            or self.max_conclusion_corrections < 0
             or self.max_observation_only_turns < 0
             or self.max_no_progress_turns < 0
         ):
@@ -146,6 +148,7 @@ class RunBudget:
             "maxTotalTokens": self.max_total_tokens,
             "maxModelRetries": self.max_model_retries,
             "maxToolCorrections": self.max_tool_corrections,
+            "maxConclusionCorrections": self.max_conclusion_corrections,
             "maxObservationOnlyTurns": self.max_observation_only_turns,
             "maxNoProgressTurns": self.max_no_progress_turns,
             "maxModelObservationBytes": self.max_model_observation_bytes,
@@ -158,7 +161,7 @@ class RunBudget:
         """Materialize schema-v1 Contract budget authority for execution.
 
         Early caller-neutral Contracts may omit fields that predate the complete
-        ten-field projection. Missing fields use the historical Harness defaults;
+        budget projection. Missing fields use the historical Harness defaults;
         every field that is present remains exact authority and unknown fields
         fail closed through ``require_contract_match``.
         """
@@ -170,6 +173,7 @@ class RunBudget:
             max_total_tokens=131_072,
             max_model_retries=2,
             max_tool_corrections=3,
+            max_conclusion_corrections=3,
             max_observation_only_turns=6,
             max_no_progress_turns=3,
             max_model_observation_bytes=32_768,
@@ -182,6 +186,7 @@ class RunBudget:
             "maxTotalTokens": "max_total_tokens",
             "maxModelRetries": "max_model_retries",
             "maxToolCorrections": "max_tool_corrections",
+            "maxConclusionCorrections": "max_conclusion_corrections",
             "maxObservationOnlyTurns": "max_observation_only_turns",
             "maxNoProgressTurns": "max_no_progress_turns",
             "maxModelObservationBytes": "max_model_observation_bytes",
@@ -234,6 +239,7 @@ class RunBudget:
         total_tokens: int = 0,
         model_retries: int = 0,
         tool_corrections: int = 0,
+        conclusion_corrections: int = 0,
         observation_only_turns: int = 0,
         no_progress_turns: int = 0,
     ) -> dict[str, JsonValue]:
@@ -245,6 +251,9 @@ class RunBudget:
             "totalTokens": max(0, self.max_total_tokens - total_tokens),
             "modelRetries": max(0, self.max_model_retries - model_retries),
             "toolCorrections": max(0, self.max_tool_corrections - tool_corrections),
+            "conclusionCorrections": max(
+                0, self.max_conclusion_corrections - conclusion_corrections
+            ),
             "observationOnlyTurns": max(
                 0, self.max_observation_only_turns - observation_only_turns
             ),
@@ -404,6 +413,7 @@ class OrdivonAgentLoop:
             total_tokens = 0
             model_retries = 0
             tool_corrections = 0
+            conclusion_corrections = 0
             observation_only_turns = 0
             no_progress_turns = 0
             provider_attempts = 0
@@ -446,6 +456,7 @@ class OrdivonAgentLoop:
                 "totalTokens",
                 "modelRetries",
                 "toolCorrections",
+                "conclusionCorrections",
                 "observationOnlyTurns",
                 "noProgressTurns",
             }
@@ -489,6 +500,11 @@ class OrdivonAgentLoop:
             tool_corrections = self.budget.max_tool_corrections - int(
                 remaining.get("toolCorrections", self.budget.max_tool_corrections)
             )
+            conclusion_corrections = self.budget.max_conclusion_corrections - int(
+                remaining.get(
+                    "conclusionCorrections", self.budget.max_conclusion_corrections
+                )
+            )
             observation_only_turns = (
                 self.budget.max_observation_only_turns
                 - int(
@@ -519,6 +535,7 @@ class OrdivonAgentLoop:
                     total_tokens,
                     model_retries,
                     tool_corrections,
+                    conclusion_corrections,
                     observation_only_turns,
                     no_progress_turns,
                 )
@@ -663,6 +680,7 @@ class OrdivonAgentLoop:
                     total_tokens=total_tokens,
                     model_retries=model_retries,
                     tool_corrections=tool_corrections,
+                    conclusion_corrections=conclusion_corrections,
                     observation_only_turns=observation_only_turns,
                     no_progress_turns=no_progress_turns,
                 ),
@@ -690,6 +708,7 @@ class OrdivonAgentLoop:
                 "totalTokens": total_tokens,
                 "modelRetries": model_retries,
                 "toolCorrections": tool_corrections,
+                "conclusionCorrections": conclusion_corrections,
                 "observationOnlyTurns": observation_only_turns,
                 "noProgressTurns": no_progress_turns,
                 "providerAttempts": provider_attempts,
@@ -718,6 +737,8 @@ class OrdivonAgentLoop:
                     "tokenLimit": self.budget.max_total_tokens,
                     "modelRetries": model_retries,
                     "toolCorrections": tool_corrections,
+                    "conclusionCorrections": conclusion_corrections,
+                    "conclusionCorrectionLimit": self.budget.max_conclusion_corrections,
                     "observationOnlyTurns": observation_only_turns,
                     "observationOnlyTurnLimit": self.budget.max_observation_only_turns,
                     "noProgressTurns": no_progress_turns,
@@ -1578,6 +1599,7 @@ class OrdivonAgentLoop:
                     total_tokens=total_tokens,
                     model_retries=model_retries,
                     tool_corrections=tool_corrections,
+                    conclusion_corrections=conclusion_corrections,
                     observation_only_turns=observation_only_turns,
                     no_progress_turns=no_progress_turns,
                 ),
@@ -2306,7 +2328,10 @@ class OrdivonAgentLoop:
                                 RunStopCode.INVALID_MODEL_OUTPUT,
                                 detail=f"Conclusion rejected: {error}",
                             )
-                        if tool_corrections >= self.budget.max_tool_corrections:
+                        if (
+                            conclusion_corrections
+                            >= self.budget.max_conclusion_corrections
+                        ):
                             return stop(
                                 RunStopCode.INVALID_MODEL_OUTPUT,
                                 detail=(
@@ -2314,7 +2339,7 @@ class OrdivonAgentLoop:
                                     f"local rejection: {error}"
                                 ),
                             )
-                        tool_corrections += 1
+                        conclusion_corrections += 1
                         messages.append(
                             {
                                 "role": "assistant",
@@ -2327,8 +2352,9 @@ class OrdivonAgentLoop:
                                 "role": "user",
                                 "content": (
                                     "Harness conclusion gate rejected this candidate "
-                                    "conclusion as incomplete. Continue with the available "
-                                    f"tools and correct the missing evidence: {str(error)[:1_500]}"
+                                    "conclusion. Correct the candidate using the caller/domain "
+                                    "rejection reason below; use available tools or evidence only "
+                                    f"when relevant: {str(error)[:1_500]}"
                                 ),
                             }
                         )
@@ -2339,7 +2365,8 @@ class OrdivonAgentLoop:
                                     result.conclusion.to_dict()
                                 ),
                                 "errorKind": error.kind.value,
-                                "correction": tool_corrections,
+                                "correction": conclusion_corrections,
+                                "conclusionCorrection": conclusion_corrections,
                                 "safeToCorrect": True,
                             },
                         )

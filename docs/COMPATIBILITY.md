@@ -45,7 +45,14 @@ Current writers own only independent Harness state: `HarnessRunContract`, Run pr
 
 Pre-H3 Host-backed state is not a current compatibility obligation. Historical receipts remain evidence of the implementation that produced them; they are not a decoder requirement for H3.
 
-Schema-v1 caller-neutral `HarnessRunContract` keeps one narrow compatibility rule because it is part of the independent line: budget fields present in the Contract are exact authority; omitted known fields use the historical defaults; unknown fields fail closed.
+Schema-v1 caller-neutral `HarnessRunContract` keeps one narrow compatibility rule
+because it is part of the independent line: budget fields present in the Contract
+are exact authority; omitted known fields use the historical defaults; unknown
+fields fail closed. `maxConclusionCorrections` is a later known budget field with
+historical default 3 when absent. An older Contract that explicitly binds
+`maxToolCorrections` does not thereby bind conclusion correction: Tool-call
+correction and caller/domain conclusion correction are separate execution
+mechanics.
 
 ## Upgrade rule
 

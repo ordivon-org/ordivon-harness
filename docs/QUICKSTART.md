@@ -109,7 +109,12 @@ budget = RunBudget(
 # HarnessRunContract. Persist `contract.to_dict()` as RUN_CONTRACT.json.
 ```
 
-`max_tool_calls=0` is valid for a no-Tool Run. Capability comes from the Tool catalog/grant bound by the Contract; a positive Tool budget never grants a Tool by itself.
+`max_tool_calls=0` is valid for a no-Tool Run. Capability comes from the Tool
+catalog/grant bound by the Contract; a positive Tool budget never grants a Tool by
+itself. `max_tool_corrections` bounds only model-correctable Tool-call rejection;
+`max_conclusion_corrections` independently bounds caller/domain conclusion-gate
+rejection. Older schema-v1 Contracts that omit `maxConclusionCorrections` remain
+readable with the historical default of 3.
 
 ```bash
 ordivon-harness --state-root /var/lib/ordivon/harness \

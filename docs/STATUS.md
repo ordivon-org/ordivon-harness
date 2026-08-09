@@ -39,7 +39,8 @@ Ordivon Harness is an independent caller-neutral **durable cognitive execution s
 - SQLite Store creation, reopen, Doctor, lease/revision fencing, backup and restore;
 - durable Provider Call continuity and response-loss recovery;
 - durable Tool-step intents/fences/receipts and Runtime reconciliation;
-- Agent loop budgets, pause/resume and no-progress handling;
+- Agent loop budgets, pause/resume and no-progress handling, with separate Tool-call
+  and caller/domain conclusion-correction counters/budgets;
 - model-visible WorkingView projection separated from canonical Run history;
 - Agent-owned durable WorkingSet transitions with exact replay/concurrency fencing;
 - explicit discovery/materialization versus Agent selection boundary;

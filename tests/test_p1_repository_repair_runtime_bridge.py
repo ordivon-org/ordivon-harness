@@ -415,7 +415,8 @@ class RepositoryRepairRuntimeBridgeTests(unittest.TestCase):
             self.assertEqual(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
             self.assertEqual(result.model_calls, 7)
             self.assertEqual(result.tool_calls, 5)
-            self.assertEqual(result.usage["toolCorrections"], 1)
+            self.assertEqual(result.usage["toolCorrections"], 0)
+            self.assertEqual(result.usage["conclusionCorrections"], 1)
             self.assertIn(
                 "conclusion_rejected",
                 {event.kind for event in result.trace.events},
