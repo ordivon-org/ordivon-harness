@@ -28,6 +28,7 @@ from ..completion import (
 )
 from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
+    AgentCallerIngressPromotionProposal,
     AgentWorkingSetTransitionProposal,
     HarnessWorkingSetPin,
     parse_working_set_history_query,
@@ -53,6 +54,7 @@ SUPPORTED_DEEPSEEK_MODELS = ("deepseek-v4-flash", "deepseek-v4-pro")
 DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID = "deepseek:default"
 _CONCLUSION_TOOL_NAME = "submit_run_conclusion"
 _WORKING_SET_TRANSITION_TOOL_NAME = "propose_working_set_transition"
+_CALLER_INGRESS_PROMOTION_TOOL_NAME = "promote_caller_ingress"
 
 
 def _text(value: str, label: str, *, max_bytes: int = 2_048) -> str:
@@ -569,6 +571,79 @@ def _working_set_transition_tool() -> dict[str, JsonValue]:
     }
 
 
+def _caller_ingress_promotion_tool(
+    allowed_caller_indexes: tuple[int, ...],
+) -> dict[str, JsonValue]:
+    return {
+        "type": "function",
+        "function": {
+            "name": _CALLER_INGRESS_PROMOTION_TOOL_NAME,
+            "description": (
+                "Add exact messages from the current caller interaction to the current "
+                "durable Working Set. Choose only message indexes you actually saw and "
+                "one new successor slot. Existing selected sources are retained "
+                "mechanically; do not restate or guess their pin identities. You cannot "
+                "provide or rewrite promoted bytes; Harness derives them from caller-ingress "
+                "authority. This is cognition state, not a Runtime effect."
+            ),
+            "parameters": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "next_attempt_id": {"type": "string", "minLength": 1},
+                    "promotion_slot": {"type": "string", "minLength": 1},
+                    "caller_message_indexes": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "enum": list(allowed_caller_indexes),
+                        },
+                        "minItems": 1,
+                        "maxItems": min(32, len(allowed_caller_indexes)),
+                    },
+                    "basis": {"type": "string", "minLength": 1},
+                },
+                "required": [
+                    "next_attempt_id",
+                    "promotion_slot",
+                    "caller_message_indexes",
+                    "basis",
+                ],
+            },
+        },
+    }
+
+
+def _parse_caller_ingress_promotion(
+    arguments: dict[str, JsonValue],
+) -> AgentCallerIngressPromotionProposal:
+    expected = {
+        "next_attempt_id",
+        "promotion_slot",
+        "caller_message_indexes",
+        "basis",
+    }
+    if set(arguments) != expected:
+        raise ValueError("DeepSeek caller ingress promotion fields differ")
+    next_attempt_id = arguments["next_attempt_id"]
+    promotion_slot = arguments["promotion_slot"]
+    basis = arguments["basis"]
+    raw_indexes = arguments["caller_message_indexes"]
+    if not all(
+        isinstance(value, str)
+        for value in (next_attempt_id, promotion_slot, basis)
+    ):
+        raise TypeError("DeepSeek caller ingress promotion text fields are invalid")
+    if not isinstance(raw_indexes, list):
+        raise TypeError("DeepSeek caller ingress promotion indexes must be a list")
+    return AgentCallerIngressPromotionProposal(
+        next_attempt_id=next_attempt_id,
+        promotion_slot=promotion_slot,
+        caller_message_indexes=tuple(raw_indexes),
+        basis=basis,
+    )
+
+
 def _working_set_history_tool() -> dict[str, JsonValue]:
     return {
         "type": "function",
@@ -825,10 +900,12 @@ class DeepSeekTurnAdapter:
         transport: DeepSeekTransport | None = None,
         completion_contract: Mapping[str, JsonValue] | None = None,
         working_set_transitions: bool = False,
+        caller_ingress_promotions: bool = False,
         working_set_history: bool = False,
     ) -> None:
         self.settings = settings
         self.working_set_transitions = working_set_transitions
+        self.caller_ingress_promotions = caller_ingress_promotions
         self.working_set_history = working_set_history
         self.model_id = settings.model
         self.transport = transport or HttpClientDeepSeekTransport()
@@ -962,6 +1039,7 @@ class DeepSeekTurnAdapter:
         reserved = {
             _CONCLUSION_TOOL_NAME,
             _WORKING_SET_TRANSITION_TOOL_NAME,
+            _CALLER_INGRESS_PROMOTION_TOOL_NAME,
             WORKING_SET_HISTORY_CONTROL_NAME,
         }
         collisions = allowed_tool_names & reserved
@@ -973,15 +1051,30 @@ class DeepSeekTurnAdapter:
         tools = [_provider_tool(tool) for tool in request.tools]
         if self.working_set_transitions:
             tools.append(_working_set_transition_tool())
+        promotion_indexes = tuple(
+            ref.caller_message_index for ref in request.caller_ingress_refs
+        )
+        if self.caller_ingress_promotions and promotion_indexes:
+            tools.append(_caller_ingress_promotion_tool(promotion_indexes))
         if self.working_set_history:
             tools.append(_working_set_history_tool())
         tools.append(_conclusion_tool(self._structured_result_schema))
-        execution_control = {
+        execution_control: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.harness-agent-turn-control",
             "remainingBudget": request.remaining_budget,
             "admittedRuntimeTools": [tool.name for tool in request.tools],
         }
+        if self.caller_ingress_promotions:
+            execution_control["callerIngress"] = {
+                "promotable": [
+                    {
+                        "callerMessageIndex": ref.caller_message_index,
+                        "providerMessageIndex": ref.request_message_index + 1,
+                    }
+                    for ref in request.caller_ingress_refs
+                ]
+            }
         provider_messages = [
             {
                 "role": "system",
@@ -990,6 +1083,14 @@ class DeepSeekTurnAdapter:
                     "constraints, not task evidence. Previously seen Runtime Tools that are "
                     "not listed as admitted are unavailable for this turn. Harness cognition "
                     "and conclusion control actions offered separately remain available. "
+                    + (
+                        "When caller-ingress promotion is available, only messages listed under "
+                        "callerIngress.promotable are current caller-ingress messages eligible "
+                        "for promotion; other user-role messages are selected or otherwise "
+                        "non-promotable cognition. "
+                        if self.caller_ingress_promotions
+                        else ""
+                    )
                     + canonical_bytes(execution_control).decode("utf-8")
                 ),
             },
@@ -1081,6 +1182,7 @@ class DeepSeekTurnAdapter:
         runtime_calls: list[AgentToolCall] = []
         conclusion: AgentRunConclusion | None = None
         working_set_transition: AgentWorkingSetTransitionProposal | None = None
+        caller_ingress_promotion: AgentCallerIngressPromotionProposal | None = None
 
         def invalid_call(
             call_id: str,
@@ -1116,6 +1218,8 @@ class DeepSeekTurnAdapter:
                 raise TypeError("DeepSeek Tool Call name or arguments are invalid")
             cognition_call = name == _WORKING_SET_TRANSITION_TOOL_NAME
             cognition_allowed = cognition_call and self.working_set_transitions
+            promotion_call = name == _CALLER_INGRESS_PROMOTION_TOOL_NAME
+            promotion_allowed = promotion_call and self.caller_ingress_promotions
             history_call = name == WORKING_SET_HISTORY_CONTROL_NAME
             history_allowed = history_call and self.working_set_history
             try:
@@ -1124,6 +1228,10 @@ class DeepSeekTurnAdapter:
                 if cognition_allowed:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments are invalid JSON"
+                    )
+                if promotion_allowed:
+                    raise ValueError(
+                        "DeepSeek caller ingress promotion arguments are invalid JSON"
                     )
                 if history_allowed:
                     raise ValueError(
@@ -1147,6 +1255,10 @@ class DeepSeekTurnAdapter:
                 if cognition_allowed:
                     raise ValueError(
                         "DeepSeek Working Set transition arguments must be an object"
+                    )
+                if promotion_allowed:
+                    raise ValueError(
+                        "DeepSeek caller ingress promotion arguments must be an object"
                     )
                 if history_allowed:
                     raise ValueError(
@@ -1210,6 +1322,23 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         f"invalid DeepSeek Working Set transition: {error}"
                     ) from error
+            elif promotion_call:
+                if not self.caller_ingress_promotions:
+                    raise ValueError(
+                        "DeepSeek called the unavailable caller ingress promotion control"
+                    )
+                if caller_ingress_promotion is not None:
+                    raise ValueError(
+                        "DeepSeek emitted multiple caller ingress promotions in one turn"
+                    )
+                try:
+                    caller_ingress_promotion = _parse_caller_ingress_promotion(
+                        dict(arguments)
+                    )
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"invalid DeepSeek caller ingress promotion: {error}"
+                    ) from error
             elif history_call:
                 if not self.working_set_history:
                     raise ValueError(
@@ -1236,9 +1365,19 @@ class DeepSeekTurnAdapter:
                     continue
                 runtime_calls.append(AgentToolCall(call_id, name, dict(arguments)))
 
-        if working_set_transition is not None and (runtime_calls or conclusion is not None):
+        if working_set_transition is not None and (
+            runtime_calls
+            or conclusion is not None
+            or caller_ingress_promotion is not None
+        ):
             raise ValueError(
-                "DeepSeek Working Set transition cannot be mixed with Tools or conclusion"
+                "DeepSeek Working Set transition cannot be mixed with Tools, conclusion, or caller ingress promotion"
+            )
+        if caller_ingress_promotion is not None and (
+            runtime_calls or conclusion is not None
+        ):
+            raise ValueError(
+                "DeepSeek caller ingress promotion cannot be mixed with Tools or conclusion"
             )
         history_calls = [
             call
@@ -1246,7 +1385,11 @@ class DeepSeekTurnAdapter:
             if call.name == WORKING_SET_HISTORY_CONTROL_NAME
             and call.argument_error is None
         ]
-        if history_calls and (len(runtime_calls) != 1 or conclusion is not None):
+        if history_calls and (
+            len(runtime_calls) != 1
+            or conclusion is not None
+            or caller_ingress_promotion is not None
+        ):
             raise ValueError(
                 "DeepSeek Working Set history control cannot be mixed with Runtime Tools or conclusion"
             )
@@ -1306,4 +1449,5 @@ class DeepSeekTurnAdapter:
             raw_response_digest=raw_digest,
             effective_model_id=response_model,
             working_set_transition=working_set_transition,
+            caller_ingress_promotion=caller_ingress_promotion,
         )

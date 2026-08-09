@@ -10,6 +10,7 @@ from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 from ..protocol import HarnessProviderCallFailureReceipt
 from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
+    CallerIngressPromotionHandler,
     WorkingSetHistoryReader,
     WorkingSetTransitionHandler,
     WorkingViewProjector,
@@ -19,6 +20,7 @@ from ..working_view import (
 from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
+    AgentCallerIngressRef,
     AgentRunConclusion,
     AgentToolCall,
     AgentTurnAdapter,
@@ -283,6 +285,7 @@ class OrdivonAgentLoop:
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
         working_view_projector: WorkingViewProjector | None = None,
         working_set_transition_handler: WorkingSetTransitionHandler | None = None,
+        caller_ingress_promotion_handler: CallerIngressPromotionHandler | None = None,
         working_set_history_reader: WorkingSetHistoryReader | None = None,
     ) -> None:
         self.adapter = adapter
@@ -290,10 +293,15 @@ class OrdivonAgentLoop:
         self.budget = budget
         self.working_view_projector = working_view_projector
         self.working_set_transition_handler = working_set_transition_handler
+        self.caller_ingress_promotion_handler = caller_ingress_promotion_handler
         self.working_set_history_reader = working_set_history_reader
         if working_set_transition_handler is not None and working_view_projector is None:
             raise ValueError(
                 "Agent Working Set transitions require a Working View projector"
+            )
+        if caller_ingress_promotion_handler is not None and working_view_projector is None:
+            raise ValueError(
+                "caller ingress promotion requires a Working View projector"
             )
         if working_set_history_reader is not None and working_view_projector is None:
             raise ValueError(
@@ -1439,6 +1447,7 @@ class OrdivonAgentLoop:
                 )
             request_context_digest = context_digest
             request_messages = tuple(messages)
+            caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
             working_view = None
             if self.working_view_projector is not None:
                 try:
@@ -1459,9 +1468,45 @@ class OrdivonAgentLoop:
                     pre_caller_tool_exchange_messages.clear()
                     post_caller_tool_exchange_messages.clear()
                     transient_working_set_digest = None
+                projected_caller_entries = tuple(
+                    (index, dict(message))
+                    for index, message in enumerate(caller_ingress_messages)
+                )
+                caller_projector = getattr(
+                    self.caller_ingress_promotion_handler,
+                    "project_current_caller_ingress",
+                    None,
+                )
+                if callable(caller_projector):
+                    try:
+                        projected_caller_entries = caller_projector(tuple(messages))
+                    except Exception as error:  # noqa: BLE001 - cognition projection is a Harness boundary.
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                "caller ingress projection failed: "
+                                f"{type(error).__name__}: {error}"
+                            ),
+                        )
+                projected_caller_messages = tuple(
+                    message for _caller_index, message in projected_caller_entries
+                )
+                caller_message_offset = (
+                    len(base_working_view.messages)
+                    + len(pre_caller_tool_exchange_messages)
+                )
+                caller_ingress_refs = tuple(
+                    AgentCallerIngressRef(
+                        caller_message_index=caller_index,
+                        request_message_index=caller_message_offset + position,
+                    )
+                    for position, (caller_index, _message) in enumerate(
+                        projected_caller_entries
+                    )
+                )
                 projected_overlay = (
                     tuple(pre_caller_tool_exchange_messages)
-                    + tuple(caller_ingress_messages)
+                    + projected_caller_messages
                     + tuple(post_caller_tool_exchange_messages)
                 )
                 working_view = overlay_working_view(
@@ -1483,7 +1528,7 @@ class OrdivonAgentLoop:
                             + len(post_caller_tool_exchange_messages)
                         ),
                         "callerCognitionIngressMessages": len(
-                            caller_ingress_messages
+                            projected_caller_messages
                         ),
                         "canonicalMessagesDigest": canonical_digest(messages),
                         "projectedMessagesDigest": canonical_digest(
@@ -1515,6 +1560,7 @@ class OrdivonAgentLoop:
                     observation_only_turns=observation_only_turns,
                     no_progress_turns=no_progress_turns,
                 ),
+                caller_ingress_refs=caller_ingress_refs,
             )
             token_bounder = getattr(
                 self.adapter, "request_token_upper_bound", None
@@ -2039,6 +2085,100 @@ class OrdivonAgentLoop:
                         + "; the Agent requested another admitted external Tool after the gate closed"
                     ),
                 )
+            if result.caller_ingress_promotion is not None:
+                handler = self.caller_ingress_promotion_handler
+                if handler is None:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=(
+                            "Agent proposed caller ingress promotion but this Loop "
+                            "did not grant that cognition surface"
+                        ),
+                    )
+                if working_view is None:
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail="caller ingress promotion omitted its source Working View",
+                    )
+                try:
+                    source_working_set = handler.load_current_working_set()
+                    if source_working_set.digest != working_view.working_set_digest:
+                        raise ValueError(
+                            "caller ingress promotion source is no longer current selected cognition"
+                        )
+                    committed_working_set = handler.apply_caller_ingress_promotion(
+                        result.caller_ingress_promotion,
+                        source_working_set_digest=working_view.working_set_digest,
+                        source_model_view_digest=request.context_digest,
+                    )
+                    selection_changed = committed_working_set.pins != source_working_set.pins
+                except ValueError as error:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=f"caller ingress promotion rejected: {error}",
+                    )
+                except Exception as error:  # noqa: BLE001 - durable cognition admission failure terminates this Run.
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=(
+                            "caller ingress promotion admission failed: "
+                            f"{type(error).__name__}: {error}"
+                        ),
+                    )
+                pre_caller_tool_exchange_messages.clear()
+                post_caller_tool_exchange_messages.clear()
+                transient_working_set_digest = None
+                if selection_changed:
+                    external_observation_gate_reason = None
+                    observation_only_turns = 0
+                    no_progress_turns = 0
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": result.content,
+                        "callerIngressPromotion": result.caller_ingress_promotion.to_dict(),
+                    }
+                )
+                recorder.record(
+                    "caller_ingress_promotion_applied",
+                    {
+                        "turnId": turn_id,
+                        "proposalDigest": result.caller_ingress_promotion.digest,
+                        "sourceWorkingSetDigest": working_view.working_set_digest,
+                        "sourceModelViewDigest": request.context_digest,
+                        "nextAttemptId": committed_working_set.attempt_id,
+                        "committedWorkingSetDigest": committed_working_set.digest,
+                        "promotionSlot": result.caller_ingress_promotion.promotion_slot,
+                        "callerMessageIndexes": list(
+                            result.caller_ingress_promotion.caller_message_indexes
+                        ),
+                        "selectionChanged": selection_changed,
+                    },
+                )
+                recorder.record(
+                    "run_progress_evaluated",
+                    {
+                        "turnId": turn_id,
+                        "observationOnly": False,
+                        "actionProgress": selection_changed,
+                        "newEvidence": True,
+                        "observationOnlyTurns": observation_only_turns,
+                        "noProgressTurns": no_progress_turns,
+                        "callerIngressPromotion": True,
+                        "workingSetSelectionChanged": selection_changed,
+                    },
+                )
+                try:
+                    bind_run_state()
+                except ToolBridgeError as state_error:
+                    return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                except Exception as state_error:  # noqa: BLE001
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=f"{type(state_error).__name__}: {state_error}",
+                    )
+                continue
+
             if result.working_set_transition is not None:
                 handler = self.working_set_transition_handler
                 if handler is None:

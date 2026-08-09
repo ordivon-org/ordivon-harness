@@ -6,7 +6,10 @@ from typing import Any, Protocol
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from ..working_view import AgentWorkingSetTransitionProposal
+from ..working_view import (
+    AgentCallerIngressPromotionProposal,
+    AgentWorkingSetTransitionProposal,
+)
 
 
 def _exact(value: dict[str, Any], expected: set[str], label: str) -> None:
@@ -225,6 +228,36 @@ class AgentRunConclusion:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentCallerIngressRef:
+    caller_message_index: int
+    request_message_index: int
+
+    def __post_init__(self) -> None:
+        if type(self.caller_message_index) is not int or self.caller_message_index < 0:
+            raise ValueError("caller ingress index must be a non-negative integer")
+        if type(self.request_message_index) is not int or self.request_message_index < 0:
+            raise ValueError("caller ingress request position must be a non-negative integer")
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "callerMessageIndex": self.caller_message_index,
+            "requestMessageIndex": self.request_message_index,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentCallerIngressRef:
+        _exact(
+            value,
+            {"callerMessageIndex", "requestMessageIndex"},
+            "AgentCallerIngressRef",
+        )
+        return cls(
+            caller_message_index=value["callerMessageIndex"],
+            request_message_index=value["requestMessageIndex"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class AgentTurnRequest:
     harness_run_id: str
     turn_id: str
@@ -235,6 +268,7 @@ class AgentTurnRequest:
     messages: tuple[dict[str, JsonValue], ...]
     tools: tuple[AgentToolDefinition, ...]
     remaining_budget: dict[str, JsonValue]
+    caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
 
     def __post_init__(self) -> None:
         _text(self.harness_run_id, "Harness Run identity", max_bytes=300)
@@ -250,6 +284,16 @@ class AgentTurnRequest:
         if len(names) != len(set(names)):
             raise ValueError("Agent turn Tool names must be unique")
         validate_json_value(self.remaining_budget)
+        caller_indexes = [ref.caller_message_index for ref in self.caller_ingress_refs]
+        request_indexes = [ref.request_message_index for ref in self.caller_ingress_refs]
+        if len(caller_indexes) != len(set(caller_indexes)):
+            raise ValueError("Agent turn caller ingress indexes must be unique")
+        if len(request_indexes) != len(set(request_indexes)):
+            raise ValueError("Agent turn caller ingress request positions must be unique")
+        if tuple(sorted(self.caller_ingress_refs, key=lambda ref: ref.caller_message_index)) != self.caller_ingress_refs:
+            raise ValueError("Agent turn caller ingress refs must be sorted by caller index")
+        if any(index >= len(self.messages) for index in request_indexes):
+            raise ValueError("Agent turn caller ingress request position is outside messages")
 
     @property
     def digest(self) -> str:
@@ -265,7 +309,7 @@ class AgentTurnRequest:
         return canonical_digest(value)
 
     def to_dict(self) -> dict[str, JsonValue]:
-        return {
+        value: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.agent-turn-request",
             "harnessRunId": self.harness_run_id,
@@ -278,37 +322,43 @@ class AgentTurnRequest:
             "tools": [tool.to_dict() for tool in self.tools],
             "remainingBudget": self.remaining_budget,
         }
+        if self.caller_ingress_refs:
+            value["callerIngressRefs"] = [
+                ref.to_dict() for ref in self.caller_ingress_refs
+            ]
+        return value
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> AgentTurnRequest:
-        _exact(
-            value,
-            {
-                "schemaVersion",
-                "kind",
-                "harnessRunId",
-                "turnId",
-                "sequence",
-                "assignmentId",
-                "contextDigest",
-                "toolCatalogDigest",
-                "messages",
-                "tools",
-                "remainingBudget",
-            },
-            "AgentTurnRequest",
-        )
+        base_fields = {
+            "schemaVersion",
+            "kind",
+            "harnessRunId",
+            "turnId",
+            "sequence",
+            "assignmentId",
+            "contextDigest",
+            "toolCatalogDigest",
+            "messages",
+            "tools",
+            "remainingBudget",
+        }
+        if set(value) not in {frozenset(base_fields), frozenset(base_fields | {"callerIngressRefs"})}:
+            raise ValueError("AgentTurnRequest fields differ")
         if value["schemaVersion"] != 1 or value["kind"] != "ordivon.agent-turn-request":
             raise ValueError("AgentTurnRequest version or kind is invalid")
         raw_messages = value["messages"]
         raw_tools = value["tools"]
         raw_budget = value["remainingBudget"]
+        raw_caller_refs = value.get("callerIngressRefs", [])
         if (
             not isinstance(raw_messages, list)
             or any(not isinstance(item, dict) for item in raw_messages)
             or not isinstance(raw_tools, list)
             or any(not isinstance(item, dict) for item in raw_tools)
             or not isinstance(raw_budget, dict)
+            or not isinstance(raw_caller_refs, list)
+            or any(not isinstance(item, dict) for item in raw_caller_refs)
         ):
             raise ValueError("AgentTurnRequest collections are invalid")
         return cls(
@@ -321,6 +371,9 @@ class AgentTurnRequest:
             messages=tuple(dict(item) for item in raw_messages),
             tools=tuple(AgentToolDefinition.from_dict(item) for item in raw_tools),
             remaining_budget=dict(raw_budget),
+            caller_ingress_refs=tuple(
+                AgentCallerIngressRef.from_dict(item) for item in raw_caller_refs
+            ),
         )
 
 
@@ -336,6 +389,7 @@ class AgentTurnResult:
     raw_response_digest: str
     effective_model_id: str | None = None
     working_set_transition: AgentWorkingSetTransitionProposal | None = None
+    caller_ingress_promotion: AgentCallerIngressPromotionProposal | None = None
 
     def __post_init__(self) -> None:
         _text(self.model_call_id, "Model Call identity", max_bytes=300)
@@ -345,12 +399,15 @@ class AgentTurnResult:
         call_ids = [call.tool_call_id for call in self.tool_calls]
         if len(call_ids) != len(set(call_ids)):
             raise ValueError("Agent turn Tool Call identities must be unique")
-        actions = int(bool(self.tool_calls)) + int(self.conclusion is not None) + int(
-            self.working_set_transition is not None
+        actions = (
+            int(bool(self.tool_calls))
+            + int(self.conclusion is not None)
+            + int(self.working_set_transition is not None)
+            + int(self.caller_ingress_promotion is not None)
         )
         if actions != 1:
             raise ValueError(
-                "Agent turn must choose exactly one of Tool Calls, conclusion, or Working Set transition"
+                "Agent turn must choose exactly one of Tool Calls, conclusion, Working Set transition, or caller ingress promotion"
             )
         validate_json_value(self.usage)
         _text(self.finish_reason, "model finish reason", max_bytes=300)
@@ -385,6 +442,8 @@ class AgentTurnResult:
             value["effectiveModelId"] = self.effective_model_id
         if self.working_set_transition is not None:
             value["workingSetTransition"] = self.working_set_transition.to_dict()
+        if self.caller_ingress_promotion is not None:
+            value["callerIngressPromotion"] = self.caller_ingress_promotion.to_dict()
         return value
 
     @classmethod
@@ -401,7 +460,11 @@ class AgentTurnResult:
             "finishReason",
             "rawResponseDigest",
         }
-        optional_fields = {"effectiveModelId", "workingSetTransition"}
+        optional_fields = {
+            "effectiveModelId",
+            "workingSetTransition",
+            "callerIngressPromotion",
+        }
         if not base_fields.issubset(value) or set(value) - (base_fields | optional_fields):
             raise ValueError(
                 "AgentTurnResult fields differ: "
@@ -432,6 +495,11 @@ class AgentTurnResult:
             raise ValueError(
                 "AgentTurnResult Working Set transition must be an object or null"
             )
+        raw_promotion = value.get("callerIngressPromotion")
+        if raw_promotion is not None and not isinstance(raw_promotion, dict):
+            raise ValueError(
+                "AgentTurnResult caller ingress promotion must be an object or null"
+            )
         raw_usage = value["usage"]
         if not isinstance(raw_usage, dict):
             raise ValueError("AgentTurnResult usage must be an object")
@@ -453,6 +521,11 @@ class AgentTurnResult:
                 None
                 if raw_transition is None
                 else AgentWorkingSetTransitionProposal.from_dict(raw_transition)
+            ),
+            caller_ingress_promotion=(
+                None
+                if raw_promotion is None
+                else AgentCallerIngressPromotionProposal.from_dict(raw_promotion)
             ),
         )
 

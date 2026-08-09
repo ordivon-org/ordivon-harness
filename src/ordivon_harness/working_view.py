@@ -193,6 +193,75 @@ class AgentWorkingSetTransitionProposal:
 
 
 @dataclass(frozen=True, slots=True)
+class AgentCallerIngressPromotionProposal:
+    """Agent-authored request to add exact current caller messages to cognition.
+
+    Promotion is additive over the current committed WorkingSet. The Agent chooses
+    exact caller-ingress message indexes, one new successor slot, and the next
+    attempt identity. It does not need to restate source pins that are not normally
+    model-visible, and it cannot supply or rewrite the promoted bytes.
+    """
+
+    next_attempt_id: str
+    promotion_slot: str
+    caller_message_indexes: tuple[int, ...]
+    basis: str
+
+    def __post_init__(self) -> None:
+        _text(self.next_attempt_id, "next Working Set attempt identity")
+        _text(self.promotion_slot, "caller ingress promotion slot", max_bytes=160)
+        _text(self.basis, "caller ingress promotion basis", max_bytes=2_048)
+        if not self.caller_message_indexes:
+            raise ValueError("caller ingress promotion requires at least one message index")
+        if any(type(index) is not int or index < 0 for index in self.caller_message_indexes):
+            raise ValueError("caller ingress promotion indexes must be non-negative integers")
+        if tuple(sorted(set(self.caller_message_indexes))) != self.caller_message_indexes:
+            raise ValueError("caller ingress promotion indexes must be unique and sorted")
+        if len(self.caller_message_indexes) > 32:
+            raise ValueError("caller ingress promotion may select at most 32 messages")
+
+    @property
+    def digest(self) -> str:
+        return canonical_digest(self.to_dict())
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "schemaVersion": 1,
+            "kind": "ordivon.agent-caller-ingress-promotion-proposal",
+            "nextAttemptId": self.next_attempt_id,
+            "promotionSlot": self.promotion_slot,
+            "callerMessageIndexes": list(self.caller_message_indexes),
+            "basis": self.basis,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentCallerIngressPromotionProposal:
+        expected = {
+            "schemaVersion",
+            "kind",
+            "nextAttemptId",
+            "promotionSlot",
+            "callerMessageIndexes",
+            "basis",
+        }
+        if set(value) != expected:
+            raise ValueError("AgentCallerIngressPromotionProposal fields differ")
+        raw_indexes = value["callerMessageIndexes"]
+        if (
+            value["schemaVersion"] != 1
+            or value["kind"] != "ordivon.agent-caller-ingress-promotion-proposal"
+            or not isinstance(raw_indexes, list)
+        ):
+            raise ValueError("AgentCallerIngressPromotionProposal is invalid")
+        return cls(
+            next_attempt_id=value["nextAttemptId"],
+            promotion_slot=value["promotionSlot"],
+            caller_message_indexes=tuple(raw_indexes),
+            basis=value["basis"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessWorkingSetSpec:
     """Agent-owned current selection state, distinct from durable Run history."""
 
@@ -397,6 +466,25 @@ class WorkingViewProjector(Protocol):
     def project(self) -> HarnessWorkingView: ...
 
 
+class CallerIngressPromotionHandler(Protocol):
+    """Materialize exact current caller ingress and select it into a successor WorkingSet."""
+
+    def load_current_working_set(self) -> HarnessWorkingSetSpec: ...
+
+    def apply_caller_ingress_promotion(
+        self,
+        proposal: AgentCallerIngressPromotionProposal,
+        *,
+        source_working_set_digest: str,
+        source_model_view_digest: str,
+    ) -> HarnessWorkingSetSpec: ...
+
+    def project_current_caller_ingress(
+        self,
+        messages: tuple[dict[str, JsonValue], ...],
+    ) -> tuple[tuple[int, dict[str, JsonValue]], ...]: ...
+
+
 class WorkingSetTransitionHandler(Protocol):
     """Admit one Agent-authored successor Working Set against its source model view."""
 
@@ -492,12 +580,14 @@ def compile_working_view(
 
 
 __all__ = [
+    "AgentCallerIngressPromotionProposal",
     "AgentWorkingSetTransitionProposal",
     "HarnessWorkingSetPin",
     "HarnessWorkingSetSpec",
     "HarnessWorkingView",
     "HarnessWorkingViewSource",
     "WORKING_SET_HISTORY_CONTROL_NAME",
+    "CallerIngressPromotionHandler",
     "WorkingSetHistoryReader",
     "WorkingSetTransitionHandler",
     "WorkingSetViewProjector",
