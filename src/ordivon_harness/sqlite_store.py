@@ -859,6 +859,7 @@ class SQLiteHarnessStore:
         owner_id: str,
         ttl_ms: int,
         now_ms: int,
+        expected_run_revision: int | None = None,
     ) -> HarnessRunLease:
         if not owner_id or owner_id != owner_id.strip():
             raise ValueError("Harness lease owner must be non-empty and trimmed")
@@ -866,6 +867,13 @@ class SQLiteHarnessStore:
             raise ValueError("Harness lease TTL must be positive and time non-negative")
         with self._transaction():
             run = self.load_run(harness_run_id)
+            if (
+                expected_run_revision is not None
+                and run.revision != expected_run_revision
+            ):
+                raise HarnessRevisionConflict(
+                    f"Harness Run revision is {run.revision}, expected {expected_run_revision} before lease admission"
+                )
             if run.status.terminal:
                 raise HarnessTerminalConflict("terminal Harness Run cannot be leased")
             current = self.connection.execute(

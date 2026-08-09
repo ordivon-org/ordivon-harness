@@ -216,6 +216,7 @@ class HarnessStore(Protocol):
         owner_id: str,
         ttl_ms: int,
         now_ms: int,
+        expected_run_revision: int | None = None,
     ) -> HarnessRunLease: ...
 
     def release_run_lease(self, lease: HarnessRunLease) -> bool: ...

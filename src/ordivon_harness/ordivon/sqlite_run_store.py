@@ -2432,8 +2432,23 @@ class SQLiteHarnessRunContinuityStore:
     def prepare_tool_step(self, intent: HarnessToolStepIntent) -> StoredHarnessRunSnapshot:
         self._require_intent(intent)
         state = self._require_state()
+        observed_revision = self.store.load_run(self.harness_run_id).revision
+        try:
+            current_step = self.load_current_tool_step()
+        except KeyError:
+            current_step = None
+        if current_step is not None and current_step.intent.digest == intent.digest:
+            raise HarnessSuperseded("Harness Tool Step Intent is already prepared")
         now_ms = self.clock_ms()
-        lease = self._acquire_lease("tool-prepare", intent.digest, now_ms=now_ms)
+        try:
+            lease = self._acquire_lease(
+                "tool-prepare",
+                intent.digest,
+                now_ms=now_ms,
+                expected_run_revision=observed_revision,
+            )
+        except HarnessRevisionConflict as error:
+            raise HarnessSuperseded(str(error)) from error
         try:
             snapshot = self._build_snapshot(
                 HarnessRunPauseReason.EFFECT_DISPATCH_PENDING,
@@ -2925,7 +2940,14 @@ class SQLiteHarnessRunContinuityStore:
         ) as error:
             raise HarnessSuperseded(str(error)) from error
 
-    def _acquire_lease(self, operation: str, token: str, *, now_ms: int) -> HarnessRunLease:
+    def _acquire_lease(
+        self,
+        operation: str,
+        token: str,
+        *,
+        now_ms: int,
+        expected_run_revision: int | None = None,
+    ) -> HarnessRunLease:
         owner_token = canonical_digest(
             {
                 "harnessRunId": self.harness_run_id,
@@ -2938,6 +2960,7 @@ class SQLiteHarnessRunContinuityStore:
             owner_id=f"{self._execution_owner_id}:{operation}:{owner_token}",
             ttl_ms=_STORE_LEASE_TTL_MS,
             now_ms=now_ms,
+            expected_run_revision=expected_run_revision,
         )
 
     def _heads(self) -> _Heads:

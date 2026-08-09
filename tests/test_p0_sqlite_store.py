@@ -325,6 +325,49 @@ class SQLiteHarnessStoreTests(unittest.TestCase):
                     )
                 self.assertTrue(store.release_run_lease(current))
 
+    def test_lease_expected_revision_rejects_stale_observation_without_replacing_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with SQLiteHarnessStore.initialize(directory) as store:
+                contract = run_contract(
+                    run_id="harness-run:p0-stale-lease",
+                    caller_ref="trial:p0-stale-lease",
+                )
+                store.create_run(contract)
+                first = store.acquire_run_lease(
+                    contract.harness_run_id,
+                    owner_id="worker:first",
+                    ttl_ms=100,
+                    now_ms=1_001,
+                    expected_run_revision=1,
+                )
+                store.append_event(
+                    event_id="event:p0-stale-lease-advance",
+                    harness_run_id=contract.harness_run_id,
+                    event_kind="harness.run-started",
+                    data={"source": "test"},
+                    expected_revision=1,
+                    recorded_at_ms=1_002,
+                    lease=first,
+                    lease_checked_at_ms=1_002,
+                )
+                with self.assertRaises(HarnessRevisionConflict):
+                    store.acquire_run_lease(
+                        contract.harness_run_id,
+                        owner_id="worker:stale",
+                        ttl_ms=100,
+                        now_ms=1_003,
+                        expected_run_revision=1,
+                    )
+                current = store.acquire_run_lease(
+                    contract.harness_run_id,
+                    owner_id="worker:current",
+                    ttl_ms=100,
+                    now_ms=1_003,
+                    expected_run_revision=2,
+                )
+                self.assertEqual(current.run_revision, 2)
+                self.assertTrue(store.release_run_lease(current))
+
     def test_live_lease_excludes_another_owner_and_expiry_allows_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             with SQLiteHarnessStore.initialize(directory) as store:
