@@ -302,6 +302,13 @@
       "status": "verified",
       "implementationRevision": "51825aaef6f68f2cae491f8ab77d5cbc89c2ad9a",
       "scope": "Current live acceptance for explicit Agent provider continuity: the canonical DeepSeek cancellable transport preserves direct behavior without a proxy, accepts only a validated IPv4-loopback HTTP CONNECT sidecar, completed a real deepseek-v4-flash Run through native-a, and syscall/policy-route evidence proved the Harness process connected to 127.0.0.1:19081 while the sidecar egress authority used Workstation table 201 rather than ambient Surfshark. This is explicit composition, not automatic Provider migration."
+    },
+    {
+      "claimId": "harness.execution.conclusion-correction-separation",
+      "file": "harness-conclusion-correction-separation-9e47ee6.json",
+      "status": "verified",
+      "implementationRevision": "9e47ee615b2db77e274921ef5a043e429ba04c56",
+      "scope": "Current acceptance for domain-neutral conclusion correction separation: independent maxConclusionCorrections/conclusionCorrections authority, owner-reason feedback, backward-compatible schema-v1 budget materialization, 273-test regression on an identical src+tests tree, and exact final Finance admission correction with zero Tool calls/effects."
     }
   ]
 }

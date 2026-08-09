@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-conclusion-correction-separation-acceptance",
+  "implementationSourceRevision": "9e47ee615b2db77e274921ef5a043e429ba04c56",
+  "baseRevision": "1b27e7a7087f3e45f08ee6ec03a651632d6760dd",
+  "portableEquivalentRevision": "971ac0142698bfbdaa9cb12ed4bbfdb9d8bd2c15",
+  "architecture": {
+    "correctionSeparationLaw": "Model-correctable Runtime/Tool rejection and caller/domain conclusion rejection are different execution mechanics. Tool rejection consumes maxToolCorrections/toolCorrections; conclusion rejection consumes maxConclusionCorrections/conclusionCorrections.",
+    "ownerAdmissionLaw": "Harness hosts the correction boundary but does not own domain truth. A caller/domain validate_conclusion rejection remains owner-authored semantic admission and Harness forwards that exact reason without assuming incompleteness or missing evidence.",
+    "compatibilityLaw": "Schema-v1 Run Contracts may omit the later maxConclusionCorrections field and materialize historical default 3. An explicitly bound maxToolCorrections value does not implicitly bind conclusion correction. Unknown budget fields still fail closed.",
+    "effectLaw": "Conclusion correction does not grant Tool or external-effect authority. The Finance acceptance used zero Tool calls, no dispatch claim, and no external financial write.",
+    "nonPromotionLaw": "This change does not add a generic semantic verifier, domain ontology, truth service, or optimizer. It only separates correction mechanics already present in the Agent loop."
+  },
+  "sourcePressure": {
+    "computingRevision": "d00b88c7016ee196f7a62c75d22afa801b346f9d",
+    "computingRawEvidence": "research/evidence/finance-conclusion-admission-dogfood-1f4ef0de7a65.json",
+    "computingRawEvidenceDigest": "sha256:1f4ef0de7a656be09e86cff5680d377da488faafb7565b18754e2b2e0c20d50c",
+    "computingAcceptanceEvidence": "research/evidence/finance-conclusion-admission-dogfood-acceptance-641dcc3ab614.json",
+    "computingAcceptanceDigest": "sha256:641dcc3ab614c4d77c71b12a0e2303e21cda39e31f4d40010800ecddb002f49b",
+    "financeRevision": "6e810f7d3022913e26386509945365ef358e0cfe",
+    "observedFailures": [
+      "Finance authority/notional rejection was described by Harness as incomplete/missing evidence even though evidence was not missing.",
+      "Conclusion rejection incremented toolCorrections and was blocked by maxToolCorrections despite toolCalls=0.",
+      "One natural Finance Run corrected delegated size 13 -> 13 -> 12 and succeeded, while another exhausted the shared correction budget, proving both value and friction of the existing owner-admission hook."
+    ]
+  },
+  "implementation": {
+    "runBudgetField": "maxConclusionCorrections",
+    "remainingBudgetField": "conclusionCorrections",
+    "usageFields": [
+      "conclusionCorrections",
+      "conclusionCorrectionLimit"
+    ],
+    "traceField": "conclusionCorrection",
+    "defaultLimit": 3,
+    "toolCorrectionPathsUnchanged": true,
+    "feedback": "Harness conclusion gate rejected this candidate conclusion. Correct the candidate using the caller/domain rejection reason below; use available tools or evidence only when relevant: <owner reason>"
+  },
+  "checks": {
+    "exactFinalTargetedTests": 14,
+    "exactFinalTargetedPassed": true,
+    "fullRegressionTests": 273,
+    "fullRegressionSkipped": 3,
+    "fullRegressionPassed": true,
+    "fullRegressionCodeTreeDigest": "0af665259acf538ba32b44944047360c914b1077",
+    "finalCodeTreeDigest": "0af665259acf538ba32b44944047360c914b1077",
+    "fullRegressionEquivalentCodeTreeProved": true,
+    "exactFinalFinanceProbePassed": true,
+    "financeProbeTrajectory": [
+      "sz=13 -> Finance denied",
+      "sz=12 -> Finance admitted"
+    ],
+    "financeProbeToolCalls": 0,
+    "financeProbeToolCorrections": 0,
+    "financeProbeConclusionCorrections": 1,
+    "financeProbeStateUnchanged": true,
+    "financeProbeDispatchClaims": 0,
+    "pythonCompilePassed": true,
+    "ruff01514ChangedFilesPassed": true,
+    "newTestRuffFormatPassed": true,
+    "uvLockOfflinePassed": true,
+    "markdownBaselineIssuesBefore": 178,
+    "markdownBaselineIssuesAfter": 178,
+    "addedProseCSpellPassed": true,
+    "gitDiffCheckPassed": true,
+    "newSQLiteSchemaAdded": false,
+    "newOrdivonProtocolCodecAdded": false,
+    "externalEffectAttempted": false
+  },
+  "runtimeEvidence": {
+    "fullRegressionJobId": "job-019fe5b2-4e0b-73f1-83f5-6947d0db664f",
+    "fullRegressionAttemptId": "attempt-019fe5b2-4e0b-73f1-83f5-695e58f1242f",
+    "exactFinalTargetedJobId": "job-019fe5b5-e3c4-74e1-928f-1199f4aaf048",
+    "exactFinalTargetedAttemptId": "attempt-019fe5b5-e3c4-74e1-928f-11af3bd90d76",
+    "exactFinalFinanceProbeJobId": "job-019fe5b6-4d89-7c22-b9d4-bc9aad5bcb7c",
+    "exactFinalFinanceProbeAttemptId": "attempt-019fe5b6-4d89-7c22-b9d4-bca57f2319fd"
+  },
+  "conclusion": "Real Finance owner-admission pressure justifies separating conclusion correction from Tool correction, not adding a new semantic authority layer. Harness now carries an independent conclusion-correction budget/counter and reason-neutral owner feedback. A zero Tool-correction budget no longer disables a legitimate caller/domain conclusion repair; the tested Finance 65 USD candidate was rejected and corrected to the admitted 60 USD candidate with toolCorrections=0 and conclusionCorrections=1.",
+  "knownLimits": [
+    "maxConclusionCorrections defaults to 3 for backward-compatible schema-v1 materialization; this is a bounded execution default, not a claim that three attempts are universally optimal.",
+    "A caller/domain validate_conclusion implementation must still have legitimate owner semantics. Harness independence does not create truth authority.",
+    "Conclusion admission is not Task optimization. A domain may admit a lawful candidate that is not the best candidate for the Task.",
+    "The Finance dogfood observed one non-decodable terminal conclusion under structured-result-v1, but exact terminal provenance was not captured. This implementation deliberately does not change structured fallback behavior; deterministic reproduction remains required.",
+    "The 273-test full suite ran on the portable implementation tree before the unrelated global-secondary evidence-only commit. Git tree comparison proves src+tests identity with the final implementation revision, and exact final targeted/Finance checks were rerun after cherry-pick."
+  ]
+}
