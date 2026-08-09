@@ -285,9 +285,16 @@
     {
       "claimId": "harness.cognition.r0-product-composition",
       "file": "harness-r0-cognition-product-composition-debb576.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "debb5760b6352eaaaed25aeb51432f0e882d38f8",
-      "scope": "Current R0 acceptance: StandaloneHarnessRunner mechanically composes exact cognition bootstrap, WorkingView projection, Agent-owned WorkingSet transitions, caller-ingress promotion and optional bounded history from one explicit profile; deterministic replay/resume/history tests pass and real deepseek-v4-flash product-path probes performed caller promotion and an ordinary transition to final [caller-fact] without test-only handler wiring."
+      "scope": "Historical R0 cognition product-composition acceptance retained unchanged after R1 made the concrete per-turn action surface request-bound and removed DeepSeek-local cognition feature flags. Its Standalone bootstrap/composition and live promotion/transition proofs remain valid for debb576, while R1 supersedes it as whole-current cognition/action-surface verification."
+    },
+    {
+      "claimId": "harness.capability.r1-single-turn-truth",
+      "file": "harness-r1-single-capability-truth-716cc4b.json",
+      "status": "verified",
+      "implementationRevision": "716cc4b4c4bcd34584df362d3c268899fadeca92",
+      "scope": "Current R1 acceptance: AgentTurnRequest.tools plus provider-neutral AgentTurnCapabilities are the exact per-turn action authority; capability changes alter dispatch and Provider request identity, existing Continuity fences changed capability truth, DeepSeek owns no cognition feature flags, and real deepseek-v4-flash probes exercised dynamic caller-promotion withdrawal and request-bound WorkingSet transition."
     }
   ]
 }

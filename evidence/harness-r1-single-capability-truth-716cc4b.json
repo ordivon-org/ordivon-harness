@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r1-single-capability-truth-acceptance",
+  "implementationSourceRevision": "716cc4b4c4bcd34584df362d3c268899fadeca92",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "architecture": {
+    "requestAuthorityLaw": "The exact AgentTurnRequest is the per-turn Agent action authority. Runtime/World actions are the request.tools set already bound to the turn; Harness-native conclusion/cognition actions are the provider-neutral request.capabilities value. Provider adapter configuration is not capability authority.",
+    "mechanismVsCapabilityLaw": "An installed mechanism is not automatically a current capability. StandaloneCognitionProfile selects mechanisms wired for the Run, while OrdivonAgentLoop derives each turn capability from the mechanisms actually present plus dynamic addressability. Caller promotion is admitted only when exact callerIngressRefs exist for that turn.",
+    "identityLaw": "Non-default AgentTurnCapabilities serialize inside AgentTurnRequest and therefore change AgentTurnRequest.dispatchDigest. DeepSeek derives its exact Provider body from the same request, so capability changes also change provider_request_digest. Default conclusion-only capabilities remain omitted for legacy request-shape compatibility.",
+    "providerLaw": "DeepSeekTurnAdapter owns no WorkingSet-transition, caller-promotion or history feature booleans. Request preparation, execution-control projection, call-handle decoding and response-action validation all use request.capabilities. A model call for a Harness-native action not granted by the exact request is rejected.",
+    "continuityLaw": "Existing Provider claim/replay authority requires no new schema: request.dispatchDigest, optional retained AgentTurnRequest CAS content and provider-specific request digest already fence the exact request. A same-turn claim whose only change is capability truth is rejected as HarnessProviderCallRequestMismatch.",
+    "privacyLaw": "Capability truth does not override Run content authority. History still requires the established model/Tool-content permissions for its Provider-faithful Tool channel, while caller promotion still requires exact model-authorized caller provenance.",
+    "nonServiceLaw": "R1 adds no global Capability Service, capability database, automatic recommendation layer, Memory/RAG policy or new SQLite/Ordivon Protocol schema. Capability is a small exact per-turn request value derived from existing structural authority."
+  },
+  "baselineCounterexample": {
+    "requestDispatchDigest": "sha256:bffc0315a0186d34d3b5bdc2e075f1925e267052564d3c1b4a2ebdfb7ca25865",
+    "adapterFlagsOffTools": [
+      "submit_run_conclusion"
+    ],
+    "adapterTransitionFlagOnTools": [
+      "propose_working_set_transition",
+      "submit_run_conclusion"
+    ],
+    "conclusion": "Before R1, the same exact AgentTurnRequest and same dispatchDigest could produce different physical Provider action surfaces solely because two DeepSeek adapters had different local cognition flags. This falsified the idea that Provider configuration was harmless composition metadata."
+  },
+  "deterministicBehavior": {
+    "legacyCodec": "A default conclusion-only AgentTurnCapabilities value is omitted from AgentTurnRequest serialization and decodes back to the default, preserving legacy request shape.",
+    "digestBinding": "Changing only working_set_transition from false to true changes both AgentTurnRequest.dispatchDigest and DeepSeek provider request digest; the rendered Provider tool set changes only because the exact request changed.",
+    "singleAdapterAdmission": "The same DeepSeek adapter rejects propose_working_set_transition when the exact request does not grant it and admits the same response when an otherwise equivalent request grants working_set_transition.",
+    "promotionAddressability": "An AgentTurnRequest cannot claim caller_ingress_promotion=true without at least one exact callerIngressRef. Product-loop tests prove promotion=false before caller input, true only on the turn with exact promotable caller provenance, and false again after promotion suppresses that ingress from the caller overlay.",
+    "continuityFence": "After Continuity claims one exact Provider turn, another request with the same turn/source identity but changed capability truth is rejected. Doctor remains healthy.",
+    "responseLossReplay": "The existing P-C1.3 Provider-completion response-loss test now proves transition capability is present on the original exact request and is derived again on the next request after durable result replay without redispatch."
+  },
+  "realModelExperiments": {
+    "model": "deepseek-v4-flash",
+    "dynamicPromotionProbe": "A normal Standalone product Run with caller-promotion mechanism installed and no DeepSeek cognition flags dispatched sequence 1 with callerRefs=[] and promotion=false; real DeepSeek concluded needs_input. On resume sequence 2 carried one exact caller ref, promotion=true and a different dispatchDigest; real DeepSeek promoted CURRENT_TOKEN=BLUE-71 into caller-fact. Sequence 3 then carried callerRefs=[] and promotion=false while the promoted bytes remained durable cognition; real DeepSeek did not fabricate a promotion call and concluded needs_input. Final WorkingSet slots were [caller-fact, task] and Continuity Doctor was healthy.",
+    "semanticVsAuthorityObservation": "On the post-promotion turn the model text still described the durable message imprecisely as caller ingress, yet the request-bound action surface exposed only conclusion and the model did not attempt the withdrawn promotion. This demonstrates that model semantic interpretation cannot override Harness action authority.",
+    "transitionPreflightControl": "A first one-turn transition probe with maxTotalTokens=8000 made zero Provider dispatches because the exact DeepSeek request upper bound exceeded the Run token budget. Harness stopped budget_exhausted with unchanged [drop, keep] and healthy Doctor; this was a pre-dispatch budget proof, not a transition failure.",
+    "requestBoundTransitionProbe": "Repeating the same transition experiment with sufficient token budget produced exactly one real Provider dispatch whose capabilities were conclusion=true, workingSetTransition=true, callerIngressPromotion=false, workingSetHistory=false and whose current slots were [drop, keep]. With no adapter cognition flags, real DeepSeek proposed the ordinary transition, producing final WorkingSet [keep] and healthy Doctor. The Run then stopped budget_exhausted because maxModelCalls=1 intentionally made this a one-Provider-turn proof."
+  },
+  "checks": {
+    "r1FocusedTests": 5,
+    "cognitionR0FocusedTests": 34,
+    "deepseekCompatibilityTests": 9,
+    "deterministicTests": 265,
+    "skippedTests": 3,
+    "fullRegressionPassed": true,
+    "ruff01517OfflinePassed": true,
+    "compileAllPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "liveDeepSeekDynamicPromotionProbePassed": true,
+    "liveDeepSeekRequestBoundTransitionProbePassed": true,
+    "deepSeekAdapterCognitionFlagsRemoved": true,
+    "capabilityChangeFencedByContinuity": true,
+    "newSQLiteSchemaAdded": false,
+    "newOrdivonProtocolCodecAdded": false,
+    "newRecommendedApiAdded": false,
+    "newCapabilityServiceAdded": false,
+    "newMemoryServiceAdded": false
+  },
+  "conclusion": "R1 proves that capability authority belongs to the exact Agent turn rather than Provider configuration. AgentTurnRequest.tools plus provider-neutral AgentTurnCapabilities now form the request-bound action surface: Loop derives it from actual mechanisms and dynamic addressability, DeepSeek only renders and validates it, and existing Provider Continuity fences/replays it through the exact request identity. The original same-dispatch/different-Provider-surface counterexample is therefore eliminated. Real deepseek-v4-flash runs exercised dynamic promotion false→true→false and a request-bound WorkingSet transition with no adapter cognition flags.",
+  "knownLimits": [
+    "AgentTurnCapabilities currently names the Harness-native actions implemented by this Agent Loop. It is not a generic ontology for every future World/domain action; external actions remain exact AgentTurnRequest.tools.",
+    "StandaloneCognitionProfile remains product composition configuration. R1 does not yet remove the individual Loop handler parameters or extract a separate Agent Interface kernel; that is later recomposition work.",
+    "History capability is derived from history-reader presence and remains subject to the existing Tool-content privacy contract. R1 does not redesign its Provider-faithful Tool-channel representation.",
+    "Conclusion remains an invariant true capability for current Runs. R1 does not introduce a state where an Agent turn is forbidden from reporting candidate_completed or needs_input.",
+    "Request-bound capability prevents Provider-local action drift; it does not ensure a model chooses an efficient action. Lawful same-selection attempt resets can still consume budget, as established by P-C1.9/R0.",
+    "The transition live probe intentionally used maxModelCalls=1, so budget_exhausted after the successful transition is expected and is not evidence of semantic Run completion.",
+    "The new capability value remains an experimental internal execution seam rather than part of the recommended ordivon_harness.api facade.",
+    "No Runtime, World, Finance, Host or other Ordivon repository was changed."
+  ]
+}
