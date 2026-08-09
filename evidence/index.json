@@ -334,16 +334,23 @@
     {
       "claimId": "harness.recomposition.r2-three-kernel-lineage",
       "file": "harness-r2-three-kernel-lineage-badae55.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "badae5543261678a836d1f410c188743f53ac87a",
-      "scope": "Current Harness R2 acceptance: AgentTurnProjector + CognitionAdmissionKernel + ProviderCallLifecycle are distinct internal seams; Loop keeps policy/action semantics; Continuity remains independent Journal/CAS verifier; inherited no-progress conclusion ownership and conclusion-correction authority are preserved; 287 discovered tests/full build gate pass; exact current source completed a real deepseek-v4-flash caller-promotion trajectory through native-a."
+      "scope": "Current Harness R2 acceptance: AgentTurnProjector + CognitionAdmissionKernel + ProviderCallLifecycle are distinct internal seams; Loop keeps policy/action semantics; Continuity remains independent Journal/CAS verifier; inherited no-progress conclusion ownership and conclusion-correction authority are preserved; 287 discovered tests/full build gate pass; exact current source completed a real deepseek-v4-flash caller-promotion trajectory through native-a. Superseded as current-source verification after R3 application-surface changes; the receipt remains historical evidence for its bound implementation."
     },
     {
       "claimId": "harness.transport.no-vpn-tool-continuity",
       "file": "harness-no-vpn-tool-continuity-49a3882.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "49a388238ed5df9d50be182f06bb86e3e2ff2e5b",
-      "scope": "Current-source live acceptance composing the existing bounded native-a DeepSeek transport with one real observation-only Runtime workspace Tool: two DeepSeek turns, one committed Runtime rg Job with Harness dispatch fence, Tool observation consumed by the second turn, and candidate_completed. This proves functional Provider+Tool continuity without claiming an OpenAI secondary, physical Surfshark shutdown, generic destination reachability, or automatic failover."
+      "scope": "Current-source live acceptance composing the existing bounded native-a DeepSeek transport with one real observation-only Runtime workspace Tool: two DeepSeek turns, one committed Runtime rg Job with Harness dispatch fence, Tool observation consumed by the second turn, and candidate_completed. This proves functional Provider+Tool continuity without claiming an OpenAI secondary, physical Surfshark shutdown, generic destination reachability, or automatic failover. Superseded as current-source verification after R3 application-surface changes; the receipt remains historical evidence for its bound implementation."
+    },
+    {
+      "claimId": "harness.product.r3-supported-agent-surface",
+      "file": "harness-r3-supported-agent-surface-fe6fc1a.json",
+      "status": "verified",
+      "implementationRevision": "fe6fc1a589aace5b695f817501b66d69ea5b49e0",
+      "scope": "Current R3.1 product acceptance: HarnessAgentRun is the recommended state-root execution handle; it hides Store/Continuity/Bridge/RunBudget/provider-source wiring, performs structural/Adapter admission before durable create, keeps Contract/Provider/Runtime/cognition authority explicit, is used by CLI run/resume, keeps R2 kernels internal, passes 294 tests/full wheel/local acceptance on a byte-identical validated tree, and completes real deepseek-v4-flash pause/reopen/resume through the public API."
     }
   ]
 }

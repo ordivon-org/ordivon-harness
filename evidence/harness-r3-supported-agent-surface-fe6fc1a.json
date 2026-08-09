@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-r3-supported-agent-surface-lineage-acceptance",
+  "implementationSourceRevision": "fe6fc1a589aace5b695f817501b66d69ea5b49e0",
+  "baseRevision": "02a5bbc146c4b00b6ae1d385bd0acc6520f6789c",
+  "validatedEquivalentRevision": "7379370193f1b6507a74566dab2880cc6af24d0b",
+  "protocolRevision": "420dc356cb664d75db0f34f356156baebe5843db",
+  "worldModel": {
+    "surfaceLaw": "A supported Agent application surface owns mechanical Harness composition, not caller/domain semantics. The caller supplies exact Run Contract, chooses Provider via a Contract-bound Adapter factory, supplies external Runtime execution authority when required, and selects exact initial cognition. Harness owns state-root Store opening, Continuity reconstruction, built-in bridge composition, Contract-budget reconstruction and Snapshot-bound resume provenance.",
+    "reopenLaw": "Fresh-process reopen/resume requires state root, Harness Run identity and caller Provider factory plus any explicit external execution authority. Callers do not load pause snapshots, derive provider_source, instantiate Continuity/Bridge or reconstruct RunBudget.",
+    "preAdmissionLaw": "HarnessAgentRun.create performs pure structural admission, then exact Adapter identity/model resolution, before creating the state root or durable Run. Unsupported Tool surface, missing/forbidden Runtime authority or Adapter mismatch therefore leaves no partial Run and does not construct Provider for structurally invalid input.",
+    "providerChoiceLaw": "On open, Harness loads the exact persisted Contract then passes it to the caller-supplied Adapter factory. Harness binds Provider choice but does not choose it.",
+    "runtimeAuthorityLaw": "Runtime workspace identity, runtime-binding digest and foreign references are never inferred. Built-in Tool-bearing composition requires caller-supplied HarnessExecutionBinding and HarnessRuntimeClient; custom Tool surfaces fail closed to advanced core composition.",
+    "cognitionLaw": "HarnessCognitionProfile, HarnessCognitionSeed, HarnessCognitionSeedSource and HarnessCognitionSource expose exact caller-owned bootstrap state without discovery, ranking, summarization or automatic retention.",
+    "kernelBoundary": "AgentTurnProjector, CognitionAdmissionKernel and ProviderCallLifecycle remain internal and absent from the recommended API. R3 composes through them without exposing them.",
+    "compatibilityLaw": "R3.1 is additive. Existing low-level recommended exports remain available; narrowing that facade is deferred to a later evidence-gated R3 slice."
+  },
+  "integration": {
+    "parentAdvance": "02a5bbc added only no-VPN Tool-continuity evidence/index after the R3 experiment began.",
+    "sourceTreeObject": "ab664cf196c0085c5719bb9c7b95048b0ed4b3fb",
+    "testsTreeObject": "d4ab731816fd9867d0ed57ae0525835e7a9f5091",
+    "docsTreeObject": "602b18bbfab4379d5dd0c8ae7b824614d2b4f300",
+    "validatedSourceTreeObject": "ab664cf196c0085c5719bb9c7b95048b0ed4b3fb",
+    "validatedTestsTreeObject": "d4ab731816fd9867d0ed57ae0525835e7a9f5091",
+    "validatedDocsTreeObject": "602b18bbfab4379d5dd0c8ae7b824614d2b4f300",
+    "sourceTestsDocsByteIdenticalToValidatedRevision": true,
+    "inheritedNoVpnToolContinuity": "The no-VPN Tool continuity receipt from parent 02a5bbc remains historical evidence for its bound source. R3 does not claim to have rerun that exact Tool experiment; its own real Provider acceptance used the native-a loopback secondary path."
+  },
+  "surface": {
+    "recommendedApiSymbolCount": 51,
+    "newCallerFacingSymbols": [
+      "HarnessAgentExecution",
+      "HarnessAgentRun",
+      "HarnessAgentRunCompositionError",
+      "HarnessCognitionProfile",
+      "HarnessCognitionSeed",
+      "HarnessCognitionSeedSource",
+      "HarnessCognitionSource"
+    ],
+    "internalKernelsNotExported": [
+      "AgentTurnProjector",
+      "CognitionAdmissionKernel",
+      "ProviderCallLifecycle"
+    ],
+    "cliAdoption": "Primary independent no-Tool CLI run/resume uses HarnessAgentRun while retaining CLI-specific no-Tool profile admission.",
+    "builtInCompositionProfiles": [
+      "canonical no-Tool",
+      "independent Runtime search with explicit HarnessExecutionBinding + HarnessRuntimeClient"
+    ]
+  },
+  "checks": {
+    "discoveredTests": 294,
+    "fullRegressionPassed": true,
+    "fullRegressionSkipped": 3,
+    "r3PublicCliFocusedTests": 16,
+    "r3PublicCliFocusedPassed": true,
+    "publicConcurrentHandles": 8,
+    "publicConcurrentPhysicalProviderCalls": 1,
+    "structuralFailureLeavesNoStateRoot": true,
+    "adapterMismatchLeavesNoStateRoot": true,
+    "unsupportedSurfaceCallsProviderFactory": false,
+    "ruff01517OfflinePassed": true,
+    "compileAllPassed": true,
+    "documentationContractPassed": true,
+    "dependencyContractPassed": true,
+    "hostFreeCoreVerified": true,
+    "deterministicDemoPassed": true,
+    "wheelSmokePassed": true,
+    "cliCommandsVerified": 14,
+    "gitDiffCheckPassed": true,
+    "recommendedApiSymbolCount": 51,
+    "r2KernelsExported": false
+  },
+  "runtimeEvidence": {
+    "fullRegressionJobId": "job-019fe612-7774-7771-a239-82d799a3c4a0",
+    "fullRegressionAttemptId": "attempt-019fe612-7774-7771-a239-82e3686fcdeb",
+    "livePublicApiJobId": "job-019fe614-97ae-78d0-9c0d-f79e3eda98fb",
+    "livePublicApiAttemptId": "attempt-019fe614-97ae-78d0-9c0d-f7acb277e2f5",
+    "officialAcceptanceJobId": "job-019fe616-e326-74d3-b56a-bcd928ce3a50",
+    "officialAcceptanceAttemptId": "attempt-019fe616-e326-74d3-b56a-bce2e9f7f310"
+  },
+  "liveProviderAcceptance": {
+    "provider": "deepseek-v4-flash",
+    "executionEntryPoint": "ordivon_harness.api.HarnessAgentRun",
+    "networkProfile": "native-a through explicit loopback CONNECT http://127.0.0.1:19081",
+    "callerExecutionPath": "HarnessAgentRun.create -> run -> fresh HarnessAgentRun.open -> resume; no caller-supplied SQLite Store, Continuity, concrete Bridge, RunBudget or provider_source",
+    "trajectory": [
+      {
+        "sequence": 1,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "needs_input"
+      },
+      {
+        "sequence": 2,
+        "callerRefs": 1,
+        "callerIngressPromotion": true,
+        "conclusionCorrections": 5,
+        "action": "promote exact caller index 0"
+      },
+      {
+        "sequence": 3,
+        "callerRefs": 0,
+        "callerIngressPromotion": false,
+        "conclusionCorrections": 5,
+        "stop": "needs_input"
+      }
+    ],
+    "finalWorkingSetSlots": [
+      "caller-fact",
+      "task"
+    ],
+    "doctorHealthy": true,
+    "providerAttempts": 3,
+    "providerResultReplays": 0,
+    "observationNote": "Continuity was opened only after public execution completed to observe final WorkingSet/Doctor state; it did not participate in the caller execution path."
+  },
+  "conclusion": "R3.1 establishes a supported Agent Run product surface over the R0-R2 mechanisms. Normal Python callers now execute/reopen/resume from a state root without persistence/Continuity/Bridge/budget/provider-source wiring, while Contract, Provider choice, external Runtime authority and exact cognition selection remain explicit caller-owned inputs. CLI run/resume adopts the same handle; 294 tests/full wheel/local acceptance pass on a byte-identical source/tests/docs tree; and real DeepSeek cognition promotion succeeds through the recommended API.",
+  "knownLimits": [
+    "Automatic bridge composition is intentionally limited to canonical no-Tool and existing independent Runtime-search surfaces; custom/domain bridges remain advanced core composition.",
+    "Earlier low-level Store/Continuity/StandaloneRunner exports remain in the recommended API in R3.1 for compatibility; pruning is deferred.",
+    "HarnessAgentRun is per-Run composition, not cross-Run memory/orchestration or Provider recommendation.",
+    "HarnessCognitionSource aliases the existing HarnessWorkingViewSource representation so there is one source schema/digest truth.",
+    "The inherited no-VPN Tool continuity experiment was not physically rerun after R3 because its checker scope became stale; it remains historical evidence rather than a current R3 claim."
+  ]
+}
