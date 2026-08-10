@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p4-capability-composition-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r11-capability-composition-and-lawful-no-change-accepted",
+  "implementationRevision": "9032d0f3784317fa2cbab1da399bb0720c2d8d43",
+  "baseRevision": "9032d0f3784317fa2cbab1da399bb0720c2d8d43",
+  "scope": "One bounded P4 improvement-cycle composition in which the Agent selected repository observations from an admitted capability catalog without caller-preselected source slices or evaluator gates, two target finalizations were denied because their own falsifiers did not produce causal baseline-red evidence, and a corrected experiment protocol allowed the Agent to terminate with an explicit bounded no-target/no-source-mutation outcome. This is evidence for Agent-owned discovery composition plus lawful abstention, not a claim that Harness is defect-free or an autonomous indefinite RSI controller.",
+  "metaFalsifier": {
+    "claim": "The P4 experiment protocol could not represent a bounded no-target terminal outcome because discovery admitted only observe or finalize-with-target.",
+    "baselineRuntimeJobId": "job-019febd4-2332-7f70-b0c7-86d4f6c61058",
+    "baselineTerminalEvidence": "sha256:d34634ee0497e27f68959bc5c921a94a849b428cabdd6bde21284efe4e890619",
+    "baselineExitCode": 1,
+    "baselineFailure": "P4_PROTOCOL_CANNOT_TERMINATE_NO_TARGET: discovery status admits only observe/finalize",
+    "experimentOnlyRepair": true,
+    "repairedRunnerDigest": "sha256:012bab9165769e37a84b5b70f6dbce5ac22b44aae6af46a64fbe2f0fb1c0a0e7",
+    "repairVerificationRuntimeJobId": "job-019febd6-54a7-7ff1-99bc-a99d0370f42c",
+    "repairVerificationTerminalEvidence": "sha256:566e5b50a687eaf3ffbe4d358fa297186852051de1f5857b003c17134ffed0b3",
+    "productSourceChanged": false,
+    "runnerCommitted": false
+  },
+  "agentOwnedDiscovery": {
+    "runtimeJobId": "job-019febd7-0c06-7ea0-8f2a-0987bbce29af",
+    "terminalEvidence": "sha256:1c820d31751fd49c5ead3b0dee50273c20e7b8cdfedd9280e194d11876687c7b",
+    "discoveryRecordDigest": "sha256:25df861523f38f48b5d2704bebf4fb39b701264e74b356b884080debe52837e9",
+    "rounds": 204,
+    "observationCount": 203,
+    "sourceSlicesInitiallyProvided": false,
+    "callerPreselectedEvaluatorGates": false,
+    "capabilityCounts": {
+      "list_paths": 5,
+      "search_text": 109,
+      "read_file": 82,
+      "run_unittest_module": 2,
+      "run_named_check": 1,
+      "read_observation": 1,
+      "run_probe": 3
+    },
+    "trackedSourceFiles": 51,
+    "exactReadSourceFiles": 50,
+    "unreadSourcePaths": [
+      "src/ordivon_harness/version.py"
+    ],
+    "finalStatus": "abstain",
+    "finalOutcome": "bounded-no-target-no-source-mutation",
+    "epistemicBoundary": "No causal baseline-red source target was demonstrated under the Agent-selected observations. This does not claim that Harness has no remaining defects or is globally correct."
+  },
+  "causalTargetAdmission": {
+    "mutationRequiresCausalBaselineRed": true,
+    "rejectedFinalizedTargets": 2,
+    "targetEvidence": [
+      {
+        "digest": "sha256:ecdde099802c754dc1cf1e4eee789f2575fdd085a292de2dfd8d6d6ed79536fe",
+        "exitCode": 0,
+        "causalBaselineRed": false,
+        "verdict": "target-invalid-no-baseline-red"
+      },
+      {
+        "digest": "sha256:1bddb8f1d76bd92b35ddeddf2657134c949c1461da82b156622f4b26c7557e93",
+        "exitCode": 0,
+        "causalBaselineRed": false,
+        "verdict": "target-invalid-no-baseline-red"
+      }
+    ],
+    "interpretation": "A plausible or confident target does not earn mutation authority. Exact causal baseline-red remains the asymmetric admission requirement for changing source."
+  },
+  "noChangeAuthority": {
+    "sourceGeneratorInvoked": false,
+    "sourceMaterializerInvoked": false,
+    "candidateEvaluatorInvoked": false,
+    "sourcePromotionDecisionInvoked": false,
+    "canonicalSourceGitPromotionInvoked": false,
+    "reason": "No target survived causal baseline admission; invoking downstream mutation/promotion authorities would have fabricated work rather than preserved authority separation.",
+    "law": "Source mutation requires causal baseline-red; bounded abstention requires exact provenance plus an explicit uncertainty boundary, not proof of global correctness."
+  },
+  "independentNoChangeEvaluation": {
+    "runtimeJobId": "job-019febd8-5f5e-7fe3-a7f4-a7bfdc6bfd20",
+    "terminalEvidence": "sha256:e06ea5c3a462a687ef3a8fa1dcbca6ce1df4ee3e60104f2e7da8f473e87064f6",
+    "evaluationDigest": "sha256:2eab272b08f4d9f6405e6182e9163aa85769acde5889897358dc2ccd8500224d",
+    "passed": true,
+    "checks": [
+      "exact baseline revision",
+      "bounded no-target kind",
+      "Agent abstention",
+      "target absent",
+      "no caller-preselected source slices",
+      "no caller-preselected evaluator gates",
+      "substantial Agent-selected observations",
+      "near-complete source read coverage",
+      "two false targets blocked",
+      "tracked source unchanged",
+      "only experiment scaffolding dirty before cleanup"
+    ]
+  },
+  "canonicalReleaseAcceptance": {
+    "runtimeJobId": "job-019febdc-b1ec-7361-a339-aab8ab4695bd",
+    "terminalEvidence": "sha256:31eab3da173b5454fbd154c278ef1f2d8a3a24b307e200fd5b2b6eebdf9eb8e1",
+    "pinnedRuffVersion": "0.15.17",
+    "ruffPassed": true,
+    "fullTestsPassed": 342,
+    "testsSkipped": 3,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "evidenceContractPassed": true,
+    "deterministicDemoPassed": true,
+    "wheelVersion": "0.6.0",
+    "wheelHostFree": true,
+    "wheelCliCommandsVerified": 14
+  },
+  "improvementOfImprovement": {
+    "p3CallerPreparedSourceView": true,
+    "p4AgentSelectedObservationCapabilities": true,
+    "p4CallerPreselectedSourceSlices": false,
+    "p4CallerPreselectedEvaluatorGates": false,
+    "p4FalseTargetsBlockedBeforeMutation": 2,
+    "p4LawfulNoChangeTerminal": true,
+    "p4ExperimentSearchTailBeforeAbstentionRounds": 203,
+    "interpretation": "The improvement mechanism learned that no-change is a first-class valid outcome. This removes defect-hunting pressure without weakening source-mutation admission."
+  },
+  "remainingBoundaries": [
+    "P4 is a bounded capability-composition/no-change instance, not autonomous indefinite recursive self-improvement.",
+    "The discovery runner and abstain protocol remain experiment scaffolding and are not supported Harness APIs.",
+    "The successful no-target branch did not exercise a surviving Agent-authored evaluator specification, source edit, candidate evaluator, promotion decision or Git source promotion; those authorities remain separate and intentionally uninvoked.",
+    "Discovery efficiency remains poor: 203 observations and near-complete source reading were required before the protocol admitted abstention. P4 proves authority semantics, not efficient repository search.",
+    "Cycle triggering and canonical documentation/evidence promotion remain external.",
+    "No Scheduler, Goal Stream, generic Evaluator Service, Memory/RAG subsystem, DAG, RSI Controller or second persistence layer was forced."
+  ]
+}

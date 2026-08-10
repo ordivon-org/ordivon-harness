@@ -432,9 +432,16 @@
     {
       "claimId": "harness.rsi.p3-recursive-improvement",
       "file": "harness-rsi-p3-recursive-improvement-aea4ec1.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "aea4ec10b0e9f37122054fe0723f96c85f7a7991",
-      "scope": "Current RSI P3/R10 bounded evidence: promoted P2 system autonomously selected the next real source target and falsifier, improved falsifier/Working-View/materialization mechanics from observed failures, obtained independent evaluation and separate promote decision, and preserved authority separation; does not claim autonomous indefinite RSI."
+      "scope": "Historical RSI P3/R10 bounded improvement-of-improvement evidence retained unchanged after P4 capability-composition/no-change acceptance superseded it as the current RSI research claim; its Agent-owned target/falsifier, falsifier admission, Working-View projection, Runtime-native exact materialization and separate promotion evidence remain exact for its bound source revision."
+    },
+    {
+      "claimId": "harness.rsi.p4-capability-composition-no-change",
+      "file": "harness-rsi-p4-capability-composition-9032d0f.json",
+      "status": "verified",
+      "implementationRevision": "9032d0f3784317fa2cbab1da399bb0720c2d8d43",
+      "scope": "Current bounded RSI P4 capability-composition/no-change acceptance: an Agent selected 203 admitted repository observations without caller-preselected source slices/evaluator gates; two non-causal target finalizations were blocked before mutation; after the experiment protocol gained a bounded abstention outcome the Agent immediately chose no source mutation with an explicit uncertainty boundary; independent no-change evaluation and exact canonical CI passed. This does not claim defect-freedom or autonomous indefinite RSI."
     }
   ]
 }
