@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p5-high-information-discovery-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r12-evidence-driven-high-information-discovery-accepted",
+  "implementationRevision": "999d7535242b14c432cd14527ec109f2c6749969",
+  "baseRevision": "999d7535242b14c432cd14527ec109f2c6749969",
+  "scope": "One bounded P5/R12 recursive-improvement discovery experiment on unchanged Harness implementation source. The Agent consumed one mechanical repository map plus exact independent Host/World failure evidence, selected all subsequent repository observations itself, reduced admitted observations from the P4 baseline of 203 to 8 while performing six real source/reference investigations, and lawfully abstained because it could not prove a reachable causal source defect. This validates evidence-driven observation selection and compact Working-View mechanics, not defect-freedom, token-efficient autonomous discovery, or a fix for the separate no-Tool conclusion-correction failure.",
+  "negativeControl": {
+    "runtimeJobId": "job-019febf9-e85e-7b80-be08-5bb03c6a792e",
+    "terminalEvidence": "sha256:f1e03cf4c2d145234094791203a413de4f256f0d3d92666165d576ece70a592c",
+    "recordDigest": "sha256:609368c6c82c4bb1041195b6810f42e627a2cdb5aa8cbff71b4645897404ad0f",
+    "observationCount": 1,
+    "sourceObservationCount": 0,
+    "outcome": "degenerate-count-only-abstention",
+    "interpretation": "Minimizing observation count alone rewards ignorance: the Agent saw only the repository map and abstained despite independently existing external failure evidence. P5 therefore changed its objective from fewest observations to highest decision value per observation."
+  },
+  "externalWorldEvidence": {
+    "hostTaskId": "task:harness:no-tool-conclusion-correction-20260810",
+    "hostTaskRevision": 2,
+    "hostCheckpointDigest": "sha256:c79dc4c91c2ff752237ff1b3115af4e3a09ee32bb9b519497714fce0231c3027",
+    "fileDigest": "sha256:b08f97742522fa9de96e4a8c4a9ccda39b3b4580a09847d59925ff0bcf101683",
+    "observationDigest": "sha256:75f1ebb1fe295b5fa6f78ffe8b496fadda54c9a253e58b293e12d1ee44c3f538",
+    "observedFailure": "World HP4 reported one structured-result no-Tool Harness Run entering correction/control handling and failing with ToolBridgeError: no-Tool Agent Run cannot bind Tool observations or Tool Call identities; other independent Runs succeeded.",
+    "sourceTargetPreselected": false,
+    "sourceSlicePreselected": false,
+    "evaluatorGatePreselected": false,
+    "separateTaskRemainsOpen": true
+  },
+  "apparatusFalsifiersAndRepairs": {
+    "initialModelViewPreflight": {
+      "result": "full repository index plus duplicated recent exact data exceeded the default model-observation boundary before Provider dispatch",
+      "repair": "retain one durable full index while preventing duplicate exact projection; do not classify as repository evidence"
+    },
+    "tokenPreflight": {
+      "result": "conservative request upper bound exceeded the first experimental token envelope before dispatch",
+      "repair": "set a bounded experiment envelope large enough for the mechanical map while continuing to measure actual Provider usage independently"
+    },
+    "largeActionEncoding": {
+      "runtimeJobId": "job-019fec05-273b-75a0-b568-a69ced76fbaa",
+      "terminalEvidence": "sha256:c849b7d8faded0501142c199644a65cf1f20233eba9420b03efe60da2c283414",
+      "rawProviderResponseDigest": "sha256:175f99ee36c7c3458fafae1020d1f5dc463bf938559a463a176d545f850d019b",
+      "result": "DeepSeek submit_run_conclusion function arguments were invalid JSON under the large nested decision schema.",
+      "repair": "use a thin Harness structured envelope with one decisionJson string, then strictly decode and admit the semantic decision caller-side; validation was moved, not weakened."
+    },
+    "failedActionProjection": {
+      "result": "Agent requested nonexistent or contract-invalid discovery actions during localization.",
+      "repair": "retain exact rejected actions in durable experiment checkpoints while projecting only capability, decision digest and abstract failure class into the next Working View; failed action bytes are not replayed."
+    },
+    "workingViewCompaction": {
+      "fullAstIndexBytes": 53618,
+      "recentExactObservationsBefore": 3,
+      "recentExactObservationsAfter": 1,
+      "precompactRequestTokenUpperBound": 92595,
+      "precompactBudgetRejected": true,
+      "compactRequestTokenUpperBound": 75592,
+      "compactBudgetRejected": false,
+      "finalRequestTokenUpperBound": 75965,
+      "law": "Full exact repository/index history may remain durable while the model-visible Working View carries a compact addressability map plus only the current exact observation needed for the next decision."
+    },
+    "checkpointRecovery": {
+      "result": "A successful observation could be lost from the experiment partial checkpoint if the following model round failed preflight.",
+      "repair": "persist the partial checkpoint again immediately after each admitted observation; rejected actions are also checkpointed and resumable."
+    }
+  },
+  "acceptedDiscovery": {
+    "runtimeJobId": "job-019fec1b-523d-77f0-8b0b-7f27dda6fe7d",
+    "terminalEvidence": "sha256:80d8a36aeaa143eafb15397f414aa8367b4b24d9e2efc6b8041d8c0ca67659d7",
+    "recordDigest": "sha256:0e0ec6fa95cbe92777868540d7ec207cef7b7fdd420d20dfbef0e7e0021a70e8",
+    "status": "accepted-abstain",
+    "rounds": 12,
+    "observationCount": 8,
+    "p4ObservationBaseline": 203,
+    "observationReductionFactor": 25.375,
+    "capabilityCounts": {
+      "repo_index": 1,
+      "external_failure_evidence": 1,
+      "read_symbol": 4,
+      "search_text": 1,
+      "references": 1
+    },
+    "sourceObservationCount": 6,
+    "rejectedActionCount": 5,
+    "rejectedTargetCount": 0,
+    "target": null,
+    "sourceMutationAuthorityEarned": false,
+    "finalBoundary": "The Agent verified a deliberate no-Tool guard in SQLiteHarnessAgentBridge and adjacent source/reference evidence, but did not prove any real invocation path with non-empty observations/seen_tool_call_ids, any failing unittest, or any reproducible causal baseline defect. It therefore abstained rather than converting correlation into source authority."
+  },
+  "acceptedTrajectoryProviderCost": {
+    "measurementRuntimeJobId": "job-019fec1c-a91e-7cc0-9669-b2b9cc2bbf0d",
+    "measurementTerminalEvidence": "sha256:cdbfd551ce24397fd3b609d8b9612ce6d82099f242e23285b1d53602069b14fe",
+    "completedProviderCalls": 12,
+    "totalTokens": 239953,
+    "promptTokens": 231329,
+    "completionTokens": 8624,
+    "promptCacheHitTokens": 65664,
+    "interpretation": "P5 improves observation traversal and decision relevance, not token/model-call efficiency. Reconstructing a large fresh one-decision Working View twelve times remains expensive."
+  },
+  "independentEvaluation": {
+    "runtimeJobId": "job-019fec1d-a825-7b73-b1f8-e7ecb6c09c0f",
+    "terminalEvidence": "sha256:91fc01ed8eedef3972ea25d63c813048d42670fded676b5317e39542e33ad912",
+    "evaluationDigest": "sha256:c73e2320cab8a08e68115cffa8fc66a102b883bbbdb903f8bd81dcee1e973554",
+    "passed": true,
+    "checks": [
+      "exact baseline",
+      "bounded early abstain",
+      ">10x observation reduction",
+      "exact external world evidence consumed",
+      "nondegenerate source investigation",
+      "r4 degenerate negative control detected",
+      "no caller-preselected source slices",
+      "no caller-preselected evaluator gates",
+      "no mutation authority claimed",
+      "explicit epistemic boundary",
+      "tracked source unchanged",
+      "only experiment runner untracked before cleanup",
+      "rejected actions preserved"
+    ]
+  },
+  "experimentFreeze": {
+    "runtimeJobId": "job-019fec1f-4e3c-7e40-a05e-084b105556c4",
+    "terminalEvidence": "sha256:443e29f3f450d2f8129ae2eb8c9f96336fcf802eceea3f87045c780e2e37ac67",
+    "freezeDigest": "sha256:f266ea3f6087fc27b1069117ac99632c00426324dac49d6e3505bc85aa104747",
+    "runnerDigest": "sha256:0b01845355e0bff896e22319c96872a6e5aa2778fe310d82e7dda253cf6b3a10",
+    "runnerCommitted": false,
+    "runnerDeletedAfterFreeze": true
+  },
+  "authorityOutcome": {
+    "sourceGeneratorInvoked": false,
+    "sourceMaterializerInvoked": false,
+    "candidateEvaluatorInvoked": false,
+    "sourcePromotionDecisionInvoked": false,
+    "canonicalSourcePromotionInvoked": false,
+    "reason": "No causal baseline-red target was established. Exercising mutation/promotion authorities would fabricate work and violate the P4/P5 admission law."
+  },
+  "improvementOfImprovement": {
+    "p4ObservationCount": 203,
+    "p5ObservationCount": 8,
+    "countOnlyOptimizationRejected": true,
+    "externalWorldEvidencePrioritized": true,
+    "agentSelectedAllRepositoryObservations": true,
+    "thinSemanticActionEncoding": true,
+    "fullHistorySeparatedFromCompactWorkingView": true,
+    "failedActionBytesProjectedOut": true,
+    "boundedAbstentionPreserved": true,
+    "mutationAdmissionPreserved": true
+  },
+  "remainingBoundaries": [
+    "P5 is a bounded R12 evidence-driven high-information discovery instance, not autonomous indefinite recursive self-improvement.",
+    "The separate no-Tool conclusion-correction Host task remains unresolved; P5 did not prove or fix its source cause.",
+    "Observation count fell 25.375x versus P4, but the accepted trajectory still consumed 12 Provider calls and 239,953 total tokens; token/computation efficiency remains open.",
+    "The discovery runner, repository map projection and decisionJson envelope are experiment scaffolding, not supported Harness APIs.",
+    "A future independently causal target is still required before P5-style discovery can re-exercise generator/materializer/evaluator/promotion branches under this more efficient observation ownership.",
+    "No Scheduler, Goal Stream, generic Evaluator Service, Memory/RAG subsystem, DAG, RSI Controller or second persistence layer was forced."
+  ]
+}

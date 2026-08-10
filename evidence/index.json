@@ -439,9 +439,16 @@
     {
       "claimId": "harness.rsi.p4-capability-composition-no-change",
       "file": "harness-rsi-p4-capability-composition-9032d0f.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9032d0f3784317fa2cbab1da399bb0720c2d8d43",
-      "scope": "Current bounded RSI P4 capability-composition/no-change acceptance: an Agent selected 203 admitted repository observations without caller-preselected source slices/evaluator gates; two non-causal target finalizations were blocked before mutation; after the experiment protocol gained a bounded abstention outcome the Agent immediately chose no source mutation with an explicit uncertainty boundary; independent no-change evaluation and exact canonical CI passed. This does not claim defect-freedom or autonomous indefinite RSI."
+      "scope": "Historical bounded RSI P4/R11 capability-composition/no-change evidence retained unchanged after P5 evidence-driven high-information discovery superseded it as the current RSI research claim. Its 203-observation Agent-owned discovery, causal target admission and lawful abstention semantics remain exact for its bound implementation."
+    },
+    {
+      "claimId": "harness.rsi.p5-high-information-discovery",
+      "file": "harness-rsi-p5-high-information-discovery-999d753.json",
+      "status": "verified",
+      "implementationRevision": "999d7535242b14c432cd14527ec109f2c6749969",
+      "scope": "Current bounded RSI P5/R12 evidence-driven high-information discovery acceptance: an Agent consumed exact external Host/World failure evidence and selected all repository observations itself, reducing admitted observations from P4 203 to 8 (25.375x) while performing six source/reference investigations; it separated durable full index/history from a compact Working View, preserved rejected action evidence, and lawfully abstained because no reachable causal source defect was proven. This does not claim token-efficient autonomous discovery or resolve the separate no-Tool failure."
     }
   ]
 }
