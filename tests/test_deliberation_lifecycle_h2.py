@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from collections import deque
+from dataclasses import replace
 
 from anc_canonical import canonical_digest
 
@@ -346,6 +347,28 @@ class DeliberationLifecycleH2Tests(unittest.TestCase):
         self.assertEqual(execution.deadline_monotonic_ms, 2000)
         self.assertEqual(adapter.controls[0].deadline.expires_at_ms, 2000)
         self.assertEqual(adapter.controls[1].deadline.expires_at_ms, 2000)
+
+    def test_expired_assignment_deadline_blocks_phase_a_before_provider_dispatch(self) -> None:
+        clock = Clock()
+        adapter = ControlledAdapter(
+            [result_conclusion("unused", "must not dispatch", tokens=1)]
+        )
+        expired_plan = replace(tool_plan(), assignment_deadline_ms=clock.value - 1)
+        with self.assertRaises(DeliberationLifecycleError) as raised:
+            DeliberationThenToolRunner(
+                adapter,
+                Bridge(),
+                clock_ms=clock,
+                monotonic_ms=clock,
+            ).run_lifecycle_bound(
+                deliberation_request(),
+                expired_plan,
+                budget=budget(),
+            )
+        self.assertEqual(raised.exception.stop_code, RunStopCode.BUDGET_EXHAUSTED)
+        self.assertEqual(raised.exception.phase, "deliberation")
+        self.assertFalse(raised.exception.provider_dispatched)
+        self.assertEqual(adapter.requests, [])
 
     def test_phase_a_pre_dispatch_safe_failure_preserves_known_failure_taxonomy(self) -> None:
         class SafeFailureAdapter:

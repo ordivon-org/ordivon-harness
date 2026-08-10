@@ -7,7 +7,7 @@ from typing import Any
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from .core_contracts import HarnessBoundReference, HarnessRunContract
+from .core_contracts import HarnessBoundReference, HarnessPrivacyPolicy, HarnessRunContract
 from .ordivon.loop import RunBudget
 
 
@@ -85,6 +85,7 @@ class HarnessExecutionMandate:
     max_wall_time_ms: int
     completion_contract: Mapping[str, JsonValue]
     created_at_ms: int
+    privacy: HarnessPrivacyPolicy | None = None
 
     def __post_init__(self) -> None:
         _text(self.mandate_id, "Harness Mandate identity")
@@ -105,6 +106,8 @@ class HarnessExecutionMandate:
             raise ValueError("Harness Mandate max_wall_time_ms must be positive")
         if type(self.created_at_ms) is not int or self.created_at_ms < 0:
             raise ValueError("Harness Mandate creation time must be non-negative")
+        if self.privacy is not None and not isinstance(self.privacy, HarnessPrivacyPolicy):
+            raise TypeError("Harness Mandate privacy policy is invalid")
         completion = _json_object(
             self.completion_contract,
             "Harness Mandate completion contract",
@@ -113,13 +116,17 @@ class HarnessExecutionMandate:
         object.__setattr__(self, "completion_contract", _freeze_json(completion))
 
     @property
+    def effective_privacy(self) -> HarnessPrivacyPolicy:
+        return self.privacy or HarnessPrivacyPolicy()
+
+    @property
     def digest(self) -> str:
         return canonical_digest(self.to_dict())
 
     def to_dict(self) -> dict[str, JsonValue]:
         completion = _thaw_json(self.completion_contract)
         assert isinstance(completion, dict)
-        return {
+        value: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.harness-execution-mandate",
             "mandateId": self.mandate_id,
@@ -135,10 +142,13 @@ class HarnessExecutionMandate:
             "completionContract": completion,
             "createdAtMs": self.created_at_ms,
         }
+        if self.privacy is not None:
+            value["privacy"] = self.privacy.to_dict()
+        return value
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> HarnessExecutionMandate:
-        expected = {
+        base_fields = {
             "schemaVersion",
             "kind",
             "mandateId",
@@ -151,7 +161,7 @@ class HarnessExecutionMandate:
             "completionContract",
             "createdAtMs",
         }
-        if set(value) != expected:
+        if set(value) not in (base_fields, base_fields | {"privacy"}):
             raise ValueError("HarnessExecutionMandate fields differ")
         if value["schemaVersion"] != 1 or value["kind"] != "ordivon.harness-execution-mandate":
             raise ValueError("HarnessExecutionMandate version or kind is invalid")
@@ -166,8 +176,11 @@ class HarnessExecutionMandate:
             raise ValueError("HarnessExecutionMandate economicEnvelope is invalid")
         objective = value["objectiveRef"]
         completion = value["completionContract"]
+        privacy = value.get("privacy")
         if not isinstance(objective, dict) or not isinstance(completion, dict):
             raise ValueError("HarnessExecutionMandate bound data is invalid")
+        if privacy is not None and not isinstance(privacy, dict):
+            raise ValueError("HarnessExecutionMandate privacy is invalid")
         return cls(
             mandate_id=value["mandateId"],
             caller_id=value["callerId"],
@@ -179,6 +192,7 @@ class HarnessExecutionMandate:
             max_wall_time_ms=economic["maxWallTimeMs"],
             completion_contract=completion,
             created_at_ms=value["createdAtMs"],
+            privacy=(None if privacy is None else HarnessPrivacyPolicy.from_dict(privacy)),
         )
 
 
@@ -552,6 +566,7 @@ def compile_harness_attempt(
         completion_contract=completion,
         system_manifest_ref=system_manifest_ref,
         created_at_ms=created_at_ms,
+        privacy=mandate.effective_privacy,
     )
     return CompiledHarnessAttempt(
         mandate_digest=mandate.digest,

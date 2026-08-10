@@ -202,10 +202,12 @@ class DeliberationThenToolRunner:
         adapter: AgentTurnAdapter,
         bridge: DomainToolBridge,
         *,
+        clock_ms: Callable[[], int] | None = None,
         monotonic_ms: Callable[[], int] | None = None,
     ) -> None:
         self.adapter = adapter
         self.bridge = bridge
+        self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (lambda: time.monotonic_ns() // 1_000_000)
 
     def run(
@@ -261,7 +263,24 @@ class DeliberationThenToolRunner:
             )
         cancellation = cancellation or CancellationToken(monotonic_ms=self.monotonic_ms)
         started_at_ms = self.monotonic_ms()
-        deadline = RunDeadline(started_at_ms + budget.max_wall_time_ms, self.monotonic_ms)
+        deadline_monotonic_ms = started_at_ms + budget.max_wall_time_ms
+        if tool_plan.assignment_deadline_ms is not None:
+            assignment_remaining_ms = tool_plan.assignment_deadline_ms - self.clock_ms()
+            if assignment_remaining_ms <= 0:
+                raise DeliberationLifecycleError(
+                    RunStopCode.BUDGET_EXHAUSTED,
+                    "assignment deadline expired before deliberation Provider dispatch",
+                    phase="deliberation",
+                    provider_dispatched=False,
+                )
+            assignment_deadline_monotonic_ms = (
+                self.monotonic_ms() + assignment_remaining_ms
+            )
+            deadline_monotonic_ms = min(
+                deadline_monotonic_ms,
+                assignment_deadline_monotonic_ms,
+            )
+        deadline = RunDeadline(deadline_monotonic_ms, self.monotonic_ms)
         control = ExecutionControl(cancellation, deadline)
         if cancellation.cancelled:
             raise DeliberationLifecycleError(
@@ -358,6 +377,7 @@ class DeliberationThenToolRunner:
         tool_result = DomainToolLoopRunner(
             self.adapter,
             self.bridge,
+            clock_ms=self.clock_ms,
             monotonic_ms=self.monotonic_ms,
         ).run(
             augmented_plan,

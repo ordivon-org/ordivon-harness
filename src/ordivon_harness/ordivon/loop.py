@@ -29,7 +29,7 @@ from .model import (
     AgentTurnFailureCode,
 )
 from .provider_lifecycle import ProviderCallLifecycle, ProviderLifecycleError
-from .run_store_port import StoredHarnessRunSnapshot
+from .run_store_port import HarnessProviderCallRecoveryRequired, StoredHarnessRunSnapshot
 from .run_recovery import (
     _observation_evidence_signature,
     _path_subsumes,
@@ -1769,6 +1769,8 @@ class OrdivonAgentLoop:
                             if callable(controlled_invoke)
                             else self.adapter.invoke(request)
                         )
+                except HarnessProviderCallRecoveryRequired:
+                    raise
                 except AgentTurnAdapterError as error:
                     unknown = (
                         error.dispatch_safety

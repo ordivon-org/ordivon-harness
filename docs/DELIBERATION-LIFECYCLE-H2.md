@@ -325,4 +325,12 @@ terminalEvidence = sha256:f7522fed6c39de7dad3db7c20614d812938041e59ef94154c3965b
 
 This is an improvement claim stronger than “tests stayed green”: the pre-change source is reproducibly wrong on one exact execution-semantics falsifier, while the candidate changes that falsifier from false UNKNOWN to the Adapter-proven failure state without weakening ambiguous-dispatch handling.
 
-One separate question remains deliberately open: `DomainToolLoopPlan.assignment_deadline_ms` is currently enforced by the Tool-loop phase rather than folded into phase A's composition deadline. P0 does not broaden H2 deadline semantics without a real caller requiring assignment-wide expiry.
+## RSI P1 hardening: Assignment authority spans the composition
+
+P1 closed the remaining H2 deadline question with a direct authority falsifier instead of broadening semantics by intuition. `DomainToolLoopPlan.assignment_deadline_ms` is bound to the same Assignment identity whose Tool phase H2 is composing with phase-A deliberation. On the unchanged baseline, an Assignment whose wall-clock deadline had already expired still allowed the phase-A Provider call to dispatch and complete; only the later Tool-loop phase observed expiry.
+
+The baseline regression therefore required an already-expired Assignment to block phase A with `budget_exhausted`, `providerDispatched=false`, and zero Provider requests. It failed exactly because phase A still dispatched. The candidate adds an explicit wall-clock source to `DeliberationThenToolRunner`, computes the remaining Assignment duration in the wall-clock domain, then projects only that duration into the composition's monotonic deadline domain. The effective lifecycle deadline is the earlier of the aggregate RunBudget deadline and the Assignment-derived monotonic deadline; the same clock sources and absolute monotonic deadline continue into phase B. Wall-clock and monotonic timestamps are never compared directly.
+
+The exact falsifier changes baseline-red to candidate-green, and the focused H2 suite passes 10/10. The deterministic H2 acceptance apparatus now carries a thirteenth gate, `expiredAssignmentBlocksPhaseABeforeProviderDispatch`, so current receipts explicitly prove this authority rather than relying on the earlier 12-gate historical receipt.
+
+This closes the previous P0 open question without promoting H2 into the recommended public API or changing domain strategy ownership.

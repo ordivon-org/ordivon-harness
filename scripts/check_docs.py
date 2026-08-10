@@ -63,6 +63,7 @@ STABLE_API = {
     "HarnessExecutionStrategy",
     "HarnessAgentStrategySelection",
     "HarnessPriorAttemptEvidence",
+    "HarnessStrategyEvidence",
     "HarnessStrategySelectionContext",
     "DomainToolBridge",
     "DomainToolCatalog",

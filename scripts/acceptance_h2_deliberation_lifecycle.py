@@ -4,6 +4,7 @@ import argparse
 import json
 import subprocess
 from collections import deque
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
@@ -300,6 +301,25 @@ def run() -> dict[str, JsonValue]:
         preflight = _error(exc)
     preflight["providerCalls"] = len(preflight_adapter.requests)
 
+    assignment_clock = Clock()
+    assignment_adapter = Adapter([_conclusion("assignment-unused", "Unused.", 1)])
+    expired_assignment_plan = replace(
+        _plan(), assignment_deadline_ms=assignment_clock.value - 1
+    )
+    try:
+        DeliberationThenToolRunner(
+            assignment_adapter,
+            Bridge(),
+            clock_ms=assignment_clock,
+            monotonic_ms=assignment_clock,
+        ).run_lifecycle_bound(
+            _request(), expired_assignment_plan, budget=_budget()
+        )
+        raise AssertionError("expected expired Assignment to block phase-A Provider dispatch")
+    except DeliberationLifecycleError as exc:
+        expired_assignment = _error(exc)
+    expired_assignment["providerCalls"] = len(assignment_adapter.requests)
+
     pending_clock = Clock()
     pending_token = CancellationToken(monotonic_ms=pending_clock)
     pending_adapter = Adapter(
@@ -391,6 +411,11 @@ def run() -> dict[str, JsonValue]:
         and exhaustion["choices"] == [],
         "tokenPreflightBlocksProvider": preflight["stopCode"] == "budget_exhausted"
         and preflight["providerCalls"] == 0,
+        "expiredAssignmentBlocksPhaseABeforeProviderDispatch": (
+            expired_assignment["stopCode"] == "budget_exhausted"
+            and expired_assignment["providerDispatched"] is False
+            and expired_assignment["providerCalls"] == 0
+        ),
         "pendingCancelBecomesUnknownAndBlocksTools": cancel_pending["stopCode"] == "cancel_unknown"
         and cancel_pending["handleCancelCalls"] == 1
         and cancel_pending["choices"] == [],
@@ -414,6 +439,7 @@ def run() -> dict[str, JsonValue]:
         "normal": normal_record,
         "phaseAExhaustion": exhaustion,
         "tokenPreflight": preflight,
+        "expiredAssignment": expired_assignment,
         "pendingCancellation": cancel_pending,
         "cancelResultRace": cancel_result_race,
         "deadlineCarry": deadline_record,
@@ -423,6 +449,7 @@ def run() -> dict[str, JsonValue]:
             "oneAggregateBudgetValidated": True,
             "oneCancellationAuthorityValidated": True,
             "oneAbsoluteDeadlineValidated": True,
+            "assignmentDeadlineAuthorityValidatedAcrossBothPhases": True,
             "domainStrategyOwnedByLifecycle": False,
             "recommendedPublicApiForced": False,
             "defaultHiddenDeliberationForced": False,

@@ -40,6 +40,7 @@ from .independent_result import (
 from .strategy_selection import (
     HarnessAgentStrategySelection,
     HarnessPriorAttemptEvidence,
+    HarnessStrategyEvidence,
     HarnessStrategySelectionContext,
     admit_harness_agent_strategy,
     build_harness_strategy_selection_context,
@@ -191,6 +192,7 @@ __all__ = [
     "HarnessExecutionStrategy",
     "HarnessAgentStrategySelection",
     "HarnessPriorAttemptEvidence",
+    "HarnessStrategyEvidence",
     "HarnessStrategySelectionContext",
     "HarnessJournalCorruption",
     "HarnessLeaseConflict",
