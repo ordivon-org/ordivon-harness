@@ -23,6 +23,9 @@ def _digest(value: str, label: str) -> str:
     _text(value, label, max_bytes=80)
     if not value.startswith("sha256:") or len(value) != 71:
         raise ValueError(f"{label} must be a sha256 digest")
+    payload = value[len("sha256:"):]
+    if any(character not in "0123456789abcdef" for character in payload):
+        raise ValueError(f"{label} must be a sha256 digest")
     return value
 
 
