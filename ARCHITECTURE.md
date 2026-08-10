@@ -169,6 +169,34 @@ The distinction is deliberate: **Mandate says what has been delegated; Strategy 
 
 Current Mandate support remains intentionally pure and stateless: Harness does not ship a built-in StrategyPolicy, Mandate scheduler, semantic verifier, or second durable Mandate database. `build_harness_strategy_selection_context()` accepts the exact Mandate, currently available Profiles, a contiguous lineage of exact prior-attempt evidence, and optional exact `HarnessStrategyEvidence`; it derives consumption and remaining authority mechanically and exposes that complete selection surface to the Agent. The Agent authors one `HarnessAgentStrategySelection` bound to the exact context digest; Harness only admits the selected Profile/budget/adopted evidence and freezes the next attempt. The Mandate may explicitly carry `HarnessPrivacyPolicy` when cross-attempt model-content retention is required; absence preserves the metadata-only legacy/default authority and serialized identity. Triggering another attempt, discovering candidate Profiles, producing independent verification, and deciding semantic Strategy remain outside Harness policy.
 
+## Self-change evidence and promotion authority
+
+RSI P2 validated one bounded source-improvement loop without moving source-generation, evaluation, or promotion policy into Harness:
+
+```text
+exact baseline failure evidence
+        ↓
+source-change Agent
+        │ semantic candidate edits
+        ▼
+Runtime materialization
+        │ exact source bytes only
+        ▼
+independent evaluator
+        │ baseline ↔ candidate evidence
+        ▼
+independent promotion decision
+        │ promote / revise / reject
+        ▼
+guarded canonical Git promotion
+```
+
+The authorities remain deliberately separate. The source-change Agent may choose what to alter and author the replacement bytes; it does not certify that its own candidate is better. Runtime proves only whether the requested exact source edit can be materialized and executed. The evaluator owns the comparison evidence, not the candidate. Promotion is a separate semantic decision over exact proposal, diff and evaluation evidence, and canonical Git movement remains guarded by repository ancestry/concurrency checks.
+
+The experiment also exposed an action-encoding boundary. Two independent Agent attempts selected the same correct source-level law but emitted malformed unified diffs. Those diffs were rejected unchanged; no human repaired their hunk arithmetic. A later attempt consumed those failures and expressed the same semantic change as exact `oldText → newText` replacements. Runtime admitted each replacement only when the old bytes occurred exactly once. This preserves Agent authorship while moving line-number/hunk-count mechanics out of the model's semantic burden. It does **not** establish a generic source-edit service or require Harness to own self-modification orchestration.
+
+The accepted source candidate also strengthens one existing authority law: caller-authored JSON object keys at Mandate and structured-completion projection boundaries must already be strings. Harness now fails closed instead of silently converting a non-string key into different valid bytes via `str(key)`. Valid legacy all-string-key objects preserve their existing canonical representation.
+
 ## Run Contract
 
 `HarnessRunContract` binds one **attempt** to caller identity/reference, Objective and Context refs, Provider/Adapter/model identity, Tool catalog and grant digests, execution budget, completion contract, system manifest, privacy policy, deadline and correlation links. The Contract digest is execution authority for that attempt: a Run may not silently execute against different values. When compiled from a Mandate, its system manifest binds the Mandate, selected profile, Strategy, attempt index, and adopted prior Context evidence.
