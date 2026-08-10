@@ -17,6 +17,9 @@ from ordivon_harness.ordivon.loop import RunBudget, RunStopCode
 from ordivon_harness.ordivon.model import (
     AgentRunConclusion,
     AgentToolCall,
+    AgentTurnAdapterError,
+    AgentTurnDispatchSafety,
+    AgentTurnFailureCode,
     AgentTurnRequest,
     AgentTurnResult,
 )
@@ -343,6 +346,36 @@ class DeliberationLifecycleH2Tests(unittest.TestCase):
         self.assertEqual(execution.deadline_monotonic_ms, 2000)
         self.assertEqual(adapter.controls[0].deadline.expires_at_ms, 2000)
         self.assertEqual(adapter.controls[1].deadline.expires_at_ms, 2000)
+
+    def test_phase_a_pre_dispatch_safe_failure_preserves_known_failure_taxonomy(self) -> None:
+        class SafeFailureAdapter:
+            adapter_id = "adapter:h2-safe-failure"
+            model_id = "model:h2"
+            supports_call_handle = True
+
+            def provider_request_digest(self, request):
+                return request.dispatch_digest
+
+            def request_token_upper_bound(self, request):
+                return 1
+
+            def invoke(self, request):
+                raise AssertionError("H2 lifecycle path must not use uncontrolled invoke")
+
+            def start_invoke(self, request, control):
+                raise AgentTurnAdapterError(
+                    "Provider unavailable before dispatch",
+                    failure_code=AgentTurnFailureCode.UNAVAILABLE,
+                    dispatch_safety=AgentTurnDispatchSafety.PRE_DISPATCH_SAFE,
+                )
+
+        with self.assertRaises(DeliberationLifecycleError) as raised:
+            DeliberationThenToolRunner(SafeFailureAdapter(), Bridge()).run_lifecycle_bound(
+                deliberation_request(), tool_plan(), budget=budget()
+            )
+        self.assertEqual(raised.exception.stop_code, RunStopCode.PROVIDER_UNAVAILABLE)
+        self.assertFalse(raised.exception.provider_dispatched)
+        self.assertIn("before dispatch", str(raised.exception))
 
     def test_uncontrolled_minimal_adapter_fails_closed_in_lifecycle_mode(self) -> None:
         class Minimal:

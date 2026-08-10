@@ -9,7 +9,12 @@ source_role: canonical
 visibility: public
 owners:
   - ordivon-harness
-updated: 2026-08-09
+audience:
+  - builder
+  - agent
+updated: 2026-08-10
+applies_to:
+  - ordivon-harness
 summary: H1 validates a narrow Harness-owned composition that runs one no-Tool cognition turn, binds an exact non-authoritative cognition record to the same Context, and then exposes the caller-owned domain Tool loop without taking ownership of strategy, admission or effects.
 evidence_status: verified
 readiness: ADVANCED_RESEARCH

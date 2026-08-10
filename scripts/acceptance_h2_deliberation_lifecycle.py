@@ -17,7 +17,7 @@ from ordivon_harness.domain_tools import (
     ToolObservation,
 )
 from ordivon_harness.ordivon.control import CancellationToken, ExecutionControl
-from ordivon_harness.ordivon.loop import RunBudget, RunStopCode
+from ordivon_harness.ordivon.loop import RunBudget
 from ordivon_harness.ordivon.model import (
     AgentRunConclusion,
     AgentToolCall,

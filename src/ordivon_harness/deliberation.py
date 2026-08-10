@@ -14,6 +14,8 @@ from .ordivon.model import (
     AgentTurnAdapter,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
+    AgentTurnDispatchSafety,
+    AgentTurnFailureCode,
     AgentTurnRequest,
     AgentTurnResult,
 )
@@ -454,11 +456,27 @@ class DeliberationThenToolRunner:
         except DeliberationLifecycleError:
             raise
         except AgentTurnAdapterError as error:
+            if error.dispatch_safety is AgentTurnDispatchSafety.DISPATCH_AMBIGUOUS:
+                stop_code = RunStopCode.PROVIDER_STATE_UNKNOWN
+                provider_dispatched = True
+            else:
+                stop_code = {
+                    AgentTurnFailureCode.FAILED: RunStopCode.PROVIDER_FAILED,
+                    AgentTurnFailureCode.TIMEOUT: RunStopCode.PROVIDER_TIMEOUT,
+                    AgentTurnFailureCode.TRANSPORT_FAILED: (
+                        RunStopCode.PROVIDER_TRANSPORT_FAILED
+                    ),
+                    AgentTurnFailureCode.REJECTED: RunStopCode.PROVIDER_REJECTED,
+                    AgentTurnFailureCode.UNAVAILABLE: RunStopCode.PROVIDER_UNAVAILABLE,
+                }[error.failure_code]
+                provider_dispatched = (
+                    error.dispatch_safety is not AgentTurnDispatchSafety.PRE_DISPATCH_SAFE
+                )
             raise DeliberationLifecycleError(
-                RunStopCode.PROVIDER_STATE_UNKNOWN,
-                f"deliberation Provider failed after dispatch: {error}",
+                stop_code,
+                f"deliberation Provider failed: {error}",
                 phase="deliberation",
-                provider_dispatched=True,
+                provider_dispatched=provider_dispatched,
             ) from error
         raise DeliberationLifecycleError(
             RunStopCode.HARNESS_FAILED,

@@ -9,7 +9,12 @@ source_role: canonical
 visibility: public
 owners:
   - ordivon-harness
-updated: 2026-08-09
+audience:
+  - builder
+  - agent
+updated: 2026-08-10
+applies_to:
+  - ordivon-harness
 summary: H2 binds H1 no-Tool deliberation and the later caller-owned Tool loop to one aggregate budget, cancellation authority, and absolute deadline without moving domain strategy or admission into Harness.
 evidence_status: verified
 readiness: ADVANCED_RESEARCH
@@ -294,3 +299,30 @@ terminal evidence = sha256:b90bdfafc04209da5d2614884eb91dd5fd50c2c2d79ea2aea437c
 ```
 
 The repair does not change H2's product boundary. Deliberation lifecycle composition remains advanced/internal, and no recommended public API is forced without an independent domain consumer.
+
+## RSI P0 hardening: preserve phase-A Provider failure truth
+
+A later Host/Harness RSI audit found one narrower H2 correctness defect: `_invoke_lifecycle_bound()` converted every controlled phase-A `AgentTurnAdapterError` into `provider_state_unknown` with `providerDispatched=true`, even when the Adapter had already proved `dispatchSafety=pre_dispatch_safe`. That conversion discarded execution truth and made recovery more conservative than the Provider evidence required.
+
+The P0 self-improvement acceptance first added a regression that failed on the unchanged baseline:
+
+```text
+Runtime Job      = job-019fea52-7ab6-7b62-bf44-44ff4a3d0b3d
+expected         = provider_unavailable / providerDispatched=false
+baseline actual  = provider_state_unknown
+terminalEvidence = sha256:8b5315061ab4d4f7f10429a4bdcc17aaaa7e180128e5ab075352a38f5cc5f52a
+```
+
+The candidate then preserves `AgentTurnFailureCode` whenever dispatch is known and uses `provider_state_unknown` only for `dispatch_ambiguous`. `pre_dispatch_safe` therefore remains explicitly not dispatched, while Provider-rejected or other known post-admission failures retain their specific stop code without becoming UNKNOWN.
+
+The exact same regression then passed, together with the complete focused H2 lifecycle suite and Ruff checks:
+
+```text
+Runtime Job      = job-019fea53-5d26-7d82-b1fe-9efb6f30fa1b
+focused H2 tests = 9 / 9 passed
+terminalEvidence = sha256:f7522fed6c39de7dad3db7c20614d812938041e59ef94154c3965b2f13bd806a
+```
+
+This is an improvement claim stronger than “tests stayed green”: the pre-change source is reproducibly wrong on one exact execution-semantics falsifier, while the candidate changes that falsifier from false UNKNOWN to the Adapter-proven failure state without weakening ambiguous-dispatch handling.
+
+One separate question remains deliberately open: `DomainToolLoopPlan.assignment_deadline_ms` is currently enforced by the Tool-loop phase rather than folded into phase A's composition deadline. P0 does not broaden H2 deadline semantics without a real caller requiring assignment-wide expiry.

@@ -9,7 +9,12 @@ source_role: canonical
 visibility: public
 owners:
   - ordivon-harness
-updated: 2026-08-09
+audience:
+  - builder
+  - agent
+updated: 2026-08-10
+applies_to:
+  - ordivon-harness
 summary: Harness-native neutral experiment independently reproducing a Tool-first/later-correct-reasoning mismatch and observing 2/2 correct choices when the same task receives one no-domain-Tool deliberation turn before Tool exposure.
 evidence_status: verified
 readiness: RESEARCH

@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-09
+updated: 2026-08-10
 summary: Current maturity claim for Harness as a durable cognitive execution substrate, including proven cognition, continuity, execution and support boundaries.
 evidence_status: verified
 readiness: READY
@@ -34,7 +34,7 @@ Ordivon Harness is an independent caller-neutral **durable cognitive execution s
 
 ## Operational
 
-- caller-delegated `HarnessExecutionMandate`, receipt-derived `HarnessMandateConsumption`, selectable `HarnessExecutionProfile` / `HarnessExecutionStrategy`, and pure `compile_harness_attempt()` into exact `HarnessRunContract` attempt authority;
+- Agent-owned multi-attempt Strategy admission over caller-delegated `HarnessExecutionMandate`: exact prior `CompiledHarnessAttempt` + terminal Receipt evidence is validated as one contiguous lineage, `HarnessMandateConsumption` and remaining economic authority are derived mechanically, `HarnessAgentStrategySelection` binds the Agent's choice to the exact selection-context digest, and `compile_harness_selected_attempt()` resolves the selected Profile into one immutable `HarnessRunContract` without a planner or second Mandate store;
 - `HarnessRunContract` with exact execution-bound authority;
 - SQLite Store creation, reopen, Doctor, lease/revision fencing, backup and restore;
 - durable Provider Call continuity and response-loss recovery;
@@ -69,7 +69,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 ## Known limits
 
 - primary CLI does not construct Tool-bearing Runtime clients;
-- Mandate support currently compiles caller delegation + a supplied Strategy into Run attempts; Harness does not yet persist Mandate state or ship a built-in StrategyPolicy/cross-attempt controller;
+- Mandate support can now construct exact multi-attempt selection authority and admit an Agent-authored next Strategy, but Harness still does not schedule the next attempt, discover/rank Profiles, persist Mandate state, or ship a built-in StrategyPolicy/cross-attempt controller;
 - there is intentionally no Host-specific cognition bridge: the tested Host cognition slices use generic `structured-result-v1` completion and Host-owned semantic admission;
 - CompletionProposal is not caller/domain completion authority;
 - `candidate_completed` is bounded-Run terminality, not a claim that all world uncertainty is resolved; CompletionProposal v2 carries `unresolvedUnknowns`, while v1 remains readable with an empty unknown set;
@@ -83,7 +83,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - R3.1 is additive rather than a breaking facade cleanup: existing low-level recommended exports remain available while CLI/Python adoption moves to `HarnessAgentRun`; removing `StandaloneHarnessRunner`, concrete SQLite composition objects or other advanced exports is a later evidence-gated decision, not part of this slice;
 - there is no generic Memory/RAG/ranking/summarization layer, cross-Run cognition orchestrator, semantic supersession graph or automatic relevance policy;
 - large-WorkingSet discovery/inspection strategy, initial cognition bootstrap and cross-Run cognition reuse remain open Agent-side/system-boundary questions rather than solved Harness policy.
-- H0 independently reproduced Tool-first/later-correct-reasoning ordering pressure and H1 validated an advanced/internal generic `DeliberationThenToolRunner`. H2 now closes the internal composition lifecycle gaps with one aggregate RunBudget, one cancellation authority and one absolute deadline across deliberation and the later caller-owned Tool loop; deterministic acceptance passes 12/12 gates. The lifecycle-bound path remains advanced/internal rather than recommended `ordivon_harness.api` because no fresh independent domain consumer has yet forced promotion.
+- H0 independently reproduced Tool-first/later-correct-reasoning ordering pressure and H1 validated an advanced/internal generic `DeliberationThenToolRunner`. H2 closes the validated internal composition lifecycle with one aggregate RunBudget, one cancellation authority and one absolute composition deadline across deliberation and the later caller-owned Tool loop; phase-A `AgentTurnAdapterError` now preserves known failure taxonomy and `PRE_DISPATCH_SAFE` no longer becomes false Provider uncertainty. The lifecycle-bound path remains advanced/internal rather than recommended `ordivon_harness.api` because no fresh independent domain consumer has yet forced promotion; assignment-deadline scope across phase A remains separately evidence-gated.
 
 ## Operator check
 

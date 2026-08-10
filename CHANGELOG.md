@@ -4,6 +4,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ## Unreleased
 
+- added Agent-owned multi-attempt Strategy admission above one Run: `HarnessStrategySelectionContext` exposes the exact Mandate, currently available Profiles and contiguous prior `CompiledHarnessAttempt` + terminal Receipt evidence; Harness derives aggregate consumption and remaining economic authority mechanically, while `HarnessAgentStrategySelection` binds the Agent's semantic choice to the exact context digest and `compile_harness_selected_attempt()` resolves that chosen Profile without a built-in planner, scheduler or second Mandate database; same-named changed Mandates cannot inherit old receipts because prior attempt evidence binds the exact Mandate/System-Manifest/Contract chain;
 - strengthened the R3 supported Agent Run surface with static composition admission: `HarnessAgentRun.create()` now rejects cognition privacy/history authority mismatch and exact Runtime-binding mismatch before Adapter construction, and rejects structured-completion binding mismatch before durable Run creation; lower-layer validation remains defense-in-depth and no Provider/Runtime liveness is inferred;
 - began R3 supported Agent surface: `HarnessAgentRun` now owns state-root Store/Continuity/Bridge/Runner composition and Snapshot-bound resume wiring for the built-in no-Tool and explicitly bound Runtime-search surfaces; caller policy still owns Contract, Provider factory, Runtime binding/client and exact cognition selection, and invalid structural composition fails before Provider construction; the primary no-Tool CLI now executes through this handle;
 - Stop synthesizing `AgentRunConclusion` for Harness-owned `no_progress` execution
@@ -54,6 +55,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Fixed
 
+- H2 lifecycle-bound phase-A Provider failures now preserve `AgentTurnFailureCode` and dispatch safety: an Adapter-proven `pre_dispatch_safe` failure remains not dispatched and maps to its specific Provider stop code instead of being inflated to `provider_state_unknown`; ambiguous dispatch remains UNKNOWN;
 - DeepSeek turns that simultaneously request ordinary Tools and `submit_run_conclusion` no longer become Harness failures: the mixed turn is rejected before physical Tool execution and returned through the existing model-correction path so the Agent can choose one action on the next turn;
 - the DeepSeek conclusion Tool now describes caller/domain verification rather than the removed Host-backed verification model, and Standalone execution fails closed when a structured completion Contract is not bound by the executing Adapter;
 - Quick Start now includes a caller-authored Contract construction path, the DeepSeek 8,192-token completion-ceiling preflight behavior, Runtime error-translation requirements for Tool-bearing callers, and a wheel-verification command that passes the actual wheel path;

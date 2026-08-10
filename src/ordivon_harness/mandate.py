@@ -435,6 +435,33 @@ class CompiledHarnessAttempt:
             "contract": self.contract.to_dict(),
         }
 
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> CompiledHarnessAttempt:
+        expected = {
+            "schemaVersion",
+            "kind",
+            "mandateDigest",
+            "profileDigest",
+            "strategyDigest",
+            "systemManifest",
+            "contract",
+        }
+        if set(value) != expected:
+            raise ValueError("CompiledHarnessAttempt fields differ")
+        if value["schemaVersion"] != 1 or value["kind"] != "ordivon.compiled-harness-attempt":
+            raise ValueError("CompiledHarnessAttempt version or kind is invalid")
+        manifest = value["systemManifest"]
+        contract = value["contract"]
+        if not isinstance(manifest, dict) or not isinstance(contract, dict):
+            raise ValueError("CompiledHarnessAttempt manifest or contract is invalid")
+        return cls(
+            mandate_digest=value["mandateDigest"],
+            profile_digest=value["profileDigest"],
+            strategy_digest=value["strategyDigest"],
+            system_manifest=manifest,
+            contract=HarnessRunContract.from_dict(contract),
+        )
+
 
 def compile_harness_attempt(
     mandate: HarnessExecutionMandate,

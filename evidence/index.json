@@ -355,28 +355,28 @@
     {
       "claimId": "harness.product.r3-static-composition-admission",
       "file": "harness-r3-static-composition-admission-4e9d4b9.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "4e9d4b91d34ea39cdd8e2f7d7a11729b99b303c5",
       "scope": "Current R3.2 acceptance: HarnessAgentRun owns static supported-composition admission before durable Run creation; cognition privacy/history and exact Runtime-binding incompatibilities fail before Adapter construction, structured completion binding fails before state creation, lower layers retain defense-in-depth, 298 tests/full build gate pass, and a fresh real deepseek-v4-flash pause/open/resume trajectory succeeds through the recommended public API."
     },
     {
       "claimId": "harness.cognition.h0-deliberation-before-tools",
       "file": "harness-h0-deliberation-authority-9576039.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "95760397caea9785b5374cd7f0a134e618c2cad5",
       "scope": "Harness-native neutral 2+2 research experiment independently reproducing one Tool-first/later-correct-reasoning mismatch in the immediate-Tool baseline while both no-domain-Tool-deliberation-first replicates later submit the unique mechanical oracle. This is scoped research evidence, not whole-product verification or a population-level causal estimate."
     },
     {
       "claimId": "harness.cognition.h1-deliberation-composition",
       "file": "harness-h1-deliberation-composition-89a7fa1.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "89a7fa125bb8b1facc51bd89cb7eb1cdae3f0b4e",
       "scope": "Two predeclared H1 replicates reuse the exact H0 neutral task and caller-owned ChoiceBridge through the generic DeliberationThenToolRunner; both choose cobalt and all 10 gates pass. This validates the narrow composition in the H0 consumer, not a recommended universal API, aggregate budget model or cross-phase cancellation contract."
     },
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle",
       "file": "harness-h2-deliberation-lifecycle-8100879.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "8100879e8ea7823b9ae231a681598dada2ea5c3c",
       "scope": "Deterministic H2 acceptance validating one aggregate RunBudget, one cancellation authority and one absolute deadline across no-Tool deliberation and the later caller-owned Tool loop; all 12 gates pass. H2 remains advanced/internal and does not make deliberation a hidden default or move domain strategy/admission into Harness."
     }

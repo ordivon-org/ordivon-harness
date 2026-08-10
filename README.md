@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-09
+updated: 2026-08-10
 summary: Public entry to the durable cognitive execution substrate for caller-neutral Agent Runs, with explicit cognition, action, continuity, Runtime and Host boundaries.
 evidence_status: verified
 readiness: READY
@@ -62,7 +62,7 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 
 ## What works
 
-- `HarnessExecutionMandate` → `HarnessExecutionStrategy` → `compile_harness_attempt()` separation, so caller delegation can constrain allowed profiles plus aggregate token/wall-time envelopes while caller-supplied `HarnessMandateConsumption` reserves only the remaining envelope for later attempts and each resulting `HarnessRunContract` remains exact attempt authority;
+- Agent-owned multi-attempt Strategy admission over `HarnessExecutionMandate`: `build_harness_strategy_selection_context()` exposes the exact Mandate, currently available Profiles, and prior `CompiledHarnessAttempt` + terminal Receipt pairs; Harness mechanically derives `HarnessMandateConsumption` and the remaining economic envelope, an Agent returns one context-digest-bound `HarnessAgentStrategySelection`, and `compile_harness_selected_attempt()` resolves that chosen Profile and freezes the next exact `HarnessRunContract` without a built-in planner or second Mandate state machine;
 - immutable `HarnessRunContract` attempt authority, including Context refs, Provider/Adapter identity, Tool catalog/grant digests, budget and completion contract;
 - independent SQLite Journal/CAS with caller binding, revision fencing, leases, backup/restore and full Doctor;
 - durable Provider Call claim/dispatch/completion/failure state with response-loss reconciliation;
@@ -85,7 +85,7 @@ Pre-1.0 and operational for caller-neutral independent Runs. H3 intentionally re
 - migrate or decode the removed Host-backed Harness state model;
 - infer success from an ambiguous Provider or Tool delivery;
 - provide a built-in Tool-bearing Runtime transport in the primary CLI; applications supply a Runtime client through the Python API;
-- choose execution strategy for a Mandate with a built-in planner, or persist a second Mandate state machine. Current Mandate support is a caller-delegated contract plus pure compiler into independently durable Run attempts;
+- choose execution strategy for a Mandate with a built-in planner, schedule later attempts, or persist a second Mandate state machine. Harness exposes and validates exact Strategy-selection authority, but the Agent owns the semantic choice and an external caller/Host still decides when another attempt should be requested;
 - provide a generic Memory/RAG/semantic-ranking service, automatically select or summarize cognition, infer that one source semantically supersedes another, or silently inject historical sources into the Agent's current view.
 
 ## Requirements
@@ -129,6 +129,8 @@ Use `ordivon_harness.api` for the recommended application surface. `ordivon_harn
 `HarnessAgentRun` is now the supported Python execution handle for one exact Agent Run. It owns mechanical state-root → Continuity → Bridge → Runner composition, exact pause/resume Provider-source rebinding and Contract-budget reconstruction. The caller still supplies the Contract, a Contract-bound Adapter factory, and any exact Runtime execution authority; custom bridge composition remains an advanced `core` concern.
 Static composition is fail-closed before durable Run creation: exact Contract/cognition/Runtime-binding incompatibilities are rejected before the Adapter factory when they do not depend on it, and Adapter/structured-completion mismatches are rejected before `harness.run-created`. This preflight proves composition only; it does not probe Provider or Runtime availability.
 R3.1 adds this surface without removing the existing low-level exports; applications should prefer the handle for normal execution, while advanced integrations may continue to compose the lower layers directly.
+
+For delegated multi-attempt execution, applications should prefer `build_harness_strategy_selection_context()` + `HarnessAgentStrategySelection` + `compile_harness_selected_attempt()`. Prior-attempt authority is an exact `HarnessPriorAttemptEvidence` pair: the immutable compiled attempt proves the Mandate/System-Manifest/Contract lineage and its terminal Receipt proves what that attempt consumed. Harness derives the next attempt index and remaining token/wall-time envelope mechanically; it does not rank Profiles or evidence and does not choose the next Strategy.
 
 Tool-bearing applications supply `HarnessRuntimeClient` explicitly. Repository-repair bridges and other domain-specific execution surfaces remain explicit modules rather than package-root policy.
 
