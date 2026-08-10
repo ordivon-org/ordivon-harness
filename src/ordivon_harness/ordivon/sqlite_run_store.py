@@ -74,6 +74,8 @@ from .run_store_port import (
 
 _DISPATCH_FENCE_TTL_MS = 30_000
 _STORE_LEASE_TTL_MS = 30_000
+_PROVIDER_OUTCOME_LEASE_WAIT_SECONDS = 1.0
+_PROVIDER_OUTCOME_LEASE_RETRY_SECONDS = 0.001
 _PROVIDER_EVENT_KINDS = frozenset(
     {
         "harness.provider-call-claimed",
@@ -1907,6 +1909,37 @@ class SQLiteHarnessRunContinuityStore:
         )
         now_ms = self.clock_ms()
         provider_call_id = self._provider_call_id(source, turn_sequence)
+        active_before_lease = self._load_current_provider_call_or_none()
+        if (
+            active_before_lease is not None
+            and active_before_lease.record.provider_call_id == provider_call_id
+        ):
+            previous_before_lease = active_before_lease.record
+            self._require_provider_request_matches(
+                previous_before_lease,
+                source=source,
+                turn_id=turn_id,
+                turn_sequence=turn_sequence,
+                request_digest=request_digest,
+                provider_request_digest=provider_request_digest,
+                request_object_digest=(
+                    None if request_object is None else request_object.digest
+                ),
+                adapter_id=adapter_id,
+                requested_model_id=requested_model_id,
+            )
+            if previous_before_lease.status is HarnessProviderCallStatus.DISPATCHING:
+                raise HarnessProviderCallRecoveryRequired(
+                    "Provider Call may already have been dispatched; explicit reconciliation is required"
+                )
+            if (
+                previous_before_lease.status is HarnessProviderCallStatus.CLAIMED
+                and previous_before_lease.holder_id != holder_id
+                and now_ms <= previous_before_lease.expires_at_ms
+            ):
+                raise HarnessProviderCallClaimHeld(
+                    "Provider Call is claimed by another Harness execution"
+                )
         try:
             lease = self._acquire_lease("provider-claim", provider_call_id, now_ms=now_ms)
         except HarnessLeaseHeld as error:
@@ -2113,10 +2146,8 @@ class SQLiteHarnessRunContinuityStore:
             raise HarnessProviderCallRecoveryRequired(
                 "Provider result arrived without a current dispatch record"
             )
+        lease = self._acquire_provider_outcome_lease("provider-complete", retained)
         now_ms = self.clock_ms()
-        lease = self._acquire_lease(
-            "provider-complete", retained.record.provider_call_id, now_ms=now_ms
-        )
         try:
             current = self.load_current_provider_call()
             if current.record.status is HarnessProviderCallStatus.COMPLETED:
@@ -2180,10 +2211,8 @@ class SQLiteHarnessRunContinuityStore:
         failure: HarnessProviderCallFailureReceipt,
     ) -> StoredHarnessProviderCall:
         self._provider_outcome_requires_resume = False
+        lease = self._acquire_provider_outcome_lease("provider-fail", retained)
         now_ms = self.clock_ms()
-        lease = self._acquire_lease(
-            "provider-fail", retained.record.provider_call_id, now_ms=now_ms
-        )
         try:
             current = self.load_current_provider_call()
             if current.record.status in {
@@ -2962,6 +2991,39 @@ class SQLiteHarnessRunContinuityStore:
             now_ms=now_ms,
             expected_run_revision=expected_run_revision,
         )
+
+    def _acquire_provider_outcome_lease(
+        self,
+        operation: str,
+        retained: StoredHarnessProviderCall,
+    ) -> HarnessRunLease:
+        """Wait through short Run-lease contention after physical Provider dispatch.
+
+        The durable DISPATCHING record is the semantic authority for the known
+        Provider outcome. A competing execution may briefly hold the Run lease
+        while discovering that it must not redispatch. That short mechanical
+        lease must not make the physical dispatch owner lose its ability to
+        commit the already-known result.
+        """
+        deadline = time.monotonic() + _PROVIDER_OUTCOME_LEASE_WAIT_SECONDS
+        while True:
+            try:
+                return self._acquire_lease(
+                    operation,
+                    retained.record.provider_call_id,
+                    now_ms=self.clock_ms(),
+                )
+            except HarnessLeaseHeld:
+                current = self.load_current_provider_call()
+                if current.record != retained.record:
+                    raise HarnessSuperseded(
+                        "Harness Provider Call changed while waiting to commit its physical outcome"
+                    )
+                if time.monotonic() >= deadline:
+                    raise HarnessProviderCallRecoveryRequired(
+                        "Provider outcome could not reacquire the Run lease after physical dispatch"
+                    )
+                time.sleep(_PROVIDER_OUTCOME_LEASE_RETRY_SECONDS)
 
     def _heads(self) -> _Heads:
         provider = None

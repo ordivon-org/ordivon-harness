@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import tempfile
+import time
 import unittest
 
 from anc_canonical import canonical_digest
@@ -253,6 +255,81 @@ class SQLiteHarnessRunContinuityProviderTests(unittest.TestCase):
             with self.assertRaises(HarnessProviderCallRecoveryRequired):
                 self.claim(fresh)
             store.close()
+
+    def test_dispatching_replay_does_not_take_run_lease_from_outcome_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = MutableClock()
+            store, winner = self.prepare(root, clock)
+            claimed = self.claim(winner)
+            dispatching = winner.mark_provider_call_dispatching(claimed)
+            contender = SQLiteHarnessRunContinuityStore(
+                store,
+                contract(),
+                clock_ms=clock,
+            )
+            contender.bind_state(state())
+            lease_acquisitions: list[str] = []
+            original_acquire = store.acquire_run_lease
+
+            def tracked_acquire(*args, **kwargs):
+                lease_acquisitions.append(kwargs["owner_id"])
+                return original_acquire(*args, **kwargs)
+
+            store.acquire_run_lease = tracked_acquire
+            try:
+                with self.assertRaises(HarnessProviderCallRecoveryRequired):
+                    self.claim(contender, holder="holder:contender")
+                self.assertEqual(lease_acquisitions, [])
+            finally:
+                store.acquire_run_lease = original_acquire
+
+            winner.bind_state(state(elapsed=10, wall_time_ms=29_990))
+            completed = winner.complete_provider_call(dispatching, result())
+            self.assertEqual(completed.record.status, HarnessProviderCallStatus.COMPLETED)
+            store.close()
+
+    def test_dispatched_outcome_waits_for_transient_run_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = MutableClock()
+            store, winner = self.prepare(root, clock)
+            claimed = self.claim(winner)
+            dispatching = winner.mark_provider_call_dispatching(claimed)
+            store.close()
+
+            blocker_store = SQLiteHarnessStore(root)
+            blocking_lease = blocker_store.acquire_run_lease(
+                contract().harness_run_id,
+                owner_id="test:transient-contender",
+                ttl_ms=30_000,
+                now_ms=clock(),
+            )
+
+            def commit_outcome():
+                with SQLiteHarnessStore(root) as outcome_store:
+                    outcome = SQLiteHarnessRunContinuityStore(
+                        outcome_store,
+                        contract(),
+                        clock_ms=clock,
+                    )
+                    outcome.bind_state(state(elapsed=10, wall_time_ms=29_990))
+                    return outcome.complete_provider_call(dispatching, result())
+
+            try:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(commit_outcome)
+                    time.sleep(0.02)
+                    self.assertFalse(future.done())
+                    blocker_store.release_run_lease(blocking_lease)
+                    completed = future.result(timeout=2.0)
+                self.assertEqual(
+                    completed.record.status,
+                    HarnessProviderCallStatus.COMPLETED,
+                )
+            finally:
+                blocker_store.release_run_lease(blocking_lease)
+                blocker_store.close()
 
     def test_safe_claim_failure_can_retry_only_after_budget_consumption(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
