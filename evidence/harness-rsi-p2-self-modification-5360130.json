@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p2-self-modification-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r9-self-modification-accepted",
+  "implementationRevision": "53601304283971f22fb059788ebdab58481b5614",
+  "baseRevision": "69a27e8b59f0ac5215086debb96bab8cfac662bb",
+  "testHardeningRevision": "64f58c7ca0f5cffda9e32e5a62a553a8679fac79",
+  "documentationRevision": "6ccaae3675a5c60ea59b17ac30a6d062ad4269e7",
+  "scope": "One bounded Agent-authored Harness source improvement from exact baseline failure evidence through independent evaluation and independent promotion decision. This does not claim an automatic scheduler, generic evaluator service, self-modification controller, or indefinitely recursive source promotion.",
+  "baselineFalsifiers": {
+    "runtimeJobId": "job-019feafd-c0db-7e92-aa5a-196a07e860f3",
+    "terminalEvidence": "sha256:76fb294627dd8a916ba9c2621396d6a1a89ce7b394488b26fcfe6b5e1a8a71a4",
+    "A": {
+      "name": "mandate-non-string-json-key",
+      "baselineAccepted": true,
+      "selected": true
+    },
+    "B": {
+      "name": "execution-profile-invalid-sha256-text",
+      "baselineAccepted": true,
+      "selected": false,
+      "remaining": true
+    },
+    "C": {
+      "name": "structured-completion-non-string-schema-key",
+      "baselineAccepted": true,
+      "selected": true
+    }
+  },
+  "failedSourceAttempts": [
+    {
+      "agentJobId": "job-019feb00-e10e-7430-b19d-763a70538d23",
+      "agentTerminalEvidence": "sha256:c780a38d56b42a30e4f18e319a53b333b7fd959d992557f13161fdd70458641e",
+      "patchDigest": "sha256:e7d6cafdc95d7fa634c1f01d5916af27a45c2cafb07e512bd7a4b1f1020d689c",
+      "materializationJobId": "job-019feb01-88a2-7040-970a-11c77d6866fe",
+      "materializationTerminalEvidence": "sha256:e726e2657c0b046a7745af8168bab437a7f24cfbb0be19ce202b16004a8e6d2b",
+      "verdict": "rejected-before-materialization",
+      "reason": "git apply --check rejected malformed unified diff; no source bytes applied"
+    },
+    {
+      "agentJobId": "job-019feb03-c6a2-7dd3-af2c-5dca01535a68",
+      "agentTerminalEvidence": "sha256:a3e46453e37eb295154623e16d47dce529e4109b55524ca751757e5191e17ed5",
+      "patchDigest": "sha256:9c19d3fc236c435340325fc578c440851cc0f13fb9bebd9a63a662b490bb2375",
+      "materializationJobId": "job-019feb04-9c68-76c2-aa78-b3e274453c0a",
+      "materializationTerminalEvidence": "sha256:1f9125ed2ee80514d425fb56146484f83a811243239c932be0040136be15119e",
+      "verdict": "rejected-before-materialization",
+      "reason": "git apply --check rejected revised malformed unified diff; no source bytes applied"
+    }
+  ],
+  "actionEncodingImprovement": {
+    "unifiedDiffAttemptsRejected": 2,
+    "replacementEncoding": "exact-oldText-newText",
+    "mechanicalAdmission": "oldText must occur exactly once in current source",
+    "fuzzyMatching": false,
+    "humanByteRepair": false,
+    "interpretation": "Semantic source-change authority is separate from unified-diff hunk arithmetic; exact replacements preserve Agent-authored bytes while mechanical source addressing fails closed."
+  },
+  "successfulSourceAgent": {
+    "runtimeJobId": "job-019feb05-c4f4-7e30-a5fc-73b377ba97e3",
+    "terminalEvidence": "sha256:187e4dc51ae868cc892487961e9fa952927d520dec62c07c78902a4e83473d99",
+    "proposalFileDigest": "sha256:e51abee8978d058f8b5460f28d7d4925f940e30b415b9e4aece2c51e46e49fb0",
+    "priorAttemptEvidenceDigest": "sha256:a60e827532d5c6babb1409f61352444081af804011707e60f72f575dc7ecb70b",
+    "targetId": "C",
+    "semanticScope": "A+C shared JSON-key coercion root; B explicitly left separate",
+    "exactEditCount": 4,
+    "materializationJobId": "job-019feb06-4cd9-79c2-ad49-7ff04d6e4f70",
+    "materializationTerminalEvidence": "sha256:889882dfd38b7ceb2f459569c00479febcded1ce412a4b3ba2f08ecc140b01d0",
+    "allOldTextOccurrencesExactlyOne": true
+  },
+  "independentEvaluation": {
+    "runtimeJobId": "job-019feb06-989b-7ca0-81d2-fa228d77caa9",
+    "terminalEvidence": "sha256:0c184c7fbb4cbe793b746c9865e88eb8122f0a0228aeae36514b04b4d08c4206",
+    "candidateDiffDigest": "sha256:8988bd91004d620005ae6b89883ae41f2ab3d944d880b468676b3f17c16fd843",
+    "baselineAToCandidate": "red-to-green",
+    "baselineCToCandidate": "red-to-green",
+    "unselectedBRemainsUnchanged": true,
+    "compatibilityTestsPassed": 39,
+    "fullTestsPassed": 339,
+    "testsSkipped": 3,
+    "ruffPassed": true,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "evidenceContractPassedBeforeSourceCommit": true
+  },
+  "promotionDecision": {
+    "runtimeJobId": "job-019feb09-5c87-7fd2-acc8-0ea78373ad8c",
+    "terminalEvidence": "sha256:41f77d5d77895fbc4f526c28d64b6a42817ff317b589fe79c25147aea4860b30",
+    "contextDigest": "sha256:b3ef8e84f931768354eabf23dbb6977ed26368f4dbe4c6bc252208d232b76bbd",
+    "decision": "promote",
+    "requiredChanges": [],
+    "generatorWasPromotionDecider": false,
+    "evaluatorWasPromotionDecider": false
+  },
+  "commits": {
+    "agentAuthoredImplementation": "53601304283971f22fb059788ebdab58481b5614",
+    "evaluatorOwnedRegressionTests": "64f58c7ca0f5cffda9e32e5a62a553a8679fac79",
+    "documentationCloseout": "6ccaae3675a5c60ea59b17ac30a6d062ad4269e7"
+  },
+  "postCommitAcceptance": {
+    "sourceCommitEvaluationJobId": "job-019feb0a-335d-7b40-b37a-69542c131d8e",
+    "sourceCommitEvaluationTerminalEvidence": "sha256:e8d44d5fd51754c8f7f7c88063ea69a57429858c0a179aed80d2420ee30645de",
+    "sourceCommitFullTestsPassed": 339,
+    "evaluatorRegressionJobId": "job-019feb0e-1ca0-7ac1-8fdf-bb9f46b3312f",
+    "evaluatorRegressionTerminalEvidence": "sha256:85d3adc7f3fd3dafcd04d772a594499333c3a834df050b00210b1755a948c926",
+    "currentFullTestsPassed": 341,
+    "testsSkipped": 3,
+    "currentReleaseGateJobId": "job-019feb0f-cfcc-7381-8ede-aea1c87c5626",
+    "currentReleaseGateTerminalEvidence": "sha256:aaa28da8560783713b8e62526bcb4e41d79641df95e4d75441e3674fa77a8eee",
+    "h2DeterministicGatesPassed": 13,
+    "ruffPassed": true,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "isolatedWheelInstallPassed": true,
+    "wheelHostFree": true,
+    "wheelCliCommandsVerified": 14
+  },
+  "authoritySeparation": {
+    "sourceGenerator": "Agent Provider Run",
+    "physicalMaterializer": "Runtime Workspace exact source replacement",
+    "candidateEvaluator": "independent mechanical evaluator",
+    "promotionDecision": "separate Agent Provider Run",
+    "canonicalPromotion": "guarded Git authority after evidence",
+    "singleAuthorityOwnsAllStages": false
+  },
+  "remainingBoundaries": [
+    "Falsifier B remains open and out of this accepted candidate scope.",
+    "P2 proves one bounded source-improvement promotion composition, not automatic indefinite recursive self-improvement.",
+    "Future source changes still require explicit independent evaluation and guarded promotion.",
+    "No generic Evaluator Service, Scheduler, Goal Stream, Memory/RAG, or self-modification controller was forced."
+  ]
+}

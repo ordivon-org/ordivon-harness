@@ -397,16 +397,30 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p1",
       "file": "harness-h2-deliberation-lifecycle-6c0defb.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "6c0defb8d696f30a5d9431344f6d4f9bd050d2be",
-      "scope": "Current deterministic H2 lifecycle evidence: 13/13 gates including Assignment-wide phase-A expiry fencing, shared cancellation/budget/deadline authority, and no domain-strategy ownership."
+      "scope": "Current deterministic H2 lifecycle evidence: 13/13 gates including Assignment-wide phase-A expiry fencing, shared cancellation/budget/deadline authority, and no domain-strategy ownership. Historical after RSI P2 changed current Mandate/completion source authority; retained unchanged for its exact P1 revision."
     },
     {
       "claimId": "harness.rsi.p1-live-multi-attempt",
       "file": "harness-rsi-p1-live-multi-attempt-6c0defb.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "6c0defb8d696f30a5d9431344f6d4f9bd050d2be",
-      "scope": "Current live DeepSeek RSI P1 falsifier: Agent autonomously switches partial→full Profile after exact independent verification, adopts prior CompletionProposal plus StrategyEvidence, and remains inside Harness economic/Context authority; final unresolved semantic closure is intentionally not claimed and the raw receipt remains falsified on that gate."
+      "scope": "Current live DeepSeek RSI P1 falsifier: Agent autonomously switches partial→full Profile after exact independent verification, adopts prior CompletionProposal plus StrategyEvidence, and remains inside Harness economic/Context authority; final unresolved semantic closure is intentionally not claimed and the raw receipt remains falsified on that gate. Historical after RSI P2 changed current Mandate/completion source authority; retained unchanged for its exact P1 revision."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-p2",
+      "file": "harness-h2-deliberation-lifecycle-64f58c7.json",
+      "status": "verified",
+      "implementationRevision": "64f58c7ca0f5cffda9e32e5a62a553a8679fac79",
+      "scope": "Current deterministic H2 lifecycle evidence on the P2 source/test lineage: 13/13 gates remain accepted after Agent-authored authority hardening."
+    },
+    {
+      "claimId": "harness.rsi.p2-self-modification",
+      "file": "harness-rsi-p2-self-modification-5360130.json",
+      "status": "verified",
+      "implementationRevision": "53601304283971f22fb059788ebdab58481b5614",
+      "scope": "Current RSI P2/R9 evidence for one bounded Agent-authored Harness source improvement: exact prior failure evidence -> failed source attempts -> exact-edit candidate -> independent evaluation -> independent promote decision; does not claim automatic indefinite self-improvement."
     }
   ]
 }
