@@ -379,6 +379,20 @@
       "status": "historical",
       "implementationRevision": "8100879e8ea7823b9ae231a681598dada2ea5c3c",
       "scope": "Deterministic H2 acceptance validating one aggregate RunBudget, one cancellation authority and one absolute deadline across no-Tool deliberation and the later caller-owned Tool loop; all 12 gates pass. H2 remains advanced/internal and does not make deliberation a hidden default or move domain strategy/admission into Harness."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-p0",
+      "file": "harness-h2-deliberation-lifecycle-ae02d6b.json",
+      "status": "verified",
+      "implementationRevision": "ae02d6beeac8e618f6659a2bea8c5b181d6d4841",
+      "scope": "Current committed H2 deterministic acceptance after RSI P0 hardening: all 12 aggregate-budget/cancellation/deadline gates pass on ae02d6b, while the separate regression proves phase-A PRE_DISPATCH_SAFE Provider failures retain known failure taxonomy instead of false UNKNOWN. H2 remains advanced/internal and assignment-deadline scope across phase A is not newly claimed."
+    },
+    {
+      "claimId": "harness.rsi.p0-agent-owned-multi-attempt",
+      "file": "harness-rsi-p0-agent-owned-multi-attempt-ae02d6b.json",
+      "status": "verified",
+      "implementationRevision": "ae02d6beeac8e618f6659a2bea8c5b181d6d4841",
+      "scope": "Current RSI P0 acceptance: exact prior CompiledAttempt/terminal-Receipt evidence mechanically reconstructs Mandate consumption and remaining authority; an Agent selects the next Strategy from a digest-bound selection context; Host Task-per-attempt lineage survives exact replay, conflicting adoption and fresh recovery without forcing a Goal stream; one Harness self-change is accepted by baseline-red/candidate-green evidence plus 326-test, static-contract, H2 and isolated-wheel post-commit gates."
     }
   ]
 }

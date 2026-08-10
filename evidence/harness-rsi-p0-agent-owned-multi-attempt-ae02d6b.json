@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p0-acceptance",
+  "status": "accepted",
+  "implementationRevision": "ae02d6beeac8e618f6659a2bea8c5b181d6d4841",
+  "baseRevision": "5a42afdf5e01a6f5ad2b12738c52a249edb91dda",
+  "scope": "RSI P0 acceptance for Agent-owned multi-attempt Strategy selection, exact receipt-derived Mandate consumption, Host Task-per-attempt lineage recovery, and one evidence-based Harness self-improvement candidate. This does not claim a built-in planner, automatic attempt scheduler, durable Mandate state machine, Goal event stream, generic Memory/RAG policy, or autonomous source promotion/deployment.",
+  "strategyAuthority": {
+    "selectionContext": "HarnessStrategySelectionContext",
+    "agentSelection": "HarnessAgentStrategySelection",
+    "priorEvidence": "HarnessPriorAttemptEvidence",
+    "compileBoundary": "compile_harness_selected_attempt",
+    "consumptionDerivation": "derive_harness_mandate_consumption",
+    "agentOwnsSemanticStrategy": true,
+    "harnessRanksProfiles": false,
+    "builtInPlanner": false,
+    "durableMandateDatabase": false,
+    "sameNamedChangedMandateReceiptReuseRejected": true,
+    "staleSelectionContextRejected": true,
+    "inventedPriorReceiptAdoptionRejected": true,
+    "unavailableProfileRejected": true
+  },
+  "targetedAuthorityAcceptance": {
+    "runtimeJobId": "job-019fea56-3fc6-79c3-9f20-33393eccba58",
+    "terminalEvidence": "sha256:f0e24530db586be61ca82131a80d297f524a4ecc739e9b20b19bc3a2edc87f1b",
+    "strategySelectionTests": 9,
+    "executionMandateRegressionTests": 7,
+    "publicApiTests": 6,
+    "ruffPassed": true
+  },
+  "hostTaskPerAttemptFalsifier": {
+    "goalId": "goal:harness-host:rsi-loop",
+    "hostSourceRevision": "95cd5479e71281baed5a1d1c34cbfaadffe2a22f",
+    "hostSourceChanged": false,
+    "attempt1": {
+      "taskId": "task:harness-host:rsi-p0-attempt-1-20260810",
+      "terminalRevision": 3,
+      "state": "completed",
+      "checkpointDigest": "sha256:bbaa397a39b459dee3e2738541da82bb59a279dfd49fedfd29ca5c1c4d3f0323",
+      "receiptDigest": "sha256:595c3cf08d0ef909c7297b090cfefc7d1d46ac298b64ed7ccb0a5cc3e4e278d0",
+      "exactAdoptReplayConverged": true,
+      "divergentSameTaskAdoptionRejected": true
+    },
+    "attempt2": {
+      "taskId": "task:harness-host:rsi-p0-attempt-2-20260810",
+      "revision": 2,
+      "state": "ready",
+      "checkpointDigest": "sha256:194161069be9e81aa1d30d9f24c4ffb6f2c0f0ffb887e3b7e91c315ac4e4c4bf",
+      "parentReceiptDigest": "sha256:595c3cf08d0ef909c7297b090cfefc7d1d46ac298b64ed7ccb0a5cc3e4e278d0",
+      "successorSelectionContextDigest": "sha256:6af798cf55c3be6b715dda58bd21f9e6a80d933d55999db2a7d70474f851b1c9",
+      "agentStrategyDigest": "sha256:e87145065d6d00a5f3c3decbac72760a502d2636ce52bccf5dcd7efde45a4b94",
+      "contractDigest": "sha256:072d8863871257e7db521ba5544105ffb294af5162f80149e120e83788aa8581",
+      "divergentParentReceiptAdoptionRejected": true
+    },
+    "goalScopedDiscoveryRecoveredBothAttempts": true,
+    "freshResumeRecoveredExactCheckpoints": true,
+    "goalStreamForced": false,
+    "schedulerForced": false,
+    "interpretation": "For the tested two-attempt lineage, deterministic Task identity plus exact semantic checkpoints and Harness-owned prior-attempt evidence were sufficient; no Host Goal event stream or scheduler was forced."
+  },
+  "selfImprovementAcceptance": {
+    "target": "H2 phase-A Provider failure taxonomy",
+    "baseline": {
+      "runtimeJobId": "job-019fea52-7ab6-7b62-bf44-44ff4a3d0b3d",
+      "terminalEvidence": "sha256:8b5315061ab4d4f7f10429a4bdcc17aaaa7e180128e5ab075352a38f5cc5f52a",
+      "expectedStopCode": "provider_unavailable",
+      "observedStopCode": "provider_state_unknown",
+      "expectedProviderDispatched": false,
+      "regressionFailed": true
+    },
+    "candidate": {
+      "runtimeJobId": "job-019fea53-5d26-7d82-b1fe-9efb6f30fa1b",
+      "terminalEvidence": "sha256:f7522fed6c39de7dad3db7c20614d812938041e59ef94154c3965b2f13bd806a",
+      "observedStopCode": "provider_unavailable",
+      "providerDispatched": false,
+      "focusedH2TestsPassed": 9,
+      "ruffPassed": true
+    },
+    "improvementCriterion": "The unchanged baseline reproducibly inflated an Adapter-proven PRE_DISPATCH_SAFE failure to UNKNOWN; the candidate preserves the specific failure state while leaving ambiguous dispatch UNKNOWN and passes the focused lifecycle regression suite."
+  },
+  "postCommitAcceptance": {
+    "runtimeJobId": "job-019fea64-cdaf-7643-9cde-edcadb50db36",
+    "runtimeAttemptId": "attempt-019fea64-cdaf-7643-9cde-edd783fc4fe0",
+    "runtimeOperationDigest": "sha256:976ee8389c63a95ed919006c1d8f0854bd87d1c0a3079ba81bc852034fd598ba",
+    "runtimeTerminalEvidence": "sha256:f4d56cafd9b367e20d73d9a07a0d562218dbdee1b6ce34ba32fc2a77cc9970a1",
+    "testsPassed": 326,
+    "testsSkipped": 3,
+    "ruffPassed": true,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "evidenceContractPassedBeforeNewReceipt": true,
+    "h2DeterministicGatesPassed": 12,
+    "isolatedWheelInstallPassed": true,
+    "wheelHostFree": true,
+    "wheelCliCommandsVerified": 14
+  },
+  "remainingBoundaries": [
+    "Harness still does not decide when to launch another attempt; caller/Agent/Host orchestration remains external.",
+    "Profile discovery and semantic ranking remain outside Harness; only exact available Profiles are exposed for Agent choice.",
+    "H2 assignment_deadline_ms is still Tool-phase authority rather than proven composition-wide phase-A authority.",
+    "P0 does not reduce the large sequential Agent-loop coordinator blast radius; later extraction remains friction-driven."
+  ]
+}
