@@ -383,16 +383,30 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p0",
       "file": "harness-h2-deliberation-lifecycle-ae02d6b.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "ae02d6beeac8e618f6659a2bea8c5b181d6d4841",
-      "scope": "Current committed H2 deterministic acceptance after RSI P0 hardening: all 12 aggregate-budget/cancellation/deadline gates pass on ae02d6b, while the separate regression proves phase-A PRE_DISPATCH_SAFE Provider failures retain known failure taxonomy instead of false UNKNOWN. H2 remains advanced/internal and assignment-deadline scope across phase A is not newly claimed."
+      "scope": "Current committed H2 deterministic acceptance after RSI P0 hardening: all 12 aggregate-budget/cancellation/deadline gates pass on ae02d6b, while the separate regression proves phase-A PRE_DISPATCH_SAFE Provider failures retain known failure taxonomy instead of false UNKNOWN. H2 remains advanced/internal and assignment-deadline scope across phase A is not newly claimed. Historical after RSI P1 advanced current Harness implementation paths; retained unchanged for its exact P0 revision."
     },
     {
       "claimId": "harness.rsi.p0-agent-owned-multi-attempt",
       "file": "harness-rsi-p0-agent-owned-multi-attempt-ae02d6b.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "ae02d6beeac8e618f6659a2bea8c5b181d6d4841",
-      "scope": "Current RSI P0 acceptance: exact prior CompiledAttempt/terminal-Receipt evidence mechanically reconstructs Mandate consumption and remaining authority; an Agent selects the next Strategy from a digest-bound selection context; Host Task-per-attempt lineage survives exact replay, conflicting adoption and fresh recovery without forcing a Goal stream; one Harness self-change is accepted by baseline-red/candidate-green evidence plus 326-test, static-contract, H2 and isolated-wheel post-commit gates."
+      "scope": "Current RSI P0 acceptance: exact prior CompiledAttempt/terminal-Receipt evidence mechanically reconstructs Mandate consumption and remaining authority; an Agent selects the next Strategy from a digest-bound selection context; Host Task-per-attempt lineage survives exact replay, conflicting adoption and fresh recovery without forcing a Goal stream; one Harness self-change is accepted by baseline-red/candidate-green evidence plus 326-test, static-contract, H2 and isolated-wheel post-commit gates. Historical after RSI P1 advanced current Harness implementation paths; retained unchanged for its exact P0 revision."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-p1",
+      "file": "harness-h2-deliberation-lifecycle-6c0defb.json",
+      "status": "verified",
+      "implementationRevision": "6c0defb8d696f30a5d9431344f6d4f9bd050d2be",
+      "scope": "Current deterministic H2 lifecycle evidence: 13/13 gates including Assignment-wide phase-A expiry fencing, shared cancellation/budget/deadline authority, and no domain-strategy ownership."
+    },
+    {
+      "claimId": "harness.rsi.p1-live-multi-attempt",
+      "file": "harness-rsi-p1-live-multi-attempt-6c0defb.json",
+      "status": "verified",
+      "implementationRevision": "6c0defb8d696f30a5d9431344f6d4f9bd050d2be",
+      "scope": "Current live DeepSeek RSI P1 falsifier: Agent autonomously switches partial→full Profile after exact independent verification, adopts prior CompletionProposal plus StrategyEvidence, and remains inside Harness economic/Context authority; final unresolved semantic closure is intentionally not claimed and the raw receipt remains falsified on that gate."
     }
   ]
 }
