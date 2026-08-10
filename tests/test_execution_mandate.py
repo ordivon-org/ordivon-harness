@@ -99,6 +99,10 @@ class ExecutionMandateTests(unittest.TestCase):
         selected = strategy(value)
         self.assertEqual(HarnessExecutionStrategy.from_dict(selected.to_dict()), selected)
 
+    def test_mandate_rejects_non_string_completion_contract_keys(self) -> None:
+        with self.assertRaisesRegex(ValueError, "authority object keys must be strings"):
+            replace(mandate(), completion_contract={1: "must-not-be-coerced"})  # type: ignore[dict-item]
+
     def test_compiler_separates_aggregate_mandate_from_attempt_step_limits(self) -> None:
         value = mandate()
         selected = strategy(

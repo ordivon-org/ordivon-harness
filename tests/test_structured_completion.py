@@ -11,6 +11,7 @@ from ordivon_harness.api import (
     decode_structured_completion_result,
     structured_completion_contract_digest,
 )
+from ordivon_harness.completion import structured_completion_result_schema
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.ordivon.model import AgentTurnRequest
 
@@ -144,6 +145,15 @@ class StructuredCompletionTests(unittest.TestCase):
         self.assertNotIn("summary", properties)
         self.assertEqual(properties["result"], run_contract.to_dict()["completionContract"]["resultSchema"])
 
+
+    def test_structured_schema_rejects_non_string_object_keys(self) -> None:
+        with self.assertRaisesRegex(ValueError, "completion schema object keys must be strings"):
+            structured_completion_result_schema(
+                {
+                    "mode": STRUCTURED_COMPLETION_MODE,
+                    "resultSchema": {1: {"type": "string"}},  # type: ignore[dict-item]
+                }
+            )
 
     def test_candidate_completed_may_retain_honest_unresolved_unknowns(self) -> None:
         run_contract = self.structured_contract()
