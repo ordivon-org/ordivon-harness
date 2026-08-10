@@ -425,9 +425,9 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p3",
       "file": "harness-h2-deliberation-lifecycle-28d3a28.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "28d3a28b53db96cc7237f0cf838f580236623dd8",
-      "scope": "Current deterministic H2 lifecycle evidence on the P3 source/test/docs lineage: 13/13 gates remain accepted after delegated-digest hardening."
+      "scope": "Historical P3 H2 lifecycle evidence retained exactly after P5 Provider lifecycle source hardening changed current Harness implementation paths; its 13/13 gates remain valid for 28d3a28, while the P5 H2 receipt supersedes it as current implementation verification."
     },
     {
       "claimId": "harness.rsi.p3-recursive-improvement",
@@ -446,9 +446,23 @@
     {
       "claimId": "harness.rsi.p5-high-information-discovery",
       "file": "harness-rsi-p5-high-information-discovery-999d753.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "999d7535242b14c432cd14527ec109f2c6749969",
-      "scope": "Current bounded RSI P5/R12 evidence-driven high-information discovery acceptance: an Agent consumed exact external Host/World failure evidence and selected all repository observations itself, reducing admitted observations from P4 203 to 8 (25.375x) while performing six source/reference investigations; it separated durable full index/history from a compact Working View, preserved rejected action evidence, and lawfully abstained because no reachable causal source defect was proven. This does not claim token-efficient autonomous discovery or resolve the separate no-Tool failure."
+      "scope": "Historical exact P5/R12 discovery receipt bound to the unchanged 999d753 discovery baseline: 203→8 observations, external Host/World evidence, compact Working View and lawful abstention. A later independent release acceptance found a separate Provider concurrency defect and changed current source, so this receipt is preserved rather than rewritten."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-p5",
+      "file": "harness-h2-deliberation-lifecycle-89fc499.json",
+      "status": "verified",
+      "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
+      "scope": "Current deterministic H2 lifecycle evidence on the P5 Provider-outcome hardening implementation: all 13 aggregate-budget/cancellation/deadline gates remain accepted after concurrency source changes."
+    },
+    {
+      "claimId": "harness.rsi.p5-final-acceptance",
+      "file": "harness-rsi-p5-final-acceptance-89fc499.json",
+      "status": "verified",
+      "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
+      "scope": "Current final P5 acceptance: preserves the Agent-owned 203→8 evidence-driven discovery result and separately records the release-acceptance Provider concurrency hardening forced after that Agent lawfully abstained. A physical Provider dispatch winner now preserves bounded known-outcome commit authority against short generic Run-lease contention while contenders remain no-redispatch; 100/100 official concurrency repetitions, 29 focused tests and 344-test source acceptance pass. The Agent discovery did not author this source target."
     }
   ]
 }

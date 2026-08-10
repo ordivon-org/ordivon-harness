@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p5-final-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r12-high-information-discovery-plus-independent-provider-outcome-hardening-accepted",
+  "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
+  "baseRevision": "999d7535242b14c432cd14527ec109f2c6749969",
+  "discoveryReceipt": "harness-rsi-p5-high-information-discovery-999d753.json",
+  "scope": "Final P5 acceptance keeps two provenance lines separate. The Agent-owned R12 discovery experiment on 999d753 reduced repository observations from 203 to 8 and lawfully abstained because it did not prove the external no-Tool failure causally. Afterwards, independent closeout release acceptance exposed a different pre-existing Provider concurrency defect: the unique physical Provider dispatch winner could lose the generic Run lease to a non-dispatching contender and fail to commit a known result, leaving durable DISPATCHING state. Deterministic baseline-red, high-intensity reproduction, a partial-fix falsifier, bounded outcome-lease hardening, 100/100 official concurrency repetitions, 29 focused tests and 344-test full acceptance validate the source repair at 89fc499. This does not retroactively claim that the discovery Agent found or authorized that defect.",
+  "r12Discovery": {
+    "sourceRevision": "999d7535242b14c432cd14527ec109f2c6749969",
+    "receipt": "harness-rsi-p5-high-information-discovery-999d753.json",
+    "acceptedResultDigest": "sha256:0e0ec6fa95cbe92777868540d7ec207cef7b7fdd420d20dfbef0e7e0021a70e8",
+    "observationCount": 8,
+    "p4ObservationBaseline": 203,
+    "observationReductionFactor": 25.375,
+    "providerCalls": 12,
+    "totalTokens": 239953,
+    "sourceMutationAuthorityEarned": false,
+    "outcome": "bounded-abstain",
+    "separateNoToolFailureStillOpen": true,
+    "interpretation": "Evidence-driven observation selection improved sharply, but no causal source target emerged from that branch and token/model-call efficiency remains open."
+  },
+  "independentReleaseFalsifier": {
+    "discoveryAgentAuthoredThisTarget": false,
+    "sourceChangeTriggeredBy": "independent closeout release acceptance and concurrency stress",
+    "firstFullReleaseFailure": {
+      "runtimeJobId": "job-019fec22-7c8b-7b01-97c6-d5136c5dc47e",
+      "terminalEvidence": "sha256:3d8e5c66b442620db709cd41de233499e7ad96260d5bfddc313011f0cc543960",
+      "failedTest": "R3 public handles: exactly one physical Provider dispatch but zero successful workers"
+    },
+    "secondFullReleaseFailure": {
+      "runtimeJobId": "job-019fec27-0296-7211-b015-39e4769bd760",
+      "terminalEvidence": "sha256:6d20bb0af6606d9a17c985dd9a34e2bb24f318aa32fe10d0f39105f44efd7bb0",
+      "failedTest": "Standalone runner concurrency: exactly one physical Provider dispatch but zero successful workers"
+    },
+    "highIntensityBaseline": {
+      "runtimeJobId": "job-019fec29-491e-7a62-aed2-adc024737e9c",
+      "terminalEvidence": "sha256:1d71d7ababe1d1e12ce48f97d75678aacc60f675011dc75ecd0a2acefa41d04e",
+      "failedIteration": 16,
+      "workers": 12,
+      "physicalDispatchWorkers": [
+        6
+      ],
+      "physicalWinnerFailure": "HarnessLeaseHeld",
+      "durableEvents": [
+        "harness.run-created",
+        "harness.provider-call-claimed",
+        "harness.provider-call-dispatching"
+      ],
+      "providerCompletedEventPresent": false,
+      "runProjection": "active",
+      "doctorHealthy": true,
+      "causalClaim": "A contender that did not own physical dispatch could temporarily take the generic Run lease while discovering an existing DISPATCHING call; the physical winner then lost known-result commit authority and stranded durable DISPATCHING state."
+    },
+    "deterministicRegressionBaselineRed": {
+      "runtimeJobId": "job-019fec2e-c08a-7121-b694-6b88e5447fc0",
+      "terminalEvidence": "sha256:cb3f3a4816d7935708a0e590fb23be6d745ae3e960ae146f77226e19dbdc70b2",
+      "test": "test_dispatching_replay_does_not_take_run_lease_from_outcome_owner",
+      "baselineRed": true
+    }
+  },
+  "repairIteration": {
+    "firstRepair": "Pre-lease Provider-state replay preflight: same-call DISPATCHING and live foreign CLAIMED contenders exit without taking the generic Run lease; true writes still revalidate under the lease.",
+    "firstRepairCandidateGreen": {
+      "runtimeJobId": "job-019fec2f-6fbf-7c41-a9d6-f29810adf446",
+      "terminalEvidence": "sha256:c11bfa0d1a544f81c676221a5924edf0788770063499090affc39586c4d70ccf"
+    },
+    "firstRepairStress": {
+      "runtimeJobId": "job-019fec2f-c40f-78c3-9d77-09a4d1441206",
+      "terminalEvidence": "sha256:e9798cd8ddbf7d7f05906d7bc3a12b06198092ec4a5dfc32f1415696f56b923d",
+      "custom12WorkerIterationsPassed": 100
+    },
+    "partialRepairFalsified": {
+      "runtimeJobId": "job-019fec31-1e92-7112-9767-bfb4b51d8ebe",
+      "terminalEvidence": "sha256:dea4caa7cbec57cddda7cd58f960d899947148f435c765ee7d46db445a2e1971",
+      "result": "Official Standalone/R3 repetition still produced an R3 zero-success race, proving pre-lease replay filtering alone was insufficient."
+    },
+    "finalRepair": "Known Provider outcome commit uses a bounded provider-outcome lease acquisition. If a short generic Run lease is held, the physical outcome owner waits up to 1.0s in 1ms mechanical intervals while requiring the exact durable Provider Call record to remain current; supersession fails closed, and exhausted wait becomes explicit Provider recovery rather than silent result loss.",
+    "failurePathCovered": true,
+    "genericPreDispatchLeaseSemanticsChanged": false
+  },
+  "finalRepairEvidence": {
+    "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
+    "deterministicRegressions": {
+      "runtimeJobId": "job-019fec37-dea3-72e0-b685-982150df995f",
+      "terminalEvidence": "sha256:c3317222701ae263af9518d48d55007bb5ce398d397e35f58d6226b71d5fd83c",
+      "testsPassed": 3,
+      "covers": [
+        "DISPATCHING replay does not take Run lease",
+        "known Provider outcome waits through transient Run lease",
+        "DISPATCHING replay still requires recovery/no redispatch"
+      ]
+    },
+    "officialConcurrencyRepetition": {
+      "runtimeJobId": "job-019fec38-2ba4-7e33-8264-e0234b5d96e1",
+      "terminalEvidence": "sha256:bf0c217c3a88444aa6a0573ae8afb58fe4aaac0ac821c2749801e18b8b9b312e",
+      "standaloneIterations": 50,
+      "publicHandleIterations": 50,
+      "result": "100/100 official concurrency tests passed"
+    },
+    "focusedModules": {
+      "runtimeJobId": "job-019fec3a-3361-74e3-92e0-501334332e50",
+      "terminalEvidence": "sha256:1a9539dd676827f120a671bb9e95442b4afd9d6e1a19c5fafab4a31f05bf4559",
+      "testsPassed": 29,
+      "modules": [
+        "test_p0_sqlite_provider_store",
+        "test_p0_standalone_runner",
+        "test_r3_supported_agent_run"
+      ],
+      "ruffPassed": true
+    },
+    "sourceCandidateAcceptance": {
+      "runtimeJobId": "job-019fec3b-b664-7842-86b2-fe8e0baa5126",
+      "terminalEvidence": "sha256:9e7ccb9a90b84bcadb3970dfaa90b584184d3d6aa1b39a43c15078a20db3202e",
+      "fullTestsPassed": 344,
+      "testsSkipped": 3,
+      "h2GatesPassed": 13,
+      "h2ReceiptDigest": "sha256:9fa2ade3c9cf9f0600dd550af2d236bcd1df0a3bbe62e5a92bb9932c228e762d",
+      "ruffPassed": true,
+      "dependencyContractPassed": true,
+      "documentationContractPassed": true,
+      "deterministicDemoPassed": true
+    }
+  },
+  "authorityLaw": "After durable physical Provider dispatch, a known outcome must not be lost merely because a non-dispatching contender briefly owns the generic Run lease. Contenders must not redispatch; the exact physical outcome owner may wait only through bounded mechanical contention while the exact durable Provider Call identity remains current.",
+  "remainingBoundaries": [
+    "The P5 Agent discovery still ended in lawful abstention and did not discover or authorize the concurrency source repair; provenance remains separate.",
+    "The separate no-Tool conclusion-correction task remains unresolved unless its own owner independently closes it.",
+    "P5 observation traversal improved 25.375x but the discovery branch still used 12 Provider calls and 239,953 tokens; P6 should target incremental durable decision state/model-call efficiency.",
+    "Provider outcome waiting is intentionally bounded to one second and exact-record continuity; it is not a generic lock retry framework.",
+    "No Scheduler, Goal Stream, generic Evaluator Service, Memory/RAG subsystem, DAG, RSI Controller or second persistence layer was added."
+  ]
+}
