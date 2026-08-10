@@ -103,6 +103,20 @@ class ExecutionMandateTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "authority object keys must be strings"):
             replace(mandate(), completion_contract={1: "must-not-be-coerced"})  # type: ignore[dict-item]
 
+    def test_delegated_digest_authority_rejects_non_hex_payloads(self) -> None:
+        invalid = "sha256:" + "g" * 64
+        with self.subTest("consumption"):
+            with self.assertRaisesRegex(ValueError, "must be a sha256 digest"):
+                HarnessMandateConsumption(
+                    mandate_digest=invalid,
+                    completed_attempts=0,
+                    consumed_total_tokens=0,
+                    consumed_wall_time_ms=0,
+                )
+        with self.subTest("execution-profile"):
+            with self.assertRaisesRegex(ValueError, "must be a sha256 digest"):
+                replace(profile(), tool_catalog_digest=invalid)
+
     def test_compiler_separates_aggregate_mandate_from_attempt_step_limits(self) -> None:
         value = mandate()
         selected = strategy(
