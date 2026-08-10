@@ -411,16 +411,30 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p2",
       "file": "harness-h2-deliberation-lifecycle-64f58c7.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "64f58c7ca0f5cffda9e32e5a62a553a8679fac79",
-      "scope": "Current deterministic H2 lifecycle evidence on the P2 source/test lineage: 13/13 gates remain accepted after Agent-authored authority hardening."
+      "scope": "Current deterministic H2 lifecycle evidence on the P2 source/test lineage: 13/13 gates remain accepted after Agent-authored authority hardening. Historical after RSI P3 changed current delegated-digest source authority and improvement-loop evidence; retained unchanged for its exact P2 revision."
     },
     {
       "claimId": "harness.rsi.p2-self-modification",
       "file": "harness-rsi-p2-self-modification-5360130.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "53601304283971f22fb059788ebdab58481b5614",
-      "scope": "Current RSI P2/R9 evidence for one bounded Agent-authored Harness source improvement: exact prior failure evidence -> failed source attempts -> exact-edit candidate -> independent evaluation -> independent promote decision; does not claim automatic indefinite self-improvement."
+      "scope": "Current RSI P2/R9 evidence for one bounded Agent-authored Harness source improvement: exact prior failure evidence -> failed source attempts -> exact-edit candidate -> independent evaluation -> independent promote decision; does not claim automatic indefinite self-improvement. Historical after RSI P3 changed current delegated-digest source authority and improvement-loop evidence; retained unchanged for its exact P2 revision."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-p3",
+      "file": "harness-h2-deliberation-lifecycle-28d3a28.json",
+      "status": "verified",
+      "implementationRevision": "28d3a28b53db96cc7237f0cf838f580236623dd8",
+      "scope": "Current deterministic H2 lifecycle evidence on the P3 source/test/docs lineage: 13/13 gates remain accepted after delegated-digest hardening."
+    },
+    {
+      "claimId": "harness.rsi.p3-recursive-improvement",
+      "file": "harness-rsi-p3-recursive-improvement-aea4ec1.json",
+      "status": "verified",
+      "implementationRevision": "aea4ec10b0e9f37122054fe0723f96c85f7a7991",
+      "scope": "Current RSI P3/R10 bounded evidence: promoted P2 system autonomously selected the next real source target and falsifier, improved falsifier/Working-View/materialization mechanics from observed failures, obtained independent evaluation and separate promote decision, and preserved authority separation; does not claim autonomous indefinite RSI."
     }
   ]
 }

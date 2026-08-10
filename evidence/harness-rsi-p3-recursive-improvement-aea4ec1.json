@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p3-recursive-improvement-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r10-improvement-of-improvement-accepted",
+  "implementationRevision": "aea4ec10b0e9f37122054fe0723f96c85f7a7991",
+  "baseRevision": "5a390657bc0aaa2b89e02b0fc15b33158a03ec20",
+  "testHardeningRevision": "4c4bc2614ecbf2335e6957b83a70428e7c66eb23",
+  "documentationRevision": "28d3a28b53db96cc7237f0cf838f580236623dd8",
+  "scope": "One bounded R10 cycle in which the promoted P2 system improved its own improvement composition: Agent-owned target/falsifier selection, falsifier admission, failed-action history/Working-View separation, Runtime-native exact source materialization, independent evaluation, separate promotion decision, and guarded promotion evidence. This does not claim autonomous indefinite RSI.",
+  "p2Baseline": {
+    "receipt": "harness-rsi-p2-self-modification-5360130.json",
+    "separateAgentRunnerScripts": 3,
+    "callerAuthoredBaselineProbeSet": true,
+    "customExactMaterializerGlue": true,
+    "failedActionBytesProjectedIntoRevisionContext": true
+  },
+  "recursiveTargetDiscovery": {
+    "insufficientContextAttempt": {
+      "runtimeJobId": "job-019feb26-1e62-7312-b679-c9c9d100b8f0",
+      "terminalEvidence": "sha256:4273299c31d93ca5cc086239c1f60ecc922d73f6ca976e9fed26ed45009419ad",
+      "result": "Agent refused to fabricate a target from partial source and requested complete authority source for reachability-sensitive candidates."
+    },
+    "initialTargetSelection": {
+      "runtimeJobId": "job-019feb28-7915-7ab0-b2c8-951c49f8a3dd",
+      "terminalEvidence": "sha256:dc1754fb380640c958883b9d6251fa52b40c5526a2151a1bbac8ed88ab6a9db5",
+      "selectionDigest": "sha256:d4b1a87b3c3e83c3f43ed474ef2bf5068898d8cb79d8cc7a2b4b485e30ba4445",
+      "targetId": "harness-mandate-digest-invalid-hex-authority",
+      "humanPreselectedTarget": false,
+      "selectedFromCurrentSourceAndP2Evidence": true,
+      "rejectedFalsePositiveCandidates": [
+        "strategy_selection._thaw_json non-string-key path",
+        "core_contracts._thaw_json without proven reachability",
+        "broad exception boundaries"
+      ]
+    },
+    "invalidFalsifier": {
+      "runtimeJobId": "job-019feb29-0bda-7f92-9510-b844a4a6b870",
+      "terminalEvidence": "sha256:59a999fbd585e626ebae3baed8d83f75fdca3eb919228da8f7834be65205ba6b",
+      "evidenceDigest": "sha256:0bd017f28a7ec6a4555fcd46dee6540bf1972276b452d91c3dab4a62791710e1",
+      "expectedFailureMatched": false,
+      "classification": "action-invalid-not-baseline-red",
+      "reason": "The Agent-authored falsifier failed before exercising the selected invariant because its import root was invalid."
+    },
+    "falsifierAdmissionImprovement": {
+      "staticImportRootAdmissionAdded": true,
+      "allowedHarnessImportRoot": "ordivon_harness",
+      "invalidActionRejectedBeforeBaselineEvaluation": true,
+      "admissionProofJobId": "job-019feb2c-cb87-7002-b435-665b5639cad2",
+      "admissionProofTerminalEvidence": "sha256:b365b4d3cd5c1aa573bb81478716a4e1a528079dd8bdb0f3c03ee82c9b1e95af"
+    },
+    "workingViewImprovement": {
+      "canonicalFailureHistoryRetained": true,
+      "priorFalsifierCodeRetainedByDigest": true,
+      "priorMalformedActionBytesReplayed": false,
+      "priorDiagnosticBytesReplayed": false,
+      "currentViewCarries": [
+        "target semantic claim",
+        "files",
+        "expected failure",
+        "improvement boundary",
+        "action digest",
+        "abstract failure class",
+        "current repair constraint"
+      ],
+      "interpretation": "Exact failed-action history is not automatically the next Agent Working View; obsolete action/diagnostic bytes can anchor stale behavior while remaining durably recoverable by digest."
+    },
+    "finalTargetSelection": {
+      "runtimeJobId": "job-019feb2e-a216-7402-b4e7-949fc96a534d",
+      "terminalEvidence": "sha256:cead9193c9189fc3725ac034da7b4737b713329c609042966b032eb0f752e06c",
+      "selectionDigest": "sha256:5ffa881c539c2e15cdbaef81a6639cc420b97b79203fd2f018f9c7986ea05d1f",
+      "targetId": "harness-mandate-digest-invalid-hex-authority",
+      "claim": "mandate.py's _digest helper validates only the sha256: prefix and total length (71 chars) for every runtime digest field (HarnessMandateConsumption.mandate_digest, HarnessExecutionProfile.tool_catalog_digest/tool_grant_digest, HarnessExecutionStrategy.mandate_digest, CompiledHarnessAttempt mandate/profile/strategy digests), but never validates that the 64-character hex payload only contains [0-9a-f]. This is inconsistent with core_contracts._digest which enforces the strict _DIGEST_RE ^sha256:[0-9a-f]{64}$. As a result, a structurally invalid digest such as 'sha256:' + 'g'*64 is admitted into consumption/recipient authority evidence, violating the sha256 hex canonical form contract.",
+      "files": [
+        "src/ordivon_harness/mandate.py"
+      ],
+      "falsifierCodeDigest": "sha256:e0d2eb72a513b66a47774a20d19897835a602f59be20ae4834042cbaf1bf7c9f"
+    },
+    "baselineFalsifier": {
+      "runtimeJobId": "job-019feb2f-18e9-7060-b17f-5a29454708c3",
+      "terminalEvidence": "sha256:67f1a12ff3981ab5287b1dfa2b3e252565d659592c9539b95d5d661418872eeb",
+      "evidenceDigest": "sha256:db6450debb13a375b278fb8cc6f4d222d91568cd7f6c99db7c6832379689a6ea",
+      "exitCode": 1,
+      "expectedFailureMatched": true,
+      "verdict": "baseline-red"
+    }
+  },
+  "sourceChange": {
+    "agentRuntimeJobId": "job-019feb2f-5190-7eb2-a492-8d64b1ba5e70",
+    "agentTerminalEvidence": "sha256:74bda07d3ee34d5f0d30d78abdcc401a7e9ae2097278c168bddc43bd6f068714",
+    "proposalDigest": "sha256:ad1daece34f8b631fd66bd2fe8e2edf928db36eebd79d4f23f98aa7b146fc702",
+    "agentAuthoredImplementationRevision": "aea4ec10b0e9f37122054fe0723f96c85f7a7991",
+    "changedFiles": [
+      "src/ordivon_harness/mandate.py"
+    ],
+    "exactEditCount": 1,
+    "materializationAuthority": "Runtime Workspace REPLACE_EXACT",
+    "customMaterializerScriptRequired": false,
+    "fuzzyMatching": false,
+    "humanByteRepair": false,
+    "semanticEffect": "Mandate-layer digests now require sha256: followed by exactly 64 lowercase hexadecimal characters, covering consumption, Profiles, Strategies and compiled attempts through one shared helper."
+  },
+  "independentEvaluation": {
+    "runtimeJobId": "job-019feb30-17eb-7cb1-946a-b57fe4ade7cd",
+    "terminalEvidence": "sha256:635d7b9639e66d1ad68eb6334d65286aad936fd3e49ff07e71b927d2f140c6dd",
+    "evaluationRecordJobId": "job-019feb34-bbcb-70e2-a041-d9c16072d066",
+    "evaluationRecordTerminalEvidence": "sha256:a3c15383b61e1d9fc45c5c0c46bdd8c0035f5b3aab9ad67f2eed7d4c9a909984",
+    "evaluationDigest": "sha256:9419f334f8b6e654315077f8940564d8037a918fdaab94016b1d41c37ea51cc3",
+    "candidateDiffDigest": "sha256:da05bde9585d7357aa2ddcf5de2550f24cbaa23ac73280eb544aad254e5dfabf",
+    "sameAgentFalsifierBaselineRedCandidateGreen": true,
+    "validLowercaseDigestStillAccepted": true,
+    "profileInvalidHexAlsoRejected": true,
+    "focusedTestsPassedBeforePermanentRegression": 28,
+    "fullTestsPassedBeforePermanentRegression": 341,
+    "testsSkipped": 3,
+    "ruffPassed": true,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "diffCheckPassed": true
+  },
+  "evaluatorHardening": {
+    "revision": "4c4bc2614ecbf2335e6957b83a70428e7c66eb23",
+    "runtimeJobId": "job-019feb32-d5be-7d62-a3c6-d1a9e3679edd",
+    "terminalEvidence": "sha256:b2e7f5a27c5c7137540ee99fee12fbcf4e888e9b730b17fc8c78dbefa4c8762e",
+    "permanentRegressionOwner": "independent evaluator",
+    "executionMandateTestsPassed": 9,
+    "fullTestsPassed": 342,
+    "testsSkipped": 3
+  },
+  "promotionDecision": {
+    "runtimeJobId": "job-019feb34-f39a-7b51-b9c0-f8e3003abf37",
+    "terminalEvidence": "sha256:04bad6a666d6e758de4b506119d8ce984bde1f0ca73a12c5ccb871ebdce559aa",
+    "decisionDigest": "sha256:5bd5e9154acfe07e7889629a2bdf95fd24cb095bd66da61ba743c4dcdd2e1b6e",
+    "contextDigest": "sha256:71acb9a26795929134a91f6df9e82e2174470ff1f40b06a0fc0d54e0f523b3ba",
+    "decision": "promote",
+    "requiredChanges": [],
+    "sourceGeneratorWasPromotionDecider": false,
+    "evaluatorWasPromotionDecider": false
+  },
+  "improvementOfImprovement": {
+    "p2SeparateAgentRunnerScripts": 3,
+    "p3SingleAgentRunnerScript": 1,
+    "p2CallerPreselectedBaselineProbeSet": true,
+    "p3AgentSelectedTargetAndAuthoredFalsifier": true,
+    "p2CustomMaterializerGlue": true,
+    "p3RuntimeNativeExactMaterialization": true,
+    "p3FalsifierStaticAdmission": true,
+    "p3FailedActionHistorySeparatedFromWorkingView": true,
+    "generatorEvaluatorPromotionSeparationPreserved": true
+  },
+  "preEvidenceReleaseAcceptance": {
+    "runtimeJobId": "job-019feb38-167e-7491-92cd-95204dc271a0",
+    "terminalEvidence": "sha256:b8e7c8961d309195ea70349bf98d78b277eb96f7e4a7312a05996735eab13958",
+    "focusedTestsPassed": 33,
+    "fullTestsPassed": 342,
+    "testsSkipped": 3,
+    "h2DeterministicGatesPassed": 13,
+    "ruffPassed": true,
+    "dependencyContractPassed": true,
+    "documentationContractPassed": true,
+    "isolatedWheelInstallPassed": true,
+    "wheelHostFree": true,
+    "wheelCliCommandsVerified": 14
+  },
+  "remainingBoundaries": [
+    "P3 is a bounded R10 instance, not autonomous indefinite recursive self-improvement.",
+    "The compact target/edit/decision runner remains experiment scaffolding and is not a supported Harness API.",
+    "Source discovery slices/observations and independent evaluator gate selection are still externally prepared.",
+    "Canonical promotion triggering and Git authority remain external and guarded.",
+    "No Scheduler, Goal Stream, generic Evaluator Service, Memory/RAG subsystem, DAG, or RSI Controller was forced."
+  ]
+}
