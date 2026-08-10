@@ -19,7 +19,9 @@ _MAX_RESULT_SCHEMA_BYTES = 65_536
 
 def _json_projection(value: Any) -> JsonValue:
     if isinstance(value, Mapping):
-        projected = {str(key): _json_projection(item) for key, item in value.items()}
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError("completion schema object keys must be strings")
+        projected = {key: _json_projection(item) for key, item in value.items()}
         validate_json_value(projected)
         return projected
     if isinstance(value, (list, tuple)):

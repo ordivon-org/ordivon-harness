@@ -28,7 +28,9 @@ def _digest(value: str, label: str) -> str:
 
 def _freeze_json(value: Any) -> Any:
     if isinstance(value, Mapping):
-        return MappingProxyType({str(key): _freeze_json(item) for key, item in value.items()})
+        if any(not isinstance(key, str) for key in value):
+            raise TypeError("authority object keys must be strings")
+        return MappingProxyType({key: _freeze_json(item) for key, item in value.items()})
     if isinstance(value, (list, tuple)):
         return tuple(_freeze_json(item) for item in value)
     validate_json_value(value)
@@ -37,7 +39,9 @@ def _freeze_json(value: Any) -> Any:
 
 def _thaw_json(value: Any) -> JsonValue:
     if isinstance(value, Mapping):
-        projected = {str(key): _thaw_json(item) for key, item in value.items()}
+        if any(not isinstance(key, str) for key in value):
+            raise ValueError("authority object keys must be strings")
+        projected = {key: _thaw_json(item) for key, item in value.items()}
         validate_json_value(projected)
         return projected
     if isinstance(value, tuple):
@@ -52,6 +56,8 @@ def _json_object(value: Mapping[str, Any], label: str, *, non_empty: bool = Fals
     projected = _thaw_json(value)
     if not isinstance(projected, dict):
         raise TypeError(f"{label} must be an object")
+    if any(not isinstance(key, str) for key in projected):
+        raise TypeError(f"{label} object keys must be strings")
     if non_empty and not projected:
         raise ValueError(f"{label} must not be empty")
     return projected
