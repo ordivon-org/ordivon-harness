@@ -2282,23 +2282,13 @@ class OrdivonAgentLoop:
                     )
                 return stop(RunStopCode.NEEDS_INPUT, conclusion=result.conclusion)
 
-            if (
-                len(result.tool_calls) == 1
-                and result.tool_calls[0].argument_error is not None
-                and bool(
-                    getattr(self.tool_bridge, "definitions", None)
-                )
-            ):
-                bridge_definitions = getattr(self.tool_bridge, "definitions", None)
-                tool_names = (
-                    {definition.name for definition in bridge_definitions()}
-                    if callable(bridge_definitions)
-                    else set()
-                )
-                unavailable_only = bool(tool_names) is False and all(
-                    call.argument_error == "unavailable_tool"
+            bridge_definitions = getattr(self.tool_bridge, "definitions", None)
+            if result.tool_calls and callable(bridge_definitions):
+                tool_names = {definition.name for definition in bridge_definitions()}
+                unavailable_only = not tool_names and all(
+                    call.name != WORKING_SET_HISTORY_CONTROL_NAME
+                    and call.argument_error == "unavailable_tool"
                     for call in result.tool_calls
-                    if call.name != WORKING_SET_HISTORY_CONTROL_NAME
                 )
                 if unavailable_only:
                     if tool_corrections >= self.budget.max_tool_corrections:
@@ -2310,29 +2300,34 @@ class OrdivonAgentLoop:
                             ),
                         )
                     tool_corrections += 1
+                    unavailable_names = sorted({call.name for call in result.tool_calls})
+                    display_names = ", ".join(unavailable_names[:8])
                     messages.append(
                         {
                             "role": "user",
                             "content": (
-                                "The Runtime Tool you requested was never admitted on this "
-                                "surface, so no Runtime Tool observation was produced and it "
-                                f"did not execute: {result.tool_calls[0].name}. Choose an "
-                                "available Harness cognition action or submit a conclusion "
-                                "instead."
+                                "The Runtime Tool actions you requested were never admitted "
+                                "on this surface, so no Runtime Tool observations were "
+                                "produced and nothing executed. Unavailable action names: "
+                                f"{display_names}. Choose an available Harness cognition "
+                                "action or submit a conclusion instead."
                             ),
                         }
                     )
-                    recorder.record(
-                        "tool_call_rejected",
-                        {
-                            "toolCallId": result.tool_calls[0].tool_call_id,
-                            "toolName": result.tool_calls[0].name,
-                            "argumentError": result.tool_calls[0].argument_error,
-                            "correction": tool_corrections,
-                            "physicalDispatch": False,
-                            "seenToolCallIdentity": False,
-                        },
-                    )
+                    for call in result.tool_calls:
+                        recorder.record(
+                            "tool_call_rejected",
+                            {
+                                "toolCallId": call.tool_call_id,
+                                "toolName": call.name,
+                                "toolCall": call.to_dict(),
+                                "argumentError": call.argument_error,
+                                "correction": tool_corrections,
+                                "physicalDispatch": False,
+                                "seenToolCallIdentity": False,
+                                "source": "unavailable_no_tool_provider_intent",
+                            },
+                        )
                     try:
                         bind_run_state()
                     except ToolBridgeError as state_error:
