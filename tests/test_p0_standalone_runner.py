@@ -114,6 +114,56 @@ class StandaloneHarnessRunnerTests(unittest.TestCase):
                 self.assertEqual(event_kinds.count("harness.run-completed"), 1)
 
 
+    def test_durable_claim_does_not_rebind_state_before_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            clock = FixedClock()
+            suffix = "claim-to-dispatch-no-rebind"
+            run_contract, store, continuity = self.initialize(root, suffix, clock)
+            adapter = ScriptedTurnAdapter((completed_result(suffix),))
+            bridge = SQLiteHarnessAgentBridge(run_contract, continuity)
+            runner = self.runner(run_contract, continuity, adapter, bridge, clock)
+
+            original_begin = bridge.begin_provider_call
+            original_admit = bridge.admit_provider_call
+            original_bind = bridge.bind_run_state
+            claim_active = False
+            dispatch_admitted = False
+
+            def tracked_begin(*args, **kwargs):
+                nonlocal claim_active
+                retained = original_begin(*args, **kwargs)
+                if retained is None:
+                    claim_active = True
+                return retained
+
+            def tracked_admit(*args, **kwargs):
+                nonlocal dispatch_admitted
+                admitted = original_admit(*args, **kwargs)
+                if admitted:
+                    dispatch_admitted = True
+                return admitted
+
+            def guarded_bind(*args, **kwargs):
+                if claim_active and not dispatch_admitted:
+                    raise AssertionError(
+                        "durable CLAIMED Provider Call must transition directly to dispatch admission"
+                    )
+                return original_bind(*args, **kwargs)
+
+            bridge.begin_provider_call = tracked_begin
+            bridge.admit_provider_call = tracked_admit
+            bridge.bind_run_state = guarded_bind
+            try:
+                result = runner.run(({"role": "user", "content": "complete"},))
+                self.assertEqual(
+                    result.loop_result.stop_code,
+                    RunStopCode.CANDIDATE_COMPLETED,
+                )
+                self.assertTrue(dispatch_admitted)
+            finally:
+                store.close()
+
     def test_structured_completion_requires_adapter_binding_to_exact_contract(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"
