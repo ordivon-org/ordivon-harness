@@ -467,9 +467,9 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p6",
       "file": "harness-h2-deliberation-lifecycle-9e9c210.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9e9c2105958b754914609b4e0f28e06786755429",
-      "scope": "Current deterministic H2 lifecycle evidence on the P6 no-Tool control hardening lineage: all 13 aggregate-budget/cancellation/deadline gates remain accepted after malformed-conclusion and unavailable-Provider-intent source changes."
+      "scope": "Historical deterministic H2 lifecycle evidence retained unchanged after current DeepSeek cache-locality and Provider CLAIMED-to-DISPATCHING hardening advanced implementation source."
     },
     {
       "claimId": "harness.rsi.p6-high-budget-causal-utilization",
@@ -481,9 +481,23 @@
     {
       "claimId": "harness.rsi.p7-reversible-epistemic-state",
       "file": "harness-rsi-p7-reversible-epistemic-state-6b4cc77.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "6b4cc7724c83061a03fdb85df0003e9b4bff8d26",
-      "scope": "Current bounded RSI P7/R14 acceptance: compact Agent world-model state remains non-authoritative cognition, exact evidence is externally durable and reversible, cognition-state admission is distinct from action admission, root objective coverage cannot be replaced by easy subclaims, and causal terminal claims require Agent-observed exact evidence before independent re-grounding. The experiment rejects productizing a mandatory causal-ledger API; existing objective/WorkingView/deliberation/completion-evidence primitives are sufficient at this boundary."
+      "scope": "Historical bounded RSI P7/R14 reversible-epistemic-state evidence retained unchanged after current DeepSeek cache-locality and Provider claim-dispatch hardening advanced implementation source; P7 laws remain exact for their bound revision."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-cache",
+      "file": "harness-h2-deliberation-lifecycle-1d0fa63.json",
+      "status": "verified",
+      "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
+      "scope": "Current deterministic H2 lifecycle evidence after DeepSeek request-locality and Provider CLAIMED-to-DISPATCHING hardening; all 13 aggregate budget, deadline and cancellation gates remain accepted."
+    },
+    {
+      "claimId": "harness.deepseek.cache-locality-current",
+      "file": "harness-deepseek-cache-locality-1d0fa63.json",
+      "status": "verified",
+      "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
+      "scope": "Current DeepSeek request-locality acceptance: dynamic per-turn control moved behind stable protocol/history, caller-promotion Provider schema is stable while exact Run Store admission retains authority, real Harness live A/B expands deterministic common wire prefix from 642 bytes to about 140KB and changes independent second-turn cache realization from repeated zero hits to material 81.5%-99.65% hits. Receipt separately preserves a release-found Provider CLAIMED-to-DISPATCHING race and its independent 500/500 plus 400/400 hardening evidence."
     }
   ]
 }

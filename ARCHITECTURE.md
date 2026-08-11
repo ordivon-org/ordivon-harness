@@ -363,3 +363,9 @@ Harness can conclude that an Agent Run produced a candidate-completed result and
 ## Removed pre-H3 architecture
 
 H3 intentionally removed the former `HarnessHost`, Host Assignment/TaskContract model, `HostHarnessRunStore`, Host CLI namespace, cutover machinery, Host dependency extra, and Host-coupled Codex/Hermes drivers. Historical evidence may describe those experiments, but current source does not decode or advertise them.
+
+## Provider request locality and claim-transition authority
+
+Provider request locality is an Adapter projection property, not domain semantics. For DeepSeek, the stable system protocol and retained model-visible history precede a Harness-authored trailing user-role record named `ordivon_harness_turn_control`. Per-turn budget, exact caller-ingress provenance and WorkingSet selection remain visible and current, but their variation no longer rewrites the leading system prefix. Caller-promotion Provider schemas remain stable shapes; exact current-request provenance and Run Store admission still reject proposals outside the authorized caller-ingress set. Thus cacheability does not become authority.
+
+The release acceptance that validated this projection independently exposed a separate pre-dispatch concurrency boundary. Once an exact durable Provider Call is `CLAIMED`, its holder owns the next dispatch-admission transition more strongly than contenders that never obtained that claim. The Loop therefore does not perform a semantically redundant durable state rebind between claim/retry and dispatch admission. SQLite continuity may wait through bounded transient Run-lease contention before `DISPATCHING`, but only while the exact `CLAIMED` record remains current; supersession fails closed and bounded exhaustion requires recovery. This is distinct from P5's post-dispatch known-outcome authority and is not a generic lock-retry policy.

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-deepseek-cache-locality-current-acceptance",
+  "status": "accepted",
+  "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
+  "scope": "Current DeepSeek request-locality repair plus independently discovered Provider CLAIMED-to-DISPATCHING race hardening. Cache and concurrency provenance are retained separately inside this receipt; neither is claimed to cause the other.",
+  "cacheLocality": {
+    "law": "Stable protocol/history and stable Provider tool shape may be reused; exact per-turn authority remains dynamic and adapter-specific. Provider Tool schemas are affordance, not final authority.",
+    "sourceCommit": "3b9e299d1ad1260b1f13f821fd8da6bca0dbaa2a",
+    "regressionCommit": "6b722641f0c484f467669af936426f3cd4535341",
+    "runnerDigest": "sha256:524342217a5400f9191cb0fad1557db5f8c37b491ceb0cd9423e200e16f5e9da",
+    "rawCleanAB": {
+      "artifactDigest": "sha256:de8f41d42c8c8de2d22291f67cb38e73086eeecdce8e37a678983d8f74322f02",
+      "result": "dynamic first-system 0 hit; dynamic trailing-system 0 hit; dynamic trailing-user ~99.4%; dynamic promotion Tool enum alone 0 hit"
+    },
+    "rawCandidateAB": {
+      "artifactDigest": "sha256:866634c83d10f61dcbb37124c684abd82262079e78a632f715a2d5b73b0f7bd7",
+      "result": "trailing named-user control ~99.3% with no tools/static promotion schema; changing only dynamic enum again produced zero hit"
+    },
+    "harnessBaselineR2": {
+      "artifactDigest": "sha256:5c161c27b1b7d819dd4282b62b29699eb82d2ae9c749af9a980ddf5d1acdbe6c",
+      "secondTurnCacheHitTokens": 0,
+      "secondTurnPromptTokens": 32089,
+      "wireCommonPrefixBytes": 642
+    },
+    "harnessBaselineR3": {
+      "artifactDigest": "sha256:71cfa67c1a664791016dab1811ffdb4c6d5a29522f246992e1771b1cf0fc8685",
+      "secondTurnCacheHitTokens": 0,
+      "secondTurnPromptTokens": 32089,
+      "wireCommonPrefixBytes": 642
+    },
+    "harnessCandidateR1": {
+      "artifactDigest": "sha256:91c3d58bbeba341dd7d29cafd09ab34b49b0c53c94734203693ae26892ff6b79",
+      "secondTurnCacheHitTokens": 32000,
+      "secondTurnPromptTokens": 32113,
+      "wireCommonPrefixBytes": 139540
+    },
+    "harnessCandidateR2": {
+      "artifactDigest": "sha256:d875ff205d3ee360871a1fea6de5b8fb62d0eda1e61ce61c5cf297d8f47b5851",
+      "secondTurnCacheHitTokens": 26240,
+      "secondTurnPromptTokens": 32197,
+      "wireCommonPrefixBytes": 139792
+    },
+    "harnessCandidateR3": {
+      "artifactDigest": "sha256:4c585320b0e6f39b93231500e596cabe0f37b97f399ba619e3ad6ce24d5e24e6",
+      "secondTurnCacheHitTokens": 26240,
+      "secondTurnPromptTokens": 32197,
+      "wireCommonPrefixBytes": 139792
+    },
+    "deterministicAcceptance": "Request-locality acceptance is the stable wire-prefix expansion, not a fixed cache-hit percentage; Provider cache realization remains best-effort.",
+    "nonClaims": [
+      "No aggregate reasoning-token reduction is required or claimed.",
+      "Trailing user-role control is DeepSeek adapter policy, not a universal Harness wire law.",
+      "Static Provider schema does not broaden caller-ingress authority because exact Run Store admission rechecks current request authority."
+    ]
+  },
+  "providerClaimRace": {
+    "sourceCommit": "0523136",
+    "regressionCommit": "1d0fa63",
+    "failureClass": "durable Provider Call can be stranded in CLAIMED before physical dispatch when rightful claim owner loses a redundant/generic Run-lease competition",
+    "law": "After exact durable CLAIMED admission, the claim owner has stronger transition authority to dispatch admission than contenders that did not obtain that Provider claim. Mechanical Run-lease contention may be waited through only while the exact CLAIMED record remains current.",
+    "repair": [
+      "remove semantically redundant durable bind between begin/retry and dispatch admission",
+      "bounded dispatch-lease reacquisition wait with exact-current-record check",
+      "preserve independent P5 DISPATCHING-to-known-outcome authority semantics"
+    ],
+    "failureCapture": "same durable diagnostic failed at iteration 7 before repair",
+    "postRepairDiagnostic": "500/500 passed",
+    "officialConcurrency": "Standalone 200/200 plus R3 200/200 passed before release; final release repetition 100/100 passed"
+  },
+  "release": {
+    "jobId": "job-019fef3d-758a-71b1-bbbf-5a21c40b99f4",
+    "terminalEvidence": "sha256:f835919384d5201a6edee78b7204f7588c0b90fac9af6ca71a18175ece78e195",
+    "tests": "356 passed / 3 skipped",
+    "h2": "13/13",
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "docsContract": "passed",
+    "hostFreeCore": "passed",
+    "wheel": "0.6.0 / 14 CLI",
+    "providerConcurrency": "100/100"
+  },
+  "externalCrossValidation": [
+    {
+      "source": "OpenAI GPT-5.6 harness efficiency",
+      "url": "https://openai.com/index/gpt-5-6-frontier-intelligence-efficiency/",
+      "relevance": "append-only model-visible history, deterministic tools, runtime settings outside tool definitions"
+    },
+    {
+      "source": "OpenHands agent/event architecture",
+      "url": "https://docs.openhands.dev/sdk/api-reference/openhands.sdk.agent",
+      "relevance": "static_system_message versus dynamic_context for cacheability"
+    },
+    {
+      "source": "Anthropic tool caching/search docs",
+      "url": "https://platform.claude.com/docs/en/agents-and-tools/tool-use/tool-use-with-prompt-caching",
+      "relevance": "tool definition changes invalidate prefix; deferred tools preserve prefix"
+    },
+    {
+      "source": "NVIDIA Dynamo router filtering",
+      "url": "https://docs.nvidia.com/dynamo/dev/knowledge-base/modular-components/router/worker-filtering",
+      "relevance": "hard eligibility before cache/load soft scoring"
+    }
+  ]
+}

@@ -192,3 +192,9 @@ Secrets are not persisted as Run evidence. Tool and Provider evidence is bounded
 ## License
 
 Apache-2.0. See `LICENSE`.
+
+## Provider request locality
+
+DeepSeek request projection now treats cache locality as a physical Adapter concern rather than a semantic reason to shrink Agent reasoning. Stable Provider protocol, retained model-visible history and stable Tool shapes precede one exact Harness-authored trailing `ordivon_harness_turn_control` record containing per-turn budget, caller-ingress and WorkingSet identities. Exact caller-side Run Store admission still decides whether a proposed cognition action is legal; Provider schemas are model affordances, not capability authority.
+
+Acceptance deliberately separates deterministic Harness locality from best-effort Provider caching. On independent ~32K-token live requests, the prior projection diverged after 642 request-body bytes and repeatedly received zero second-turn cache-hit tokens. The current projection preserves about 140 KB of common request bytes; DeepSeek then realized 81.5%–99.65% second-turn prompt-cache hits across independent runs. No fixed cache-hit percentage is a Harness guarantee, and no reduction of high-value model token budgets is claimed.

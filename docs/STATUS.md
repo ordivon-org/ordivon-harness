@@ -106,3 +106,10 @@ ordivon-harness --state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness doctor
 ```
+
+## Current DeepSeek request-locality acceptance
+
+- current DeepSeek projection preserves stable protocol/history before one exact trailing Harness turn-control record; Provider Tool schemas no longer encode changing caller-index enums as if schema shape were authority;
+- actual Harness live A/B on ~32K-token prompts changed deterministic common request-body prefix from 642 bytes to ~139.5–139.8 KB; the canonical baseline independently reproduced 0/32,089 second-turn cache hits, while the candidate realized 26,240/32,197 to 32,000/32,113 second-turn hits. Cache realization is best-effort and is not a fixed release threshold;
+- all exact per-turn authority remains present and caller-side admission is unchanged: static Provider schema is only an affordance, while exact `caller_ingress_refs`, WorkingSet provenance and Run Store checks remain authoritative;
+- a separate release-found `CLAIMED → DISPATCHING` race is also closed: deterministic claim-owner tests pass, the durable failure-capture stress changed from failure at iteration 7 to 500/500, official Standalone/R3 repetitions pass 200/200 each, and current source acceptance passes 356 tests with 3 skipped plus H2 13/13, Host-free wheel verification and final 100/100 Provider concurrency repetition.
