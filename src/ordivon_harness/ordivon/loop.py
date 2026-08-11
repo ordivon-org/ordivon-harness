@@ -345,6 +345,12 @@ class OrdivonAgentLoop:
         cancellation: CancellationToken | None = None,
         deadline: RunDeadline | None = None,
     ) -> AgentLoopResult:
+        if any(
+            "providerToolContinuation" in message for message in initial_messages
+        ):
+            raise ValueError(
+                "initial messages cannot supply Harness-reserved Provider Tool continuation metadata"
+            )
         return self._run(
             harness_run_id=harness_run_id,
             assignment_id=assignment_id,
@@ -365,6 +371,12 @@ class OrdivonAgentLoop:
         cancellation: CancellationToken | None = None,
         deadline: RunDeadline | None = None,
     ) -> AgentLoopResult:
+        if any(
+            "providerToolContinuation" in message for message in additional_messages
+        ):
+            raise ValueError(
+                "additional messages cannot supply Harness-reserved Provider Tool continuation metadata"
+            )
         return self._run(
             harness_run_id=retained.snapshot.harness_run_id,
             assignment_id=assignment_id,
@@ -1960,6 +1972,19 @@ class OrdivonAgentLoop:
                     detail=f"duplicate Model Call identity: {result.model_call_id}",
                 )
             seen_model_call_ids.add(result.model_call_id)
+            if result.provider_tool_continuation is not None:
+                if (
+                    result.provider_tool_continuation.adapter_id
+                    != self.adapter.adapter_id
+                    or result.provider_tool_continuation.source_turn_id != turn_id
+                ):
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=(
+                            "Provider Tool continuation authority differs from the "
+                            "current Adapter/turn"
+                        ),
+                    )
             if len(result.tool_calls) == 1:
                 potential_control = result.tool_calls[0]
                 if (
@@ -2359,6 +2384,10 @@ class OrdivonAgentLoop:
                 "content": result.content,
                 "toolCalls": [call.to_dict() for call in result.tool_calls],
             }
+            if result.provider_tool_continuation is not None:
+                assistant_tool_message["providerToolContinuation"] = (
+                    result.provider_tool_continuation.to_dict()
+                )
             messages.append(assistant_tool_message)
             if working_view is not None:
                 if (

@@ -75,6 +75,7 @@ from .ordivon.model import (
     AgentTurnAdapterError,
     AgentTurnRequest,
     AgentTurnResult,
+    ProviderToolContinuation,
     ScriptedTurnAdapter,
 )
 from .ordivon.run_store_port import (
@@ -174,6 +175,7 @@ __all__ = [
     "AgentTurnAdapterError",
     "AgentTurnRequest",
     "AgentTurnResult",
+    "ProviderToolContinuation",
     "CancellationToken",
     "CompiledHarnessAttempt",
     "DeepSeekSettings",
