@@ -143,7 +143,14 @@ class R1SingleCapabilityTruthTests(unittest.TestCase):
             admitted_names,
             ["propose_working_set_transition", "submit_run_conclusion"],
         )
-        self.assertIn("propose_working_set_transition", admitted_body["messages"][0]["content"])
+        self.assertIn(
+            "ordivon_harness_turn_control",
+            admitted_body["messages"][0]["content"],
+        )
+        admitted_control = admitted_body["messages"][-1]
+        self.assertEqual(admitted_control["role"], "user")
+        self.assertEqual(admitted_control["name"], "ordivon_harness_turn_control")
+        self.assertIn("propose_working_set_transition", admitted_control["content"])
 
     def test_same_adapter_rejects_native_action_not_granted_by_request(self) -> None:
         raw = transition_response()
@@ -245,7 +252,14 @@ class R1SingleCapabilityTruthTests(unittest.TestCase):
         )
         names = [tool["function"]["name"] for tool in body["tools"]]
         self.assertIn("promote_caller_ingress", names)
-        self.assertIn('"callerMessageIndex":0', body["messages"][0]["content"])
+        self.assertIn(
+            "ordivon_harness_turn_control",
+            body["messages"][0]["content"],
+        )
+        control = body["messages"][-1]
+        self.assertEqual(control["role"], "user")
+        self.assertEqual(control["name"], "ordivon_harness_turn_control")
+        self.assertIn('"callerMessageIndex":0', control["content"])
 
 
 if __name__ == "__main__":

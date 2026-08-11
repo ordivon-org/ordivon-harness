@@ -904,10 +904,14 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         self.assertIn("promote_caller_ingress", names)
         self.assertNotIn("propose_working_set_transition", names)
         self.assertEqual(body.get("tool_choice"), "required")
-        self.assertIn('"admittedRuntimeTools":[]', body["messages"][0]["content"])
-        self.assertIn('"toolCalls":0', body["messages"][0]["content"])
-        self.assertIn('"callerMessageIndex":0', body["messages"][0]["content"])
-        self.assertIn('"providerMessageIndex":1', body["messages"][0]["content"])
+        self.assertIn("ordivon_harness_turn_control", body["messages"][0]["content"])
+        control = body["messages"][-1]
+        self.assertEqual(control["role"], "user")
+        self.assertEqual(control["name"], "ordivon_harness_turn_control")
+        self.assertIn('"admittedRuntimeTools":[]', control["content"])
+        self.assertIn('"toolCalls":0', control["content"])
+        self.assertIn('"callerMessageIndex":0', control["content"])
+        self.assertIn('"providerMessageIndex":1', control["content"])
 
         disabled_request = replace(
             request, capabilities=AgentTurnCapabilities()
@@ -962,8 +966,9 @@ class InteractionDurablePromotionTests(unittest.TestCase):
         names = [item["function"]["name"] for item in tools]
         self.assertNotIn("promote_caller_ingress", names)
         self.assertIn("submit_run_conclusion", names)
-        control = body["messages"][0]["content"]
-        self.assertNotIn('"callerIngress"', control)
+        control_message = body["messages"][-1]
+        self.assertEqual(control_message["name"], "ordivon_harness_turn_control")
+        self.assertNotIn('"callerIngress"', control_message["content"])
 
     def test_deepseek_rejects_promotion_mixed_with_conclusion(self) -> None:
         proposal = AgentCallerIngressPromotionProposal(
