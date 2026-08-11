@@ -254,6 +254,65 @@ class P6NoToolConclusionControlTests(unittest.TestCase):
             self.assertEqual(len(adapter.requests), 1)
             store.close()
 
+    def test_unavailable_provider_tool_on_no_tool_surface_is_correction_not_runtime_history(self) -> None:
+        run_contract = contract()
+        raw = '{"path":"src/ordivon_harness/ordivon/loop.py"}'
+        unavailable = AgentTurnResult(
+            model_call_id="model-call:p6-unavailable-no-tool",
+            model_id=ScriptedTurnAdapter.model_id,
+            content="attempted unavailable observation",
+            tool_calls=(
+                AgentToolCall(
+                    "provider-call:p6-unavailable-read-file",
+                    "read_file",
+                    {"path": "src/ordivon_harness/ordivon/loop.py"},
+                    argument_error="unavailable_tool",
+                    raw_arguments_digest="sha256:" + __import__("hashlib").sha256(raw.encode()).hexdigest(),
+                    raw_arguments_preview=raw,
+                ),
+            ),
+            conclusion=None,
+            usage={"inputTokens": 20, "outputTokens": 5, "totalTokens": 25},
+            finish_reason="tool_calls",
+            raw_response_digest=canonical_digest({"turn": "unavailable-no-tool"}),
+        )
+        adapter = ScriptedTurnAdapter((unavailable, valid_conclusion_turn()))
+        budget = RunBudget(
+            max_model_calls=2,
+            max_tool_calls=0,
+            max_observation_bytes=16_384,
+            max_wall_time_ms=10_000,
+            max_total_tokens=10_000,
+            max_model_retries=0,
+            max_tool_corrections=1,
+            max_conclusion_corrections=1,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "state"
+            store = SQLiteHarnessStore.initialize(root)
+            store.create_run(run_contract)
+            continuity = SQLiteHarnessRunContinuityStore(store, run_contract)
+            result = OrdivonAgentLoop(
+                adapter,
+                SQLiteHarnessAgentBridge(run_contract, continuity),
+                budget=budget,
+            ).run(
+                harness_run_id=run_contract.harness_run_id,
+                assignment_id=continuity.binding.assignment_id,
+                context_digest=run_contract.context_refs[0].digest,
+                initial_messages=({"role": "user", "content": "inspect or conclude without Runtime Tools"},),
+            )
+            self.assertEqual(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
+            self.assertEqual(result.model_calls, 2)
+            self.assertEqual(result.tool_calls, 0)
+            self.assertEqual(result.usage["toolCorrections"], 1)
+            self.assertEqual(result.usage["conclusionCorrections"], 0)
+            self.assertEqual(len(adapter.requests), 2)
+            self.assertEqual(adapter.requests[0].tools, ())
+            self.assertEqual(adapter.requests[1].tools, ())
+            self.assertFalse(any(message.get("role") == "tool" for message in result.messages))
+            store.close()
+
     def test_repeated_malformed_conclusion_is_bounded_by_conclusion_budget(self) -> None:
         run_contract = contract()
         first = invalid_conclusion_turn()
