@@ -1955,6 +1955,55 @@ class OrdivonAgentLoop:
                     detail=f"duplicate Model Call identity: {result.model_call_id}",
                 )
             seen_model_call_ids.add(result.model_call_id)
+            if len(result.tool_calls) == 1:
+                potential_control = result.tool_calls[0]
+                if (
+                    potential_control.name == "submit_run_conclusion"
+                    and potential_control.argument_error is not None
+                ):
+                    if conclusion_corrections >= self.budget.max_conclusion_corrections:
+                        return stop(
+                            RunStopCode.INVALID_MODEL_OUTPUT,
+                            detail=(
+                                "Conclusion correction budget exhausted after malformed "
+                                "Harness conclusion control: "
+                                f"{potential_control.argument_error}"
+                            ),
+                        )
+                    conclusion_corrections += 1
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Harness conclusion control was malformed and did not "
+                                "dispatch. Correct the candidate using the Provider/owner "
+                                "rejection reason below; use available tools or evidence "
+                                f"only when relevant: {potential_control.argument_error}"
+                            ),
+                        }
+                    )
+                    recorder.record(
+                        "conclusion_rejected",
+                        {
+                            "conclusionName": potential_control.name,
+                            "argumentError": potential_control.argument_error,
+                            "correction": conclusion_corrections,
+                            "conclusionCorrection": conclusion_corrections,
+                            "safeToCorrect": True,
+                        },
+                    )
+                    try:
+                        bind_run_state()
+                    except ToolBridgeError as state_error:
+                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                    except Exception as state_error:  # noqa: BLE001
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                f"{type(state_error).__name__}: {state_error}"
+                            ),
+                        )
+                    continue
             if external_observation_gate_reason is not None and any(
                 call.name != WORKING_SET_HISTORY_CONTROL_NAME
                 and call.argument_error != "unavailable_tool"
