@@ -2282,6 +2282,70 @@ class OrdivonAgentLoop:
                     )
                 return stop(RunStopCode.NEEDS_INPUT, conclusion=result.conclusion)
 
+            if (
+                len(result.tool_calls) == 1
+                and result.tool_calls[0].argument_error is not None
+                and bool(
+                    getattr(self.tool_bridge, "definitions", None)
+                )
+            ):
+                bridge_definitions = getattr(self.tool_bridge, "definitions", None)
+                tool_names = (
+                    {definition.name for definition in bridge_definitions()}
+                    if callable(bridge_definitions)
+                    else set()
+                )
+                unavailable_only = bool(tool_names) is False and all(
+                    call.argument_error == "unavailable_tool"
+                    for call in result.tool_calls
+                    if call.name != WORKING_SET_HISTORY_CONTROL_NAME
+                )
+                if unavailable_only:
+                    if tool_corrections >= self.budget.max_tool_corrections:
+                        return stop(
+                            RunStopCode.INVALID_TOOL_CALL,
+                            detail=(
+                                "Tool correction budget exhausted after unavailable "
+                                "Runtime Tool intent on a no-Tool surface"
+                            ),
+                        )
+                    tool_corrections += 1
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "The Runtime Tool you requested was never admitted on this "
+                                "surface, so no Runtime Tool observation was produced and it "
+                                f"did not execute: {result.tool_calls[0].name}. Choose an "
+                                "available Harness cognition action or submit a conclusion "
+                                "instead."
+                            ),
+                        }
+                    )
+                    recorder.record(
+                        "tool_call_rejected",
+                        {
+                            "toolCallId": result.tool_calls[0].tool_call_id,
+                            "toolName": result.tool_calls[0].name,
+                            "argumentError": result.tool_calls[0].argument_error,
+                            "correction": tool_corrections,
+                            "physicalDispatch": False,
+                            "seenToolCallIdentity": False,
+                        },
+                    )
+                    try:
+                        bind_run_state()
+                    except ToolBridgeError as state_error:
+                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                    except Exception as state_error:  # noqa: BLE001
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                f"{type(state_error).__name__}: {state_error}"
+                            ),
+                        )
+                    continue
+
             budgeted_tool_calls = tuple(
                 call
                 for call in result.tool_calls
