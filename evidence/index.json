@@ -474,9 +474,16 @@
     {
       "claimId": "harness.rsi.p6-high-budget-causal-utilization",
       "file": "harness-rsi-p6-high-budget-causal-utilization-9e9c210.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "9e9c2105958b754914609b4e0f28e06786755429",
-      "scope": "Current bounded RSI P6/R13 acceptance: high DeepSeek budgets remain elastic while repeated settled evidence and mechanical formatting are treated as low utilization; non-replaying Agent Working Views sharply reduce repeated evidence but can still merge adjacent mechanisms, so every terminal causal claim requires independent exact re-grounding before mutation authority. P6 also closes the causally exposed no-Tool control-routing defects without broadening Tool authority."
+      "scope": "Historical bounded RSI P6/R13 acceptance retained unchanged after P7 reversible-epistemic-state research superseded it as the current RSI research claim. Its high-budget non-replay, terminal exact re-grounding and no-Tool control-routing evidence remains exact for its bound implementation."
+    },
+    {
+      "claimId": "harness.rsi.p7-reversible-epistemic-state",
+      "file": "harness-rsi-p7-reversible-epistemic-state-6b4cc77.json",
+      "status": "verified",
+      "implementationRevision": "6b4cc7724c83061a03fdb85df0003e9b4bff8d26",
+      "scope": "Current bounded RSI P7/R14 acceptance: compact Agent world-model state remains non-authoritative cognition, exact evidence is externally durable and reversible, cognition-state admission is distinct from action admission, root objective coverage cannot be replaced by easy subclaims, and causal terminal claims require Agent-observed exact evidence before independent re-grounding. The experiment rejects productizing a mandatory causal-ledger API; existing objective/WorkingView/deliberation/completion-evidence primitives are sufficient at this boundary."
     }
   ]
 }

@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-rsi-p7-reversible-epistemic-state-acceptance",
+  "status": "accepted",
+  "researchOutcome": "bounded-r14-reversible-epistemic-state-with-objective-root-and-terminal-regrounding-accepted",
+  "implementationRevision": "6b4cc7724c83061a03fdb85df0003e9b4bff8d26",
+  "sourceMutation": false,
+  "scope": "P7 attacks causal fidelity of compact Agent world models rather than prompt size or total token volume. It compares free compact state with an experiment-only reversible claim/evidence/discriminator ledger across resolved Provider concurrency, resolved no-Tool control, and an attractive adjacent-mechanism dispatch-fence trap. Exact evidence remains outside the Working View and is rehydrated only for independent terminal re-grounding. P7 accepts laws about epistemic authority and composition; it explicitly does not productize the ledger DSL, Memory/RAG, a causal-claim database, planner, evaluator service, Scheduler or RSI controller.",
+  "highBudgetPolicy": {
+    "totalTokensAreNotOptimizationTarget": true,
+    "largeDeepSeekBudgetsRemainAllowed": true,
+    "optimizationTarget": "causal fidelity, reversible evidence grounding, honest uncertainty and marginal information",
+    "cacheLocalityWorkDeferred": "task:harness:deepseek-cache-locality-20260811"
+  },
+  "experimentScaffolding": {
+    "committed": false,
+    "runnerDigest": "sha256:25be6e013c53a200f50d0d298c34342a4027f3e5a33210d7a1cc5c0354577f3b",
+    "protocols": ["free", "ledger"],
+    "ledgerSyntax": "experiment-only CLAIM Cn status exact-EIDs statement + DISC Cn unresolved-discriminator",
+    "exactEvidenceStoredOutsideState": true,
+    "stateIsTruthAuthority": false,
+    "mutationAuthorized": false
+  },
+  "finalMatrix": [
+    {
+      "protocol": "ledger",
+      "workload": "provider-resolved",
+      "resultDigest": "sha256:30cd72b3f2768b9eed49f60220c664c330ece63072b0159bb56a196f22726612",
+      "runtimeJobId": "job-019feec3-b6a4-7f03-a9e4-f39ba6307d27",
+      "terminalEvidence": "sha256:2a389e0795bc4c9dd873fd52f3bb5cf814326bcddc82d6330bc5828b8e86b262",
+      "status": "max-rounds",
+      "rounds": 16,
+      "observations": 16,
+      "protocolRejections": 3,
+      "stateBytes": 1248,
+      "stateEvidenceRefs": 3,
+      "promptTokens": 71750,
+      "completionTokens": 7797,
+      "totalTokens": 79547,
+      "cacheHitTokensObserved": 22912,
+      "expandedExactEvidenceBytes": 72000,
+      "reversible": true,
+      "independentOutcome": "lawful_uncertainty",
+      "interpretation": "The root objective remained unresolved. The state kept the provider-outcome lease as a distinct hypothesis/discriminator and did not merge it with pre-lease claim contender admission or claim a new active defect."
+    },
+    {
+      "protocol": "free",
+      "workload": "provider-resolved",
+      "resultDigest": "sha256:5c87c6e7bba30958e39543452336a996dff0ee3c7f0edc3e4dd51443def588f4",
+      "runtimeJobId": "job-019feec5-a08d-7b83-9ff0-fe16923367cd",
+      "terminalEvidence": "sha256:a903d0907db1492f5f60a685a191bb45eeb6bdac6fe2f7ea73f219fd8d11ce36",
+      "status": "max-rounds",
+      "rounds": 16,
+      "observations": 16,
+      "protocolRejections": 0,
+      "stateBytes": 534,
+      "stateEvidenceRefs": 3,
+      "promptTokens": 114655,
+      "completionTokens": 11741,
+      "totalTokens": 126396,
+      "cacheHitTokensObserved": 42624,
+      "expandedExactEvidenceBytes": 25251,
+      "reversible": true,
+      "independentOutcome": "insufficient",
+      "interpretation": "This replicate kept two hypotheses separate but sequentially scanned broad file ranges and never grounded the decisive claim_provider_call and _acquire_provider_outcome_lease regions. Earlier free replicate r3 did merge adjacent HarnessDispatchFence/working-set/outcome mechanisms, demonstrating stochastic causal-fidelity risk in unconstrained compression."
+    },
+    {
+      "protocol": "ledger",
+      "workload": "no-tool-resolved",
+      "resultDigest": "sha256:f228cda457a614f17cdb2f2bf32144bdc1e59edc00a18a64c7cd6d7cd6a4c022",
+      "runtimeJobId": "job-019feebc-ac7b-7231-8c22-7d5f8303f185",
+      "terminalEvidence": "sha256:053fc6ad8a9f26562892e550b6825b4b7f2c323377ddaf63752026ef1ad4f730",
+      "status": "max-rounds",
+      "rounds": 12,
+      "observations": 12,
+      "protocolRejections": 1,
+      "stateBytes": 2034,
+      "stateEvidenceRefs": 10,
+      "promptTokens": 59218,
+      "completionTokens": 7429,
+      "totalTokens": 66647,
+      "cacheHitTokensObserved": 16384,
+      "expandedExactEvidenceBytes": 42104,
+      "reversible": true,
+      "independentOutcome": "lawful_uncertainty",
+      "interpretation": "After persistent root-objective admission was added, the Agent could no longer graduate by proving only the strict no-Tool bridge guard. C0 remained hypothesis until the upstream Loop correction path itself was grounded."
+    },
+    {
+      "protocol": "free",
+      "workload": "no-tool-resolved",
+      "resultDigest": "sha256:7f2b05c722ffb81e84ea8029b50b2466a23640e6bf70dc67930d54f06d92f107",
+      "runtimeJobId": "job-019feeb8-1f45-7543-a684-1b2589f0e53d",
+      "terminalEvidence": "sha256:29b28943e72676b916f6ae2af37d4db7e3a4635ad6a606f150bb32b17de9ce4d",
+      "status": "max-rounds",
+      "rounds": 12,
+      "observations": 12,
+      "protocolRejections": 0,
+      "stateBytes": 2222,
+      "stateEvidenceRefs": 6,
+      "promptTokens": 86406,
+      "completionTokens": 10031,
+      "totalTokens": 96437,
+      "cacheHitTokensObserved": 11904,
+      "expandedExactEvidenceBytes": 121663,
+      "reversible": true,
+      "independentOutcome": "lawful_uncertainty",
+      "interpretation": "The state remained honest but spent much of the trajectory on provider-call record codecs/_turn_sequence rather than the accepted no-Tool correction locality. Honest uncertainty is necessary but does not guarantee high-information observation choice."
+    },
+    {
+      "protocol": "ledger",
+      "workload": "dispatch-fence-trap",
+      "resultDigest": "sha256:e7e1504ad0caa1324353028afe955347fff0e41fbaa2a2efc6529f33e973c533",
+      "runtimeJobId": "job-019feebe-7f63-7d43-ba7d-2af69e9227ae",
+      "terminalEvidence": "sha256:e0b51e785848ef47aa57f3e5a96be8d67065d668d3688f3670389ab3b03fb6cc",
+      "status": "max-rounds",
+      "rounds": 12,
+      "observations": 12,
+      "protocolRejections": 0,
+      "stateBytes": 1976,
+      "stateEvidenceRefs": 5,
+      "promptTokens": 55666,
+      "completionTokens": 7639,
+      "totalTokens": 63305,
+      "cacheHitTokensObserved": 16896,
+      "expandedExactEvidenceBytes": 34029,
+      "reversible": true,
+      "modelVerifierVerdict": "supported_resolved",
+      "verifierVerdictAuthorityAdmitted": false,
+      "supervisingOutcome": "lawful_uncertainty_preserved",
+      "interpretation": "The Agent never adopted the attractive prior conflation. C0 remained hypothesis and kept Runtime Tool dispatch fencing distinct from Provider-call lifecycle. The independent verifier prose described lawful uncertainty but emitted the enum supported_resolved; the enum is therefore retained as evaluator inconsistency evidence and is not admitted as authority."
+    },
+    {
+      "protocol": "free",
+      "workload": "dispatch-fence-trap",
+      "resultDigest": "sha256:493321a8163d563992138368f38e36b490a78585d92bd46baebe2b706dba05fd",
+      "runtimeJobId": "job-019feec2-735c-74f3-b242-8dbb648e849e",
+      "terminalEvidence": "sha256:97f24b7a2dfe91a4ff834173bac4f6118b74faa9d7f4fc5e2d2dddadf15fa945",
+      "status": "finalize",
+      "rounds": 2,
+      "observations": 1,
+      "protocolRejections": 0,
+      "stateBytes": 2682,
+      "stateEvidenceRefs": 1,
+      "promptTokens": 27292,
+      "completionTokens": 2132,
+      "totalTokens": 29424,
+      "cacheHitTokensObserved": 26368,
+      "expandedExactEvidenceBytes": 652,
+      "reversible": true,
+      "independentOutcome": "supported_resolved",
+      "interpretation": "After evidence-bound terminal admission was added, free state rejected the false prior claim in two rounds from one exact git-grep observation. This is an important negative control against productizing the ledger as a mandatory representation."
+    }
+  ],
+  "matrixAggregates": {
+    "ledgerTotalStateBytes": 5258,
+    "freeTotalStateBytes": 5438,
+    "ledgerExpandedExactEvidenceBytes": 148133,
+    "freeExpandedExactEvidenceBytes": 147566,
+    "ledgerObservations": 40,
+    "freeObservations": 29,
+    "ledgerTotalTokensObserved": 209499,
+    "freeTotalTokensObserved": 252257,
+    "interpretation": "State size and exact-evidence expansion were nearly identical in aggregate. P7 is not evidence that the ledger is a compression or token-saving mechanism. Ledger behavior was more conservative on these trajectories; free state could be faster and correct on the negative control."
+  },
+  "falsifierLineage": [
+    {
+      "name": "free-state-causal-merge",
+      "artifactDigest": "sha256:55d062a52940f09e913da48dbd57bb9555b46970657c0a17e6c320abdebe9ddc",
+      "result": "Earlier free/provider-resolved r3 kept a ~1KB compact state but merged HarnessDispatchFence, working-set transition and Provider outcome authority into one causal framing. Independent exact re-grounding rejected that locality. Compactness alone is not causal fidelity."
+    },
+    {
+      "name": "cognition-action-coupled-admission",
+      "artifactDigest": "sha256:ac5ee1404f5a1e21cc6b8e97c8a7e74e2cf148835f136a082779f6449ee56e7d",
+      "result": "Ledger/provider r2 suffered 12/12 protocol rejections and lost the current world model because malformed action fields caused the entire state proposal to be discarded. Experiment apparatus was repaired so mechanically admissible cognition state survives rejected action proposals; rejected actions still never execute."
+    },
+    {
+      "name": "true-subclaim-false-objective-completion",
+      "artifactDigest": "sha256:76a3a2acee685743d0785e37afdd3e8390585fad167bd73a27fe35f25968351b",
+      "result": "Ledger/no-Tool r1 finalized after correctly proving the strict SQLiteHarnessAgentBridge guard while failing to investigate the two upstream correction branches that actually resolved the workload. This forced persistent root objective claim C0; arbitrary supported subclaims cannot authorize objective completion."
+    },
+    {
+      "name": "correct-answer-without-epistemic-authority",
+      "artifactDigest": "sha256:762b0b00807c2f0964fe0e289aa2c5436cfe4fef0c2d196e044f66330af528e8",
+      "result": "Free dispatch-fence r1 correctly rejected the prior claim on its first model turn but cited zero caller-admitted E-ids. A hidden-oracle verifier incorrectly rewarded the lucky/correct answer. P7 added a mechanical law: causal finalize requires at least one Agent-observed exact evidence reference; semantic correctness cannot substitute for epistemic authority."
+    }
+  ],
+  "acceptedLaws": [
+    "Compact Agent state is cognition, not source truth; size reduction alone does not preserve causal fidelity.",
+    "Exact evidence/history remains durable outside the Working View and must be cheaply rehydratable from bound addresses/digests.",
+    "Cognition-state admission and action admission are distinct authority boundaries. A malformed or unavailable action must not erase an otherwise mechanically admissible Agent world-model update, and admitting cognition never executes the rejected action.",
+    "Objective completion is rooted in the persistent task objective. True/evidenced subclaims cannot silently replace the root objective and authorize completion.",
+    "For causal terminal claims, semantic correctness is not epistemic authority: the claim must bind exact evidence the Agent actually observed before terminal re-grounding can admit it.",
+    "Unresolved discriminators are first-class cognition. Lawful max-rounds/abstention with explicit uncertainty is preferable to false causal finalization.",
+    "Independent evaluator output is itself evidence, not automatic authority. Internal inconsistency between evaluator prose, enum and the Agent's admitted epistemic form must fail closed at the promotion boundary.",
+    "A reversible claim ledger is one useful research representation, not a mandatory product abstraction. Free compact state can outperform it when the evidence discriminator is simple."
+  ],
+  "productPrimitiveAudit": {
+    "runtimeJobId": "job-019feeca-3622-7410-a3c9-97009a6b6fe2",
+    "terminalEvidence": "sha256:45bd9b7189fb803b4fc6eb1a032ccd892c2c268d1f630b1c7ebdbacdb339160a",
+    "result": "no-new-source-primitive-earned",
+    "existingCoverage": [
+      "HarnessRunContract/ExecutionMandate already bind objective_ref as persistent objective identity.",
+      "HarnessWorkingSetSpec is explicitly Agent-owned current selection state distinct from durable Run history; WorkingView sources/pins preserve exact addressability.",
+      "CognitionAdmissionKernel already admits exact Agent-authored cognition mutations against current selection separately from durable persistence authority.",
+      "NonAuthoritativeDeliberationRecord explicitly marks model cognition as not world truth/domain authority and preserves unresolvedUnknowns.",
+      "IndependentCompletionProposal already preserves evidenceRefs and unresolvedUnknowns for caller/domain admission.",
+      "HarnessStrategyEvidence explicitly proves byte identity/addressability only and does not make evidence true, ranked or preferred."
+    ],
+    "whyNoCausalLedgerApi": "The experiment did not show a universal representation advantage. Final ledger/free aggregates had similar state/evidence volume; free solved the dispatch-fence trap faster; existing Harness primitives already preserve the required authority boundaries. Productizing the DSL would add semantic policy before repeated cross-domain falsifiers justify it."
+  },
+  "nonClaims": [
+    "P7 does not prove a universal optimal world-model representation.",
+    "P7 does not prove ledger state reduces tokens or observations.",
+    "P7 does not grant mutation authority to model summaries, hidden oracles or evaluator verdicts.",
+    "P7 does not require evidence refs for every generic creative/non-causal Harness completion; the evidence-bound terminal law is scoped to causal claims/admission paths that depend on external/source truth.",
+    "P7 does not introduce Memory/RAG, a claim database, semantic search, a planner, a Scheduler, a DAG or an RSI controller."
+  ],
+  "nextFrontier": {
+    "task": "task:harness:deepseek-cache-locality-20260811",
+    "reason": "User-provided real deepseek-v4-flash A/B data shows dynamic execution_control and per-turn refs may break automatic prefix caching. This is intentionally separate from P7: high reasoning budgets remain allowed; the next target is avoidable KV recomputation caused by dynamic prefix placement, verified with prompt_cache_hit_tokens rather than aggregate token minimization."
+  }
+}
