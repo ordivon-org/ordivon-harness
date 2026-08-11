@@ -1673,8 +1673,11 @@ class OrdivonAgentLoop:
                     },
                 )
                 if not failure_was_replayed:
-                    bind_run_state()
                     if durable_provider_call:
+                        # begin()/retry() just bound the exact state that owns this
+                        # durable Provider claim. Rebinding before dispatch adds no
+                        # semantic information and creates a generic Run-lease race
+                        # that can strand the rightful claim owner in CLAIMED.
                         try:
                             admitted = self.provider_lifecycle.admit(
                                 request, control=control
@@ -1693,16 +1696,18 @@ class OrdivonAgentLoop:
                                     "physical invocation"
                                 ),
                             )
-                    elif cancellation.cancelled:
-                        return stop(RunStopCode.CANCELLED)
-                    elif execution_deadline_expired():
-                        return stop(
-                            RunStopCode.BUDGET_EXHAUSTED,
-                            detail=(
-                                "effective Run deadline expired at Provider "
-                                "dispatch admission"
-                            ),
-                        )
+                    else:
+                        bind_run_state()
+                        if cancellation.cancelled:
+                            return stop(RunStopCode.CANCELLED)
+                        if execution_deadline_expired():
+                            return stop(
+                                RunStopCode.BUDGET_EXHAUSTED,
+                                detail=(
+                                    "effective Run deadline expired at Provider "
+                                    "dispatch admission"
+                                ),
+                            )
                 try:
                     if replayed_failure is not None:
                         durable_failure = replayed_failure

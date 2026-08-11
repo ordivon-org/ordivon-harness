@@ -74,6 +74,8 @@ from .run_store_port import (
 
 _DISPATCH_FENCE_TTL_MS = 30_000
 _STORE_LEASE_TTL_MS = 30_000
+_PROVIDER_DISPATCH_LEASE_WAIT_SECONDS = 1.0
+_PROVIDER_DISPATCH_LEASE_RETRY_SECONDS = 0.001
 _PROVIDER_OUTCOME_LEASE_WAIT_SECONDS = 1.0
 _PROVIDER_OUTCOME_LEASE_RETRY_SECONDS = 0.001
 _PROVIDER_EVENT_KINDS = frozenset(
@@ -2070,10 +2072,8 @@ class SQLiteHarnessRunContinuityStore:
         self,
         retained: StoredHarnessProviderCall,
     ) -> StoredHarnessProviderCall:
+        lease = self._acquire_provider_dispatch_lease(retained)
         now_ms = self.clock_ms()
-        lease = self._acquire_lease(
-            "provider-dispatch", retained.record.provider_call_id, now_ms=now_ms
-        )
         try:
             current = self._require_current_provider_call(retained.record)
             if current.record.status is not HarnessProviderCallStatus.CLAIMED:
@@ -2991,6 +2991,38 @@ class SQLiteHarnessRunContinuityStore:
             now_ms=now_ms,
             expected_run_revision=expected_run_revision,
         )
+
+    def _acquire_provider_dispatch_lease(
+        self,
+        retained: StoredHarnessProviderCall,
+    ) -> HarnessRunLease:
+        """Wait through short Run-lease contention after exact Provider claim.
+
+        The durable CLAIMED record is the semantic authority for the holder's
+        next dispatch-admission transition. A competing execution may briefly
+        hold the generic Run lease while discovering that it does not own this
+        Provider claim. That mechanical lease must not strand the exact claim
+        owner before physical dispatch.
+        """
+        deadline = time.monotonic() + _PROVIDER_DISPATCH_LEASE_WAIT_SECONDS
+        while True:
+            try:
+                return self._acquire_lease(
+                    "provider-dispatch",
+                    retained.record.provider_call_id,
+                    now_ms=self.clock_ms(),
+                )
+            except HarnessLeaseHeld:
+                current = self.load_current_provider_call()
+                if current.record != retained.record:
+                    raise HarnessSuperseded(
+                        "Harness Provider Call changed while waiting for dispatch admission"
+                    )
+                if time.monotonic() >= deadline:
+                    raise HarnessProviderCallRecoveryRequired(
+                        "Provider claim owner could not reacquire the Run lease before dispatch"
+                    )
+                time.sleep(_PROVIDER_DISPATCH_LEASE_RETRY_SECONDS)
 
     def _acquire_provider_outcome_lease(
         self,
