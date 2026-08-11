@@ -642,20 +642,19 @@ def _working_set_transition_tool() -> dict[str, JsonValue]:
     }
 
 
-def _caller_ingress_promotion_tool(
-    allowed_caller_indexes: tuple[int, ...],
-) -> dict[str, JsonValue]:
+def _caller_ingress_promotion_tool() -> dict[str, JsonValue]:
     return {
         "type": "function",
         "function": {
             "name": _CALLER_INGRESS_PROMOTION_TOOL_NAME,
             "description": (
                 "Add exact messages from the current caller interaction to the current "
-                "durable Working Set. Choose only message indexes you actually saw and "
-                "one new successor slot. Existing selected sources are retained "
-                "mechanically; do not restate or guess their pin identities. You cannot "
-                "provide or rewrite promoted bytes; Harness derives them from caller-ingress "
-                "authority. This is cognition state, not a Runtime effect."
+                "durable Working Set. Choose only caller message indexes listed as promotable "
+                "by the authoritative ordivon_harness_turn_control record for this turn, and "
+                "one new successor slot. Existing selected sources are retained mechanically; "
+                "do not restate or guess their pin identities. You cannot provide or rewrite "
+                "promoted bytes; Harness derives and independently admits them from exact "
+                "caller-ingress authority. This is cognition state, not a Runtime effect."
             ),
             "parameters": {
                 "type": "object",
@@ -667,10 +666,10 @@ def _caller_ingress_promotion_tool(
                         "type": "array",
                         "items": {
                             "type": "integer",
-                            "enum": list(allowed_caller_indexes),
+                            "minimum": 0,
                         },
                         "minItems": 1,
-                        "maxItems": min(32, len(allowed_caller_indexes)),
+                        "maxItems": 32,
                     },
                     "basis": {"type": "string", "minLength": 1},
                 },
@@ -1132,7 +1131,7 @@ class DeepSeekTurnAdapter:
             ref.caller_message_index for ref in request.caller_ingress_refs
         )
         if capabilities.caller_ingress_promotion and promotion_indexes:
-            tools.append(_caller_ingress_promotion_tool(promotion_indexes))
+            tools.append(_caller_ingress_promotion_tool())
         if capabilities.working_set_history:
             tools.append(_working_set_history_tool())
         if capabilities.conclusion:
@@ -1178,34 +1177,38 @@ class DeepSeekTurnAdapter:
                 }
                 for ref in request.working_set_refs
             ]
+        # Keep exact per-turn control behind the stable Provider prefix. DeepSeek caches
+        # exact common prefixes automatically; placing budget/selection identities in the
+        # leading system record forces unchanged history to be recomputed every turn.
+        # The trailing synthetic user record is Harness-authored authority, not caller
+        # evidence. Exact action admission remains caller/Run-Store owned.
         provider_messages = [
             {
                 "role": "system",
                 "content": (
-                    "Ordivon Harness execution control. These are authoritative execution "
-                    "constraints, not task evidence. Previously seen Runtime Tools that are "
-                    "not listed as admitted are unavailable for this turn. Harness cognition "
-                    "and conclusion control actions offered separately remain available. "
-                    + (
-                        "When caller-ingress promotion is available, only messages listed under "
-                        "callerIngress.promotable are current caller-ingress messages eligible "
-                        "for promotion; other user-role messages are selected or otherwise "
-                        "non-promotable cognition. "
-                        if capabilities.caller_ingress_promotion
-                        else ""
-                    )
-                    + (
-                        "When WorkingSet transition is available, workingSetSelection lists the "
-                        "exact currently selected durable pins and the half-open Provider-message "
-                        "ranges [start,end) that each pin produced. Use those exact identities for retain/drop "
-                        "decisions; do not infer or invent pin identities from message text. "
-                        if capabilities.working_set_transition
-                        else ""
-                    )
-                    + canonical_bytes(execution_control).decode("utf-8")
+                    "Ordivon Harness Provider protocol. The final user-role message named "
+                    "ordivon_harness_turn_control is injected by Harness and is authoritative "
+                    "per-turn execution control, never caller task evidence. Previously seen "
+                    "Runtime Tools that are not listed there as admitted are unavailable for "
+                    "that turn. Harness cognition and conclusion control actions are available "
+                    "only when listed there under harnessActions. When callerIngress.promotable "
+                    "is present, only those exact caller message indexes are eligible for "
+                    "promotion; the Provider Tool schema is only a stable shape hint and does "
+                    "not grant authority. When workingSetSelection is present, it lists the exact "
+                    "currently selected durable pins and half-open Provider-message ranges "
+                    "[start,end) produced by each pin; use those identities for retain/drop "
+                    "decisions and do not infer pin identities from message text."
                 ),
             },
             *_provider_messages(request.messages),
+            {
+                "role": "user",
+                "name": "ordivon_harness_turn_control",
+                "content": (
+                    "ORDIVON_HARNESS_TURN_CONTROL "
+                    + canonical_bytes(execution_control).decode("utf-8")
+                ),
+            },
         ]
         body_value: dict[str, JsonValue] = {
             "model": self.settings.model,
