@@ -342,6 +342,22 @@ DeepSeek physical egress may be supplied by an external workstation transport wi
 
 A Provider turn that simultaneously requests ordinary Tools and submits a Run conclusion is treated as a **model-correctable action conflict**, not as permission to choose on the model's behalf and not as a Harness failure. Harness dispatches none of those ordinary Tools and admits no conclusion from that mixed turn; the next model turn must choose whether to continue acting or conclude.
 
+### Provider protocol continuation is not cognition
+
+Some Providers bind later Tool turns to opaque Provider-native bytes returned with an earlier function call. Harness treats those bytes as **protocol continuation**, not as semantic conversation content:
+
+```text
+completed Provider Tool result
+        │ exact Adapter/turn/model-call binding
+        ▼
+ProviderToolContinuation
+        │ durable only under existing content privacy authority
+        ├── AgentTurnProjector ──► removed from model-visible messages
+        └── AgentTurnRequest.provider_tool_continuations ──► bound Adapter
+```
+
+The continuation carries no Harness interpretation of Provider reasoning. External initial/resume messages cannot author the reserved metadata, and Continuity independently requires matching completed Provider evidence before a retained continuation can participate in a later Provider claim. Metadata-only Runs do not gain hidden content retention; if exact Provider bytes were not authorized for retention, crash recovery cannot invent them.
+
 ## Tool lifecycle
 
 Tool-bearing Runs bind a complete Tool catalog digest and Tool grant digest. Before physical delivery, Harness records a Tool intent and dispatch fence. Runtime requests carry Harness authority references. Observation-only failures can be corrected by the Agent; ambiguous external effects require reconciliation and may terminate recovery as UNKNOWN.

@@ -488,9 +488,9 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-cache",
       "file": "harness-h2-deliberation-lifecycle-1d0fa63.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
-      "scope": "Current deterministic H2 lifecycle evidence after DeepSeek request-locality and Provider CLAIMED-to-DISPATCHING hardening; all 13 aggregate budget, deadline and cancellation gates remain accepted."
+      "scope": "Historical deterministic H2 lifecycle evidence on the pre-X2 DeepSeek/cache implementation; superseded as current verification by the 9087278 Provider-continuation source revision."
     },
     {
       "claimId": "harness.deepseek.cache-locality-current",
@@ -502,9 +502,23 @@
     {
       "claimId": "harness.external-cross-validation.x0-x1",
       "file": "harness-external-cross-validation-x0-x1-eb442c5.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "eb442c53a463b302946cf6062080eda4a3597a11",
-      "scope": "Current external Harness cross-validation acceptance: X0 mechanically localizes request divergence without optimization authority; X1/X1b show no universal Tool-surface winner, demonstrate semantic authority leakage when caller pruning hides the correct Tool, separate visible prompt/cache/roundtrip/correctness planes, retain mini-SWE-like simplicity controls, and find no new core ToolSearch/CacheOptimizer/generic-invoke product primitive. Existing AgentToolSurface/AgentTurnProjector read-side projection plus independent continuity admission already matches the surviving authority boundary."
+      "scope": "Historical X0/X1 external cross-validation on eb442c5. Its Tool-surface and request-locality findings remain bound to that revision; X2 second-Provider work advanced current product source."
+    },
+    {
+      "claimId": "harness.cognition.h2-deliberation-lifecycle-x2",
+      "file": "harness-h2-deliberation-lifecycle-9087278.json",
+      "implementationRevision": "9087278e69e20cd501310f4e8719b2dcd5811f05",
+      "scope": "Current deterministic H2 lifecycle evidence on the Provider-tool-continuation implementation; all 13 aggregate budget, deadline, cancellation and dispatch-safety gates remain accepted.",
+      "status": "verified"
+    },
+    {
+      "claimId": "harness.provider-tool-continuation.x2",
+      "file": "harness-provider-tool-continuation-9087278.json",
+      "implementationRevision": "9087278e69e20cd501310f4e8719b2dcd5811f05",
+      "scope": "Current five-frontier X2 acceptance. Gemini native function-calling proved an otherwise inexpressible Provider-protocol continuation state; Harness now carries exact Adapter-bound opaque continuation outside Agent messages and recovers it across crash/reopen without Runtime redispatch. Public-surface contraction, generic retry/idempotency, repository-map/ranking and observability-planner primitives were not earned.",
+      "status": "verified"
     }
   ]
 }
