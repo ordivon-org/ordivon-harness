@@ -242,14 +242,7 @@ class DurableCognitionSupersessionTests(unittest.TestCase):
             transport=transport,
         )
         adapter.invoke(request)
-        self.assertIn(
-            "ordivon_harness_turn_control",
-            transport.requests[0]["messages"][0]["content"],
-        )
-        control_message = transport.requests[0]["messages"][-1]
-        self.assertEqual(control_message["role"], "user")
-        self.assertEqual(control_message["name"], "ordivon_harness_turn_control")
-        control = control_message["content"]
+        control = transport.requests[0]["messages"][0]["content"]
         self.assertIn('\"workingSetSelection\"', control)
         self.assertIn(stale_pin.resolved_digest, control)
         self.assertIn('\"providerMessageStartIndex\":1', control)
@@ -272,10 +265,7 @@ class DurableCognitionSupersessionTests(unittest.TestCase):
             transport=hidden_transport,
         )
         hidden.invoke(hidden_request)
-        hidden_control = hidden_transport.requests[0]["messages"][-1]
-        self.assertEqual(hidden_control["role"], "user")
-        self.assertEqual(hidden_control["name"], "ordivon_harness_turn_control")
-        self.assertNotIn("workingSetSelection", hidden_control["content"])
+        self.assertNotIn("workingSetSelection", hidden_transport.requests[0]["messages"][0]["content"])
 
     def test_forged_current_source_identity_is_rejected_before_provider_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

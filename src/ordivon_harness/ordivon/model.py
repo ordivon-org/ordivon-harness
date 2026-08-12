@@ -316,71 +316,6 @@ class AgentTurnCapabilities:
 
 
 @dataclass(frozen=True, slots=True)
-class ProviderToolContinuation:
-    """Exact Provider-protocol state required to continue one admitted Tool turn.
-
-    Harness binds and persists these bytes but does not interpret their Provider
-    semantics. They are projection metadata, not Agent cognition or Tool authority.
-    """
-
-    adapter_id: str
-    source_turn_id: str
-    source_model_call_id: str
-    opaque_state: dict[str, JsonValue]
-
-    def __post_init__(self) -> None:
-        _text(self.adapter_id, "Provider continuation Adapter identity", max_bytes=300)
-        _text(self.source_turn_id, "Provider continuation source turn", max_bytes=300)
-        _text(
-            self.source_model_call_id,
-            "Provider continuation source Model Call",
-            max_bytes=300,
-        )
-        validate_json_value(self.opaque_state)
-
-    @property
-    def digest(self) -> str:
-        return canonical_digest(self.to_dict())
-
-    def to_dict(self) -> dict[str, JsonValue]:
-        return {
-            "schemaVersion": 1,
-            "kind": "ordivon.provider-tool-continuation",
-            "adapterId": self.adapter_id,
-            "sourceTurnId": self.source_turn_id,
-            "sourceModelCallId": self.source_model_call_id,
-            "opaqueState": self.opaque_state,
-        }
-
-    @classmethod
-    def from_dict(cls, value: dict[str, Any]) -> ProviderToolContinuation:
-        _exact(
-            value,
-            {
-                "schemaVersion",
-                "kind",
-                "adapterId",
-                "sourceTurnId",
-                "sourceModelCallId",
-                "opaqueState",
-            },
-            "ProviderToolContinuation",
-        )
-        if (
-            value["schemaVersion"] != 1
-            or value["kind"] != "ordivon.provider-tool-continuation"
-            or not isinstance(value["opaqueState"], dict)
-        ):
-            raise ValueError("ProviderToolContinuation version, kind, or state is invalid")
-        return cls(
-            adapter_id=value["adapterId"],
-            source_turn_id=value["sourceTurnId"],
-            source_model_call_id=value["sourceModelCallId"],
-            opaque_state=dict(value["opaqueState"]),
-        )
-
-
-@dataclass(frozen=True, slots=True)
 class AgentTurnRequest:
     harness_run_id: str
     turn_id: str
@@ -394,7 +329,6 @@ class AgentTurnRequest:
     capabilities: AgentTurnCapabilities = AgentTurnCapabilities()
     caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
     working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
-    provider_tool_continuations: tuple[ProviderToolContinuation, ...] = ()
 
     def __post_init__(self) -> None:
         _text(self.harness_run_id, "Harness Run identity", max_bytes=300)
@@ -431,12 +365,6 @@ class AgentTurnRequest:
             raise ValueError("Agent turn WorkingSet source slots must be unique")
         if tuple(sorted(self.working_set_refs, key=lambda ref: ref.pin.slot)) != self.working_set_refs:
             raise ValueError("Agent turn WorkingSet source refs must be sorted by slot")
-        continuation_sources = [
-            (item.source_turn_id, item.source_model_call_id)
-            for item in self.provider_tool_continuations
-        ]
-        if len(continuation_sources) != len(set(continuation_sources)):
-            raise ValueError("Provider Tool continuation sources must be unique")
         previous_end = 0
         for ref in self.working_set_refs:
             if ref.request_message_start_index != previous_end:
@@ -480,10 +408,6 @@ class AgentTurnRequest:
             ]
         if self.working_set_refs:
             value["workingSetRefs"] = [ref.to_dict() for ref in self.working_set_refs]
-        if self.provider_tool_continuations:
-            value["providerToolContinuations"] = [
-                item.to_dict() for item in self.provider_tool_continuations
-            ]
         return value
 
     @classmethod
@@ -501,12 +425,7 @@ class AgentTurnRequest:
             "tools",
             "remainingBudget",
         }
-        optional_fields = {
-            "capabilities",
-            "callerIngressRefs",
-            "workingSetRefs",
-            "providerToolContinuations",
-        }
+        optional_fields = {"capabilities", "callerIngressRefs", "workingSetRefs"}
         if not base_fields.issubset(value) or not set(value).issubset(
             base_fields | optional_fields
         ):
@@ -519,7 +438,6 @@ class AgentTurnRequest:
         raw_capabilities = value.get("capabilities")
         raw_caller_refs = value.get("callerIngressRefs", [])
         raw_working_refs = value.get("workingSetRefs", [])
-        raw_provider_continuations = value.get("providerToolContinuations", [])
         if (
             not isinstance(raw_messages, list)
             or any(not isinstance(item, dict) for item in raw_messages)
@@ -531,8 +449,6 @@ class AgentTurnRequest:
             or any(not isinstance(item, dict) for item in raw_caller_refs)
             or not isinstance(raw_working_refs, list)
             or any(not isinstance(item, dict) for item in raw_working_refs)
-            or not isinstance(raw_provider_continuations, list)
-            or any(not isinstance(item, dict) for item in raw_provider_continuations)
         ):
             raise ValueError("AgentTurnRequest collections are invalid")
         return cls(
@@ -556,10 +472,6 @@ class AgentTurnRequest:
             working_set_refs=tuple(
                 HarnessWorkingSetSourceRef.from_dict(item) for item in raw_working_refs
             ),
-            provider_tool_continuations=tuple(
-                ProviderToolContinuation.from_dict(item)
-                for item in raw_provider_continuations
-            ),
         )
 
 
@@ -576,7 +488,6 @@ class AgentTurnResult:
     effective_model_id: str | None = None
     working_set_transition: AgentWorkingSetTransitionProposal | None = None
     caller_ingress_promotion: AgentCallerIngressPromotionProposal | None = None
-    provider_tool_continuation: ProviderToolContinuation | None = None
 
     def __post_init__(self) -> None:
         _text(self.model_call_id, "Model Call identity", max_bytes=300)
@@ -601,18 +512,6 @@ class AgentTurnResult:
         _digest(self.raw_response_digest, "raw model response digest")
         if self.effective_model_id is not None:
             _text(self.effective_model_id, "effective model identity", max_bytes=300)
-        if self.provider_tool_continuation is not None:
-            if not self.tool_calls:
-                raise ValueError(
-                    "Provider Tool continuation requires a Tool-bearing Agent turn result"
-                )
-            if (
-                self.provider_tool_continuation.source_model_call_id
-                != self.model_call_id
-            ):
-                raise ValueError(
-                    "Provider Tool continuation source Model Call differs from its result"
-                )
 
     @property
     def effective_model(self) -> str:
@@ -643,10 +542,6 @@ class AgentTurnResult:
             value["workingSetTransition"] = self.working_set_transition.to_dict()
         if self.caller_ingress_promotion is not None:
             value["callerIngressPromotion"] = self.caller_ingress_promotion.to_dict()
-        if self.provider_tool_continuation is not None:
-            value["providerToolContinuation"] = (
-                self.provider_tool_continuation.to_dict()
-            )
         return value
 
     @classmethod
@@ -667,7 +562,6 @@ class AgentTurnResult:
             "effectiveModelId",
             "workingSetTransition",
             "callerIngressPromotion",
-            "providerToolContinuation",
         }
         if not base_fields.issubset(value) or set(value) - (base_fields | optional_fields):
             raise ValueError(
@@ -704,11 +598,6 @@ class AgentTurnResult:
             raise ValueError(
                 "AgentTurnResult caller ingress promotion must be an object or null"
             )
-        raw_continuation = value.get("providerToolContinuation")
-        if raw_continuation is not None and not isinstance(raw_continuation, dict):
-            raise ValueError(
-                "AgentTurnResult Provider Tool continuation must be an object or null"
-            )
         raw_usage = value["usage"]
         if not isinstance(raw_usage, dict):
             raise ValueError("AgentTurnResult usage must be an object")
@@ -735,11 +624,6 @@ class AgentTurnResult:
                 None
                 if raw_promotion is None
                 else AgentCallerIngressPromotionProposal.from_dict(raw_promotion)
-            ),
-            provider_tool_continuation=(
-                None
-                if raw_continuation is None
-                else ProviderToolContinuation.from_dict(raw_continuation)
             ),
         )
 

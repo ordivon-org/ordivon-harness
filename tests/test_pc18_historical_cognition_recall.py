@@ -294,11 +294,7 @@ class HistoricalCognitionRecallTests(unittest.TestCase):
         self.assertIn(WORKING_SET_HISTORY_CONTROL_NAME, names)
         self.assertNotIn("propose_working_set_transition", names)
         self.assertEqual(body.get("tool_choice"), "required")
-        self.assertIn("ordivon_harness_turn_control", body["messages"][0]["content"])
-        control = body["messages"][-1]
-        self.assertEqual(control["role"], "user")
-        self.assertEqual(control["name"], "ordivon_harness_turn_control")
-        control_text = control["content"]
+        control_text = body["messages"][0]["content"]
         self.assertIn('"admittedRuntimeTools":[]', control_text)
         self.assertIn('"toolCalls":0', control_text)
 

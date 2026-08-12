@@ -49,7 +49,7 @@ Under `metadata-only`, current Harness-managed persistence preserves the facts n
 | --- | --- |
 | Run State message digest | model transcript omitted |
 | Tool Observation digest and Tool receipt | Tool Observation object omitted |
-| Provider request/result digests and completion status | exact AgentTurnRequest/AgentTurnResult omitted, including opaque Provider Tool continuation content |
+| Provider request/result digests and completion status | exact AgentTurnRequest/AgentTurnResult omitted |
 | Provider failure code and dispatch safety | dynamic Provider error detail reduced to a digest-bearing redacted string |
 | Trace causal events and execution digests | normalized model result / Tool-call payload removed when unauthorized; free-form detail reduced to a digest |
 | terminal Run receipt and conclusion/proposal digests | exact conclusion and CompletionProposal omitted |
