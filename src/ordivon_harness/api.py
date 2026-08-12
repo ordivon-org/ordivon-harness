@@ -13,7 +13,6 @@ from .core import (
     AgentTurnAdapter,
     AgentTurnRequest,
     AgentTurnResult,
-    ProviderToolContinuation,
     CompiledHarnessAttempt,
     DeepSeekSettings,
     DeepSeekTurnAdapter,
@@ -60,6 +59,11 @@ from .core import (
     structured_completion_contract_digest,
     structured_completion_result_schema,
 )
+from .provider_use_policy import (
+    HarnessProviderRoute,
+    HarnessProviderUsePolicy,
+    HarnessProviderUsePolicyError,
+)
 from .agent_run import (
     HarnessAgentExecution,
     HarnessAgentRun,
@@ -87,7 +91,6 @@ __all__ = [
     "HarnessCognitionSource",
     "AgentTurnRequest",
     "AgentTurnResult",
-    "ProviderToolContinuation",
     "CompiledHarnessAttempt",
     "DeepSeekSettings",
     "DeepSeekTurnAdapter",
@@ -137,4 +140,7 @@ __all__ = [
     "derive_harness_mandate_consumption",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",
+    "HarnessProviderRoute",
+    "HarnessProviderUsePolicy",
+    "HarnessProviderUsePolicyError",
 ]

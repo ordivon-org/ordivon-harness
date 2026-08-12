@@ -59,7 +59,6 @@ from .model import (
     AgentToolCall,
     AgentTurnRequest,
     AgentTurnResult,
-    ProviderToolContinuation,
 )
 from .run_store_port import (
     HarnessDispatchFenceView,
@@ -1307,10 +1306,6 @@ class SQLiteHarnessRunContinuityStore:
                 "content": result.content,
                 "toolCalls": [call.to_dict() for call in result.tool_calls],
             }
-            if result.provider_tool_continuation is not None:
-                assistant_message["providerToolContinuation"] = (
-                    result.provider_tool_continuation.to_dict()
-                )
             turn_messages: list[dict[str, JsonValue]] = [assistant_message]
             for call in result.tool_calls:
                 observation = observations_by_call.get(call.tool_call_id)
@@ -1807,33 +1802,8 @@ class SQLiteHarnessRunContinuityStore:
             else ()
         )
         expected_overlay: list[dict[str, JsonValue]] = []
-        expected_provider_continuations: list[ProviderToolContinuation] = []
         expected_caller_refs: list[AgentCallerIngressRef] = []
         caller_inserted = False
-
-        def append_structural_message(message: dict[str, JsonValue]) -> None:
-            raw_continuation = message.get("providerToolContinuation")
-            if raw_continuation is None:
-                expected_overlay.append(dict(message))
-                return
-            if (
-                message.get("role") != "assistant"
-                or not isinstance(message.get("toolCalls"), list)
-                or not isinstance(raw_continuation, dict)
-            ):
-                raise HarnessProviderCallRequestMismatch(
-                    "durable Provider Tool continuation metadata is structurally invalid"
-                )
-            try:
-                continuation = ProviderToolContinuation.from_dict(raw_continuation)
-            except (TypeError, ValueError) as error:
-                raise HarnessProviderCallRequestMismatch(
-                    "durable Provider Tool continuation cannot be decoded exactly"
-                ) from error
-            clean = dict(message)
-            clean.pop("providerToolContinuation")
-            expected_overlay.append(clean)
-            expected_provider_continuations.append(continuation)
 
         def insert_caller_messages() -> None:
             start = len(base_view.messages) + len(expected_overlay)
@@ -1855,8 +1825,7 @@ class SQLiteHarnessRunContinuityStore:
             ):
                 insert_caller_messages()
                 caller_inserted = True
-            for message in segment:
-                append_structural_message(message)
+            expected_overlay.extend(dict(message) for message in segment)
         if caller_messages and not caller_inserted:
             insert_caller_messages()
         if overlay_messages != tuple(expected_overlay):
@@ -1866,12 +1835,6 @@ class SQLiteHarnessRunContinuityStore:
                     if caller_messages
                     else "Provider Working View overlay is not a completed Provider-authored Tool exchange"
                 )
-            )
-        if request.provider_tool_continuations != tuple(
-            expected_provider_continuations
-        ):
-            raise HarnessProviderCallRequestMismatch(
-                "Provider Tool continuation differs from durable Provider protocol authority"
             )
         if request.caller_ingress_refs and request.caller_ingress_refs != tuple(
             expected_caller_refs
@@ -1892,42 +1855,6 @@ class SQLiteHarnessRunContinuityStore:
             raise HarnessProviderCallRequestMismatch(
                 "Provider Call request digest differs from its current Working View plus transient cognition"
             )
-
-    def _require_provider_tool_continuation_lineage(
-        self, request: AgentTurnRequest | None
-    ) -> None:
-        if request is None or not request.provider_tool_continuations:
-            return
-        completed_events = tuple(
-            event
-            for event in self.store.list_run_events(self.harness_run_id)
-            if event.event_kind == "harness.provider-call-completed"
-        )
-        previous_sequence = -1
-        for continuation in request.provider_tool_continuations:
-            matched_sequence: int | None = None
-            for event in completed_events:
-                retained = self._load_provider_from_event(event)
-                result = retained.result
-                if result is None or result.provider_tool_continuation != continuation:
-                    continue
-                if (
-                    retained.record.turn_id != continuation.source_turn_id
-                    or retained.record.adapter_id != continuation.adapter_id
-                    or result.model_call_id != continuation.source_model_call_id
-                ):
-                    continue
-                matched_sequence = event.sequence
-                break
-            if matched_sequence is None:
-                raise HarnessProviderCallRequestMismatch(
-                    "Provider Tool continuation lacks matching completed Provider evidence"
-                )
-            if matched_sequence <= previous_sequence:
-                raise HarnessProviderCallRequestMismatch(
-                    "Provider Tool continuation order differs from completed Provider evidence"
-                )
-            previous_sequence = matched_sequence
 
     def _require_current_working_view_request(
         self,
@@ -2023,7 +1950,6 @@ class SQLiteHarnessRunContinuityStore:
             ) from error
         try:
             self._require_provider_source_current(source)
-            self._require_provider_tool_continuation_lineage(request)
             self._require_current_working_view_request(request)
             active = self._load_current_provider_call_or_none()
             previous = None

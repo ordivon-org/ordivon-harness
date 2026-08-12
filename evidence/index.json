@@ -455,70 +455,14 @@
       "file": "harness-h2-deliberation-lifecycle-89fc499.json",
       "status": "historical",
       "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
-      "scope": "Historical deterministic H2 lifecycle evidence on the P5 Provider-outcome hardening implementation: all 13 aggregate-budget/cancellation/deadline gates remain accepted after concurrency source changes."
+      "scope": "Historical deterministic H2 lifecycle evidence bound to 89fc499: all 13 aggregate-budget/cancellation/deadline gates passed on that implementation. Operational closeout later changed current Provider-use and claim-to-dispatch source, so the receipt remains immutable historical evidence rather than claiming current-source verification."
     },
     {
       "claimId": "harness.rsi.p5-final-acceptance",
       "file": "harness-rsi-p5-final-acceptance-89fc499.json",
       "status": "historical",
       "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
-      "scope": "Historical final P5 acceptance: preserves the Agent-owned 203→8 evidence-driven discovery result and separately records the release-acceptance Provider concurrency hardening forced after that Agent lawfully abstained. A physical Provider dispatch winner now preserves bounded known-outcome commit authority against short generic Run-lease contention while contenders remain no-redispatch; 100/100 official concurrency repetitions, 29 focused tests and 344-test source acceptance pass. The Agent discovery did not author this source target."
-    },
-    {
-      "claimId": "harness.cognition.h2-deliberation-lifecycle-p6",
-      "file": "harness-h2-deliberation-lifecycle-9e9c210.json",
-      "status": "historical",
-      "implementationRevision": "9e9c2105958b754914609b4e0f28e06786755429",
-      "scope": "Historical deterministic H2 lifecycle evidence retained unchanged after current DeepSeek cache-locality and Provider CLAIMED-to-DISPATCHING hardening advanced implementation source."
-    },
-    {
-      "claimId": "harness.rsi.p6-high-budget-causal-utilization",
-      "file": "harness-rsi-p6-high-budget-causal-utilization-9e9c210.json",
-      "status": "historical",
-      "implementationRevision": "9e9c2105958b754914609b4e0f28e06786755429",
-      "scope": "Historical bounded RSI P6/R13 acceptance retained unchanged after P7 reversible-epistemic-state research superseded it as the current RSI research claim. Its high-budget non-replay, terminal exact re-grounding and no-Tool control-routing evidence remains exact for its bound implementation."
-    },
-    {
-      "claimId": "harness.rsi.p7-reversible-epistemic-state",
-      "file": "harness-rsi-p7-reversible-epistemic-state-6b4cc77.json",
-      "status": "historical",
-      "implementationRevision": "6b4cc7724c83061a03fdb85df0003e9b4bff8d26",
-      "scope": "Historical bounded RSI P7/R14 reversible-epistemic-state evidence retained unchanged after current DeepSeek cache-locality and Provider claim-dispatch hardening advanced implementation source; P7 laws remain exact for their bound revision."
-    },
-    {
-      "claimId": "harness.cognition.h2-deliberation-lifecycle-cache",
-      "file": "harness-h2-deliberation-lifecycle-1d0fa63.json",
-      "status": "historical",
-      "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
-      "scope": "Historical deterministic H2 lifecycle evidence on the pre-X2 DeepSeek/cache implementation; superseded as current verification by the 9087278 Provider-continuation source revision."
-    },
-    {
-      "claimId": "harness.deepseek.cache-locality-current",
-      "file": "harness-deepseek-cache-locality-1d0fa63.json",
-      "status": "historical",
-      "implementationRevision": "1d0fa63e43ef0d0d67cd09f95d2e19f333d46bd3",
-      "scope": "Historical current DeepSeek request-locality acceptance retained unchanged after External Harness Cross-Validation X0/X1 became the current research claim. Cache/source behavior remains exact for its bound implementation and source is unchanged by X-series."
-    },
-    {
-      "claimId": "harness.external-cross-validation.x0-x1",
-      "file": "harness-external-cross-validation-x0-x1-eb442c5.json",
-      "status": "historical",
-      "implementationRevision": "eb442c53a463b302946cf6062080eda4a3597a11",
-      "scope": "Historical X0/X1 external cross-validation on eb442c5. Its Tool-surface and request-locality findings remain bound to that revision; X2 second-Provider work advanced current product source."
-    },
-    {
-      "claimId": "harness.cognition.h2-deliberation-lifecycle-x2",
-      "file": "harness-h2-deliberation-lifecycle-9087278.json",
-      "implementationRevision": "9087278e69e20cd501310f4e8719b2dcd5811f05",
-      "scope": "Current deterministic H2 lifecycle evidence on the Provider-tool-continuation implementation; all 13 aggregate budget, deadline, cancellation and dispatch-safety gates remain accepted.",
-      "status": "verified"
-    },
-    {
-      "claimId": "harness.provider-tool-continuation.x2",
-      "file": "harness-provider-tool-continuation-9087278.json",
-      "implementationRevision": "9087278e69e20cd501310f4e8719b2dcd5811f05",
-      "scope": "Current five-frontier X2 acceptance. Gemini native function-calling proved an otherwise inexpressible Provider-protocol continuation state; Harness now carries exact Adapter-bound opaque continuation outside Agent messages and recovers it across crash/reopen without Runtime redispatch. Public-surface contraction, generic retry/idempotency, repository-map/ranking and observability-planner primitives were not earned.",
-      "status": "verified"
+      "scope": "Historical final P5 acceptance bound to 89fc499: preserves the Agent-owned 203→8 evidence-driven discovery result and the Provider concurrency hardening forced by later release acceptance. Operational closeout subsequently changed current Provider-use and claim-to-dispatch source; the P5 receipt remains unchanged historical evidence and no longer claims whole-current implementation verification."
     }
   ]
 }

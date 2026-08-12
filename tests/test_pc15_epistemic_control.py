@@ -226,13 +226,9 @@ class EpistemicControlTests(unittest.TestCase):
         body = transport.requests[0]
         messages = body["messages"]
         self.assertEqual(messages[0]["role"], "system")
-        self.assertIn("ordivon_harness_turn_control", messages[0]["content"])
-        control = messages[-1]
-        self.assertEqual(control["role"], "user")
-        self.assertEqual(control["name"], "ordivon_harness_turn_control")
-        self.assertIn('"admittedRuntimeTools":[]', control["content"])
-        self.assertIn('"toolCalls":0', control["content"])
-        self.assertEqual(messages[1:-1], list(request.messages))
+        self.assertIn('"admittedRuntimeTools":[]', messages[0]["content"])
+        self.assertIn('"toolCalls":0', messages[0]["content"])
+        self.assertEqual(messages[1:], list(request.messages))
         provider_tools = [item["function"]["name"] for item in body["tools"]]
         self.assertNotIn("search_workspace", provider_tools)
         self.assertIn("submit_run_conclusion", provider_tools)

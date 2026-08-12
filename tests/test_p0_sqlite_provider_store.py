@@ -331,47 +331,6 @@ class SQLiteHarnessRunContinuityProviderTests(unittest.TestCase):
                 blocker_store.release_run_lease(blocking_lease)
                 blocker_store.close()
 
-    def test_claim_owner_waits_for_transient_run_lease_before_dispatch(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory) / "state"
-            clock = MutableClock()
-            store, winner = self.prepare(root, clock)
-            claimed = self.claim(winner)
-            store.close()
-
-            blocker_store = SQLiteHarnessStore(root)
-            blocking_lease = blocker_store.acquire_run_lease(
-                contract().harness_run_id,
-                owner_id="test:transient-pre-dispatch-contender",
-                ttl_ms=30_000,
-                now_ms=clock(),
-            )
-
-            def admit_dispatch():
-                with SQLiteHarnessStore(root) as dispatch_store:
-                    dispatch = SQLiteHarnessRunContinuityStore(
-                        dispatch_store,
-                        contract(),
-                        clock_ms=clock,
-                    )
-                    dispatch.bind_state(state())
-                    return dispatch.mark_provider_call_dispatching(claimed)
-
-            try:
-                with ThreadPoolExecutor(max_workers=1) as pool:
-                    future = pool.submit(admit_dispatch)
-                    time.sleep(0.02)
-                    self.assertFalse(future.done())
-                    blocker_store.release_run_lease(blocking_lease)
-                    dispatching = future.result(timeout=2.0)
-                self.assertEqual(
-                    dispatching.record.status,
-                    HarnessProviderCallStatus.DISPATCHING,
-                )
-            finally:
-                blocker_store.release_run_lease(blocking_lease)
-                blocker_store.close()
-
     def test_safe_claim_failure_can_retry_only_after_budget_consumption(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "state"

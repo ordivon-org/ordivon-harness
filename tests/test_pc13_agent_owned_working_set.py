@@ -388,16 +388,11 @@ class AgentOwnedWorkingSetTests(unittest.TestCase):
                 second_messages = second_body["messages"]
                 self.assertEqual(first_messages[0]["role"], "system")
                 self.assertEqual(second_messages[0]["role"], "system")
-                self.assertIn("ordivon_harness_turn_control", first_messages[0]["content"])
-                first_control = first_messages[-1]
-                second_control = second_messages[-1]
-                self.assertEqual(first_control["name"], "ordivon_harness_turn_control")
-                self.assertEqual(second_control["name"], "ordivon_harness_turn_control")
-                self.assertIn('"admittedRuntimeTools":[]', first_control["content"])
-                self.assertIn('"toolCalls":0', first_control["content"])
-                self.assertEqual(first_messages[1:-1], list(source_a.messages))
-                self.assertEqual(second_messages[1:-1], list(source_b.messages))
-                self.assertNotIn("View A", str(second_messages[1:-1]))
+                self.assertIn('"admittedRuntimeTools":[]', first_messages[0]["content"])
+                self.assertIn('"toolCalls":0', first_messages[0]["content"])
+                self.assertEqual(first_messages[1:], list(source_a.messages))
+                self.assertEqual(second_messages[1:], list(source_b.messages))
+                self.assertNotIn("View A", str(second_messages[1:]))
                 current = continuity.load_current_working_set()
                 self.assertEqual(current.attempt_id, proposal.next_attempt_id)
                 self.assertEqual(current.pins, proposal.pins)
