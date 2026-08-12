@@ -74,10 +74,14 @@ from .agent_run import (
     HarnessCognitionSource,
 )
 from .domain_tools import (
+    AgentToolDefinition,
     DomainToolBridge,
     DomainToolCatalog,
     DomainToolLoopPlan,
     DomainToolLoopRunner,
+    ToolBridgeError,
+    ToolBridgeErrorKind,
+    ToolObservation,
 )
 
 __all__ = [
@@ -105,10 +109,14 @@ __all__ = [
     "HarnessPriorAttemptEvidence",
     "HarnessStrategyEvidence",
     "HarnessStrategySelectionContext",
+    "AgentToolDefinition",
     "DomainToolBridge",
     "DomainToolCatalog",
     "DomainToolLoopPlan",
     "DomainToolLoopRunner",
+    "ToolBridgeError",
+    "ToolBridgeErrorKind",
+    "ToolObservation",
     "HarnessPrivacyPolicy",
     "HarnessRunContract",
     "HarnessRuntimeClient",
