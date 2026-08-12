@@ -453,16 +453,16 @@
     {
       "claimId": "harness.cognition.h2-deliberation-lifecycle-p5",
       "file": "harness-h2-deliberation-lifecycle-89fc499.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
-      "scope": "Current deterministic H2 lifecycle evidence on the P5 Provider-outcome hardening implementation: all 13 aggregate-budget/cancellation/deadline gates remain accepted after concurrency source changes."
+      "scope": "Historical deterministic H2 lifecycle evidence bound to 89fc499: all 13 aggregate-budget/cancellation/deadline gates passed on that implementation. Operational closeout later changed current Provider-use and claim-to-dispatch source, so the receipt remains immutable historical evidence rather than claiming current-source verification."
     },
     {
       "claimId": "harness.rsi.p5-final-acceptance",
       "file": "harness-rsi-p5-final-acceptance-89fc499.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
-      "scope": "Current final P5 acceptance: preserves the Agent-owned 203→8 evidence-driven discovery result and separately records the release-acceptance Provider concurrency hardening forced after that Agent lawfully abstained. A physical Provider dispatch winner now preserves bounded known-outcome commit authority against short generic Run-lease contention while contenders remain no-redispatch; 100/100 official concurrency repetitions, 29 focused tests and 344-test source acceptance pass. The Agent discovery did not author this source target."
+      "scope": "Historical final P5 acceptance bound to 89fc499: preserves the Agent-owned 203→8 evidence-driven discovery result and the Provider concurrency hardening forced by later release acceptance. Operational closeout subsequently changed current Provider-use and claim-to-dispatch source; the P5 receipt remains unchanged historical evidence and no longer claims whole-current implementation verification."
     }
   ]
 }
