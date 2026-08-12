@@ -23,7 +23,6 @@ EXPECTED_API = {
     "HarnessCognitionSource",
     "AgentTurnRequest",
     "AgentTurnResult",
-    "ProviderToolContinuation",
     "CompiledHarnessAttempt",
     "DeepSeekSettings",
     "DeepSeekTurnAdapter",
@@ -126,16 +125,6 @@ class PublicApiTests(unittest.TestCase):
         self.assertTrue(rejected.detail.retryable)
         self.assertTrue(api.INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST.startswith("sha256:"))
         self.assertTrue(api.INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST.startswith("sha256:"))
-        continuation = api.ProviderToolContinuation(
-            adapter_id="adapter:public-api",
-            source_turn_id="turn:public-api:1",
-            source_model_call_id="model-call:public-api:1",
-            opaque_state={"opaque": "provider-protocol-state"},
-        )
-        self.assertEqual(
-            continuation.to_dict()["kind"],
-            "ordivon.provider-tool-continuation",
-        )
 
     def test_host_integration_is_an_explicit_host_free_adapter_module(self) -> None:
         from ordivon_harness.host_external_adapter import (

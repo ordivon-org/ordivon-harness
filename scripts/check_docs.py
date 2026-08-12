@@ -51,7 +51,6 @@ STABLE_API = {
     "AgentTurnAdapter",
     "AgentTurnRequest",
     "AgentTurnResult",
-    "ProviderToolContinuation",
     "CompiledHarnessAttempt",
     "DeepSeekSettings",
     "DeepSeekTurnAdapter",

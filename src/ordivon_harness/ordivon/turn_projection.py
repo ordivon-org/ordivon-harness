@@ -11,13 +11,7 @@ from ..working_view import (
     WorkingViewProjector,
     overlay_working_view,
 )
-from .model import (
-    AgentCallerIngressRef,
-    AgentToolDefinition,
-    AgentTurnCapabilities,
-    AgentTurnRequest,
-    ProviderToolContinuation,
-)
+from .model import AgentCallerIngressRef, AgentToolDefinition, AgentTurnCapabilities, AgentTurnRequest
 
 
 
@@ -33,37 +27,6 @@ class CallerIngressProjector(Protocol):
         self,
         messages: tuple[dict[str, JsonValue], ...],
     ) -> tuple[tuple[int, dict[str, JsonValue]], ...]: ...
-
-
-_PROVIDER_TOOL_CONTINUATION_FIELD = "providerToolContinuation"
-
-
-def _split_provider_tool_continuations(
-    messages: tuple[dict[str, JsonValue], ...],
-) -> tuple[
-    tuple[dict[str, JsonValue], ...],
-    tuple[ProviderToolContinuation, ...],
-]:
-    projected: list[dict[str, JsonValue]] = []
-    continuations: list[ProviderToolContinuation] = []
-    for message in messages:
-        raw = message.get(_PROVIDER_TOOL_CONTINUATION_FIELD)
-        if raw is None:
-            projected.append(dict(message))
-            continue
-        if (
-            message.get("role") != "assistant"
-            or not isinstance(message.get("toolCalls"), list)
-            or not isinstance(raw, dict)
-        ):
-            raise ValueError(
-                "Provider Tool continuation metadata requires an assistant Tool message"
-            )
-        clean = dict(message)
-        clean.pop(_PROVIDER_TOOL_CONTINUATION_FIELD)
-        projected.append(clean)
-        continuations.append(ProviderToolContinuation.from_dict(raw))
-    return tuple(projected), tuple(continuations)
 
 
 class AgentTurnProjectionError(RuntimeError):
@@ -128,16 +91,7 @@ def project_agent_turn(
         )
 
     request_context_digest = canonical_context_digest
-    request_messages, canonical_continuations = _split_provider_tool_continuations(
-        canonical_messages
-    )
-    pre_projected_messages, pre_continuations = _split_provider_tool_continuations(
-        pre_caller_tool_exchange_messages
-    )
-    post_projected_messages, post_continuations = _split_provider_tool_continuations(
-        post_caller_tool_exchange_messages
-    )
-    provider_tool_continuations = canonical_continuations
+    request_messages = canonical_messages
     caller_ingress_refs: tuple[AgentCallerIngressRef, ...] = ()
     effective_working_view: HarnessWorkingView | None = None
     base_digest: str | None = None
@@ -148,9 +102,8 @@ def project_agent_turn(
     )
 
     if base_working_view is not None:
-        provider_tool_continuations = pre_continuations + post_continuations
         caller_message_offset = (
-            len(base_working_view.messages) + len(pre_projected_messages)
+            len(base_working_view.messages) + len(pre_caller_tool_exchange_messages)
         )
         caller_ingress_refs = tuple(
             AgentCallerIngressRef(
@@ -160,9 +113,9 @@ def project_agent_turn(
             for position, (caller_index, _message) in enumerate(caller_entries)
         )
         overlay = (
-            pre_projected_messages
+            pre_caller_tool_exchange_messages
             + caller_messages
-            + post_projected_messages
+            + post_caller_tool_exchange_messages
         )
         effective_working_view = overlay_working_view(base_working_view, overlay)
         request_context_digest = effective_working_view.digest
@@ -189,7 +142,6 @@ def project_agent_turn(
         remaining_budget=remaining_budget,
         caller_ingress_refs=caller_ingress_refs,
         working_set_refs=working_set_refs,
-        provider_tool_continuations=provider_tool_continuations,
     )
     return AgentTurnProjection(
         request=request,

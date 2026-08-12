@@ -219,18 +219,6 @@ P5 also reduces the information repeatedly projected into the model. A 53,618-by
 
 P5 is therefore a bounded R12 result about **evidence-driven high-information discovery**, not general efficiency. The accepted semantic discovery path still used 12 fresh Provider calls and 239,953 total tokens, so observation traversal became dramatically smaller while model-call/token cost remains high. That Agent discovery branch authorized no source change; generator, materializer, candidate evaluator, source promotion decision and canonical source promotion remained intentionally unused. A later independent release-acceptance path did find a separate causal Provider concurrency defect; its source repair has distinct provenance and is not attributed to the discovery Agent.
 
-RSI P6 tests the remaining model-context efficiency boundary without treating total tokens as scarce. Three protocols—full replay, Agent-authored incremental state, and high-budget batched observation planning—were run against both the unresolved no-Tool failure and a resolved Provider-concurrency history. Replay preserved more raw material in every turn but accumulated 966,576 repeated evidence bytes across the two workloads and, on the no-Tool workload, drifted through five rejected terminal/status forms without reaching a valid terminal result. Incremental state sharply reduced repeated evidence, but one resolved-Provider trajectory merged contender preflight with outcome-owner lease waiting into a false causal claim. Batch eliminated repeated evidence in the measured prompts yet finalized the wrong causal locality on both workloads. Therefore **non-replay is necessary but not sufficient**: compact state is cognition, not source truth.
-
-P6 keeps the full exact experiment/evidence history outside the Working View and makes terminal re-grounding an independent authority boundary. High-budget model reasoning may retain deep causal analysis; mechanically repeated settled bytes, redundant nested serialization and observation primitives that ignore Agent-requested slicing are treated as low utilization. A terminal source hypothesis does not become mutation authority until an independent evaluator reopens exact source/evidence and validates the causal locality. The experiment runner, normalized-result recorder and source generators are deleted after evidence is frozen rather than becoming a Memory/RAG, semantic-search planner or RSI controller.
-
-The same experiments produced a real product falsifier. Provider-normalized malformed `submit_run_conclusion` control and `unavailable_tool` actions on a surface with no Runtime Tool definitions previously entered generic Tool bookkeeping before the strict no-Tool state bridge could bind, creating Tool identities/observations that the bridge correctly rejected. Current Loop handling consumes these as bounded conclusion/Tool corrections **before** Runtime Tool-history authority exists; mixed actions remain non-completing, genuinely admitted Tool surfaces retain existing semantics, and repeated corrections remain budget-bounded.
-
-RSI P7 asks whether a compact Agent world model can remain causally faithful without replaying exact history. The experiment keeps raw observations outside the Working View and compares free compact state with an experiment-only ledger whose claims cite exact evidence identities and preserve one unresolved discriminator per claim. The ledger is not a product schema: it is a falsifier for whether explicit causal separation changes failure modes.
-
-The experiments establish five composition laws. First, **cognition admission and action admission are independent**: a malformed action must not execute, but it also must not erase a mechanically valid Agent world-model update. Second, **objective completion is rooted**: a true supported subclaim cannot silently replace the bound Objective and authorize completion. Third, **semantic correctness is not epistemic authority**: an Agent that guesses the right causal answer without any caller-admitted exact evidence still lacks terminal authority. Fourth, unresolved discriminators are lawful current cognition rather than a reason to synthesize certainty. Fifth, the independent evaluator is also only evidence; an internally inconsistent evaluator enum/prose pair cannot promote a claim by itself.
-
-The final 2×3 matrix does not justify a universal claim representation. Free compact state solved the simple dispatch-fence negative control in two rounds from one exact grep observation, while ledger trajectories were more conservative on adjacent-mechanism workloads. Aggregate compact-state bytes and independently expanded exact-evidence bytes were nearly identical across the two protocol families. P7 therefore records bounded R14 **reversible epistemic-state composition**, not a Causal Ledger product. Existing Harness primitives already expose the needed lower-level authorities: Contract/Mandate Objective identity, Agent-owned WorkingSet selection, exact WorkingView source pins, non-authoritative deliberation records, CompletionProposal `evidenceRefs`/`unresolvedUnknowns`, and caller/domain admission outside model cognition. No Memory/RAG, claim database, planner or evaluator service is added.
-
 ## Run Contract
 
 `HarnessRunContract` binds one **attempt** to caller identity/reference, Objective and Context refs, Provider/Adapter/model identity, Tool catalog and grant digests, execution budget, completion contract, system manifest, privacy policy, deadline and correlation links. The Contract digest is execution authority for that attempt: a Run may not silently execute against different values. When compiled from a Mandate, its system manifest binds the Mandate, selected profile, Strategy, attempt index, and adopted prior Context evidence.
@@ -342,22 +330,6 @@ DeepSeek physical egress may be supplied by an external workstation transport wi
 
 A Provider turn that simultaneously requests ordinary Tools and submits a Run conclusion is treated as a **model-correctable action conflict**, not as permission to choose on the model's behalf and not as a Harness failure. Harness dispatches none of those ordinary Tools and admits no conclusion from that mixed turn; the next model turn must choose whether to continue acting or conclude.
 
-### Provider protocol continuation is not cognition
-
-Some Providers bind later Tool turns to opaque Provider-native bytes returned with an earlier function call. Harness treats those bytes as **protocol continuation**, not as semantic conversation content:
-
-```text
-completed Provider Tool result
-        │ exact Adapter/turn/model-call binding
-        ▼
-ProviderToolContinuation
-        │ durable only under existing content privacy authority
-        ├── AgentTurnProjector ──► removed from model-visible messages
-        └── AgentTurnRequest.provider_tool_continuations ──► bound Adapter
-```
-
-The continuation carries no Harness interpretation of Provider reasoning. External initial/resume messages cannot author the reserved metadata, and Continuity independently requires matching completed Provider evidence before a retained continuation can participate in a later Provider claim. Metadata-only Runs do not gain hidden content retention; if exact Provider bytes were not authorized for retention, crash recovery cannot invent them.
-
 ## Tool lifecycle
 
 Tool-bearing Runs bind a complete Tool catalog digest and Tool grant digest. Before physical delivery, Harness records a Tool intent and dispatch fence. Runtime requests carry Harness authority references. Observation-only failures can be corrected by the Agent; ambiguous external effects require reconciliation and may terminate recovery as UNKNOWN.
@@ -379,17 +351,3 @@ Harness can conclude that an Agent Run produced a candidate-completed result and
 ## Removed pre-H3 architecture
 
 H3 intentionally removed the former `HarnessHost`, Host Assignment/TaskContract model, `HostHarnessRunStore`, Host CLI namespace, cutover machinery, Host dependency extra, and Host-coupled Codex/Hermes drivers. Historical evidence may describe those experiments, but current source does not decode or advertise them.
-
-## Provider request locality and claim-transition authority
-
-Provider request locality is an Adapter projection property, not domain semantics. For DeepSeek, the stable system protocol and retained model-visible history precede a Harness-authored trailing user-role record named `ordivon_harness_turn_control`. Per-turn budget, exact caller-ingress provenance and WorkingSet selection remain visible and current, but their variation no longer rewrites the leading system prefix. Caller-promotion Provider schemas remain stable shapes; exact current-request provenance and Run Store admission still reject proposals outside the authorized caller-ingress set. Thus cacheability does not become authority.
-
-The release acceptance that validated this projection independently exposed a separate pre-dispatch concurrency boundary. Once an exact durable Provider Call is `CLAIMED`, its holder owns the next dispatch-admission transition more strongly than contenders that never obtained that claim. The Loop therefore does not perform a semantically redundant durable state rebind between claim/retry and dispatch admission. SQLite continuity may wait through bounded transient Run-lease contention before `DISPATCHING`, but only while the exact `CLAIMED` record remains current; supersession fails closed and bounded exhaustion requires recovery. This is distinct from P5's post-dispatch known-outcome authority and is not a generic lock-retry policy.
-
-## Tool surface is projection, not authority
-
-External cross-validation X0/X1 strengthens an existing boundary instead of adding a subsystem. `AgentToolSurface` and `AgentTurnProjector` are read-side projections over already-owned Tool authority: projection may expose definitions and current model-visible state, while continuity independently reconstructs and verifies the exact request before Provider dispatch. X1 did not produce evidence for moving Tool discovery, ranking or cache policy into that authority path.
-
-Tool-surface strategies therefore remain replaceable projections. A full static catalog can be appropriate when the set is small, semantically manageable or cache-hot. Agent-owned deferred discovery can reduce visible definitions when the universe is large, at the price of search turns and latency. Caller-side dynamic filtering is admissible only as long as it preserves a recovery path to every authorized candidate the Agent may legitimately need; once a mechanical filter can silently remove the correct semantic candidate, it has become a policy decision and must not masquerade as Harness optimization. A generic catalog/invoke representation remains a simplicity control, not a universal replacement for typed Provider tools.
-
-The same separation applies to efficiency measurements. Visible context volume, exact request locality, realized Provider cache hit/miss, network/roundtrip count, latency and semantic task success are different planes. No one scalar such as total prompt tokens may authorize a projection change. X0 may observe first divergence mechanically, but it does not rank repairs; X1 may compare surfaces, but execution authority and caller admission remain unchanged.
