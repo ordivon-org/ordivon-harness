@@ -7,6 +7,7 @@ from typing import Callable, TypeAlias
 
 from anc_canonical import JsonValue
 
+from .capability_catalog import project_process_composition
 from .completion import structured_completion_contract_digest
 from .core_contracts import HarnessRunContract
 from .execution_binding import HarnessExecutionBinding
@@ -195,6 +196,19 @@ class HarnessAgentRun:
     def status(self) -> dict[str, JsonValue]:
         with SQLiteHarnessStore(self.state_root) as store:
             return store.load_run(self.harness_run_id).to_dict()
+
+    def explain(self) -> dict[str, JsonValue]:
+        """Project the validated in-process Harness composition."""
+        value = project_process_composition(
+            self.contract,
+            adapter=self.adapter,
+            cognition_profile=self.cognition_profile,
+            execution_binding=self.execution_binding,
+            runtime_supplied=self.runtime is not None,
+            provider_use_policy=self.provider_use_policy,
+        )
+        value["durableRun"] = self.status()
+        return value
 
     def run(
         self,

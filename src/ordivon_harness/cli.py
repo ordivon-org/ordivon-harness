@@ -30,12 +30,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="DeepSeek settings for the built-in no-Tool execution profile",
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("capabilities")
+    commands.add_parser(
+        "capabilities",
+        help="project the package-resolved effective capability surface",
+    )
     commands.add_parser("doctor")
     status = commands.add_parser("status")
     status.add_argument("harness_run_id")
     inspect = commands.add_parser("inspect")
     inspect.add_argument("harness_run_id")
+    explain = commands.add_parser(
+        "explain",
+        help="project one durable Run as a capability/composition workbench view",
+    )
+    explain.add_argument("harness_run_id")
     telemetry = commands.add_parser(
         "telemetry",
         help="project compact read-only Run usage, budget, cache, and recovery telemetry",

@@ -35,7 +35,7 @@ Python support is `>=3.12,<3.13`. Runtime integration is structural through the 
 
 ## Public API
 
-`ordivon_harness.api` is the recommended application facade. The package root mirrors that API plus `package_version`. `ordivon_harness.core` is the wider Host-free integration surface.
+`ordivon_harness.api` is the recommended application facade. The package root mirrors that API plus `package_version`. `ordivon_harness.core` is the wider Host-free integration surface. P0 adds `HarnessAgentRun.explain()` on the existing recommended Run handle. Generated capability projectors live in the advanced `ordivon_harness.capability_catalog` module and the explicit application-local `HarnessAgentRunToolSurface` lives in `ordivon_harness.run_tool_surface`; neither is added to the stable package-root facade yet. These projections are not durable authority and the Tool-surface seam is exact-digest-bound rather than a global registry/plugin lifecycle contract.
 
 H3 intentionally removed historical package-root aliases, `host_api`, `HarnessRunner`, `HarnessHost`, Assignment/TaskContract objects, cutover APIs and Host source compatibility modules. New code must not depend on them.
 

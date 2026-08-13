@@ -7,6 +7,10 @@ from typing import Any
 from anc_canonical import JsonValue, validate_json_value
 
 from .agent_run import HarnessAgentRun
+from .capability_catalog import (
+    effective_capability_catalog,
+    effective_capability_catalog_digest,
+)
 from .core_contracts import HarnessRunContract
 from .independent_result import IndependentRunRecorder, StoredIndependentRunResult
 from .ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
@@ -21,15 +25,18 @@ from .sqlite_store import SQLiteHarnessStore
 from .standalone import HarnessAgentExecution
 from .store import HarnessRunStatus
 from .telemetry import build_harness_telemetry_projection
+from .workbench import build_durable_workbench_projection
 
 
 def capabilities() -> dict[str, JsonValue]:
-    """Describe the Host-free operational surface without reading local state."""
+    """Describe the package-resolved surface without converting discovery into authority."""
     return {
         "ok": True,
         "schemaVersion": 1,
         "kind": "ordivon.harness-cli-capabilities",
         "defaultAuthority": "independent-harness-run",
+        "effectiveCapabilityCatalogDigest": effective_capability_catalog_digest(),
+        "effectiveCapabilityCatalog": effective_capability_catalog(),
         "executionProfiles": [
             {
                 "profileId": "deepseek-no-tool-v1",
@@ -38,7 +45,15 @@ def capabilities() -> dict[str, JsonValue]:
                 "toolCatalogDigest": NO_TOOL_AGENT_SURFACE_DIGEST,
                 "toolGrantDigest": NO_TOOL_AGENT_GRANT_DIGEST,
                 "runtimeRequired": False,
-                "commands": ["run", "resume", "recover", "status", "telemetry", "inspect"],
+                "commands": [
+                    "run",
+                    "resume",
+                    "recover",
+                    "status",
+                    "telemetry",
+                    "inspect",
+                    "explain",
+                ],
             }
         ],
         "toolBearingCliExecution": False,
@@ -78,6 +93,15 @@ def dispatch(args, *, clock_ms) -> dict[str, object]:
     if command == "inspect":
         with SQLiteHarnessStore(root) as store:
             return _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
+    if command == "explain":
+        with SQLiteHarnessStore(root) as store:
+            inspected = _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
+            return {
+                "ok": True,
+                "authority": "independent-harness-run",
+                "stateRoot": str(root),
+                "explanation": inspected["workbench"],
+            }
     if command == "telemetry":
         with SQLiteHarnessStore(root) as store:
             inspected = _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
@@ -233,8 +257,11 @@ def _inspect(
         clock_ms=clock_ms,
     )
     provider: dict[str, JsonValue] | None = None
+    provider_request = None
     try:
-        provider = continuity.load_current_provider_call().record.to_dict()
+        retained_provider = continuity.load_current_provider_call()
+        provider = retained_provider.record.to_dict()
+        provider_request = retained_provider.request
     except KeyError:
         pass
     snapshot: dict[str, JsonValue] | None = None
@@ -253,21 +280,35 @@ def _inspect(
             terminal = recorder.load_terminal_result()
         except KeyError:
             pass
+    run_value = projection.to_dict()
+    run_receipt = None if terminal is None else terminal.receipt.to_dict()
+    completion_proposal = (
+        None
+        if terminal is None or terminal.completion_proposal is None
+        else terminal.completion_proposal.to_dict()
+    )
+    workbench = build_durable_workbench_projection(
+        run=run_value,
+        contract=continuity.contract,
+        provider_call=provider,
+        provider_request=provider_request,
+        snapshot=snapshot,
+        recovery=recovery,
+        run_receipt=run_receipt,
+        completion_proposal=completion_proposal,
+    )
     return {
         "ok": True,
         "authority": "independent-harness-run",
         "stateRoot": str(root),
-        "run": projection.to_dict(),
+        "run": run_value,
         "contract": continuity.contract.to_dict(),
         "providerCall": provider,
         "snapshot": snapshot,
         "recovery": recovery,
-        "runReceipt": None if terminal is None else terminal.receipt.to_dict(),
-        "completionProposal": (
-            None
-            if terminal is None or terminal.completion_proposal is None
-            else terminal.completion_proposal.to_dict()
-        ),
+        "runReceipt": run_receipt,
+        "completionProposal": completion_proposal,
+        "workbench": workbench,
     }
 
 

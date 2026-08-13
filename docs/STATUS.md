@@ -62,6 +62,10 @@ This page states current maturity. It does not replay the research sequence that
 ### Supported composition
 
 - `HarnessAgentRun` is the recommended Python state-root execution handle for normal create/open/run/resume composition.
+- Capability truth has three explicit stages: package-installed mechanisms, immutable Run-admitted Contract/Binding authority, and exact turn-admitted `AgentTurnRequest` actions. Earlier stages never imply later stages.
+- `effective_capability_catalog()` is a generated read-only projection over source-owned Tool surfaces and cognition mechanisms; it is not a mutable registry or grant store.
+- `HarnessAgentRun.explain()` projects validated process-local composition while reporting Provider/Runtime liveness as not probed; durable CLI `explain` projects only reconstructable Journal/CAS facts and leaves unavailable process-local facts unknown.
+- `HarnessAgentRunToolSurface` is an explicit application-local advanced seam for an exact Runtime-backed Tool catalog/grant pair. It performs pre-state-creation Contract/Binding checks and then reuses the existing Run continuity/Runner; it does not dynamically mutate active Run authority or create a global plugin tree.
 - caller-owned Adapter factories keep Provider choice outside Harness policy.
 - Tool-bearing applications provide a `HarnessRuntimeClient`; the primary CLI does not invent Runtime authority.
 - structured completion binds caller-defined result shape into the Run Contract while semantic validation remains caller/domain authority.

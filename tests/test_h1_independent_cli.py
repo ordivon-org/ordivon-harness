@@ -49,6 +49,10 @@ class IndependentCliTests(unittest.TestCase):
         profile = value["executionProfiles"][0]
         self.assertEqual(profile["profileId"], "deepseek-no-tool-v1")
         self.assertFalse(profile["runtimeRequired"])
+        catalog = value["effectiveCapabilityCatalog"]
+        self.assertEqual(catalog["truthRole"], "derived-installed-capability-projection")
+        self.assertEqual(len(catalog["executionSurfaces"]), 4)
+        self.assertTrue(value["effectiveCapabilityCatalogDigest"].startswith("sha256:"))
 
     def test_independent_run_pause_resume_status_and_inspect_are_first_class(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -111,6 +115,24 @@ class IndependentCliTests(unittest.TestCase):
             self.assertEqual(inspected["contract"]["harnessRunId"], run_contract.harness_run_id)
             self.assertEqual(inspected["snapshot"]["pauseReason"], "needs-input")
             self.assertIsNone(inspected["providerCall"])
+            workbench = inspected["workbench"]
+            self.assertEqual(workbench["truthRole"], "derived-read-only-projection")
+            self.assertEqual(
+                workbench["composition"]["toolSurface"]["surfaceId"],
+                "harness.execution.no-tool.v1",
+            )
+            self.assertEqual(workbench["currentActionSurface"]["status"], "not-observed")
+            self.assertIn("not inferred", workbench["proofBoundaries"]["processLocal"])
+
+            code, explained, error = self.invoke(
+                "--state-root",
+                str(root),
+                "explain",
+                run_contract.harness_run_id,
+            )
+            self.assertEqual(code, 0, error)
+            assert explained is not None
+            self.assertEqual(explained["explanation"], workbench)
 
             code, telemetry, error = self.invoke(
                 "--state-root",

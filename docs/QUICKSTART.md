@@ -122,7 +122,10 @@ ordivon-harness --state-root /var/lib/ordivon/harness \
 
 ordivon-harness --state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
+ordivon-harness --state-root /var/lib/ordivon/harness explain HARNESS_RUN_ID
 ```
+
+`capabilities` returns the package-derived `ordivon_harness.capability_catalog.effective_capability_catalog()`. Its execution surfaces are installed mechanisms, not grants. The same advanced module exposes `project_run_capabilities()` for exact Contract-bound capability facts and `project_turn_capabilities()` for only the Tool/native actions already admitted on one `AgentTurnRequest`. Installed → Run-admitted → turn-admitted is an explicit authority boundary.
 
 For the built-in DeepSeek profile, the Contract must bind the canonical no-Tool catalog/grant and the configured DeepSeek Adapter/model. The current adapter reserves a conservative request-token upper bound equal to the serialized Provider request bytes plus its 8,192-token completion ceiling. A small Contract such as `max_total_tokens=4_096` can therefore be rejected safely before the first Provider dispatch; `16_384` is a practical starting bound for a small no-Tool Run, not a universal required value.
 

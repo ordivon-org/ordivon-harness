@@ -133,7 +133,10 @@ The current product includes:
 - attempt-local Tool cognition that survives recovery but expires when a successor cognition attempt commits;
 - bounded historical committed-cognition inspection and exact pin re-selection;
 - request-bound `AgentTurnRequest.tools` and Harness-native capabilities, so installed mechanisms do not silently become current action authority;
-- `HarnessAgentRun` as the supported Python handle for normal state-root → Run composition and resume;
+- a generated `effective_capability_catalog()` that separates **installed**, **Run-admitted**, and **turn-admitted** capability truth instead of making package installation an authority grant;
+- `HarnessAgentRun` as the supported Python handle for normal state-root → Run composition and resume, with `HarnessAgentRun.explain()` for process-local composition inspection without Provider/Runtime liveness claims;
+- `HarnessAgentRunToolSurface` as an explicit application-local advanced seam for exact non-default Runtime-backed Tool surfaces; it is not a registry and does not change an admitted Run;
+- durable `inspect` plus `explain` workbench projections over existing Journal/CAS state, with unavailable process-local facts left explicit rather than guessed;
 - multi-attempt Mandate/Strategy admission where Harness derives remaining resource authority mechanically but does not choose the Strategy;
 - caller-defined structured completion shapes while semantic admission remains outside Harness;
 - opaque Provider Tool continuation when a Provider protocol requires more than reconstructed semantic messages;
@@ -201,13 +204,16 @@ ordivon-harness --state-root /var/lib/ordivon/harness \
 ordivon-harness --state-root /var/lib/ordivon/harness status HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness telemetry HARNESS_RUN_ID
 ordivon-harness --state-root /var/lib/ordivon/harness inspect HARNESS_RUN_ID
+ordivon-harness --state-root /var/lib/ordivon/harness explain HARNESS_RUN_ID
 ```
+
+`capabilities` is a generated package projection: it can report installed built-in and specialized surfaces plus their exact source-owned digests and requirements, but it does not grant them to a Run. `explain` is a durable read model: it can prove Contract/Journal/CAS facts but deliberately does not invent whether an application-owned Adapter or Runtime client is currently live.
 
 The CLI does not invent the Objective, Context, Tool grant, Provider, budget, or completion authority. See [`docs/QUICKSTART.md`](docs/QUICKSTART.md) for Contract construction, Python examples, cognition profiles, Tool-bearing Runtime clients, and structured completion.
 
 ## Public API
 
-Use `ordivon_harness.api` for normal applications. The recommended execution handle is `HarnessAgentRun`: the caller supplies the exact Contract, Contract-bound Adapter factory, and any Runtime execution authority; Harness mechanically reconstructs the durable composition on resume.
+Use `ordivon_harness.api` for normal applications. The recommended execution handle is `HarnessAgentRun`: the caller supplies the exact Contract, Contract-bound Adapter factory, and any Runtime execution authority; Harness mechanically reconstructs the durable composition on resume. Advanced discovery/projector functions live in `ordivon_harness.capability_catalog`, and the explicit non-default Tool-surface seam lives in `ordivon_harness.run_tool_surface`; neither is promoted into the stable package-root facade yet. These projections do not grant authority.
 
 For broader delegated execution, the current path is:
 
