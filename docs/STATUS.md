@@ -50,6 +50,7 @@ This page states current maturity. It does not replay the research sequence that
 - Caller ingress is interaction cognition. The Agent may explicitly promote exact admitted caller bytes into durable cognition when that capability is present.
 - Provider-authored Tool exchanges are attempt-local cognition: they survive recovery inside the attempt and disappear when a successor cognition attempt commits.
 - Bounded historical recall returns exact earlier committed WorkingSet identities/pins, not semantic search results.
+- Advanced cross-Run reuse accepts caller/application-selected, externally owned exact knowledge/procedure references; Harness verifies the resolved source identity/digest and compiles it into the existing cognition-seed path. Presence never implies current cognition.
 - Current WorkingSet pins are addressable so an Agent can retain/drop/reselect exact sources without guessing hidden identities.
 
 ### Per-turn action authority
@@ -89,7 +90,7 @@ The following conclusions survive into current behavior:
 - **Tool-surface optimization is not semantic policy** — pruning that can hide the correct action requires Agent-owned recovery or it changes meaning;
 - **Provider wire state may exceed semantic messages** — opaque continuation is retained only when the Provider protocol requires it;
 - **deliberation-before-Tool composition is not automatically the recommended core** — it remains an advanced/internal composition until independent consumer pressure justifies promotion;
-- **no generic Memory/RAG/claim ledger was earned** — existing WorkingSet, CompletionProposal, exact evidence and caller/domain authorities remain sufficient for current accepted workloads.
+- **no generic Memory/RAG/Skill store was earned** — exact external reusable sources plus WorkingSet selection and existing structured CompletionProposal evidence are sufficient for current cross-Run knowledge/procedure workloads; semantic evaluation and promotion remain external.
 
 The exact P/R/H/X experiment chronology remains evidence, not a prerequisite for using Harness.
 
@@ -102,7 +103,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - Harness is pre-1.0; public schemas and advanced exports may still change under the documented compatibility policy.
 - The primary CLI does not create Tool-bearing Runtime clients.
 - Strategy selection is admitted and compiled, but next-attempt scheduling and semantic Strategy policy remain outside Harness.
-- Initial source discovery/ranking, large-WorkingSet inspection strategy and cross-Run cognition reuse remain Agent/application questions rather than Harness policy.
+- Initial source discovery/ranking, large-WorkingSet inspection strategy, reusable-source repository ownership, procedure evaluation and canonical promotion remain Agent/application/Host/domain questions. Harness provides only advanced exact reference-to-seed admission for already-selected cross-Run sources.
 - `CompletionProposal` cannot prove caller/domain completion.
 - structured output constrains Provider shape but does not make Harness a domain or JSON-Schema truth authority.
 - Provider/Tool UNKNOWN may require external reconciliation by the owner that can observe the consequence.

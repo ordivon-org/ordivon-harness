@@ -36,6 +36,7 @@ from .ordivon.sqlite_runtime_bridge import (
     INDEPENDENT_SEARCH_TOOL_SURFACE,
     INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
 )
+from .knowledge_topology import effective_knowledge_topology
 from .provider_use_policy import HarnessProviderUsePolicy
 from .standalone import HarnessCognitionProfile
 
@@ -255,6 +256,7 @@ def effective_capability_catalog() -> dict[str, JsonValue]:
         ),
         "executionSurfaces": _execution_surfaces(),
         "cognitionMechanisms": _cognition_mechanisms(),
+        "knowledgeTopology": effective_knowledge_topology(),
     }
     validate_json_value(value)
     return value

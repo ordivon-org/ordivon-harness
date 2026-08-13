@@ -93,6 +93,7 @@ REQUIRED_MEMBERS = {
     "ordivon_harness/core_contracts.py",
     "ordivon_harness/independent_cli.py",
     "ordivon_harness/independent_result.py",
+    "ordivon_harness/knowledge_topology.py",
     "ordivon_harness/host_external_adapter.py",
     "ordivon_harness/sqlite_store.py",
     "ordivon_harness/standalone.py",

@@ -161,6 +161,8 @@ The Adapter factory is caller policy, not Harness policy. Static composition is 
 
 For Agent-owned durable cognition, the same surface accepts `HarnessCognitionProfile` plus an exact caller-authored `HarnessCognitionSeed`. Build seed sources with `HarnessCognitionSource`/`HarnessCognitionSeedSource`; Harness does not discover, rank or summarize them.
 
+For already-selected cross-Run knowledge/procedure sources, advanced `ordivon_harness.knowledge_topology` provides exact external reference → resolver → `HarnessCognitionSeed` compilation. The external application/Host/domain still owns the source repository, discovery/ranking, semantic evaluation and canonical promotion. Merely having a reusable reference never injects cognition; explicit seed selection and the normal Run privacy checks remain required, and `role="procedure"` grants no Tool authority.
+
 A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI. `call_tool()` is only the success-shape Protocol. The caller must also translate its transport and Runtime rejection failures into `HarnessRuntimeClientError` / `HarnessRuntimeToolRejected` with a `HarnessRuntimeErrorDetail`. In particular, a Runtime rejection with `commit_state` `not_started` or `not_committed` remains model-correctable; passing an unrelated client exception through unchanged loses that recovery meaning and is treated as a Harness failure. The recommended API also exports `HarnessExecutionBinding`, `HarnessRuntimeReference`, and the independent search catalog/grant digests required by the current `SQLiteHarnessRuntimeBridge`.
 
 When a caller needs a typed semantic result instead of free-form summary text, bind the result shape into the existing completion authority:

@@ -132,6 +132,7 @@ The current product includes:
 - caller interaction ingress that can remain transient or be explicitly promoted by the Agent into durable cognition;
 - attempt-local Tool cognition that survives recovery but expires when a successor cognition attempt commits;
 - bounded historical committed-cognition inspection and exact pin re-selection;
+- advanced exact cross-Run reusable cognition admission: an external owner can resolve a digest-bound knowledge/procedure source into the existing cognition-seed path without automatic injection, ranking, evaluation or Harness-owned storage;
 - request-bound `AgentTurnRequest.tools` and Harness-native capabilities, so installed mechanisms do not silently become current action authority;
 - a generated `effective_capability_catalog()` that separates **installed**, **Run-admitted**, and **turn-admitted** capability truth instead of making package installation an authority grant;
 - `HarnessAgentRun` as the supported Python handle for normal state-root → Run composition and resume, with `HarnessAgentRun.explain()` for process-local composition inspection without Provider/Runtime liveness claims;
@@ -153,7 +154,7 @@ Harness does not:
 - own Runtime Workspace/Job/Attempt truth;
 - infer external effect success from local or transport success;
 - choose which evidence is semantically relevant to the Agent;
-- provide a generic Memory, RAG, semantic-ranking, summarization, supersession, or cross-Run cognition service;
+- provide a generic Memory/RAG store, semantic ranking, automatic knowledge extraction, hidden cross-Run injection, or Harness-owned procedure evaluation/promotion service;
 - schedule a Mandate's next Strategy or persist a second Mandate workflow engine;
 - turn Provider JSON Schema, cache locality, or Tool pruning into semantic policy;
 - treat a model-correct Run conclusion as automatically authoritative outside the bounded Run.
@@ -213,7 +214,7 @@ The CLI does not invent the Objective, Context, Tool grant, Provider, budget, or
 
 ## Public API
 
-Use `ordivon_harness.api` for normal applications. The recommended execution handle is `HarnessAgentRun`: the caller supplies the exact Contract, Contract-bound Adapter factory, and any Runtime execution authority; Harness mechanically reconstructs the durable composition on resume. Advanced discovery/projector functions live in `ordivon_harness.capability_catalog`, and the explicit non-default Tool-surface seam lives in `ordivon_harness.run_tool_surface`; neither is promoted into the stable package-root facade yet. These projections do not grant authority.
+Use `ordivon_harness.api` for normal applications. The recommended execution handle is `HarnessAgentRun`: the caller supplies the exact Contract, Contract-bound Adapter factory, and any Runtime execution authority; Harness mechanically reconstructs the durable composition on resume. Advanced discovery/projector functions live in `ordivon_harness.capability_catalog`, exact cross-Run knowledge/procedure references and seed compilation live in `ordivon_harness.knowledge_topology`, and the explicit non-default Tool-surface seam lives in `ordivon_harness.run_tool_surface`; none is promoted into the stable package-root facade yet. These projections/admission helpers do not grant authority or own external knowledge repositories.
 
 For broader delegated execution, the current path is:
 
