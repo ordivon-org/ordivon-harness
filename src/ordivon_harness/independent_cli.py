@@ -6,8 +6,8 @@ from typing import Any
 
 from anc_canonical import JsonValue, validate_json_value
 
-from .core_contracts import HarnessRunContract
 from .agent_run import HarnessAgentRun
+from .core_contracts import HarnessRunContract
 from .independent_result import IndependentRunRecorder, StoredIndependentRunResult
 from .ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from .ordivon.model import AgentTurnAdapter
@@ -20,6 +20,7 @@ from .protocol import HarnessProviderCallStatus
 from .sqlite_store import SQLiteHarnessStore
 from .standalone import HarnessAgentExecution
 from .store import HarnessRunStatus
+from .telemetry import build_harness_telemetry_projection
 
 
 def capabilities() -> dict[str, JsonValue]:
@@ -37,7 +38,7 @@ def capabilities() -> dict[str, JsonValue]:
                 "toolCatalogDigest": NO_TOOL_AGENT_SURFACE_DIGEST,
                 "toolGrantDigest": NO_TOOL_AGENT_GRANT_DIGEST,
                 "runtimeRequired": False,
-                "commands": ["run", "resume", "recover", "status", "inspect"],
+                "commands": ["run", "resume", "recover", "status", "telemetry", "inspect"],
             }
         ],
         "toolBearingCliExecution": False,
@@ -77,6 +78,10 @@ def dispatch(args, *, clock_ms) -> dict[str, object]:
     if command == "inspect":
         with SQLiteHarnessStore(root) as store:
             return _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
+    if command == "telemetry":
+        with SQLiteHarnessStore(root) as store:
+            inspected = _inspect(store, args.harness_run_id, root=root, clock_ms=clock_ms)
+            return build_harness_telemetry_projection(inspected)
     if command == "run":
         contract = _load_contract(args.contract)
         if (

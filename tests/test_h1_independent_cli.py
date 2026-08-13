@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import replace
 import io
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from dataclasses import replace
+from pathlib import Path
 from unittest.mock import patch
 
 from ordivon_harness.cli import main as cli_main
@@ -16,7 +16,6 @@ from ordivon_harness.ordivon.sqlite_runtime_bridge import (
     INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
     INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
 )
-
 from tests.test_p0_sqlite_agent_loop import (
     completed_result,
     contract,
@@ -112,6 +111,20 @@ class IndependentCliTests(unittest.TestCase):
             self.assertEqual(inspected["contract"]["harnessRunId"], run_contract.harness_run_id)
             self.assertEqual(inspected["snapshot"]["pauseReason"], "needs-input")
             self.assertIsNone(inspected["providerCall"])
+
+            code, telemetry, error = self.invoke(
+                "--state-root",
+                str(root),
+                "telemetry",
+                run_contract.harness_run_id,
+            )
+            self.assertEqual(code, 0, error)
+            assert telemetry is not None
+            self.assertEqual(telemetry["kind"], "ordivon.harness-telemetry-projection")
+            self.assertEqual(telemetry["run"]["status"], "paused")
+            self.assertEqual(telemetry["continuity"]["pauseReason"], "needs-input")
+            self.assertEqual(telemetry["budget"]["remainingBasis"], "durable-run-snapshot")
+            self.assertFalse(telemetry["cache"]["available"])
 
             code, recovery, error = self.invoke(
                 "--state-root",
