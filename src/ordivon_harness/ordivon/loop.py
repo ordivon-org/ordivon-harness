@@ -39,6 +39,10 @@ from .run_recovery import (
 )
 from .tool_bridge import ToolBridge, ToolObservation
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
+from ..tool_program_recovery import (
+    derive_tool_program_inner_call,
+    recover_tool_program_action,
+)
 from .turn_projection import AgentTurnProjectionError, AgentTurnProjector
 
 _OBSERVATION_ONLY_TOOLS = frozenset(
@@ -288,6 +292,7 @@ class OrdivonAgentLoop:
         working_set_transition_handler: WorkingSetTransitionHandler | None = None,
         caller_ingress_promotion_handler: CallerIngressPromotionHandler | None = None,
         working_set_history_reader: WorkingSetHistoryReader | None = None,
+        tool_program_actions: bool = False,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
@@ -296,6 +301,9 @@ class OrdivonAgentLoop:
         self.working_set_transition_handler = working_set_transition_handler
         self.caller_ingress_promotion_handler = caller_ingress_promotion_handler
         self.working_set_history_reader = working_set_history_reader
+        if type(tool_program_actions) is not bool:
+            raise ValueError("ToolProgram action installation must be boolean")
+        self.tool_program_actions = tool_program_actions
         self.cognition_admission = CognitionAdmissionKernel(
             working_set_transition_handler=working_set_transition_handler,
             caller_ingress_promotion_handler=caller_ingress_promotion_handler,
@@ -321,6 +329,7 @@ class OrdivonAgentLoop:
                 caller_ingress_promotion_handler is not None
             ),
             working_set_history_installed=(working_set_history_reader is not None),
+            tool_program_installed=tool_program_actions,
         )
         self.clock_ms = clock_ms or (lambda: time.time_ns() // 1_000_000)
         self.monotonic_ms = monotonic_ms or (
@@ -784,6 +793,7 @@ class OrdivonAgentLoop:
             reconciled: bool,
             count_tool_call: bool = True,
             physical_dispatch: bool = True,
+            project_to_messages: bool = True,
         ) -> AgentLoopResult | None:
             nonlocal observation_bytes, tool_calls, tool_corrections
             if count_tool_call:
@@ -864,7 +874,8 @@ class OrdivonAgentLoop:
                         "encodedBytes": encoded_size,
                     },
                 )
-            messages.append(observation.to_model_message())
+            if project_to_messages:
+                messages.append(observation.to_model_message())
             error_value = observation.structured_content.get("error")
             safe_to_correct = (
                 error_value.get("safeToCorrect") is True
@@ -915,6 +926,8 @@ class OrdivonAgentLoop:
             turn_id: str,
             sequence: int,
             turn_observations: list[ToolObservation],
+            raw_observation_sink: list[ToolObservation] | None = None,
+            project_to_messages: bool = True,
         ) -> AgentLoopResult | None:
             nonlocal tool_calls, tool_corrections
             history_calls = [
@@ -1113,6 +1126,8 @@ class OrdivonAgentLoop:
                                 "Tool Bridge cannot confirm physical cancellation"
                             ),
                         )
+                if raw_observation_sink is not None:
+                    raw_observation_sink.append(observation)
                 stopped = retain_tool_observation(
                     call,
                     observation,
@@ -1120,6 +1135,7 @@ class OrdivonAgentLoop:
                     step_id=step_id,
                     reconciled=False,
                     count_tool_call=(call.argument_error != "unavailable_tool"),
+                    project_to_messages=project_to_messages,
                 )
                 if stopped is not None:
                     return stopped
@@ -2133,6 +2149,124 @@ class OrdivonAgentLoop:
                         RunStopCode.HARNESS_FAILED,
                         detail=f"{type(state_error).__name__}: {state_error}",
                     )
+                continue
+            if result.tool_program_action is not None:
+                if not request.capabilities.tool_program or not self.tool_program_actions:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail="Agent requested ToolProgram without exact turn capability",
+                    )
+                action = result.tool_program_action
+                admitted_program_tools = {tool.name for tool in request.tools}
+                unavailable_program_tools = sorted(
+                    {
+                        step.tool_name
+                        for step in action.program.steps
+                        if step.tool_name not in admitted_program_tools
+                    }
+                )
+                if unavailable_program_tools:
+                    return stop(
+                        RunStopCode.INVALID_MODEL_OUTPUT,
+                        detail=(
+                            "ToolProgram requested Tools outside the exact turn surface: "
+                            + ", ".join(unavailable_program_tools)
+                        ),
+                    )
+                if action.physical_tool_calls > int(
+                    request.remaining_budget.get("toolCalls", 0)
+                ):
+                    return stop(
+                        RunStopCode.BUDGET_EXHAUSTED,
+                        detail="ToolProgram exceeds remaining physical Tool Call budget",
+                    )
+                assistant_program_message: dict[str, JsonValue] = {
+                    "role": "assistant",
+                    "content": result.content,
+                    "toolProgramAction": action.to_dict(),
+                }
+                messages.append(assistant_program_message)
+                raw_program_observations: list[ToolObservation] = []
+                retained_program_observations: list[ToolObservation] = []
+                program_calls: list[AgentToolCall] = []
+                for program_index in range(len(action.program.steps)):
+                    try:
+                        program_call = derive_tool_program_inner_call(
+                            action,
+                            program_index,
+                            tuple(raw_program_observations),
+                        )
+                    except (TypeError, ValueError) as error:
+                        return stop(
+                            RunStopCode.INVALID_MODEL_OUTPUT,
+                            detail=f"ToolProgram dataflow rejected: {error}",
+                        )
+                    program_calls.append(program_call)
+                    stopped = execute_tool_calls(
+                        (program_call,),
+                        turn_id=turn_id,
+                        sequence=sequence,
+                        turn_observations=retained_program_observations,
+                        raw_observation_sink=raw_program_observations,
+                        project_to_messages=False,
+                    )
+                    if stopped is not None:
+                        return stopped
+                    if raw_program_observations[-1].status != "observed":
+                        break
+                try:
+                    recovery = recover_tool_program_action(
+                        action,
+                        tuple(raw_program_observations),
+                    )
+                except (TypeError, ValueError) as error:
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=f"ToolProgram result reconstruction failed: {error}",
+                    )
+                if not recovery.terminal or recovery.terminal_result is None:
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail="ToolProgram execution ended without a terminal result",
+                    )
+                compact_result = recovery.terminal_result.to_model_projection()
+                compact_message: dict[str, JsonValue] = {
+                    "role": "user",
+                    "content": (
+                        "Harness ToolProgram result: "
+                        + canonical_bytes(compact_result).decode("utf-8")
+                    ),
+                }
+                messages.append(compact_message)
+                if working_view is not None:
+                    if (
+                        transient_working_set_digest is not None
+                        and transient_working_set_digest != working_view.working_set_digest
+                    ):
+                        pre_caller_tool_exchange_messages.clear()
+                        post_caller_tool_exchange_messages.clear()
+                    transient_working_set_digest = working_view.working_set_digest
+                    post_caller_tool_exchange_messages.extend(
+                        (assistant_program_message, compact_message)
+                    )
+                recorder.record(
+                    "tool_program_completed",
+                    {
+                        "turnId": turn_id,
+                        "actionDigest": action.digest,
+                        "programDigest": action.program.digest,
+                        "physicalToolCalls": len(raw_program_observations),
+                        "status": recovery.terminal_result.status,
+                        "modelProjectionDigest": canonical_digest(compact_result),
+                    },
+                )
+                stopped = evaluate_turn_progress(
+                    tuple(program_calls),
+                    retained_program_observations,
+                    turn_id=turn_id,
+                )
+                if stopped is not None:
+                    return stopped
                 continue
             if result.conclusion is not None:
                 conclusion_validator = getattr(

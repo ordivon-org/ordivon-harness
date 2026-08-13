@@ -79,7 +79,15 @@ class CapabilityCatalogTests(unittest.TestCase):
         catalog = effective_capability_catalog()
         mechanisms = catalog["cognitionMechanisms"]
         request_fields = {item["requestField"] for item in mechanisms}
-        self.assertEqual(request_fields, {item.name for item in fields(AgentTurnCapabilities)})
+        self.assertEqual(
+            request_fields,
+            {item.name for item in fields(AgentTurnCapabilities)} - {"tool_program"},
+        )
+        self.assertEqual(
+            catalog["programmaticToolComposition"]["modelAction"],
+            "compose_tool_program",
+        )
+        self.assertFalse(catalog["programmaticToolComposition"]["runtimeTool"])
         profile_fields = {
             item["profileField"]
             for item in mechanisms

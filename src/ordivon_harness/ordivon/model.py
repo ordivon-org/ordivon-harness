@@ -270,6 +270,7 @@ class AgentTurnCapabilities:
     working_set_transition: bool = False
     caller_ingress_promotion: bool = False
     working_set_history: bool = False
+    tool_program: bool = False
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -277,6 +278,7 @@ class AgentTurnCapabilities:
             ("working_set_transition", self.working_set_transition),
             ("caller_ingress_promotion", self.caller_ingress_promotion),
             ("working_set_history", self.working_set_history),
+            ("tool_program", self.tool_program),
         ):
             if type(value) is not bool:
                 raise ValueError(f"Agent turn capability {name} must be boolean")
@@ -293,25 +295,29 @@ class AgentTurnCapabilities:
             "workingSetTransition": self.working_set_transition,
             "callerIngressPromotion": self.caller_ingress_promotion,
             "workingSetHistory": self.working_set_history,
+            "toolProgram": self.tool_program,
         }
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "AgentTurnCapabilities":
-        _exact(
-            value,
-            {
-                "conclusion",
-                "workingSetTransition",
-                "callerIngressPromotion",
-                "workingSetHistory",
-            },
-            "AgentTurnCapabilities",
-        )
+        legacy = {
+            "conclusion",
+            "workingSetTransition",
+            "callerIngressPromotion",
+            "workingSetHistory",
+        }
+        current = legacy | {"toolProgram"}
+        if set(value) not in {frozenset(legacy), frozenset(current)}:
+            raise ValueError(
+                "AgentTurnCapabilities fields differ: "
+                f"{sorted(set(value) ^ current)}"
+            )
         return cls(
             conclusion=value["conclusion"],
             working_set_transition=value["workingSetTransition"],
             caller_ingress_promotion=value["callerIngressPromotion"],
             working_set_history=value["workingSetHistory"],
+            tool_program=value.get("toolProgram", False),
         )
 
 
@@ -488,6 +494,7 @@ class AgentTurnResult:
     effective_model_id: str | None = None
     working_set_transition: AgentWorkingSetTransitionProposal | None = None
     caller_ingress_promotion: AgentCallerIngressPromotionProposal | None = None
+    tool_program_action: Any | None = None
 
     def __post_init__(self) -> None:
         _text(self.model_call_id, "Model Call identity", max_bytes=300)
@@ -497,11 +504,17 @@ class AgentTurnResult:
         call_ids = [call.tool_call_id for call in self.tool_calls]
         if len(call_ids) != len(set(call_ids)):
             raise ValueError("Agent turn Tool Call identities must be unique")
+        if self.tool_program_action is not None:
+            from ..tool_program import HarnessToolProgramAction
+
+            if not isinstance(self.tool_program_action, HarnessToolProgramAction):
+                raise TypeError("Agent turn ToolProgram action is invalid")
         actions = (
             int(bool(self.tool_calls))
             + int(self.conclusion is not None)
             + int(self.working_set_transition is not None)
             + int(self.caller_ingress_promotion is not None)
+            + int(self.tool_program_action is not None)
         )
         if actions != 1:
             raise ValueError(
@@ -542,6 +555,12 @@ class AgentTurnResult:
             value["workingSetTransition"] = self.working_set_transition.to_dict()
         if self.caller_ingress_promotion is not None:
             value["callerIngressPromotion"] = self.caller_ingress_promotion.to_dict()
+        if self.tool_program_action is not None:
+            from ..tool_program import HarnessToolProgramAction
+
+            if not isinstance(self.tool_program_action, HarnessToolProgramAction):
+                raise TypeError("Agent turn ToolProgram action is invalid")
+            value["toolProgramAction"] = self.tool_program_action.to_dict()
         return value
 
     @classmethod
@@ -562,6 +581,7 @@ class AgentTurnResult:
             "effectiveModelId",
             "workingSetTransition",
             "callerIngressPromotion",
+            "toolProgramAction",
         }
         if not base_fields.issubset(value) or set(value) - (base_fields | optional_fields):
             raise ValueError(
@@ -598,6 +618,9 @@ class AgentTurnResult:
             raise ValueError(
                 "AgentTurnResult caller ingress promotion must be an object or null"
             )
+        raw_program = value.get("toolProgramAction")
+        if raw_program is not None and not isinstance(raw_program, dict):
+            raise ValueError("AgentTurnResult ToolProgram action must be an object or null")
         raw_usage = value["usage"]
         if not isinstance(raw_usage, dict):
             raise ValueError("AgentTurnResult usage must be an object")
@@ -624,6 +647,14 @@ class AgentTurnResult:
                 None
                 if raw_promotion is None
                 else AgentCallerIngressPromotionProposal.from_dict(raw_promotion)
+            ),
+            tool_program_action=(
+                None
+                if raw_program is None
+                else __import__(
+                    "ordivon_harness.tool_program",
+                    fromlist=["HarnessToolProgramAction"],
+                ).HarnessToolProgramAction.from_dict(raw_program)
             ),
         )
 

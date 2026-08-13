@@ -26,6 +26,7 @@ _EVENT_KINDS = {
     "tool_call_cancel_requested",
     "tool_call_cancelled",
     "tool_call_reconciled",
+    "tool_program_completed",
     "working_set_history_observed",
     "transient_tool_exchange_restored",
     "caller_cognition_ingress_restored",

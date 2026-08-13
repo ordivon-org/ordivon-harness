@@ -66,6 +66,7 @@ def project_agent_turn(
     working_set_transition_installed: bool,
     caller_ingress_promotion_installed: bool,
     working_set_history_installed: bool,
+    tool_program_installed: bool = False,
     base_working_view: HarnessWorkingView | None = None,
     working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = (),
     caller_entries: tuple[tuple[int, dict[str, JsonValue]], ...] = (),
@@ -138,6 +139,12 @@ def project_agent_turn(
                 caller_ingress_promotion_installed and bool(caller_ingress_refs)
             ),
             working_set_history=working_set_history_installed,
+            tool_program=(
+                tool_program_installed
+                and bool(runtime_tools)
+                and type(remaining_budget.get("toolCalls")) is int
+                and int(remaining_budget["toolCalls"]) > 0
+            ),
         ),
         remaining_budget=remaining_budget,
         caller_ingress_refs=caller_ingress_refs,
@@ -169,6 +176,7 @@ class AgentTurnProjector:
     working_set_transition_installed: bool = False
     caller_ingress_promotion_installed: bool = False
     working_set_history_installed: bool = False
+    tool_program_installed: bool = False
 
     def project(
         self,
@@ -245,6 +253,7 @@ class AgentTurnProjector:
             working_set_transition_installed=self.working_set_transition_installed,
             caller_ingress_promotion_installed=self.caller_ingress_promotion_installed,
             working_set_history_installed=self.working_set_history_installed,
+            tool_program_installed=self.tool_program_installed,
             base_working_view=base_working_view,
             working_set_refs=working_set_refs,
             caller_entries=caller_entries,

@@ -27,6 +27,11 @@ from ..completion import (
     structured_completion_contract_digest,
     structured_completion_result_schema,
 )
+from ..tool_program import (
+    HarnessToolProgram,
+    HarnessToolProgramAction,
+    HarnessToolProgramStep,
+)
 from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
     AgentCallerIngressPromotionProposal,
@@ -57,6 +62,7 @@ DEFAULT_DEEPSEEK_CREDENTIAL_SCOPE_ID = "deepseek:default"
 _CONCLUSION_TOOL_NAME = "submit_run_conclusion"
 _WORKING_SET_TRANSITION_TOOL_NAME = "propose_working_set_transition"
 _CALLER_INGRESS_PROMOTION_TOOL_NAME = "promote_caller_ingress"
+_TOOL_PROGRAM_ACTION_NAME = "compose_tool_program"
 
 
 def _text(value: str, label: str, *, max_bytes: int = 2_048) -> str:
@@ -591,6 +597,90 @@ def _conclusion_tool(
     }
 
 
+def _tool_program_action_tool(
+    allowed_tool_names: tuple[str, ...],
+    *,
+    max_steps: int,
+) -> dict[str, JsonValue]:
+    return {
+        "type": "function",
+        "function": {
+            "name": _TOOL_PROGRAM_ACTION_NAME,
+            "description": (
+                "Compose one bounded linear program over only the Runtime Tools admitted "
+                "for this exact turn. Use this when later Tool arguments depend mechanically "
+                "on exact JSON fields observed from earlier steps. Each step remains one "
+                "physical Tool Call with normal budget, recovery, UNKNOWN, and effect semantics. "
+                "References use {\"$harnessObservationRef\":{\"stepId\":...,\"path\":[...]}}. "
+                "No branching, loops, shell, Python, expressions, or hidden Tools are allowed."
+            ),
+            "parameters": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "steps": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": max_steps,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "step_id": {"type": "string", "minLength": 1},
+                                "tool_name": {
+                                    "type": "string",
+                                    "enum": list(allowed_tool_names),
+                                },
+                                "arguments": {
+                                    "type": "object",
+                                    "additionalProperties": True,
+                                },
+                            },
+                            "required": ["step_id", "tool_name", "arguments"],
+                        },
+                    },
+                    "outputs": {
+                        "type": "object",
+                        "additionalProperties": True,
+                    },
+                },
+                "required": ["steps", "outputs"],
+            },
+        },
+    }
+
+
+def _parse_tool_program_action(
+    action_call_id: str,
+    arguments: dict[str, JsonValue],
+) -> HarnessToolProgramAction:
+    if set(arguments) != {"steps", "outputs"}:
+        raise ValueError("DeepSeek ToolProgram fields differ")
+    raw_steps = arguments["steps"]
+    raw_outputs = arguments["outputs"]
+    if not isinstance(raw_steps, list) or any(not isinstance(item, dict) for item in raw_steps):
+        raise TypeError("DeepSeek ToolProgram steps must be objects")
+    if not isinstance(raw_outputs, dict):
+        raise TypeError("DeepSeek ToolProgram outputs must be an object")
+    steps: list[HarnessToolProgramStep] = []
+    for raw_step in raw_steps:
+        if set(raw_step) != {"step_id", "tool_name", "arguments"}:
+            raise ValueError("DeepSeek ToolProgram step fields differ")
+        if not isinstance(raw_step["arguments"], dict):
+            raise TypeError("DeepSeek ToolProgram step arguments must be an object")
+        steps.append(
+            HarnessToolProgramStep(
+                step_id=raw_step["step_id"],
+                tool_name=raw_step["tool_name"],
+                arguments=dict(raw_step["arguments"]),
+            )
+        )
+    return HarnessToolProgramAction(
+        action_call_id=action_call_id,
+        program=HarnessToolProgram(steps=tuple(steps), outputs=dict(raw_outputs)),
+    )
+
+
 def _working_set_transition_tool() -> dict[str, JsonValue]:
     pin_schema: dict[str, JsonValue] = {
         "type": "object",
@@ -808,6 +898,7 @@ def _provider_messages(
         if role == "assistant":
             raw_calls = message.get("toolCalls")
             conclusion = message.get("conclusion")
+            tool_program_action = message.get("toolProgramAction")
             if conclusion is not None:
                 if not isinstance(conclusion, dict):
                     raise ValueError(
@@ -822,6 +913,21 @@ def _provider_messages(
                 retained = (
                     "Retained Harness conclusion: "
                     + canonical_bytes(conclusion).decode("utf-8")
+                )
+                if content:
+                    retained = f"{content}\n\n{retained}"
+                translated.append({"role": "assistant", "content": retained})
+                continue
+            if tool_program_action is not None:
+                if not isinstance(tool_program_action, dict):
+                    raise ValueError("DeepSeek assistant ToolProgram history is invalid")
+                HarnessToolProgramAction.from_dict(tool_program_action)
+                content = message.get("content")
+                if content is not None and not isinstance(content, str):
+                    raise ValueError("DeepSeek assistant content must be a string or null")
+                retained = (
+                    "Retained Harness ToolProgram action: "
+                    + canonical_bytes(tool_program_action).decode("utf-8")
                 )
                 if content:
                     retained = f"{content}\n\n{retained}"
@@ -1117,6 +1223,7 @@ class DeepSeekTurnAdapter:
             _CONCLUSION_TOOL_NAME,
             _WORKING_SET_TRANSITION_TOOL_NAME,
             _CALLER_INGRESS_PROMOTION_TOOL_NAME,
+            _TOOL_PROGRAM_ACTION_NAME,
             WORKING_SET_HISTORY_CONTROL_NAME,
         }
         collisions = allowed_tool_names & reserved
@@ -1135,6 +1242,16 @@ class DeepSeekTurnAdapter:
             tools.append(_caller_ingress_promotion_tool(promotion_indexes))
         if capabilities.working_set_history:
             tools.append(_working_set_history_tool())
+        if capabilities.tool_program:
+            remaining_tool_calls = request.remaining_budget.get("toolCalls", 0)
+            if type(remaining_tool_calls) is not int or remaining_tool_calls < 1:
+                raise ValueError("ToolProgram capability requires positive Tool budget")
+            tools.append(
+                _tool_program_action_tool(
+                    tuple(sorted(allowed_tool_names)),
+                    max_steps=min(32, remaining_tool_calls),
+                )
+            )
         if capabilities.conclusion:
             tools.append(_conclusion_tool(self._structured_result_schema))
         execution_control: dict[str, JsonValue] = {
@@ -1155,6 +1272,7 @@ class DeepSeekTurnAdapter:
                         capabilities.caller_ingress_promotion,
                     ),
                     (WORKING_SET_HISTORY_CONTROL_NAME, capabilities.working_set_history),
+                    (_TOOL_PROGRAM_ACTION_NAME, capabilities.tool_program),
                 )
                 if admitted
             ],
@@ -1304,6 +1422,7 @@ class DeepSeekTurnAdapter:
         conclusion: AgentRunConclusion | None = None
         working_set_transition: AgentWorkingSetTransitionProposal | None = None
         caller_ingress_promotion: AgentCallerIngressPromotionProposal | None = None
+        tool_program_action: HarnessToolProgramAction | None = None
 
         def invalid_call(
             call_id: str,
@@ -1343,6 +1462,8 @@ class DeepSeekTurnAdapter:
             promotion_allowed = promotion_call and capabilities.caller_ingress_promotion
             history_call = name == WORKING_SET_HISTORY_CONTROL_NAME
             history_allowed = history_call and capabilities.working_set_history
+            program_call = name == _TOOL_PROGRAM_ACTION_NAME
+            program_allowed = program_call and capabilities.tool_program
             try:
                 arguments = loads_strict(raw_arguments.encode("utf-8"))
             except ValueError:
@@ -1358,6 +1479,8 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         "DeepSeek Working Set history arguments are invalid JSON"
                     )
+                if program_allowed:
+                    raise ValueError("DeepSeek ToolProgram arguments are invalid JSON")
                 runtime_calls.append(
                     invalid_call(
                         call_id,
@@ -1385,6 +1508,8 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         "DeepSeek Working Set history arguments must be an object"
                     )
+                if program_allowed:
+                    raise ValueError("DeepSeek ToolProgram arguments must be an object")
                 runtime_calls.append(
                     invalid_call(
                         call_id,
@@ -1460,6 +1585,18 @@ class DeepSeekTurnAdapter:
                     raise ValueError(
                         f"invalid DeepSeek caller ingress promotion: {error}"
                     ) from error
+            elif program_call:
+                if not capabilities.tool_program:
+                    raise ValueError("DeepSeek called the unavailable ToolProgram control")
+                if tool_program_action is not None:
+                    raise ValueError("DeepSeek emitted multiple ToolPrograms in one turn")
+                try:
+                    tool_program_action = _parse_tool_program_action(
+                        call_id,
+                        dict(arguments),
+                    )
+                except (KeyError, TypeError, ValueError) as error:
+                    raise ValueError(f"invalid DeepSeek ToolProgram: {error}") from error
             elif history_call:
                 if not capabilities.working_set_history:
                     raise ValueError(
@@ -1499,6 +1636,15 @@ class DeepSeekTurnAdapter:
         ):
             raise ValueError(
                 "DeepSeek caller ingress promotion cannot be mixed with Tools or conclusion"
+            )
+        if tool_program_action is not None and (
+            runtime_calls
+            or conclusion is not None
+            or working_set_transition is not None
+            or caller_ingress_promotion is not None
+        ):
+            raise ValueError(
+                "DeepSeek ToolProgram cannot be mixed with Runtime Tools or other Harness actions"
             )
         history_calls = [
             call
@@ -1571,4 +1717,5 @@ class DeepSeekTurnAdapter:
             effective_model_id=response_model,
             working_set_transition=working_set_transition,
             caller_ingress_promotion=caller_ingress_promotion,
+            tool_program_action=tool_program_action,
         )

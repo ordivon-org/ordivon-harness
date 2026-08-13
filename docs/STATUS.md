@@ -56,7 +56,8 @@ This page states current maturity. It does not replay the research sequence that
 ### Per-turn action authority
 
 - `AgentTurnRequest.tools` carries exact Runtime/World Tool actions admitted now.
-- provider-neutral Harness capabilities carry currently admitted conclusion/cognition actions.
+- provider-neutral Harness capabilities carry currently admitted conclusion/cognition actions and the advanced opt-in ToolProgram composition action.
+- ToolProgram is a Harness-native mechanical action, not a Runtime Tool: it may name only the exact `AgentTurnRequest.tools` currently admitted, every inner step consumes one existing physical Tool budget unit, and UNKNOWN stops the program before later effects.
 - installed mechanisms do not automatically appear as current capability; dynamic facts such as caller-ingress addressability can add or remove one action from the next request.
 - Provider adapters project the request-bound surface but do not own semantic action policy.
 

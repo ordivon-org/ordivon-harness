@@ -165,6 +165,8 @@ For already-selected cross-Run knowledge/procedure sources, advanced `ordivon_ha
 
 A Tool-bearing application supplies a `HarnessRuntimeClient` through the Python API instead of the primary CLI. `call_tool()` is only the success-shape Protocol. The caller must also translate its transport and Runtime rejection failures into `HarnessRuntimeClientError` / `HarnessRuntimeToolRejected` with a `HarnessRuntimeErrorDetail`. In particular, a Runtime rejection with `commit_state` `not_started` or `not_committed` remains model-correctable; passing an unrelated client exception through unchanged loses that recovery meaning and is treated as a Harness failure. The recommended API also exports `HarnessExecutionBinding`, `HarnessRuntimeReference`, and the independent search catalog/grant digests required by the current `SQLiteHarnessRuntimeBridge`.
 
+Advanced integrations may opt a Run loop into bounded ToolProgram actions. When admitted, the Provider sees a Harness control action that can compose a linear sequence over only the exact Runtime/World Tools present on that `AgentTurnRequest`. Later step arguments may reference exact JSON values from prior observations; every inner step remains a normal physical Tool Call with the existing Tool budget, intent/fence/receipt, cancellation and UNKNOWN handling. Intermediate Tool content is consumed mechanically and is not replayed into model context; the next Provider turn receives one compact program result. This is not a new Runtime Tool, does not grant additional Tools, and is not a general code-execution surface.
+
 When a caller needs a typed semantic result instead of free-form summary text, bind the result shape into the existing completion authority:
 
 ```python

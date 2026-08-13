@@ -257,6 +257,20 @@ def effective_capability_catalog() -> dict[str, JsonValue]:
         "executionSurfaces": _execution_surfaces(),
         "cognitionMechanisms": _cognition_mechanisms(),
         "knowledgeTopology": effective_knowledge_topology(),
+        "programmaticToolComposition": {
+            "stage": _INSTALLED,
+            "visibility": "advanced-opt-in",
+            "modelAction": "compose_tool_program",
+            "runtimeTool": False,
+            "dataflow": "bounded-linear-exact-prior-observation-reference",
+            "physicalToolAccounting": "one-existing-tool-budget-unit-per-step",
+            "authority": "exact-current-AgentTurnRequest-tools-only",
+            "intermediateModelProjection": "suppressed-in-favor-of-compact-result",
+            "durableEffectEvidence": "existing-ToolBridge-intent-fence-receipt",
+            "unknownSemantics": "stop-without-later-program-dispatch",
+            "semanticBranching": False,
+            "arbitraryCodeExecution": False,
+        },
     }
     validate_json_value(value)
     return value
