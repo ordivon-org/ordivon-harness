@@ -12,7 +12,6 @@ from .independent_result import (
     IndependentRunRecorder,
     StoredIndependentRunResult,
 )
-from .loop_driver import HarnessLoopDriverBinding
 from .ordivon.loop import (
     AgentLoopResult,
     CancellationToken,
@@ -147,7 +146,6 @@ class StandaloneHarnessRunner:
         clock_ms: Callable[[], int],
         monotonic_ms: Callable[[], int] | None = None,
         cognition_profile: HarnessCognitionProfile | None = None,
-        loop_driver_binding: HarnessLoopDriverBinding | None = None,
     ) -> None:
         if continuity.harness_run_id != contract.harness_run_id:
             raise ValueError("Standalone Runner continuity belongs to another Run")
@@ -181,9 +179,6 @@ class StandaloneHarnessRunner:
         self.monotonic_ms = monotonic_ms or clock_ms
         self.store = store
         self.cognition_profile = cognition_profile
-        self.loop_driver_binding = loop_driver_binding
-        if loop_driver_binding is not None:
-            loop_driver_binding.require_contract(contract.system_manifest_ref.digest)
         self._validate_cognition_composition()
         self.recorder = IndependentRunRecorder(
             store,
@@ -263,39 +258,31 @@ class StandaloneHarnessRunner:
 
     def _loop(self) -> OrdivonAgentLoop:
         profile = self.cognition_profile
-        kwargs: dict[str, object] = {
-            "budget": self.budget,
-            "clock_ms": self.clock_ms,
-            "monotonic_ms": self.monotonic_ms,
-            "assignment_deadline_ms": self.contract.deadline_ms,
-        }
-        if profile is not None:
-            projector = WorkingSetViewProjector(self.store, self.continuity)
-            kwargs.update(
-                {
-                    "working_view_projector": projector,
-                    "working_set_transition_handler": (
-                        self.continuity if profile.working_set_transitions else None
-                    ),
-                    "caller_ingress_promotion_handler": (
-                        self.continuity if profile.caller_ingress_promotions else None
-                    ),
-                    "working_set_history_reader": (
-                        self.continuity if profile.working_set_history else None
-                    ),
-                }
+        if profile is None:
+            return OrdivonAgentLoop(
+                self.adapter,
+                self.tool_bridge,
+                budget=self.budget,
+                clock_ms=self.clock_ms,
+                monotonic_ms=self.monotonic_ms,
+                assignment_deadline_ms=self.contract.deadline_ms,
             )
-        binding = self.loop_driver_binding
-        if binding is not None:
-            return binding.build(
-                adapter=self.adapter,
-                tool_bridge=self.tool_bridge,
-                **kwargs,
-            )
+        projector = WorkingSetViewProjector(self.store, self.continuity)
         return OrdivonAgentLoop(
             self.adapter,
             self.tool_bridge,
-            **kwargs,
+            budget=self.budget,
+            clock_ms=self.clock_ms,
+            monotonic_ms=self.monotonic_ms,
+            assignment_deadline_ms=self.contract.deadline_ms,
+            working_view_projector=projector,
+            working_set_transition_handler=(
+                self.continuity if profile.working_set_transitions else None
+            ),
+            caller_ingress_promotion_handler=(
+                self.continuity if profile.caller_ingress_promotions else None
+            ),
+            working_set_history_reader=(self.continuity if profile.working_set_history else None),
         )
 
     def _validate_cognition_composition(self) -> None:

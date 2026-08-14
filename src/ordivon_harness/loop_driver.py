@@ -1,23 +1,23 @@
-"""Experimental AM1 admission-time Agent Loop implementation binding.
+"""Experimental AM1/AM2 Agent Loop implementation identity binding.
 
-A LoopDriver is deliberately *not* a plugin registry or live replacement API.  It
-is one exact implementation selected for one immutable compiled Harness Attempt.
-The binding can only build a loop when its identity is already present in the
-Attempt system manifest and that manifest is the one referenced by the Run
-Contract.
+A LoopDriver identity is deliberately *not* an executable plugin, registry, or
+live-replacement API.  AM1 proved that loop implementation identity can be frozen
+into one immutable compiled Attempt without expanding Run authority.  AM2 then
+rejected the first factory seam: a Python callable/subclass has no mechanical
+proof that it preserves Provider/Tool lifecycle, recovery, or that a claimed
+driver digest identifies the executed code.
+
+This module therefore retains only the exact identity/addressing result.  A future
+executable LoopDriver interface must be earned by extracting non-bypassable loop
+kernels and binding implementation bytes/contract evidence; it must not grow back
+from an arbitrary callable.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
 
 from .mandate import CompiledHarnessAttempt
-from .ordivon.loop import OrdivonAgentLoop
-
-
-class HarnessLoopFactory(Protocol):
-    def __call__(self, **kwargs: object) -> OrdivonAgentLoop: ...
 
 
 def _text(value: str, label: str) -> None:
@@ -41,26 +41,22 @@ def _digest(value: str, label: str) -> None:
 
 
 @dataclass(frozen=True, slots=True)
-class HarnessLoopDriverBinding:
-    """One exact Attempt-bound Loop factory.
+class HarnessLoopDriverIdentity:
+    """One exact Attempt-bound Loop implementation identity, without execution.
 
-    `system_manifest_digest` prevents a caller from taking a valid driver choice
-    from one Attempt and silently attaching it to another Run.  The driver itself
-    owns no authority; all Tool/cognition/effect authority still comes from the
-    exact Run composition supplied to the loop constructor.
+    The object proves only that an immutable compiled Attempt declared this
+    `(driverId, driverDigest)` pair.  It grants no right to load, execute, replace,
+    discover, or promote code.
     """
 
     driver_id: str
     driver_digest: str
     system_manifest_digest: str
-    factory: HarnessLoopFactory
 
     def __post_init__(self) -> None:
         _text(self.driver_id, "Harness LoopDriver identity")
         _digest(self.driver_digest, "Harness LoopDriver digest")
         _digest(self.system_manifest_digest, "Harness LoopDriver System Manifest digest")
-        if not callable(self.factory):
-            raise TypeError("Harness LoopDriver factory must be callable")
 
     @classmethod
     def from_compiled_attempt(
@@ -69,32 +65,28 @@ class HarnessLoopDriverBinding:
         *,
         driver_id: str,
         driver_digest: str,
-        factory: HarnessLoopFactory,
-    ) -> "HarnessLoopDriverBinding":
-        manifest = attempt.to_dict()["systemManifest"]
-        assert isinstance(manifest, dict)
-        declared = manifest.get("loopDriver")
+    ) -> "HarnessLoopDriverIdentity":
+        manifest_value = attempt.to_dict()["systemManifest"]
+        assert isinstance(manifest_value, dict)
+        declared = manifest_value.get("loopDriver")
         expected = {"driverId": driver_id, "driverDigest": driver_digest}
         if declared != expected:
             raise ValueError("Harness LoopDriver differs from the compiled Attempt manifest")
-        if attempt.contract.system_manifest_ref.digest != attempt.to_dict()["contract"]["systemManifestRef"]["digest"]:
+        contract_value = attempt.to_dict()["contract"]
+        assert isinstance(contract_value, dict)
+        manifest_ref = contract_value["systemManifestRef"]
+        assert isinstance(manifest_ref, dict)
+        if attempt.contract.system_manifest_ref.digest != manifest_ref["digest"]:
             raise ValueError("compiled Harness Attempt Contract manifest reference differs")
         return cls(
             driver_id=driver_id,
             driver_digest=driver_digest,
             system_manifest_digest=attempt.contract.system_manifest_ref.digest,
-            factory=factory,
         )
 
     def require_contract(self, system_manifest_digest: str) -> None:
         if system_manifest_digest != self.system_manifest_digest:
-            raise ValueError("Harness LoopDriver binding belongs to another Run manifest")
-
-    def build(self, **kwargs: object) -> OrdivonAgentLoop:
-        loop = self.factory(**kwargs)
-        if not isinstance(loop, OrdivonAgentLoop):
-            raise TypeError("Harness LoopDriver factory must return OrdivonAgentLoop")
-        return loop
+            raise ValueError("Harness LoopDriver identity belongs to another Run manifest")
 
 
-__all__ = ["HarnessLoopDriverBinding", "HarnessLoopFactory"]
+__all__ = ["HarnessLoopDriverIdentity"]
