@@ -531,6 +531,27 @@ def compile_harness_attempt(
     if len(set(reference_ids)) != len(reference_ids):
         raise ValueError("compiled Harness attempt Context references conflict")
 
+    profile_metadata = _thaw_json(profile.metadata)
+    assert isinstance(profile_metadata, dict)
+    raw_loop_driver = profile_metadata.get("loopDriver")
+    loop_driver: dict[str, JsonValue] | None = None
+    if raw_loop_driver is not None:
+        if not isinstance(raw_loop_driver, dict) or set(raw_loop_driver) != {
+            "driverId",
+            "driverDigest",
+        }:
+            raise ValueError(
+                "Harness execution profile loopDriver must contain driverId and driverDigest"
+            )
+        driver_id = raw_loop_driver["driverId"]
+        driver_digest = raw_loop_driver["driverDigest"]
+        _text(driver_id, "Harness LoopDriver identity")
+        _digest(driver_digest, "Harness LoopDriver digest")
+        loop_driver = {
+            "driverId": driver_id,
+            "driverDigest": driver_digest,
+        }
+
     manifest: dict[str, JsonValue] = {
         "schemaVersion": 1,
         "kind": "ordivon.harness-execution-attempt-manifest",
@@ -552,6 +573,8 @@ def compile_harness_attempt(
             item.digest for item in strategy.adopted_context_refs
         ],
     }
+    if loop_driver is not None:
+        manifest["loopDriver"] = loop_driver
     system_manifest_ref = HarnessBoundReference(
         ref=f"system-manifest:{harness_run_id}",
         kind="harness-execution-attempt-manifest",

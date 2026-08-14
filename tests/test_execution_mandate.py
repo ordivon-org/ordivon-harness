@@ -283,5 +283,58 @@ class ExecutionMandateTests(unittest.TestCase):
             replace(selected, budget=incomplete_budget)
 
 
+    def test_am1_loop_driver_is_attempt_bound_without_contract_schema_expansion(self) -> None:
+        value = mandate()
+        selected = strategy(value)
+        driver_digest = "sha256:" + "d" * 64
+        selected_profile = replace(
+            profile(),
+            metadata={
+                "effectClass": "none",
+                "loopDriver": {
+                    "driverId": "loop-driver:sequential-v1",
+                    "driverDigest": driver_digest,
+                },
+            },
+        )
+        compiled = compile_harness_attempt(
+            value,
+            selected_profile,
+            selected,
+            harness_run_id="harness-run:am1-loop-driver",
+            harness_implementation_id="ordivon-harness@test",
+            created_at_ms=2_000,
+        )
+        self.assertEqual(
+            compiled.system_manifest["loopDriver"],
+            {
+                "driverId": "loop-driver:sequential-v1",
+                "driverDigest": driver_digest,
+            },
+        )
+        manifest_value = compiled.to_dict()["systemManifest"]
+        assert isinstance(manifest_value, dict)
+        self.assertEqual(
+            compiled.contract.system_manifest_ref.digest,
+            canonical_digest(manifest_value),
+        )
+        round_trip = CompiledHarnessAttempt.from_dict(compiled.to_dict())
+        self.assertEqual(round_trip, compiled)
+
+        invalid_profile = replace(
+            profile(),
+            metadata={"loopDriver": {"driverId": "loop-driver:broken"}},
+        )
+        with self.assertRaisesRegex(ValueError, "loopDriver must contain"):
+            compile_harness_attempt(
+                value,
+                invalid_profile,
+                selected,
+                harness_run_id="harness-run:am1-invalid-loop-driver",
+                harness_implementation_id="ordivon-harness@test",
+                created_at_ms=2_000,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
