@@ -14,8 +14,15 @@ from typing import Callable, Protocol
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
 from .ordivon.control import CancellationToken, RunDeadline
+from .loop_driver import HarnessLoopDriverRef, builtin_scheduling_mode
 from .ordivon.events import HarnessRunEvent
-from .ordivon.loop import AgentLoopResult, OrdivonAgentLoop, RunBudget, RunStopCode
+from .ordivon.loop import (
+    AgentLoopResult,
+    LoopSchedulingMode,
+    OrdivonAgentLoop,
+    RunBudget,
+    RunStopCode,
+)
 from .ordivon.model import (
     AgentRunConclusion,
     AgentToolCall,
@@ -169,6 +176,7 @@ class DomainToolLoopRunner:
         clock_ms: Callable[[], int] | None = None,
         monotonic_ms: Callable[[], int] | None = None,
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
+        loop_driver_ref: HarnessLoopDriverRef | None = None,
     ) -> None:
         validate_json_value(bridge.bridge_identity)
         if not bridge.bridge_identity:
@@ -178,6 +186,12 @@ class DomainToolLoopRunner:
         self.clock_ms = clock_ms
         self.monotonic_ms = monotonic_ms
         self.event_sink = event_sink
+        if loop_driver_ref is not None and not isinstance(loop_driver_ref, HarnessLoopDriverRef):
+            raise TypeError("domain Tool Loop driver must be a HarnessLoopDriverRef")
+        self.loop_driver_ref = loop_driver_ref
+        self.scheduling_mode = LoopSchedulingMode(
+            builtin_scheduling_mode(loop_driver_ref)
+        )
 
     def execution_identity(self, plan: DomainToolLoopPlan) -> dict[str, JsonValue]:
         granted = self.bridge.catalog.select(plan.allowed_tools)
@@ -188,6 +202,7 @@ class DomainToolLoopRunner:
                 "package": "ordivon-harness",
                 "version": package_version(),
                 "loopRevision": "domain-tool-loop-v1",
+                "schedulingMode": self.scheduling_mode.value,
             },
             "provider": {
                 "adapterId": self.adapter.adapter_id,
@@ -222,6 +237,7 @@ class DomainToolLoopRunner:
             monotonic_ms=self.monotonic_ms,
             assignment_deadline_ms=plan.assignment_deadline_ms,
             event_sink=self.event_sink,
+            scheduling_mode=self.scheduling_mode,
         )
         return loop.run(
             harness_run_id=plan.harness_run_id,

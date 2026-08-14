@@ -17,8 +17,51 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .mandate import CompiledHarnessAttempt
+from anc_canonical import canonical_digest
 
+from .mandate import CompiledHarnessAttempt, HarnessLoopDriverRef
+
+
+
+def _builtin_ref(driver_id: str, scheduling_mode: str) -> HarnessLoopDriverRef:
+    descriptor = {
+        "schemaVersion": 1,
+        "kind": "ordivon.builtin-loop-driver-semantics",
+        "driverId": driver_id,
+        "schedulingMode": scheduling_mode,
+        "constitutionKernel": "ordivon-agent-loop-v1",
+    }
+    return HarnessLoopDriverRef(
+        driver_id=driver_id,
+        driver_digest=canonical_digest(descriptor),
+    )
+
+
+SEQUENTIAL_LOOP_DRIVER = _builtin_ref(
+    "loop-driver:sequential-v1", "sequential"
+)
+DELIBERATE_THEN_ACT_LOOP_DRIVER = _builtin_ref(
+    "loop-driver:deliberate-then-act-v1", "deliberate_then_act"
+)
+_BUILTIN_SCHEDULING_MODES = {
+    (SEQUENTIAL_LOOP_DRIVER.driver_id, SEQUENTIAL_LOOP_DRIVER.driver_digest): "sequential",
+    (
+        DELIBERATE_THEN_ACT_LOOP_DRIVER.driver_id,
+        DELIBERATE_THEN_ACT_LOOP_DRIVER.driver_digest,
+    ): "deliberate_then_act",
+}
+
+
+def builtin_scheduling_mode(identity: "HarnessLoopDriverIdentity | HarnessLoopDriverRef | None") -> str:
+    if identity is None:
+        return "sequential"
+    key = (identity.driver_id, identity.driver_digest)
+    try:
+        return _BUILTIN_SCHEDULING_MODES[key]
+    except KeyError as error:
+        raise ValueError(
+            "Harness LoopDriver is identified but has no admitted built-in executable implementation"
+        ) from error
 
 def _text(value: str, label: str) -> None:
     if (
@@ -89,4 +132,9 @@ class HarnessLoopDriverIdentity:
             raise ValueError("Harness LoopDriver identity belongs to another Run manifest")
 
 
-__all__ = ["HarnessLoopDriverIdentity"]
+__all__ = [
+    "DELIBERATE_THEN_ACT_LOOP_DRIVER",
+    "HarnessLoopDriverIdentity",
+    "SEQUENTIAL_LOOP_DRIVER",
+    "builtin_scheduling_mode",
+]

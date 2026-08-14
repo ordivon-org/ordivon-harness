@@ -29,7 +29,12 @@ from .mandate import (
     HarnessMandateConsumption,
     HarnessExecutionProfile,
     HarnessExecutionStrategy,
+    HarnessLoopDriverRef,
     compile_harness_attempt,
+)
+from .loop_driver import (
+    DELIBERATE_THEN_ACT_LOOP_DRIVER,
+    SEQUENTIAL_LOOP_DRIVER,
 )
 from .independent_result import (
     IndependentCompletionProposal,
@@ -154,6 +159,7 @@ from .version import package_version
 __all__ = [
     "DEFAULT_DEEPSEEK_BASE_URL",
     "DEFAULT_DEEPSEEK_SECRET_PATH",
+    "DELIBERATE_THEN_ACT_LOOP_DRIVER",
     "HARNESS_STORE_EVENT_KINDS",
     "INDEPENDENT_SEARCH_TOOL_GRANT",
     "INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST",
@@ -164,6 +170,7 @@ __all__ = [
     "NO_TOOL_AGENT_SURFACE",
     "NO_TOOL_AGENT_SURFACE_DIGEST",
     "SEARCH_WORKSPACE_DEFINITION",
+    "SEQUENTIAL_LOOP_DRIVER",
     "SUPPORTED_DEEPSEEK_MODELS",
     "AgentLoopResult",
     "AgentRunConclusion",
@@ -190,6 +197,7 @@ __all__ = [
     "HarnessMandateConsumption",
     "HarnessExecutionProfile",
     "HarnessExecutionStrategy",
+    "HarnessLoopDriverRef",
     "HarnessAgentStrategySelection",
     "HarnessPriorAttemptEvidence",
     "HarnessStrategyEvidence",

@@ -12,9 +12,11 @@ from .independent_result import (
     IndependentRunRecorder,
     StoredIndependentRunResult,
 )
+from .loop_driver import HarnessLoopDriverIdentity, builtin_scheduling_mode
 from .ordivon.loop import (
     AgentLoopResult,
     CancellationToken,
+    LoopSchedulingMode,
     OrdivonAgentLoop,
     RunBudget,
 )
@@ -146,6 +148,7 @@ class StandaloneHarnessRunner:
         clock_ms: Callable[[], int],
         monotonic_ms: Callable[[], int] | None = None,
         cognition_profile: HarnessCognitionProfile | None = None,
+        loop_driver_identity: HarnessLoopDriverIdentity | None = None,
     ) -> None:
         if continuity.harness_run_id != contract.harness_run_id:
             raise ValueError("Standalone Runner continuity belongs to another Run")
@@ -179,6 +182,9 @@ class StandaloneHarnessRunner:
         self.monotonic_ms = monotonic_ms or clock_ms
         self.store = store
         self.cognition_profile = cognition_profile
+        self.loop_driver_identity = loop_driver_identity
+        if loop_driver_identity is not None:
+            loop_driver_identity.require_contract(contract.system_manifest_ref.digest)
         self._validate_cognition_composition()
         self.recorder = IndependentRunRecorder(
             store,
@@ -258,6 +264,9 @@ class StandaloneHarnessRunner:
 
     def _loop(self) -> OrdivonAgentLoop:
         profile = self.cognition_profile
+        scheduling_mode = LoopSchedulingMode(
+            builtin_scheduling_mode(self.loop_driver_identity)
+        )
         if profile is None:
             return OrdivonAgentLoop(
                 self.adapter,
@@ -266,6 +275,7 @@ class StandaloneHarnessRunner:
                 clock_ms=self.clock_ms,
                 monotonic_ms=self.monotonic_ms,
                 assignment_deadline_ms=self.contract.deadline_ms,
+                scheduling_mode=scheduling_mode,
             )
         projector = WorkingSetViewProjector(self.store, self.continuity)
         return OrdivonAgentLoop(
@@ -283,6 +293,7 @@ class StandaloneHarnessRunner:
                 self.continuity if profile.caller_ingress_promotions else None
             ),
             working_set_history_reader=(self.continuity if profile.working_set_history else None),
+            scheduling_mode=scheduling_mode,
         )
 
     def _validate_cognition_composition(self) -> None:

@@ -13,6 +13,7 @@ _EVENT_KINDS = {
     "model_call_budget_checked",
     "model_call_budget_rejected",
     "model_view_projected",
+    "deliberation_phase_completed",
     "model_call_started",
     "model_call_attempt_started",
     "model_call_attempt_failed",

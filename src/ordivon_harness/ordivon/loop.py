@@ -75,6 +75,13 @@ def _validated_projected_caller_ingress(
     return tuple(validated)
 
 
+class LoopSchedulingMode(str, Enum):
+    """Built-in scheduling policies around the same constitution-owned loop kernel."""
+
+    SEQUENTIAL = "sequential"
+    DELIBERATE_THEN_ACT = "deliberate_then_act"
+
+
 class RunStopCode(str, Enum):
     CANDIDATE_COMPLETED = "candidate_completed"
     NEEDS_INPUT = "needs_input"
@@ -293,6 +300,7 @@ class OrdivonAgentLoop:
         caller_ingress_promotion_handler: CallerIngressPromotionHandler | None = None,
         working_set_history_reader: WorkingSetHistoryReader | None = None,
         tool_program_actions: bool = False,
+        scheduling_mode: LoopSchedulingMode = LoopSchedulingMode.SEQUENTIAL,
     ) -> None:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
@@ -304,6 +312,9 @@ class OrdivonAgentLoop:
         if type(tool_program_actions) is not bool:
             raise ValueError("ToolProgram action installation must be boolean")
         self.tool_program_actions = tool_program_actions
+        if not isinstance(scheduling_mode, LoopSchedulingMode):
+            raise TypeError("Loop scheduling mode must be a LoopSchedulingMode")
+        self.scheduling_mode = scheduling_mode
         self.cognition_admission = CognitionAdmissionKernel(
             working_set_transition_handler=working_set_transition_handler,
             caller_ingress_promotion_handler=caller_ingress_promotion_handler,
@@ -1523,7 +1534,13 @@ class OrdivonAgentLoop:
                         observation_only_turns=observation_only_turns,
                         no_progress_turns=no_progress_turns,
                     ),
-                    admit_runtime_tools=(external_observation_gate_reason is None),
+                    admit_runtime_tools=(
+                        external_observation_gate_reason is None
+                        and not (
+                            self.scheduling_mode is LoopSchedulingMode.DELIBERATE_THEN_ACT
+                            and sequence == 1
+                        )
+                    ),
                     transient_working_set_digest=transient_working_set_digest,
                     caller_ingress_messages=tuple(caller_ingress_messages),
                     pre_caller_tool_exchange_messages=tuple(
@@ -2268,6 +2285,62 @@ class OrdivonAgentLoop:
                 if stopped is not None:
                     return stopped
                 continue
+            if (
+                result.conclusion is not None
+                and result.conclusion.status == "candidate_completed"
+                and self.scheduling_mode is LoopSchedulingMode.DELIBERATE_THEN_ACT
+                and sequence == 1
+            ):
+                # E2/E3: the first no-runtime-Tool turn is cognition only. The
+                # Provider call, token/deadline accounting, durable completion and
+                # replay semantics above are unchanged; only the scheduling policy
+                # declines to treat this first candidate conclusion as Run completion.
+                # The second turn is then projected with the ordinary exact Tool
+                # surface. No raw Adapter/Tool authority is handed to a Driver.
+                messages.append({
+                    "role": "assistant",
+                    "content": result.content,
+                })
+                deliberation_record: dict[str, JsonValue] = {
+                    "schemaVersion": 1,
+                    "kind": "ordivon.non-authoritative-scheduling-deliberation",
+                    "truthRole": "model-cognition-not-world-truth-or-effect-authority",
+                    "turnId": turn_id,
+                    "resultDigest": result.digest,
+                    "summary": result.conclusion.summary,
+                    "unresolvedUnknowns": list(result.conclusion.unresolved_unknowns),
+                }
+                messages.append({
+                    "role": "user",
+                    "content": (
+                        "Harness scheduling note: the preceding candidate conclusion "
+                        "was retained only as non-authoritative deliberation. Re-check "
+                        "it against the unchanged Context. Runtime Tools, if admitted "
+                        "by this exact turn, are now available for the action/evidence "
+                        "you currently endorse. Deliberation record: "
+                        + canonical_bytes(deliberation_record).decode("utf-8")
+                    ),
+                })
+                recorder.record(
+                    "deliberation_phase_completed",
+                    {
+                        "turnId": turn_id,
+                        "resultDigest": result.digest,
+                        "conclusionDigest": canonical_digest(result.conclusion.to_dict()),
+                        "externalEffect": False,
+                    },
+                )
+                try:
+                    bind_run_state()
+                except ToolBridgeError as state_error:
+                    return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                except Exception as state_error:  # noqa: BLE001
+                    return stop(
+                        RunStopCode.HARNESS_FAILED,
+                        detail=f"{type(state_error).__name__}: {state_error}",
+                    )
+                continue
+
             if result.conclusion is not None:
                 conclusion_validator = getattr(
                     self.tool_bridge, "validate_conclusion", None

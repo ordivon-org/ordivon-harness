@@ -276,6 +276,31 @@ class HarnessMandateConsumption:
 
 
 @dataclass(frozen=True, slots=True)
+class HarnessLoopDriverRef:
+    """Typed identity for one admitted Loop morphology implementation.
+
+    Addressability only: this object cannot load, execute, discover, or hot-swap
+    code and therefore cannot become a second execution-authority plane.
+    """
+
+    driver_id: str
+    driver_digest: str
+
+    def __post_init__(self) -> None:
+        _text(self.driver_id, "Harness LoopDriver identity")
+        _digest(self.driver_digest, "Harness LoopDriver digest")
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {"driverId": self.driver_id, "driverDigest": self.driver_digest}
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> HarnessLoopDriverRef:
+        if set(value) != {"driverId", "driverDigest"}:
+            raise ValueError("HarnessLoopDriverRef fields differ")
+        return cls(driver_id=value["driverId"], driver_digest=value["driverDigest"])
+
+
+@dataclass(frozen=True, slots=True)
 class HarnessExecutionProfile:
     """One concrete Provider/Tool capability profile selectable under a Mandate."""
 
@@ -299,6 +324,33 @@ class HarnessExecutionProfile:
         _digest(self.tool_grant_digest, "Harness Tool Grant digest")
         metadata = _json_object(self.metadata, "Harness execution profile metadata")
         object.__setattr__(self, "metadata", _freeze_json(metadata))
+
+    @property
+    def loop_driver_ref(self) -> HarnessLoopDriverRef | None:
+        raw = self.metadata.get("loopDriver")
+        if raw is None:
+            return None
+        if not isinstance(raw, Mapping):
+            raise ValueError("Harness execution profile loopDriver must contain driverId and driverDigest")
+        try:
+            return HarnessLoopDriverRef.from_dict(raw)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "Harness execution profile loopDriver must contain driverId and driverDigest"
+            ) from error
+
+    def with_loop_driver(self, driver: HarnessLoopDriverRef) -> HarnessExecutionProfile:
+        if not isinstance(driver, HarnessLoopDriverRef):
+            raise TypeError("Harness execution profile LoopDriver must be a HarnessLoopDriverRef")
+        metadata = _thaw_json(self.metadata)
+        assert isinstance(metadata, dict)
+        metadata["loopDriver"] = driver.to_dict()
+        return HarnessExecutionProfile(
+            profile_id=self.profile_id, provider_id=self.provider_id,
+            adapter_id=self.adapter_id, requested_model_id=self.requested_model_id,
+            tool_catalog_digest=self.tool_catalog_digest,
+            tool_grant_digest=self.tool_grant_digest, metadata=metadata,
+        )
 
     @property
     def digest(self) -> str:
@@ -533,24 +585,8 @@ def compile_harness_attempt(
 
     profile_metadata = _thaw_json(profile.metadata)
     assert isinstance(profile_metadata, dict)
-    raw_loop_driver = profile_metadata.get("loopDriver")
-    loop_driver: dict[str, JsonValue] | None = None
-    if raw_loop_driver is not None:
-        if not isinstance(raw_loop_driver, dict) or set(raw_loop_driver) != {
-            "driverId",
-            "driverDigest",
-        }:
-            raise ValueError(
-                "Harness execution profile loopDriver must contain driverId and driverDigest"
-            )
-        driver_id = raw_loop_driver["driverId"]
-        driver_digest = raw_loop_driver["driverDigest"]
-        _text(driver_id, "Harness LoopDriver identity")
-        _digest(driver_digest, "Harness LoopDriver digest")
-        loop_driver = {
-            "driverId": driver_id,
-            "driverDigest": driver_digest,
-        }
+    loop_driver_ref = profile.loop_driver_ref
+    loop_driver = None if loop_driver_ref is None else loop_driver_ref.to_dict()
 
     manifest: dict[str, JsonValue] = {
         "schemaVersion": 1,
@@ -615,5 +651,6 @@ __all__ = [
     "HarnessMandateConsumption",
     "HarnessExecutionProfile",
     "HarnessExecutionStrategy",
+    "HarnessLoopDriverRef",
     "compile_harness_attempt",
 ]

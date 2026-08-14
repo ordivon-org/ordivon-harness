@@ -56,6 +56,8 @@ ordivon-harness capabilities
 
 For one exact attempt, create a caller-authored `HarnessRunContract` JSON. When the caller wants to delegate the goal/resource envelope without prescribing every execution step, use `HarnessExecutionMandate` plus a separately selected `HarnessExecutionStrategy`, then compile one exact attempt with `compile_harness_attempt()`. The current library deliberately does not choose Strategy automatically.
 
+For bounded built-in cognition scheduling, callers may bind a typed `HarnessLoopDriverRef` to an execution profile with `profile.with_loop_driver(...)`. The stable facade currently publishes `SEQUENTIAL_LOOP_DRIVER` and `DELIBERATE_THEN_ACT_LOOP_DRIVER`. These are exact morphology identities, not plugin factories: they do not load arbitrary code, expand Tool authority, or enable live HMR.
+
 ```python
 from ordivon_harness.api import (
     HarnessExecutionMandate,
