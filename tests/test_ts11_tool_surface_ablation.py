@@ -1,5 +1,7 @@
 import unittest
+
 from scripts.assess_tool_surface_ablation import assess
+
 
 class TS11ToolSurfaceAblationTests(unittest.TestCase):
     def test_real_provider_schema_is_smaller_and_selected_tools_are_identical(self):
@@ -15,4 +17,5 @@ class TS11ToolSurfaceAblationTests(unittest.TestCase):
         self.assertFalse(value['invariants']['providerBehaviorCompared'])
         self.assertIn('does not claim higher model accuracy',value['behaviorBoundary'])
 
-if __name__=='__main__': unittest.main()
+if __name__ == '__main__':
+    unittest.main()
