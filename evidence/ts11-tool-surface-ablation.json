@@ -15,6 +15,7 @@
     "providerSchemaBytesRemoved": 1507,
     "providerSchemaReductionRatio": 0.625052
   },
+  "implementationRevision": "a57963c476d366aea0d73d96cddd223f3bd5dbaf",
   "invariants": {
     "authorityExpanded": false,
     "providerBehaviorCompared": false,

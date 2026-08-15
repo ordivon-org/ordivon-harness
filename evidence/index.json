@@ -463,6 +463,13 @@
       "status": "historical",
       "implementationRevision": "89fc49921ee292c7f0a79af32f3ec28b7692574a",
       "scope": "Historical final P5 acceptance bound to 89fc499: preserves the Agent-owned 203→8 evidence-driven discovery result and the Provider concurrency hardening forced by later release acceptance. Operational closeout subsequently changed current Provider-use and claim-to-dispatch source; the P5 receipt remains unchanged historical evidence and no longer claims whole-current implementation verification."
+    },
+    {
+      "claimId": "harness.tool-surface.ts11-turn-working-set",
+      "file": "ts11-tool-surface-ablation.json",
+      "status": "verified",
+      "implementationRevision": "a57963c476d366aea0d73d96cddd223f3bd5dbaf",
+      "scope": "TS11 structural ablation: explicit per-turn subset of already-admitted Tool definitions removes 62.5% of provider schema bytes in the measured repository-repair phase without expanding Tool authority; no model-behavior improvement is claimed."
     }
   ]
 }
