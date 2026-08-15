@@ -47,7 +47,7 @@ class ConfigureDeepSeekApiTests(unittest.TestCase):
         payload = _MODULE._secret_payload("sk-" + "c" * 40, "deepseek-v4-pro")
         self.assertEqual(payload["baseUrl"], "https://api.deepseek.com")
         self.assertEqual(payload["provider"], "deepseek")
-        self.assertNotIn("apiKey", _MODULE._fingerprint(payload["apiKey"]))
+        self.assertFalse(hasattr(_MODULE, "_fingerprint"))
 
 
 if __name__ == "__main__":

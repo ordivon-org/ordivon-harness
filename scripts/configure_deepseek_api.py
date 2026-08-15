@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import getpass
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -146,10 +145,6 @@ def _load_secret(path: Path) -> dict[str, Any]:
     return value
 
 
-def _fingerprint(api_key: str) -> str:
-    return hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:12]
-
-
 def _check_api(secret: dict[str, Any]) -> None:
     body = json.dumps(
         {
@@ -196,7 +191,6 @@ def _check_api(secret: dict[str, Any]) -> None:
     usage = value.get("usage")
     total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
     print("DeepSeek API check passed")
-    print(f"  model: {value.get('model', secret['model'])}")
     print(f"  response: {message['content'][:80]!r}")
     if isinstance(total_tokens, int):
         print(f"  total tokens: {total_tokens}")
@@ -214,8 +208,6 @@ def main() -> int:
         if args.check_only:
             secret = _load_secret(output)
             print(f"Loaded DeepSeek secret: {output}")
-            print(f"  model: {secret['model']}")
-            print(f"  key fingerprint: sha256:{_fingerprint(secret['apiKey'])}")
             _check_api(secret)
             return 0
 
@@ -230,9 +222,6 @@ def main() -> int:
         print(f"Saved DeepSeek secret: {output}")
         print("  directory mode: 0o700")
         print("  file mode: 0o600")
-        print(f"  base URL: {loaded['baseUrl']}")
-        print(f"  model: {loaded['model']}")
-        print(f"  key fingerprint: sha256:{_fingerprint(loaded['apiKey'])}")
         if args.check:
             _check_api(loaded)
         return 0
