@@ -22,6 +22,50 @@ class AgentToolSurface(Protocol):
     def definitions(self) -> tuple[AgentToolDefinition, ...]: ...
 
 
+def select_turn_tool_working_set(
+    definitions: tuple[AgentToolDefinition, ...],
+    selected_names: tuple[str, ...] | None,
+) -> tuple[AgentToolDefinition, ...]:
+    """Select a Provider-visible subset from already admitted Tool definitions.
+
+    ``None`` preserves the legacy exact admitted surface. An explicit tuple may
+    only subtract definitions; it never discovers, ranks, or grants a Tool.
+    """
+    if selected_names is None:
+        return definitions
+    if len(selected_names) != len(set(selected_names)):
+        raise ValueError("Turn Tool Working Set names must be unique")
+    available = {tool.name for tool in definitions}
+    missing = sorted(set(selected_names) - available)
+    if missing:
+        raise ValueError(
+            "Turn Tool Working Set references Tools outside the admitted surface: "
+            f"{missing}"
+        )
+    selected = set(selected_names)
+    return tuple(tool for tool in definitions if tool.name in selected)
+
+
+def project_turn_tool_working_set(
+    definitions: tuple[AgentToolDefinition, ...],
+    selected_names: tuple[str, ...] | None,
+) -> dict[str, JsonValue]:
+    selected = select_turn_tool_working_set(definitions, selected_names)
+    value: dict[str, JsonValue] = {
+        "schemaVersion": 1,
+        "kind": "ordivon.harness-turn-tool-working-set",
+        "truthRole": "subset-of-already-admitted-tool-definitions",
+        "availableCount": len(definitions),
+        "selectedCount": len(selected),
+        "omittedCount": len(definitions) - len(selected),
+        "selectedNames": [tool.name for tool in selected],
+        "selectedDefinitionsDigest": canonical_digest([tool.to_dict() for tool in selected]),
+        "selectionAuthority": "caller/application-before-provider-admission",
+        "canExpandAuthority": False,
+    }
+    return value
+
+
 class CallerIngressProjector(Protocol):
     def project_current_caller_ingress(
         self,
@@ -193,7 +237,13 @@ class AgentTurnProjector:
         caller_ingress_messages: tuple[dict[str, JsonValue], ...],
         pre_caller_tool_exchange_messages: tuple[dict[str, JsonValue], ...],
         post_caller_tool_exchange_messages: tuple[dict[str, JsonValue], ...],
+        runtime_tool_names: tuple[str, ...] | None = None,
     ) -> AgentTurnProjection:
+        if not admit_runtime_tools and runtime_tool_names not in (None, ()):
+            raise ValueError(
+                "Turn Tool Working Set cannot select Tools while Runtime Tool exposure is disabled"
+            )
+
         base_working_view: HarnessWorkingView | None = None
         working_set_refs: tuple[HarnessWorkingSetSourceRef, ...] = ()
         caller_entries: tuple[tuple[int, dict[str, JsonValue]], ...] = ()
@@ -248,7 +298,13 @@ class AgentTurnProjector:
             canonical_context_digest=canonical_context_digest,
             canonical_messages=canonical_messages,
             tool_catalog_digest=self.tool_surface.catalog_digest,
-            runtime_tools=(self.tool_surface.definitions() if admit_runtime_tools else ()),
+            runtime_tools=(
+                select_turn_tool_working_set(
+                    self.tool_surface.definitions(), runtime_tool_names
+                )
+                if admit_runtime_tools
+                else ()
+            ),
             remaining_budget=remaining_budget,
             working_set_transition_installed=self.working_set_transition_installed,
             caller_ingress_promotion_installed=self.caller_ingress_promotion_installed,
@@ -281,4 +337,6 @@ __all__ = [
     "AgentTurnProjector",
     "CallerIngressProjector",
     "project_agent_turn",
+    "project_turn_tool_working_set",
+    "select_turn_tool_working_set",
 ]
