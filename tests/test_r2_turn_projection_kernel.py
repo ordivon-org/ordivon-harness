@@ -5,7 +5,12 @@ import unittest
 from anc_canonical import canonical_digest
 
 from ordivon_harness.ordivon.model import AgentToolDefinition
-from ordivon_harness.ordivon.turn_projection import AgentTurnProjector, project_agent_turn
+from ordivon_harness.ordivon.turn_projection import (
+    AgentTurnProjector,
+    project_agent_turn,
+    project_turn_tool_working_set,
+    select_turn_tool_working_set,
+)
 from ordivon_harness.working_view import (
     HarnessWorkingSetPin,
     HarnessWorkingSetSourceRef,
@@ -214,6 +219,36 @@ class R2TurnProjectionKernelTests(unittest.TestCase):
         self.assertTrue(projection.request.capabilities.caller_ingress_promotion)
 
 
+
+
+class TurnToolWorkingSetTests(unittest.TestCase):
+    def _tools(self):
+        return (
+            AgentToolDefinition(name="read_fact", description="Read", input_schema={"type":"object","properties":{}}),
+            AgentToolDefinition(name="write_fact", description="Write", input_schema={"type":"object","properties":{}}),
+            AgentToolDefinition(name="inspect_fact", description="Inspect", input_schema={"type":"object","properties":{}}),
+        )
+
+    def test_subset_only_selection_preserves_catalog_order_and_digest_evidence(self):
+        tools=self._tools()
+        selected=select_turn_tool_working_set(tools,("inspect_fact","read_fact"))
+        self.assertEqual([tool.name for tool in selected],["read_fact","inspect_fact"])
+        projection=project_turn_tool_working_set(tools,("inspect_fact","read_fact"))
+        self.assertEqual(projection["availableCount"],3)
+        self.assertEqual(projection["selectedCount"],2)
+        self.assertEqual(projection["omittedCount"],1)
+        self.assertFalse(projection["canExpandAuthority"])
+        self.assertTrue(str(projection["selectedDefinitionsDigest"]).startswith("sha256:"))
+
+    def test_unknown_or_duplicate_tool_fails_before_provider(self):
+        tools=self._tools()
+        with self.assertRaisesRegex(ValueError,"outside the admitted surface"):
+            select_turn_tool_working_set(tools,("invented",))
+        with self.assertRaisesRegex(ValueError,"must be unique"):
+            select_turn_tool_working_set(tools,("read_fact","read_fact"))
+
+    def test_explicit_empty_selection_is_valid_narrowing(self):
+        self.assertEqual(select_turn_tool_working_set(self._tools(),()),())
 
 if __name__ == "__main__":
     unittest.main()

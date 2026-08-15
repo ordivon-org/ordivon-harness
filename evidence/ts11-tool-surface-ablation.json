@@ -1,0 +1,51 @@
+{
+  "behaviorBoundary": "TS11 proves structural/context friction reduction and monotonic authority narrowing only. It does not claim higher model accuracy, latency, or task success without a predeclared live Provider experiment.",
+  "broad": {
+    "providerSchemaBytes": 2411,
+    "providerSchemaDigest": "sha256:40b11aef0a00c0ac467d9e346cc3dbe2402ef3968b370b7b955fed3926a2e51d",
+    "toolNames": [
+      "read_workspace",
+      "patch_workspace",
+      "run_check",
+      "diff_workspace"
+    ]
+  },
+  "delta": {
+    "omittedTools": 2,
+    "providerSchemaBytesRemoved": 1507,
+    "providerSchemaReductionRatio": 0.625052
+  },
+  "invariants": {
+    "authorityExpanded": false,
+    "providerBehaviorCompared": false,
+    "selectedDefinitionDigestsUnchanged": true,
+    "unknownToolSelectionRejectedByProductCode": true
+  },
+  "kind": "ordivon.harness-ts11-tool-surface-ablation",
+  "lazy": {
+    "providerSchemaBytes": 904,
+    "providerSchemaDigest": "sha256:03da064f261ed31d06edf9aac275d3c4786225e94d805427a2d0ccd4b8d6c690",
+    "toolNames": [
+      "read_workspace",
+      "run_check"
+    ],
+    "workingSet": {
+      "availableCount": 4,
+      "canExpandAuthority": false,
+      "kind": "ordivon.harness-turn-tool-working-set",
+      "omittedCount": 2,
+      "schemaVersion": 1,
+      "selectedCount": 2,
+      "selectedDefinitionsDigest": "sha256:488d82977e70653b0e2d083d0652587f30a811ed534a732ee50a116355df0300",
+      "selectedNames": [
+        "read_workspace",
+        "run_check"
+      ],
+      "selectionAuthority": "caller/application-before-provider-admission",
+      "truthRole": "subset-of-already-admitted-tool-definitions"
+    }
+  },
+  "schemaVersion": 1,
+  "sourceSurface": "independent-repository-repair",
+  "treatment": "explicit-turn-tool-working-set"
+}
