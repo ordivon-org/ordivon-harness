@@ -27,6 +27,7 @@ from ordivon_harness.ordivon.sqlite_runtime_bridge import (
     INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
     INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
     SQLiteHarnessRuntimeBridge,
+    _runtime_delivery_state,
 )
 from ordivon_harness.protocol import HarnessToolStepStatus
 from ordivon_harness.run_state import HarnessRunState
@@ -310,6 +311,10 @@ def bound_state() -> HarnessRunState:
 
 
 class SQLiteHarnessRuntimeBridgeTests(unittest.TestCase):
+    def test_status_only_runtime_projection_fails_closed(self) -> None:
+        with self.assertRaisesRegex(HarnessRuntimeClientError, "executionTerminal"):
+            _runtime_delivery_state({"status": "succeeded"})
+
     def initialize(self, root: Path, suffix: str, runtime: FakeRuntime):
         run_contract = contract(suffix)
         store = SQLiteHarnessStore.initialize(root)
