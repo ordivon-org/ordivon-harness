@@ -61,14 +61,24 @@ class FakeRuntime:
         self.workspace_exec_count = 0
         self.job_id = "job:p0-independent-search-001"
         self.client_request_id: str | None = None
+        self.recovery_observations_remaining = 0
 
     def terminal(self) -> dict[str, JsonValue]:
         assert self.client_request_id is not None
+        recovery_required = self.recovery_observations_remaining > 0
         return {
             "schemaVersion": 1,
             "jobId": self.job_id,
             "clientRequestId": self.client_request_id,
             "status": "succeeded",
+            "executionTerminal": True,
+            "executionDisposition": "succeeded",
+            "deliveryDisposition": (
+                "reconciliation_required" if recovery_required else "committed"
+            ),
+            "recoveryRequired": recovery_required,
+            "semanticCompletionEvaluated": False,
+            "resultAvailable": True,
             "artifacts": [],
             "stdoutTail": (
                 '{"type":"match","data":{"path":{"text":"src/demo.py"},'
@@ -148,6 +158,8 @@ class FakeRuntime:
                 "nextCursor": None,
             }
         if name == "task.observe":
+            if self.recovery_observations_remaining > 0:
+                self.recovery_observations_remaining -= 1
             return self.terminal()
         raise AssertionError(f"unexpected Runtime tool: {name}")
 
@@ -425,6 +437,44 @@ class SQLiteHarnessRuntimeBridgeTests(unittest.TestCase):
             self.assertIsNotNone(retained.receipt.observation_digest)
             self.assertIsNone(retained.observation)
             self.assertIsNone(retained.observation_object)
+            store.close()
+
+    def test_succeeded_status_continues_observing_until_delivery_converges(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = FakeRuntime("direct")
+            runtime.recovery_observations_remaining = 1
+            store, _, _, continuity, bridge = self.initialize(
+                Path(directory) / "state",
+                "recovery-required",
+                runtime,
+            )
+            value = bound_state()
+            bridge.bind_run_state(
+                messages=value.messages,
+                observations=(),
+                remaining_budget=value.remaining_budget,
+                requested_model_id=value.requested_model_id,
+                effective_model_id=None,
+                active_elapsed_ms=0,
+            )
+            observation = bridge.execute(
+                tool_turn("recovery-required").tool_calls[0],
+                step_id="turn-1-tool-recovery-required",
+            )
+            self.assertEqual(observation.status, "observed")
+            self.assertEqual(
+                observation.structured_content["deliveryDisposition"],
+                "committed",
+            )
+            self.assertFalse(observation.structured_content["recoveryRequired"])
+            self.assertEqual(
+                [name for name, _ in runtime.calls].count("workspace.exec"), 1
+            )
+            self.assertEqual(
+                [name for name, _ in runtime.calls].count("task.observe"), 1
+            )
+            retained = continuity.load_current_tool_step()
+            self.assertEqual(retained.receipt.status, HarnessToolStepStatus.OBSERVED)
             store.close()
 
     def test_transport_response_loss_reconciles_without_redispatch(self) -> None:

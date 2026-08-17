@@ -157,27 +157,20 @@ class CandidateRuntime(FakeRuntime):
         self.pins = pins
 
     def terminal(self) -> dict[str, JsonValue]:
-        assert self.client_request_id is not None
+        value = super().terminal()
         candidate_line = "CANDIDATE_SOURCE " + json.dumps(
             [pin.to_dict() for pin in self.pins],
             sort_keys=True,
             separators=(",", ":"),
         )
-        return {
-            "schemaVersion": 1,
-            "jobId": self.job_id,
-            "clientRequestId": self.client_request_id,
-            "status": "succeeded",
-            "artifacts": [],
-            "stdoutTail": (
-                '{"type":"match","data":{"path":{"text":"candidate-index/sources.jsonl"},'
-                + '"lines":{"text":'
-                + json.dumps(candidate_line + "\n")
-                + '},"line_number":1,"absolute_offset":0,'
-                + '"submatches":[{"start":0,"end":16}]}}\n'
-            ),
-            "stderrTail": "",
-        }
+        value["stdoutTail"] = (
+            '{"type":"match","data":{"path":{"text":"candidate-index/sources.jsonl"},'
+            + '"lines":{"text":'
+            + json.dumps(candidate_line + "\n")
+            + '},"line_number":1,"absolute_offset":0,'
+            + '"submatches":[{"start":0,"end":16}]}}\n'
+        )
+        return value
 
 
 class RawCandidateRuntime(FakeRuntime):
@@ -186,7 +179,7 @@ class RawCandidateRuntime(FakeRuntime):
         self.sources = sources
 
     def terminal(self) -> dict[str, JsonValue]:
-        assert self.client_request_id is not None
+        value = super().terminal()
         raw_candidates = [
             {
                 "logicalRef": source.logical_ref,
@@ -200,21 +193,14 @@ class RawCandidateRuntime(FakeRuntime):
             sort_keys=True,
             separators=(",", ":"),
         )
-        return {
-            "schemaVersion": 1,
-            "jobId": self.job_id,
-            "clientRequestId": self.client_request_id,
-            "status": "succeeded",
-            "artifacts": [],
-            "stdoutTail": (
-                '{"type":"match","data":{"path":{"text":"candidate-index/raw.jsonl"},'
-                + '"lines":{"text":'
-                + json.dumps(candidate_line + "\n")
-                + '},"line_number":1,"absolute_offset":0,'
-                + '"submatches":[{"start":0,"end":20}]}}\n'
-            ),
-            "stderrTail": "",
-        }
+        value["stdoutTail"] = (
+            '{"type":"match","data":{"path":{"text":"candidate-index/raw.jsonl"},'
+            + '"lines":{"text":'
+            + json.dumps(candidate_line + "\n")
+            + '},"line_number":1,"absolute_offset":0,'
+            + '"submatches":[{"start":0,"end":20}]}}\n'
+        )
+        return value
 
 
 class MaterializingDiscoveryRuntimeBridge(SQLiteHarnessRuntimeBridge):

@@ -68,9 +68,54 @@ INDEPENDENT_SEARCH_TOOL_GRANT: dict[str, JsonValue] = {
 }
 INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST = canonical_digest(INDEPENDENT_SEARCH_TOOL_GRANT)
 
-_TERMINAL_RUNTIME_STATUSES = frozenset(
-    {"succeeded", "failed", "cancelled", "timed_out", "rejected"}
+_RUNTIME_DELIVERY_DISPOSITIONS = frozenset(
+    {"in_progress", "committed", "reconciliation_required", "unknown"}
 )
+
+
+def _runtime_delivery_state(payload: dict[str, JsonValue]) -> str:
+    """Return the safe Harness observation action from exact Runtime semantics.
+
+    Runtime ``status`` is a compatibility summary and cannot decide whether physical
+    execution has mechanically converged.  In particular, a succeeded resolution may
+    still carry ``deliveryDisposition=reconciliation_required``.
+    """
+
+    execution_terminal = payload.get("executionTerminal")
+    execution_disposition = payload.get("executionDisposition")
+    delivery_disposition = payload.get("deliveryDisposition")
+    recovery_required = payload.get("recoveryRequired")
+    result_available = payload.get("resultAvailable")
+    semantic_completion_evaluated = payload.get("semanticCompletionEvaluated")
+
+    if not isinstance(execution_terminal, bool):
+        raise HarnessRuntimeClientError("Runtime observation omitted executionTerminal")
+    if execution_disposition is not None and not isinstance(execution_disposition, str):
+        raise HarnessRuntimeClientError("Runtime executionDisposition is invalid")
+    if delivery_disposition not in _RUNTIME_DELIVERY_DISPOSITIONS:
+        raise HarnessRuntimeClientError("Runtime deliveryDisposition is invalid")
+    if not isinstance(recovery_required, bool):
+        raise HarnessRuntimeClientError("Runtime observation omitted recoveryRequired")
+    if not isinstance(result_available, bool):
+        raise HarnessRuntimeClientError("Runtime observation omitted resultAvailable")
+    if semantic_completion_evaluated is not False:
+        raise HarnessRuntimeClientError(
+            "Runtime must not claim Harness/domain semantic completion"
+        )
+
+    if recovery_required or delivery_disposition == "reconciliation_required":
+        return "reconcile"
+    if delivery_disposition == "unknown":
+        if not execution_terminal or execution_disposition != "lost" or not result_available:
+            raise HarnessRuntimeClientError("Runtime unknown delivery projection is inconsistent")
+        return "unknown"
+    if delivery_disposition == "in_progress":
+        if execution_terminal or execution_disposition is not None or result_available:
+            raise HarnessRuntimeClientError("Runtime in-progress projection is inconsistent")
+        return "reconcile"
+    if not execution_terminal or execution_disposition is None or not result_available:
+        raise HarnessRuntimeClientError("Runtime committed terminal projection is incomplete")
+    return "terminal"
 
 
 class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
@@ -407,8 +452,24 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
     ) -> HarnessToolObservation:
         current = dict(payload)
         for _ in range(20):
-            status = current.get("status")
-            if isinstance(status, str) and status in _TERMINAL_RUNTIME_STATUSES:
+            try:
+                delivery_state = _runtime_delivery_state(current)
+            except HarnessRuntimeClientError as error:
+                return self._unknown_observation(
+                    tool_call_id,
+                    tool_name,
+                    reason=f"Runtime observation semantics invalid: {error}",
+                    client_request_id=None,
+                    query=query,
+                    relative_path=relative_path,
+                    reconciled=reconciled,
+                    runtime_job_ref=(
+                        current.get("jobId")
+                        if isinstance(current.get("jobId"), str)
+                        else None
+                    ),
+                )
+            if delivery_state == "terminal":
                 return self._observation_from_payload(
                     tool_call_id=tool_call_id,
                     tool_name=tool_name,
@@ -416,6 +477,21 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     query=query,
                     relative_path=relative_path,
                     reconciled=reconciled,
+                )
+            if delivery_state == "unknown":
+                return self._unknown_observation(
+                    tool_call_id,
+                    tool_name,
+                    reason="Runtime terminal delivery is unknown",
+                    client_request_id=None,
+                    query=query,
+                    relative_path=relative_path,
+                    reconciled=reconciled,
+                    runtime_job_ref=(
+                        current.get("jobId")
+                        if isinstance(current.get("jobId"), str)
+                        else None
+                    ),
                 )
             job_id = current.get("jobId")
             if not isinstance(job_id, str):
