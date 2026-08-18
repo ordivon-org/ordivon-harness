@@ -10,14 +10,14 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - Research Programme Map v1: materialized.
 - Frontier Audit v1: materialized.
 - First Campaign Selection Tournament v1: completed.
-- **Campaign 1 completed:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
-- Campaign 1 final result: original P1 revised; P1' `SUPPORTED_IN_SCOPE`; owner boundaries preserved; `NO_FOUNDATION_PRESSURE`.
+- Campaign 1 completed: Operational Identity Under Failure — Run Identity & Recovery Equivalence.
+- Post-Campaign-1 Frontier Tournament v1: completed.
+- **Selected Campaign 2:** Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission.
 - HaF0–HaF61: frozen exact identities preserved through registry/provenance.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true at the current evidence frontier.
 - WholeHarnessClosure / WholeHarnessExhaustion: NOT ESTABLISHED.
 - HaF51–HaF61 Operational Spine: cross-family operational view, **not** a higher Foundation tier.
-- **NextHarnessResearchCampaign:** UNKNOWN pending a new typed selection decision.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Project-first recovery path
@@ -36,10 +36,11 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 12. [90 CAMPAIGN 1 ROUND 2 DOGFOOD CONTRACT](90-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-CONTRACT.md)
 13. [91 CAMPAIGN 1 ROUND 2 RESULT](91-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
 14. [92 CAMPAIGN 1 BOUNDARY AUDIT + CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-15. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
-16. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
-17. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
-18. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
+15. [93 POST-CAMPAIGN-1 FRONTIER TOURNAMENT v1](93-POST-CAMPAIGN1-FRONTIER-TOURNAMENT-V1.md)
+16. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
+17. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
+18. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
+19. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
 
 ## Long-lived research programmes
 
@@ -53,22 +54,24 @@ Cross-owner Runtime / Host / Network / Normative / Human / World-domain / Comput
 
 ## Campaign 1 result
 
-Campaign 1 established a technology-neutral recovery model with three independent questions:
+Campaign 1 established a three-stage recovery model separating Recovery Projection Standing, Run Identity Standing and Continuation Standing, plus explicit continuation topology.
 
-1. **Recovery Projection Standing** — is the reconstructed state valid, invalid or underdetermined?
-2. **Identity Standing** — does it continue the same RunEpisode, require a new Run, or remain identity-unknown?
-3. **Continuation Standing** — may it safely continue, must it reconcile first, is it terminal/unknown, or is evidence insufficient?
-
-It also established an explicit continuation-topology requirement: shared ancestry is not enough for same Run identity; one linear continuation cannot silently admit divergent successors.
-
-Two campaign results are now admitted as derived Harness laws:
+Two campaign results are admitted as derived Harness laws:
 
 - **Recovery Validity != Run Identity != Resumability**.
 - **Lineage Ancestry != Continuation Identity**.
 
-Round 2 ran six prebound dogfood fixtures under the canonical `uv run` environment; all six passed. The implementation evidence supports the revised criterion in scope but does not prove universal cross-implementation invariance. R6 (implementation-defined identity) is weakened, not fully falsified.
+Campaign 1 closed with `NO_FOUNDATION_PRESSURE`; HaF62 remained unknown/not admitted.
 
-Campaign 1 closes with `NO_FOUNDATION_PRESSURE`; HaF62 remains unknown/not admitted.
+## Post-Campaign-1 selection result
+
+The tournament found that Context Equivalence/Sufficiency has become the current project bottleneck because Campaign 1 already depends on provenance-preserving Context change while deliberately leaving general Context Equivalence unresolved.
+
+Selected Campaign 2:
+
+**Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission**.
+
+Rich Effect Semantics remains an independent high-value parallel frontier. Operational Accountability, Boundary Reconfiguration and Multi-Agent/Federated identity are deferred because each consumes a sharper Context relation. Cross-implementation invariance is retained as a falsification dimension rather than selected as a standalone campaign with insufficient independent evidence sources.
 
 ## Post-Campaign 1 frontier
 
@@ -77,16 +80,17 @@ Materially deepened:
 - Run Identity Equivalence;
 - Recovery Equivalence.
 
+Selected for next deepening:
+
+- Context Equivalence / Sufficiency.
+
 Still open:
 
-- Context Equivalence / Sufficiency;
 - Rich Effect Semantics;
 - Operational Accountability Graph;
 - Boundary Reconfiguration Equivalence;
 - Multi-Agent / federated operational identity;
-- cross-implementation invariance of the Campaign 1 criterion.
-
-No next campaign is selected by inertia.
+- cross-implementation invariance of Campaign-1 and future criteria.
 
 ## Historical materialization authority
 
@@ -102,5 +106,6 @@ Project control continuity:
 - `task:harness-agent-operational-mediation-project-20260818`
 - `task:harness-first-campaign-selection-tournament-20260818`
 - `task:harness-campaign1-operational-identity-under-failure-20260818`
+- `task:harness-post-campaign1-frontier-tournament-20260818`
 
-Do not recover future Harness research by resuming from the largest HaF number. Recover from the Constitution + Programme Map + Frontier Audit + completed campaign closeouts + latest selection control, then descend to exact HaF provenance only when needed.
+Do not recover future Harness research by resuming from the largest HaF number. Recover from Constitution + Programme Map + Frontier Audit + completed campaign closeouts + latest selection control, then descend to exact HaF provenance only when needed.
