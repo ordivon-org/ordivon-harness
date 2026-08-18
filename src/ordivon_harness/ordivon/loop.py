@@ -1993,6 +1993,55 @@ class OrdivonAgentLoop:
                     detail=f"duplicate Model Call identity: {result.model_call_id}",
                 )
             seen_model_call_ids.add(result.model_call_id)
+            if len(result.tool_calls) == 1:
+                potential_control = result.tool_calls[0]
+                if (
+                    potential_control.name == "submit_run_conclusion"
+                    and potential_control.argument_error is not None
+                ):
+                    if conclusion_corrections >= self.budget.max_conclusion_corrections:
+                        return stop(
+                            RunStopCode.INVALID_MODEL_OUTPUT,
+                            detail=(
+                                "Conclusion correction budget exhausted after malformed "
+                                "Harness conclusion control: "
+                                f"{potential_control.argument_error}"
+                            ),
+                        )
+                    conclusion_corrections += 1
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Harness conclusion control was malformed and did not "
+                                "dispatch. Correct the candidate using the Provider/owner "
+                                "rejection reason below; use available tools or evidence "
+                                f"only when relevant: {potential_control.argument_error}"
+                            ),
+                        }
+                    )
+                    recorder.record(
+                        "conclusion_rejected",
+                        {
+                            "conclusionName": potential_control.name,
+                            "argumentError": potential_control.argument_error,
+                            "correction": conclusion_corrections,
+                            "conclusionCorrection": conclusion_corrections,
+                            "safeToCorrect": True,
+                        },
+                    )
+                    try:
+                        bind_run_state()
+                    except ToolBridgeError as state_error:
+                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                    except Exception as state_error:  # noqa: BLE001
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                f"{type(state_error).__name__}: {state_error}"
+                            ),
+                        )
+                    continue
             if external_observation_gate_reason is not None and any(
                 call.name != WORKING_SET_HISTORY_CONTROL_NAME
                 and call.argument_error != "unavailable_tool"
@@ -2444,6 +2493,65 @@ class OrdivonAgentLoop:
                         detail=f"{type(error).__name__}: {error}",
                     )
                 return stop(RunStopCode.NEEDS_INPUT, conclusion=result.conclusion)
+
+            bridge_definitions = getattr(self.tool_bridge, "definitions", None)
+            if result.tool_calls and callable(bridge_definitions):
+                tool_names = {definition.name for definition in bridge_definitions()}
+                unavailable_only = not tool_names and all(
+                    call.name != WORKING_SET_HISTORY_CONTROL_NAME
+                    and call.argument_error == "unavailable_tool"
+                    for call in result.tool_calls
+                )
+                if unavailable_only:
+                    if tool_corrections >= self.budget.max_tool_corrections:
+                        return stop(
+                            RunStopCode.INVALID_TOOL_CALL,
+                            detail=(
+                                "Tool correction budget exhausted after unavailable "
+                                "Runtime Tool intent on a no-Tool surface"
+                            ),
+                        )
+                    tool_corrections += 1
+                    unavailable_names = sorted({call.name for call in result.tool_calls})
+                    display_names = ", ".join(unavailable_names[:8])
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "The Runtime Tool actions you requested were never admitted "
+                                "on this surface, so no Runtime Tool observations were "
+                                "produced and nothing executed. Unavailable action names: "
+                                f"{display_names}. Choose an available Harness cognition "
+                                "action or submit a conclusion instead."
+                            ),
+                        }
+                    )
+                    for call in result.tool_calls:
+                        recorder.record(
+                            "tool_call_rejected",
+                            {
+                                "toolCallId": call.tool_call_id,
+                                "toolName": call.name,
+                                "toolCall": call.to_dict(),
+                                "argumentError": call.argument_error,
+                                "correction": tool_corrections,
+                                "physicalDispatch": False,
+                                "seenToolCallIdentity": False,
+                                "source": "unavailable_no_tool_provider_intent",
+                            },
+                        )
+                    try:
+                        bind_run_state()
+                    except ToolBridgeError as state_error:
+                        return stop(RunStopCode.RUNTIME_UNKNOWN, detail=str(state_error))
+                    except Exception as state_error:  # noqa: BLE001
+                        return stop(
+                            RunStopCode.HARNESS_FAILED,
+                            detail=(
+                                f"{type(state_error).__name__}: {state_error}"
+                            ),
+                        )
+                    continue
 
             budgeted_tool_calls = tuple(
                 call
