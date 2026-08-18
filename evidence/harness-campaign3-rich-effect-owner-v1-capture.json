@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.campaign3-rich-effect-owner-v1",
+  "prebindingRevision": "786d64a7cfb21d52e9e541331c3db67a9edd4f29",
+  "runtimeWorkspaceId": "harness-c3-rich-effect-owner-effects-20260819",
+  "red1Partial": {
+    "jobId": "job-01a01652-050f-7f03-8f89-29f3024122ab",
+    "terminalStatus": "failed",
+    "completedSteps": 1,
+    "failedStepId": "effect-2",
+    "exitCode": 7,
+    "executionReasonCode": "PROCESS_EXIT_NONZERO",
+    "deliveryDisposition": "committed",
+    "terminalEvidenceDigest": "sha256:b33deb0c49b5dc49f9670ea564514b421fe60855f4ef20eac9bff0225fb8db23",
+    "step1Content": "step1\n",
+    "step1Digest": "sha256:674727562efe74444161457767ce2a69571d5f7fa4ddf1e7a7fa273304c56d1c"
+  },
+  "red2Delayed": {
+    "jobId": "job-01a01652-37d4-7132-a922-a78bb9a43838",
+    "preStatus": "working",
+    "preDeliveryDisposition": "in_progress",
+    "prePathAbsent": true,
+    "prePathReadErrorCode": "WORKSPACE_PATH_NOT_FOUND",
+    "prePathReadCommitState": "not_committed",
+    "terminalStatus": "succeeded",
+    "terminalDeliveryDisposition": "committed",
+    "terminalEvidenceDigest": "sha256:84d40112646414196a177969f084a346cc6985e6a95cdb1bf3231a4c9665195b",
+    "postContent": "arrived-v1\n",
+    "postDigest": "sha256:c7b7e98da9da475f7ad2d974a2763214bc73a3d1009cf4022028c4a889bd3a29"
+  },
+  "red3Interference": {
+    "workspaceId": "harness-c3-rich-effect-owner-effects-20260819",
+    "initialContent": "A\n",
+    "initialDigest": "sha256:06f961b802bc46ee168555f066d28f4f0e9afdf3f88174c1ee6f9de004fc30a0",
+    "m1ClientRequestId": "harness-c3-red3-m1-a-to-b-20260819-v1",
+    "m1OperationId": "patch-01a01652-b0bf-7192-9143-60efa28940b2",
+    "m1State": "committed",
+    "m1RequestDigest": "sha256:7876a1b05c55f76c970088efe4b019ac5d3805248a55d8943b935bed0e587f25",
+    "m1AfterDigest": "sha256:c0cde77fa8fef97d476c10aad3d2d54fcc2f336140d073651c2dcccf1e379fd6",
+    "afterM1Content": "B\n",
+    "m2ClientRequestId": "harness-c3-red3-m2-stale-a-to-c-20260819-v1",
+    "staleRejected": true,
+    "staleErrorCode": "REVISION_MISMATCH",
+    "staleCommitState": "not_committed",
+    "staleErrorField": "files[0].expectedDigest",
+    "afterM2Content": "B\n",
+    "afterM2Digest": "sha256:c0cde77fa8fef97d476c10aad3d2d54fcc2f336140d073651c2dcccf1e379fd6"
+  },
+  "red4Compensation": {
+    "workspaceId": "harness-c3-rich-effect-owner-effects-20260819",
+    "originalDigest": "sha256:06f961b802bc46ee168555f066d28f4f0e9afdf3f88174c1ee6f9de004fc30a0",
+    "m1OperationId": "patch-01a01652-b0bf-7192-9143-60efa28940b2",
+    "m1RequestDigest": "sha256:7876a1b05c55f76c970088efe4b019ac5d3805248a55d8943b935bed0e587f25",
+    "m1ReceiptStillState": "committed",
+    "m3ClientRequestId": "harness-c3-red4-m3-b-to-a-20260819-v1",
+    "m3OperationId": "patch-01a01652-fdcd-74b0-8068-3beb87cf485e",
+    "m3RequestDigest": "sha256:d743c98bef1c680a54cc0215364d89e9033f44ef873c382aaca6d753eb829cd2",
+    "m3State": "committed",
+    "finalContent": "A\n",
+    "finalDigest": "sha256:06f961b802bc46ee168555f066d28f4f0e9afdf3f88174c1ee6f9de004fc30a0"
+  }
+}

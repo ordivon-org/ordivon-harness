@@ -1,0 +1,334 @@
+{
+  "captureDigest": "sha256:5b0a0d01ab17734c05bc87752e462c36e8b5a646d88166e433736a54eacd1a94",
+  "classification": "CAMPAIGN3_RICH_EFFECT_DIRECT_SUPPORT_IN_SCOPE",
+  "gates": {
+    "claimStandingProductionModificationRequired": false,
+    "compensationRestoresCurrentBytes": true,
+    "delayedUnderdeterminedThenSupported": true,
+    "globalClaimOrEffectRegistryRequired": false,
+    "noScalarPartialStatus": true,
+    "partialMixedClaimStanding": true,
+    "priorCommittedOperationHistoryPreserved": true,
+    "priorDelayedViewImmutable": true,
+    "sameFinalBytesDoNotCollapseHistory": true,
+    "staleCompetingMutationContradicted": true
+  },
+  "kind": "ordivon.harness.campaign3-rich-effect-owner-v1-result",
+  "schemaVersion": 1,
+  "views": {
+    "red1": {
+      "prefix": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:7f53b5a1bd168c28a488abd70128a7287bae928942851def3e5ae9d5e3680dda",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:partial-prefix"
+          },
+          "claimId": "claim:c3-rich:partial-prefix-realized",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:29ffe91144ab1fcac53c37ae9141d088d82adc475fa117134053fd6a6286ab5c",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red1"
+            },
+            "role": "supporting"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "SUPPORTED",
+        "subjectRef": "runtime-job:job-01a01652-050f-7f03-8f89-29f3024122ab",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      },
+      "whole": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:b383f9b4a8b6688f6da09d3dad62d833340cc500a13fc7ac14d6ee73f8e53f97",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:partial-whole"
+          },
+          "claimId": "claim:c3-rich:partial-whole-plan-succeeded",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:29ffe91144ab1fcac53c37ae9141d088d82adc475fa117134053fd6a6286ab5c",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red1"
+            },
+            "role": "counterevidence"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "CONTRADICTED",
+        "subjectRef": "runtime-job:job-01a01652-050f-7f03-8f89-29f3024122ab",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      }
+    },
+    "red2": {
+      "post": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:a8cdc76a0271c299df47542f1f02468109387e8457c9ee41e0f94def5d4ab264",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:delayed-output"
+          },
+          "claimId": "claim:c3-rich:delayed-output-realized",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:c9c9f62364046983854a3f0dabcc86c564af2927a9b4089d1fe5554f19ce1377",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red2-post"
+            },
+            "role": "supporting"
+          }
+        ],
+        "generation": 2,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "SUPPORTED",
+        "subjectRef": "runtime-job:job-01a01652-37d4-7132-a922-a78bb9a43838",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      },
+      "pre": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:a8cdc76a0271c299df47542f1f02468109387e8457c9ee41e0f94def5d4ab264",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:delayed-output"
+          },
+          "claimId": "claim:c3-rich:delayed-output-realized",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:2d6778311bc0f7e58549b9f6d9ba815c9d1f4c91a45cac5c1c3195d5613d8583",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red2-pre"
+            },
+            "role": "required_unknown"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "UNDERDETERMINED",
+        "subjectRef": "runtime-job:job-01a01652-37d4-7132-a922-a78bb9a43838",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      },
+      "preDigestStable": true
+    },
+    "red3": {
+      "m1": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:ac36c8a13696bd70b28b86b876ab379ae229a26ff630e0d3c47d3c54512c9d67",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:interference-m1"
+          },
+          "claimId": "claim:c3-rich:interference-m1-committed",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:33049fb68f588bfd90f7b30e5d8dd6b161d30c44776128d40a2aa00045cb4c09",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red3-m1"
+            },
+            "role": "supporting"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "SUPPORTED",
+        "subjectRef": "harness-c3-rich-effect-owner-effects-20260819",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      },
+      "m2": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:0e9baf3c28d955a3c49d8731631f831b237aa94daa79f6fa977d217fe98c2ee0",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:interference-m2"
+          },
+          "claimId": "claim:c3-rich:interference-m2-committed",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:702f3fafb2a50ba762dfecb35da23a96ac0fc0cfca257ec70bd50702202ca562",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red3-m2"
+            },
+            "role": "counterevidence"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "CONTRADICTED",
+        "subjectRef": "harness-c3-rich-effect-owner-effects-20260819",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      }
+    },
+    "red4": {
+      "original": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:e114f3efc3675136fd8cf724705324103a9abcf1f4d47025152c6462a1ba0382",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:original-a-to-b"
+          },
+          "claimId": "claim:c3-rich:original-a-to-b-realized",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:2f15a1d426a6d8370cfe315e4b9bf656de2f5291130b7777568d44b6286692f2",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red4-original"
+            },
+            "role": "supporting"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "SUPPORTED",
+        "subjectRef": "harness-c3-rich-effect-owner-effects-20260819",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      },
+      "originalViewDigestStable": true,
+      "restored": {
+        "claim": {
+          "claimContractRef": {
+            "digest": "sha256:4253ff157db112c373e6d4e1013c8ee413a64e15db3db26fb9de9569018ea6db",
+            "kind": "claim-contract",
+            "ref": "claim-contract:c3-rich:current-restored-a"
+          },
+          "claimId": "claim:c3-rich:current-state-restored-a",
+          "generation": 1,
+          "kind": "ordivon.harness-operational-claim-ref",
+          "schemaVersion": 1,
+          "semanticOwnerRef": {
+            "digest": "sha256:6840b723a66787e3f7eb7db5328bf60e3a29d4f1d7fcf4cf8986c1885876a8a3",
+            "kind": "semantic-owner",
+            "ref": "owner:ordivon-runtime:c3-rich-effect-dogfood-v1"
+          }
+        },
+        "evidenceRoles": [
+          {
+            "reference": {
+              "digest": "sha256:8273fd93a8e9c9bf59739bcbed5c1e6bf2c6ed2e4ca98ebc1df8dd02a8d7432e",
+              "kind": "runtime-owner-fact-capture",
+              "ref": "runtime-owner-evidence:c3-rich:red4-restored"
+            },
+            "role": "supporting"
+          }
+        ],
+        "generation": 1,
+        "kind": "ordivon.harness-operational-claim-standing-view",
+        "schemaVersion": 1,
+        "standing": "SUPPORTED",
+        "subjectRef": "harness-c3-rich-effect-owner-effects-20260819",
+        "useContractRef": {
+          "digest": "sha256:5c39864e6864685e6d6be1a07fe4a0bd4a87e47beaf2dfdbd46edee685c7460a",
+          "kind": "claim-use-contract",
+          "ref": "use-contract:c3-rich-effect-owner-dogfood-v1"
+        }
+      }
+    }
+  }
+}
