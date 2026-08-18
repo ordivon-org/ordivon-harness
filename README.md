@@ -112,7 +112,7 @@ caller authors Contract
 → caller/domain decides what that result means
 ```
 
-Provider-specific continuation data may be structurally necessary. `ProviderToolContinuation` preserves opaque continuation required by a Provider protocol without pretending that opaque bytes are Agent cognition. Exact private-content recovery still requires the Run's privacy authority.
+Provider-specific wire state may exceed reconstructed semantic messages, but the current contracted product does **not** expose a generic `ProviderToolContinuation` primitive. Opaque Provider-local continuation therefore remains Provider/integration-local unless fresh direct pressure earns a bounded Harness surface.
 
 ## Status
 
@@ -141,7 +141,7 @@ The current product includes:
 - durable `inspect` plus `explain` workbench projections over existing Journal/CAS state, with unavailable process-local facts left explicit rather than guessed;
 - multi-attempt Mandate/Strategy admission where Harness derives remaining resource authority mechanically but does not choose the Strategy;
 - caller-defined structured completion shapes while semantic admission remains outside Harness;
-- opaque Provider Tool continuation when a Provider protocol requires more than reconstructed semantic messages;
+- explicit non-support for a generic opaque Provider-continuation primitive in the contracted current core; Provider-local continuation remains integration-local unless new direct pressure earns a bounded surface;
 - conservative UNKNOWN handling: ambiguous Provider or Tool delivery is reconciled from durable evidence rather than blindly repeated.
 
 Detailed API and compatibility contracts are linked below instead of reproduced here.

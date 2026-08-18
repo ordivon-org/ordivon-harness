@@ -71,7 +71,7 @@ This page states current maturity. It does not replay the research sequence that
 - caller-owned Adapter factories keep Provider choice outside Harness policy.
 - Tool-bearing applications provide a `HarnessRuntimeClient`; the primary CLI does not invent Runtime authority.
 - structured completion binds caller-defined result shape into the Run Contract while semantic validation remains caller/domain authority.
-- `ProviderToolContinuation` can retain Provider-specific opaque Tool continuation when semantic message reconstruction is insufficient for that Provider protocol.
+- the contracted current core does not expose a generic `ProviderToolContinuation`; Provider-specific opaque continuation remains integration-local unless fresh direct pressure earns a bounded Harness surface.
 
 ### Multi-attempt delegation
 
@@ -89,7 +89,7 @@ The following conclusions survive into current behavior:
 - **objective completion is rooted** — a true subclaim cannot silently replace the caller-bound Objective;
 - **semantic correctness is not authority** — a model can guess correctly without having evidence sufficient to authorize mutation or completion;
 - **Tool-surface optimization is not semantic policy** — pruning that can hide the correct action requires Agent-owned recovery or it changes meaning;
-- **Provider wire state may exceed semantic messages** — opaque continuation is retained only when the Provider protocol requires it;
+- **Provider wire state may exceed semantic messages** — current Harness does not turn that fact into a generic opaque-continuation authority; Provider-local continuation remains outside the contracted core unless direct evidence earns a bounded surface;
 - **deliberation-before-Tool composition is not automatically the recommended core** — it remains an advanced/internal composition until independent consumer pressure justifies promotion;
 - **no generic Memory/RAG/Skill store was earned** — exact external reusable sources plus WorkingSet selection and existing structured CompletionProposal evidence are sufficient for current cross-Run knowledge/procedure workloads; semantic evaluation and promotion remain external.
 
@@ -108,7 +108,7 @@ The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibil
 - `CompletionProposal` cannot prove caller/domain completion.
 - structured output constrains Provider shape but does not make Harness a domain or JSON-Schema truth authority.
 - Provider/Tool UNKNOWN may require external reconciliation by the owner that can observe the consequence.
-- opaque Provider continuation obeys existing privacy authority; metadata-only retention cannot magically recover private transcript state.
+- Provider-specific opaque continuation is not a current generic Harness surface; integrations that require it must preserve their own Provider-local authority without assuming metadata-only Harness continuity can recover private transcript state.
 - cache hit rate, prompt locality and Provider-specific request efficiency are measured properties rather than correctness thresholds.
 
 ## Verification
