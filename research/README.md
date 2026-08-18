@@ -13,6 +13,7 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - **Campaign 1 active:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
 - Campaign 1 Charter / Investigation Contract v1: durably prebound before analysis.
 - Campaign 1 Round 1 conceptual destructive reconstruction: complete; `P1 -> P1'` revised.
+- Campaign 1 Round 2 engineering dogfood: complete; `ENGINEERING_SUPPORT_IN_SCOPE` across prebound D1–D6.
 - HaF0–HaF61: frozen exact identities preserved through registry/provenance.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true at the current evidence frontier.
@@ -33,10 +34,12 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 9. [87 FIRST CAMPAIGN SELECTION TOURNAMENT v1](87-FIRST-CAMPAIGN-SELECTION-TOURNAMENT-V1.md)
 10. [88 CAMPAIGN 1 CHARTER v1](88-CAMPAIGN1-OPERATIONAL-IDENTITY-UNDER-FAILURE-CHARTER-V1.md)
 11. [89 CAMPAIGN 1 ROUND 1](89-CAMPAIGN1-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
-12. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
-13. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
-14. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
-15. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
+12. [90 CAMPAIGN 1 ROUND 2 DOGFOOD CONTRACT](90-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-CONTRACT.md)
+13. [91 CAMPAIGN 1 ROUND 2 RESULT](91-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
+14. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
+15. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
+16. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
+17. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
 
 ## Long-lived research programmes
 
@@ -50,17 +53,23 @@ Cross-owner Runtime / Host / Network / Normative / Human / World-domain / Comput
 
 ## Active Campaign 1 — current result
 
-Round 1 found that the prebound two-axis evaluator was too coarse. The current research model separates:
+Round 1 revised the model to three independent axes:
 
 1. **Recovery Projection Standing** — valid / invalid / underdetermined reconstruction;
 2. **Identity Standing** — same Run / new Run required / identity unknown;
 3. **Continuation Standing** — safe continue / reconcile first / terminal unknown / insufficient evidence.
 
-It also establishes a strong provisional law: **Lineage ancestry != Run continuation identity**. Declared branches can preserve provenance while requiring distinct RunEpisode identities.
+Round 2 then executed six prebound current-engineering fixtures. All six passed under the repository-canonical `uv run` environment. The strongest evidence shows that fresh-process recovery can reconstruct settled/pending Tool lineage without redoing completed Tool effects, while missing continuation content can block resume with zero new Runtime execution.
 
-Current Round 1 classification: `CRITERION_REVISED`, `NO_FOUNDATION_PRESSURE`.
+Current campaign standing:
 
-Rich Effect Semantics, Context Equivalence, Multi-Agent mediation and Accountability remain separate frontiers. Round 2 will dogfood only fixtures that can genuinely attack the revised criterion.
+- P1': supported by conceptual + engineering evidence in the tested scope;
+- R1–R5: falsified in conceptual scope;
+- R6 implementation-defined identity: weakened but not fully falsified;
+- derived-law candidates: **Recovery Validity != Run Identity != Resumability** and **Lineage Ancestry != Continuation Identity**;
+- Foundation pressure: `NO_FOUNDATION_PRESSURE`.
+
+Round 3 is a cross-owner boundary audit before closeout. Rich Effect Semantics, Context Equivalence, Multi-Agent mediation and Accountability remain separate frontiers.
 
 ## Historical materialization authority
 
