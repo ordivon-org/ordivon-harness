@@ -3,40 +3,43 @@
 ## Current project state
 
 - Campaigns 1–4 completed.
-- **Campaign 5 active:** Boundary Reconfiguration Equivalence — Operational Preservation Under Cut, Placement, Exposure & Morphology Change.
-- Campaign 5 Charter / Investigation Contract v1 prebound before destructive analysis.
+- **Campaign 5 active:** Boundary Reconfiguration / Operational Preservation Under Reconfiguration (OPUR).
+- Campaign 5 Charter durably prebound.
+- Campaign 5 Round 1 complete: `P5 -> P5'`, `CRITERION_REVISED`.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true.
-- **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Recovery path
 
 1. [30 DERIVED LAWS](30-DERIVED-LAWS.md)
-2. [110 CAMPAIGN 4 CLOSEOUT](110-CAMPAIGN4-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-3. [111 POST-CAMPAIGN-4 TOURNAMENT](111-POST-CAMPAIGN4-FRONTIER-TOURNAMENT-V1.md)
-4. [112 CAMPAIGN 5 CHARTER](112-CAMPAIGN5-BOUNDARY-RECONFIGURATION-CHARTER-V1.md)
-5. [104 CAMPAIGN 3 CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-6. [98 CAMPAIGN 2 CLOSEOUT](98-CAMPAIGN2-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-7. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+2. [111 POST-CAMPAIGN-4 TOURNAMENT](111-POST-CAMPAIGN4-FRONTIER-TOURNAMENT-V1.md)
+3. [112 CAMPAIGN 5 CHARTER](112-CAMPAIGN5-BOUNDARY-RECONFIGURATION-CHARTER-V1.md)
+4. [113 CAMPAIGN 5 ROUND 1](113-CAMPAIGN5-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
+5. [110 CAMPAIGN 4 CLOSEOUT](110-CAMPAIGN4-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
-## Campaign 5 starting hypothesis
+## Campaign 5 — current theory
 
-For pre-configuration `B0`, transition `T`, post-configuration `B1`, and bounded Reconfiguration Use Contract `U`, the likely primitive is directional:
+Round 1 revises symmetric Boundary Equivalence into **Operational Preservation Under Reconfiguration (OPUR)**.
 
-`Preserves_U(B0 --T--> B1)`.
+Primitive:
 
-Candidate preservation dimensions are:
+`Preserves_U(B0 --T--> B1)`
 
-1. reference/subject;
-2. identity/continuation;
-3. Context obligations;
-4. authority/exposure;
-5. functional placement/mediation;
-6. realization standing;
-7. OCSS accountability;
-8. external owner claims.
+with typed obligation standings over reference, identity, Context, authority/exposure, functional placement, realization, OCSS accountability and external-owner claims.
 
-Same implementation, same output, same Run ID, same Context bytes or same capability names are not preaccepted equivalence criteria.
+Provisional laws:
+
+- **Reconfiguration Preservation is Use-Relative and Directional**;
+- **Valid Reconfiguration != Old-Contract Preservation**;
+- **Structural Sameness != Operational Preservation != Behavioral Agreement**;
+- **Run Identity != Reconfiguration Substitutability**;
+- **Cut Movement != Truth-Owner Transfer**;
+- **Reconfiguration Cannot Reset Unresolved Realization Standing**;
+- **Evidence Copy != Accountability Preservation**;
+- **Transition Lineage is Semantically First-Class**;
+- **Preservation Composition Requires Obligation Compatibility**.
+
+Current standing: `CRITERION_REVISED`, `NO_FOUNDATION_PRESSURE`.
 
 ## Continuity
 
