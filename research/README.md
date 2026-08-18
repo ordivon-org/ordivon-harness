@@ -4,11 +4,10 @@
 
 - Campaigns 1–6 completed.
 - FOR Direct Destructive Dogfood v1 completed with BOUNDED direct federation evidence.
-- Operational Claim Standing Engineering Consumption v0 completed.
-- **Operational Claim Standing Minimal Materialization v1 + E5-v2 completed.**
-- Final standing: `MATERIALIZATION_ADMITTED` + `E5V2_DIRECT_SUPPORT_IN_SCOPE`.
-- Current product now exposes ClaimRef / EvidenceRole / StandingView / pure projection value-layer surfaces.
-- No Claim registry/database/persistence migration was added.
+- Operational Claim Standing v0 + Minimal Materialization v1 + E5-v2 completed.
+- **Post-Claim-Standing-Materialization Frontier Tournament completed.**
+- **Selected empirical branch:** Campaign-4 Counterevidence / Rebuttal Direct Dogfood v1.
+- No production modification is selected for that branch; current Claim Standing public API is the falsification target.
 - No Campaign 7 theory selected.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - **NextHarnessResearchCampaign:** UNKNOWN.
@@ -16,26 +15,18 @@
 
 ## Recovery path
 
-1. [133 MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
-2. [132 MATERIALIZATION ACCEPTANCE CONTRACT](132-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-ACCEPTANCE-CONTRACT.md)
-3. [129 CLAIM STANDING REFERENCE CONTRACT](129-OPERATIONAL-CLAIM-STANDING-V0-REFERENCE-CONTRACT.md)
-4. [131 POST-CLAIM-STANDING TOURNAMENT](131-POST-CLAIM-STANDING-FRONTIER-TOURNAMENT-V1.md)
-5. [130 CLAIM STANDING RESEARCH CLOSEOUT](130-OPERATIONAL-CLAIM-STANDING-V0-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-6. [125 FOR DIRECT DOGFOOD RESULT](125-FOR-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+1. [134 POST-CLAIMMAT TOURNAMENT](134-POST-CLAIMMAT-FRONTIER-TOURNAMENT-V1.md)
+2. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
+3. [110 CAMPAIGN-4 CLOSEOUT](110-CAMPAIGN4-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+4. [109 CAMPAIGN-4 ENGINEERING DOGFOOD](109-CAMPAIGN4-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
+5. [129 CLAIM STANDING REFERENCE CONTRACT](129-OPERATIONAL-CLAIM-STANDING-V0-REFERENCE-CONTRACT.md)
 
-## Current Claim Standing product boundary
+## Current frontier decision
 
-Implemented:
+Claim Standing v1 makes one previously conceptual-only Campaign-4 frontier directly testable: rebuttal/counterevidence revision. The next branch will test support → visibility-without-admission → explicit counterevidence admission → conflict/history preservation, plus counterevidence-only and required-unknown cases.
 
-- `OperationalClaimRef`;
-- `OperationalClaimEvidenceRole`;
-- `OperationalClaimStandingView`;
-- `project_operational_claim_standing_view`.
-
-E5-v2 directly demonstrated one shared Q with subject-local evidence standing, visibility without adoption, explicit later B admission, immutable prior views and no registry dependency.
-
-Still not implemented: optional `OperationalClaimUseDisposition`. Still rejected/not required: global claim registry/database, owner truth lookup, automatic claim evaluation, mutable global Q.status.
+Causal/common-cause independence remains deferred because no first-class dependency/independence relation exists. Rich physical effects and provider/locus OPUR remain high-value but require stronger external-owner/direct transition evidence. Optional Claim UseDisposition remains dormant without concrete pressure.
 
 ## Continuity
 
-- `task:harness-operational-claim-standing-minimal-materialization-v1-20260819`
+- `task:harness-campaign4-counterevidence-rebuttal-direct-dogfood-v1-20260819` (to be opened after tournament durability)
