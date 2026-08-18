@@ -164,10 +164,11 @@ def tool_turn(subject: str) -> AgentTurnResult:
 
 
 def execution_binding(contract: HarnessRunContract, subject: str) -> HarnessExecutionBinding:
+    token = contract.digest[7:31]
     return HarnessExecutionBinding(
         harness_run_id=contract.harness_run_id,
         workspace_ref="workspace:for-direct:fake-shared-target",
-        assignment_id=f"assignment:for-direct:{subject}",
+        assignment_id=f"assignment:external:{token}",
         assignment_generation=1,
         assignment_digest=contract.digest,
         runtime_binding_digest=digest("runtime-binding:shared-fake"),
