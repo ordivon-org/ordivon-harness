@@ -69,6 +69,29 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
             "a57963c476d366aea0d73d96cddd223f3bd5dbaf",
         )
 
+    def test_legacy_embedded_binding_stays_exact(self) -> None:
+        entries = self._entries()
+        entry = next(item for item in entries.values() if "revisionBinding" not in item)
+        filename = str(entry["file"])
+        revision = str(entry["implementationRevision"])
+        receipt = json.loads((ROOT / "evidence" / filename).read_text(encoding="utf-8"))
+        validator = check_evidence._validate_embedded_revision_binding
+        self.assertEqual(validator(filename, receipt, revision), [])
+        errors = validator(filename, receipt, "0" * 40)
+        self.assertTrue(any("revision mismatch" in error for error in errors))
+
+    def test_verified_currentness_still_rejects_stale_implementation(self) -> None:
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "a57963c476d366aea0d73d96cddd223f3bd5dbaf"
+        )
+        self.assertFalse(current)
+        self.assertTrue(invalidating)
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "8925fdba026cdef4f9d8969fae244ee3e5e46730"
+        )
+        self.assertTrue(current)
+        self.assertEqual(invalidating, [])
+
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
         for _claim_id, (filename, _status, revision, _digest) in EXPECTED.items():

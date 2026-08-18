@@ -141,6 +141,21 @@ def _recognized_revision_hints(receipt: dict[str, object]) -> dict[str, str]:
     }
 
 
+def _validate_embedded_revision_binding(
+    filename: str,
+    receipt: dict[str, object],
+    revision: str,
+) -> list[str]:
+    observed = (
+        receipt.get("implementationSourceRevision")
+        or receipt.get("implementationRevision")
+        or receipt.get("sourceRevision")
+    )
+    if observed == revision:
+        return []
+    return [f"revision mismatch for {filename}: index={revision} receipt={observed}"]
+
+
 def main() -> int:
     errors: list[str] = []
     index_path = EVIDENCE / "index.json"
@@ -195,15 +210,7 @@ def main() -> int:
             errors.append(f"invalid JSON {filename}: {error}")
             continue
         if revision_binding == "embedded":
-            observed = (
-                receipt.get("implementationSourceRevision")
-                or receipt.get("implementationRevision")
-                or receipt.get("sourceRevision")
-            )
-            if observed != revision:
-                errors.append(
-                    f"revision mismatch for {filename}: index={revision} receipt={observed}"
-                )
+            errors.extend(_validate_embedded_revision_binding(filename, receipt, revision))
         elif revision_binding == "index-creation-lineage":
             errors.extend(_validate_index_creation_lineage_binding(filename, revision))
             for field, observed in _recognized_revision_hints(receipt).items():
