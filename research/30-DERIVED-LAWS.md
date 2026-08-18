@@ -35,6 +35,17 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Compensation != Prior Effect Erasure** — a later compensating operation/claim does not erase prior supported realization provenance.
 - **Reconciliation Settlement is Use-Relative and History-Preserving** — reconciliation may settle bounded downstream operation while preserving prior uncertainty/conflict/nonterminal evidence.
 
+## Accountability and assurance
+
+- **Accountability Graph is a Projection; Typed Claim Support is the Semantics** — graph topology/storage/reachability does not acquire support meaning without claim-relative typed relations.
+- **Provenance Validity != Evidential Bearing != Accountability Adequacy** — authentic origin, support relation and adequacy for a bounded accountability use are distinct.
+- **Support is Non-Transitive by Default** — support composition requires an explicit typed rule with compatible scope/owner semantics.
+- **Unknown Dependency != Independence** — missing dependency knowledge does not establish independent corroboration; independence is positively established only for a bounded criterion.
+- **Counterevidence / Required Unknowns are First-Class Accountability Content** — omission can make an accountability projection inadequate even when positive evidence is authentic.
+- **Operational Attribution is Typed Role Binding, not Normative Blame** — produced/observed/asserted/adopted/mediated roles do not imply liability or moral responsibility.
+- **Bounded Reproduction != Outcome Identity** — reconstructing/re-inspecting support basis/conditions does not guarantee identical model/world outcome.
+- **Support Cycles Do Not Self-Ground** — circular support relations require admissible grounding and valid composition.
+
 ## Control and evaluation
 
 - **Universal scalarization fails** across value, risk, priority, trust, uncertainty, progress and assurance without a declared interpretation/governance context.
@@ -56,10 +67,12 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 
 ## Campaign provenance
 
-Campaign 1 — Operational Identity Under Failure admitted the two recovery/identity laws after prebound destructive analysis, six-fixture dogfood and owner-boundary audit.
+Campaign 1 — Operational Identity Under Failure admitted two recovery/identity laws after prebound destructive analysis, six-fixture dogfood and owner-boundary audit.
 
 Campaign 2 — Operational Context Equivalence admitted five Context laws after prebound destructive analysis, seven-fixture dogfood and boundary/compatibility audit.
 
-Campaign 3 — Operational Effect Standing & Reconciliation (`task:harness-campaign3-operational-effect-standing-20260818`) admitted eight realization/effect laws after prebound destructive analysis, nine-fixture dogfood and boundary/Campaign-1/2 compatibility audit. Rich partial/delayed/compensating/interfering engineering evidence remains explicitly open.
+Campaign 3 — Operational Effect Standing & Reconciliation admitted eight realization/effect laws after prebound destructive analysis, nine-fixture dogfood and boundary/Campaign-1/2 compatibility audit. Rich partial/delayed/compensating/interfering engineering evidence remains explicitly open.
+
+Campaign 4 — Operational Accountability Graph / OCSS (`task:harness-campaign4-operational-accountability-20260819`) admitted eight accountability laws after prebound destructive analysis, thirteen-fixture dogfood and owner-boundary/Campaign-1/2/3 compatibility audit. General evidence-independence, rebuttal, support-cycle and cross-owner-composition engineering evidence remains explicitly open.
 
 No completed campaign changes HaF0–HaF61 Foundation standing.
