@@ -1,0 +1,123 @@
+{
+  "cases": {
+    "pr1AllowedScripted": {
+      "adapterClass": "ScriptedTurnAdapter",
+      "adapterFactoryCalls": 1,
+      "policyDigest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+      "policyRef": {
+        "digest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+        "kind": "provider-use-policy-v1",
+        "ref": "provider-use-policy:c5-provider-route-v1"
+      },
+      "route": {
+        "adapterId": "ordivon.scripted-turn-adapter.v1",
+        "providerId": "provider:scripted-local",
+        "requestedModelId": "ordivon.scripted-model.v1"
+      },
+      "standing": "R0_ADMITTED_UNDER_U",
+      "stateRootCreated": true,
+      "stopCode": "candidate_completed"
+    },
+    "pr2AllowedDeepSeekAdapter": {
+      "adapterClass": "DeepSeekTurnAdapter",
+      "adapterFactoryCalls": 1,
+      "policyDigest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+      "policyRef": {
+        "digest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+        "kind": "provider-use-policy-v1",
+        "ref": "provider-use-policy:c5-provider-route-v1"
+      },
+      "route": {
+        "adapterId": "deepseek.chat-completions.non-thinking.v1",
+        "providerId": "provider:deepseek-controlled",
+        "requestedModelId": "deepseek-v4-flash"
+      },
+      "standing": "R1_ADMITTED_UNDER_SAME_U",
+      "stateRootCreated": true,
+      "stopCode": "candidate_completed",
+      "transportRequests": 1
+    },
+    "pr3UnlistedRoute": {
+      "adapterFactoryCalls": 0,
+      "error": "Harness Provider route is not admitted for the Contract's restricted inputs",
+      "rejected": true,
+      "stateRootCreated": false
+    },
+    "pr4RestrictedDigestSubstitution": {
+      "adapterFactoryCalls": 0,
+      "error": "Harness Provider Use Policy restricts inputs not bound by the Run Contract: dataset:c5-provider-route:restricted",
+      "rejected": true,
+      "stateRootCreated": false
+    },
+    "pr5MissingPolicy": {
+      "adapterFactoryCalls": 0,
+      "error": "Harness Run Contract requires its exact Provider Use Policy",
+      "rejected": true,
+      "stateRootCreated": false
+    },
+    "pr5UnboundPolicy": {
+      "adapterFactoryCalls": 0,
+      "error": "Harness Provider Use Policy is supplied but not bound by the Run Contract",
+      "rejected": true,
+      "stateRootCreated": false
+    },
+    "pr6UseRelativeNonGlobal": {
+      "adapterFactoryCalls": 0,
+      "admittedUnderBroadPolicyDigest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+      "error": "Harness Provider route is not admitted for the Contract's restricted inputs",
+      "rejected": true,
+      "rejectedUnderNarrowPolicyDigest": "sha256:3cab19fff0780f194baf71c600706b65a16f0a29d2252a13ccd3279f0c9aa00e",
+      "stateRootCreated": false
+    }
+  },
+  "classification": "CAMPAIGN5_PROVIDER_ROUTE_PRESERVATION_DIRECT_SUPPORT_IN_SCOPE",
+  "evidenceLimits": [
+    "Controlled DeepSeek transport exercises production DeepSeekTurnAdapter mechanics but is not live-provider semantic evidence.",
+    "This proves exact provider-route policy preservation under one bounded U, not general provider implementation equivalence.",
+    "The current ProviderUsePolicy is route-membership based and does not itself materialize a directional reconfiguration transition object."
+  ],
+  "gates": {
+    "controlledDeepSeekTransportOnly": true,
+    "crossImplementationInvarianceClaimed": false,
+    "deepSeekAdapterRouteAdmitted": true,
+    "distinctAdapterImplementationsExercised": true,
+    "genericPreservesURequired": false,
+    "locusPreservationClaimed": false,
+    "missingBoundPolicyRejectedPreAdapterPreState": true,
+    "productionSourceModificationRequired": false,
+    "providerSemanticEquivalenceClaimed": false,
+    "restrictedDigestSubstitutionRejectedPreAdapterPreState": true,
+    "routeAdmissionUseRelativeNotGlobal": true,
+    "sameExactPolicyAcrossR0R1": true,
+    "scriptedRouteAdmitted": true,
+    "unboundPolicyInjectionRejectedPreAdapterPreState": true,
+    "unlistedRouteRejectedPreAdapterPreState": true
+  },
+  "kind": "ordivon.harness.campaign5-provider-route-preservation-v1-result",
+  "policy": {
+    "allowedRoutes": [
+      {
+        "adapterId": "deepseek.chat-completions.non-thinking.v1",
+        "providerId": "provider:deepseek-controlled",
+        "requestedModelId": "deepseek-v4-flash"
+      },
+      {
+        "adapterId": "ordivon.scripted-turn-adapter.v1",
+        "providerId": "provider:scripted-local",
+        "requestedModelId": "ordivon.scripted-model.v1"
+      }
+    ],
+    "kind": "ordivon.harness-provider-use-policy",
+    "policyId": "provider-use-policy:c5-provider-route-v1",
+    "restrictedInputs": [
+      {
+        "digest": "sha256:4b49ace705d365f9e268ccc36f5d80ca9f0173458fd33954a7f2e14feda122f9",
+        "kind": "restricted-dataset",
+        "ref": "dataset:c5-provider-route:restricted"
+      }
+    ],
+    "schemaVersion": 1
+  },
+  "policyDigest": "sha256:d0fc3378ac734e0d8fbf45ba27b16e7518b7bdebcda7e5e70e3478cd7023c000",
+  "schemaVersion": 1
+}
