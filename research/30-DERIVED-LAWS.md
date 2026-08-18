@@ -8,7 +8,7 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Truth Owner Separation** — mediation, storage, evidence or representation does not transfer external truth ownership into Harness.
 - **Local != Global** — local correctness/assurance/authorization/progress cannot be promoted globally without explicit composition assumptions.
 
-## Epistemic separation
+## Epistemic separation and Context
 
 - **RepresentationOrEvidence != Truth**.
 - **History != Cognition**.
@@ -16,6 +16,11 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Observation != Feedback** unless routed into a control relation.
 - **Unknown != probability 0.5**, and uncertainty has no universal scalar representation.
 - **Multiple artifacts != independent corroboration**; dependency/common-cause structure matters.
+- **Context Validity != Currentness != Sufficiency** — a Context may be grounded/valid yet stale, superseded, contradictory or insufficient for a bounded use.
+- **Durable Context Basis != Effective Decision Context** — durable selected Context is not identical to the Context admissibly exposed at a particular decision frontier; admitted transient cognition may alter effective Context without becoming durable basis.
+- **Context Sufficiency is Use-Contract and Horizon Relative** — sufficiency/equivalence are relative to explicit bounded operational obligations and continuation horizon, not intrinsic global properties of Context content.
+- **Context Superset != Context Dominance** — adding Context does not automatically increase validity, sufficiency or equivalence.
+- **Operational Context Equivalence != Agent Behavioral Equivalence** — mutual obligation-preserving substitution under one bounded use contract does not assert identical Agent/model decisions or world outcomes.
 
 ## Control and evaluation
 
@@ -40,4 +45,8 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 
 ## Campaign provenance
 
-The two recovery/identity laws above were admitted as derived project laws by Campaign 1 — Operational Identity Under Failure (`task:harness-campaign1-operational-identity-under-failure-20260818`) after prebound conceptual destructive analysis, six-fixture engineering dogfood and cross-owner boundary audit. They do not change HaF0–HaF61 Foundation standing.
+Campaign 1 — Operational Identity Under Failure admitted the two recovery/identity laws after prebound destructive analysis, six-fixture dogfood and owner-boundary audit.
+
+Campaign 2 — Operational Context Equivalence (`task:harness-campaign2-operational-context-equivalence-20260818`) admitted the five Context laws after prebound destructive analysis, seven-fixture dogfood and owner-boundary/Campaign-1 compatibility audit.
+
+Neither campaign changes HaF0–HaF61 Foundation standing.

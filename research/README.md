@@ -5,14 +5,12 @@ Current engineering contracts are downstream dogfood surfaces, not research onto
 ## Current project state
 
 - Campaign 1 completed: Operational Identity Under Failure.
-- Post-Campaign-1 Frontier Tournament completed.
-- **Campaign 2 active:** Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission.
-- Campaign 2 Charter durably prebound.
-- Round 1: `P2 -> P2'`, `CRITERION_REVISED`.
-- Round 2: 7/7 prebound dogfood fixtures PASS; `ENGINEERING_SUPPORT_IN_SCOPE`.
+- Campaign 2 completed: Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission.
+- Campaign 2 final standing: P2 revised to P2'; `SUPPORTED_IN_SCOPE`; `ENGINEERING_SUPPORT_IN_SCOPE`; `OWNER_BOUNDARIES_PRESERVED`; `NO_FOUNDATION_PRESSURE`.
 - HaF0–HaF61: frozen.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true.
+- **NextHarnessResearchCampaign:** UNKNOWN pending a new typed frontier decision.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Project-first recovery path
@@ -24,45 +22,62 @@ Current engineering contracts are downstream dogfood surfaces, not research onto
 5. [95 CAMPAIGN 2 ROUND 1](95-CAMPAIGN2-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
 6. [96 CAMPAIGN 2 ROUND 2 DOGFOOD CONTRACT](96-CAMPAIGN2-ROUND2-ENGINEERING-DOGFOOD-CONTRACT.md)
 7. [97 CAMPAIGN 2 ROUND 2 RESULT](97-CAMPAIGN2-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
-8. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-9. [15 RESEARCH PROGRAMME MAP](15-RESEARCH-PROGRAMME-MAP-V1.md)
-10. [60 HAF REGISTRY](60-HAF-REGISTRY-AND-PROVENANCE.md)
+8. [98 CAMPAIGN 2 CLOSEOUT](98-CAMPAIGN2-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+9. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+10. [15 RESEARCH PROGRAMME MAP](15-RESEARCH-PROGRAMME-MAP-V1.md)
+11. [60 HAF REGISTRY](60-HAF-REGISTRY-AND-PROVENANCE.md)
 
-## Campaign 2 — current theory
+## Campaign 1 result
 
-P2' separates:
+- **Recovery Validity != Run Identity != Resumability**.
+- **Lineage Ancestry != Continuation Identity**.
 
-1. **Context Projection Validity**;
-2. **Effective Decision Context**;
-3. **Decision Sufficiency** under a Context Use Contract;
-4. **Obligation-Preserving Substitution**;
-5. **Operational Context Equivalence** as mutual substitution under the same use contract/horizon.
+## Campaign 2 result
 
-Provisional derived-law candidates:
+Campaign 2 established a bounded technology-neutral relation stack:
+
+1. Context Projection Validity;
+2. Effective Decision Context;
+3. Decision Sufficiency under a Context Use Contract;
+4. directional Obligation-Preserving Substitution;
+5. Operational Context Equivalence as mutual substitution under the same use contract/horizon.
+
+Derived laws admitted:
 
 - **Context Validity != Currentness != Sufficiency**;
 - **Durable Context Basis != Effective Decision Context**;
 - **Context Sufficiency is Use-Contract and Horizon Relative**;
-- **Context Superset != Context Dominance**.
+- **Context Superset != Context Dominance**;
+- **Operational Context Equivalence != Agent Behavioral Equivalence**.
 
-Round 2 provides direct current-engineering support: materialized-but-unselected bytes do not become cognition; transient evidence changes lifetime across attempt boundaries; exact caller promotion changes what survives the next interaction; unchanged durable pins can still correspond to different effective Context; forged overlays/history fail before Provider dispatch.
+Campaign 2 dogfood ran seven prebound existing fixtures; 7/7 passed. The evidence directly supports projection validity, selection-vs-materialization, transient/durable horizon differences, caller-promotion lifetime, same-basis/different-effective-context, and authoritative history recall.
 
-No claim is made that equivalent Context guarantees the same model output or domain outcome.
+The final relation does not make Harness the owner of domain relevance/truth, model behavior, physical effect truth, Host Task continuity or normative legitimacy.
 
-Current standing: `CRITERION_REVISED` + `ENGINEERING_SUPPORT_IN_SCOPE` + `NO_FOUNDATION_PRESSURE`.
+Campaign 2 closes with `NO_FOUNDATION_PRESSURE`.
 
-Round 3 will audit owner boundaries and compatibility with Campaign 1 before closeout.
+## Post-Campaign-2 frontier
 
-## Open parallel/downstream frontiers
+Materially deepened:
+
+- Run Identity / Recovery Equivalence;
+- Context Equivalence / Sufficiency.
+
+Still open:
 
 - Rich Effect Semantics;
 - Operational Accountability Graph;
 - Boundary Reconfiguration Equivalence;
 - Multi-Agent / federated operational identity;
-- cross-implementation invariance.
+- cross-implementation invariance of Campaign 1/2 criteria;
+- owner/domain construction of explicit Context Use Contracts where task discriminants are not already formalized.
+
+No Campaign 3 is selected by inertia.
 
 ## Continuity
 
 - `task:harness-campaign1-operational-identity-under-failure-20260818`
 - `task:harness-post-campaign1-frontier-tournament-20260818`
 - `task:harness-campaign2-operational-context-equivalence-20260818`
+
+Recover from completed campaign closeouts and the latest explicit frontier-selection control, not from the largest HaF number.
