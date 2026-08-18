@@ -10,16 +10,15 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - Research Programme Map v1: materialized.
 - Frontier Audit v1: materialized.
 - First Campaign Selection Tournament v1: completed.
-- **Campaign 1 active:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
-- Campaign 1 Charter / Investigation Contract v1: durably prebound before analysis.
-- Campaign 1 Round 1 conceptual destructive reconstruction: complete; `P1 -> P1'` revised.
-- Campaign 1 Round 2 engineering dogfood: complete; `ENGINEERING_SUPPORT_IN_SCOPE` across prebound D1–D6.
+- **Campaign 1 completed:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
+- Campaign 1 final result: original P1 revised; P1' `SUPPORTED_IN_SCOPE`; owner boundaries preserved; `NO_FOUNDATION_PRESSURE`.
 - HaF0–HaF61: frozen exact identities preserved through registry/provenance.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true at the current evidence frontier.
 - WholeHarnessClosure / WholeHarnessExhaustion: NOT ESTABLISHED.
 - HaF51–HaF61 Operational Spine: cross-family operational view, **not** a higher Foundation tier.
-- **NextHarnessFoundationRoute:** UNKNOWN. Campaign activity does not imply Foundation admission.
+- **NextHarnessResearchCampaign:** UNKNOWN pending a new typed selection decision.
+- **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Project-first recovery path
 
@@ -36,10 +35,11 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 11. [89 CAMPAIGN 1 ROUND 1](89-CAMPAIGN1-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
 12. [90 CAMPAIGN 1 ROUND 2 DOGFOOD CONTRACT](90-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-CONTRACT.md)
 13. [91 CAMPAIGN 1 ROUND 2 RESULT](91-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
-14. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
-15. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
-16. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
-17. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
+14. [92 CAMPAIGN 1 BOUNDARY AUDIT + CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+15. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
+16. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
+17. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
+18. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
 
 ## Long-lived research programmes
 
@@ -51,25 +51,42 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 
 Cross-owner Runtime / Host / Network / Normative / Human / World-domain / Computing work is organized as owner-preserving bridge research rather than automatic Harness Foundation expansion.
 
-## Active Campaign 1 — current result
+## Campaign 1 result
 
-Round 1 revised the model to three independent axes:
+Campaign 1 established a technology-neutral recovery model with three independent questions:
 
-1. **Recovery Projection Standing** — valid / invalid / underdetermined reconstruction;
-2. **Identity Standing** — same Run / new Run required / identity unknown;
-3. **Continuation Standing** — safe continue / reconcile first / terminal unknown / insufficient evidence.
+1. **Recovery Projection Standing** — is the reconstructed state valid, invalid or underdetermined?
+2. **Identity Standing** — does it continue the same RunEpisode, require a new Run, or remain identity-unknown?
+3. **Continuation Standing** — may it safely continue, must it reconcile first, is it terminal/unknown, or is evidence insufficient?
 
-Round 2 then executed six prebound current-engineering fixtures. All six passed under the repository-canonical `uv run` environment. The strongest evidence shows that fresh-process recovery can reconstruct settled/pending Tool lineage without redoing completed Tool effects, while missing continuation content can block resume with zero new Runtime execution.
+It also established an explicit continuation-topology requirement: shared ancestry is not enough for same Run identity; one linear continuation cannot silently admit divergent successors.
 
-Current campaign standing:
+Two campaign results are now admitted as derived Harness laws:
 
-- P1': supported by conceptual + engineering evidence in the tested scope;
-- R1–R5: falsified in conceptual scope;
-- R6 implementation-defined identity: weakened but not fully falsified;
-- derived-law candidates: **Recovery Validity != Run Identity != Resumability** and **Lineage Ancestry != Continuation Identity**;
-- Foundation pressure: `NO_FOUNDATION_PRESSURE`.
+- **Recovery Validity != Run Identity != Resumability**.
+- **Lineage Ancestry != Continuation Identity**.
 
-Round 3 is a cross-owner boundary audit before closeout. Rich Effect Semantics, Context Equivalence, Multi-Agent mediation and Accountability remain separate frontiers.
+Round 2 ran six prebound dogfood fixtures under the canonical `uv run` environment; all six passed. The implementation evidence supports the revised criterion in scope but does not prove universal cross-implementation invariance. R6 (implementation-defined identity) is weakened, not fully falsified.
+
+Campaign 1 closes with `NO_FOUNDATION_PRESSURE`; HaF62 remains unknown/not admitted.
+
+## Post-Campaign 1 frontier
+
+Materially deepened:
+
+- Run Identity Equivalence;
+- Recovery Equivalence.
+
+Still open:
+
+- Context Equivalence / Sufficiency;
+- Rich Effect Semantics;
+- Operational Accountability Graph;
+- Boundary Reconfiguration Equivalence;
+- Multi-Agent / federated operational identity;
+- cross-implementation invariance of the Campaign 1 criterion.
+
+No next campaign is selected by inertia.
 
 ## Historical materialization authority
 
@@ -86,4 +103,4 @@ Project control continuity:
 - `task:harness-first-campaign-selection-tournament-20260818`
 - `task:harness-campaign1-operational-identity-under-failure-20260818`
 
-Do not recover future Harness research by resuming from the largest HaF number. Recover from the Constitution + Programme Map + Frontier Audit + latest tournament/campaign control, then descend to exact HaF provenance only when needed.
+Do not recover future Harness research by resuming from the largest HaF number. Recover from the Constitution + Programme Map + Frontier Audit + completed campaign closeouts + latest selection control, then descend to exact HaF provenance only when needed.
