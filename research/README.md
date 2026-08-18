@@ -10,13 +10,14 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - Research Programme Map v1: materialized.
 - Frontier Audit v1: materialized.
 - First Campaign Selection Tournament v1: completed.
+- **Campaign 1 active:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
+- Campaign 1 Charter / Investigation Contract v1: prebound before dogfood.
 - HaF0–HaF61: frozen exact identities preserved through registry/provenance.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true at the current evidence frontier.
 - WholeHarnessClosure / WholeHarnessExhaustion: NOT ESTABLISHED.
 - HaF51–HaF61 Operational Spine: cross-family operational view, **not** a higher Foundation tier.
-- **NextHarnessResearchCampaign:** Operational Identity Under Failure — Run Identity & Recovery Equivalence.
-- **NextHarnessFoundationRoute:** UNKNOWN. Campaign selection does not imply Foundation admission.
+- **NextHarnessFoundationRoute:** UNKNOWN. Campaign activity does not imply Foundation admission.
 
 ## Project-first recovery path
 
@@ -29,10 +30,11 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 7. [40 CROSS-OWNER-BRIDGES](40-CROSS-OWNER-BRIDGES.md)
 8. [85 FRONTIER AUDIT v1](85-FRONTIER-AUDIT-V1.md)
 9. [87 FIRST CAMPAIGN SELECTION TOURNAMENT v1](87-FIRST-CAMPAIGN-SELECTION-TOURNAMENT-V1.md)
-10. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
-11. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
-12. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
-13. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
+10. [88 CAMPAIGN 1 CHARTER v1](88-CAMPAIGN1-OPERATIONAL-IDENTITY-UNDER-FAILURE-CHARTER-V1.md)
+11. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
+12. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
+13. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
+14. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
 
 ## Long-lived research programmes
 
@@ -44,9 +46,11 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 
 Cross-owner Runtime / Host / Network / Normative / Human / World-domain / Computing work is organized as owner-preserving bridge research rather than automatic Harness Foundation expansion.
 
-## Selected first post-Constitution campaign
+## Active Campaign 1
 
-**Operational Identity Under Failure — Run Identity & Recovery Equivalence** was selected by typed tournament rather than a scalar score. It pairs Run Identity with Recovery because recovery requires a same-operation criterion while failure/recovery supplies the strongest destructive test of that criterion.
+**Operational Identity Under Failure — Run Identity & Recovery Equivalence** studies when recovery preserves the same Harness RunEpisode and separately whether continuation is safe, requires reconciliation, or must terminate/remain unknown.
+
+Its evaluator deliberately separates **Identity Standing** (`SAME_RUN / NEW_RUN_REQUIRED / IDENTITY_UNKNOWN`) from **Continuation Standing** (`SAFE_CONTINUE / RECONCILE_FIRST / TERMINAL_UNKNOWN / INSUFFICIENT_EVIDENCE`).
 
 Rich Effect Semantics, Context Equivalence, Multi-Agent mediation and Accountability remain separate frontiers. Campaign 1 may use narrow uncertain-effect or Context-change fixtures but may not annex those full theories.
 
@@ -63,5 +67,6 @@ Project control continuity:
 
 - `task:harness-agent-operational-mediation-project-20260818`
 - `task:harness-first-campaign-selection-tournament-20260818`
+- `task:harness-campaign1-operational-identity-under-failure-20260818`
 
 Do not recover future Harness research by resuming from the largest HaF number. Recover from the Constitution + Programme Map + Frontier Audit + latest tournament/campaign control, then descend to exact HaF provenance only when needed.
