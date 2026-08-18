@@ -3,11 +3,10 @@
 ## Current project state
 
 - Campaigns 1–6 completed.
-- Post-Campaign-6 Frontier Tournament v1 completed.
-- **Selected empirical branch:** FOR Direct Destructive Dogfood v1 — Two-Subject Federation Falsification / Evidence Acquisition.
-- **No Campaign 7 theory selected.**
+- **Active empirical branch:** FOR Direct Destructive Dogfood v1 — Two-Subject Federation Falsification / Evidence Acquisition.
+- Experiment contract E1–E6 prebound before fixture construction.
+- No Campaign 7 theory selected.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
-- FoundationExpansionPause: true.
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
@@ -16,16 +15,21 @@
 1. [30 DERIVED LAWS](30-DERIVED-LAWS.md)
 2. [122 CAMPAIGN 6 CLOSEOUT](122-CAMPAIGN6-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 3. [123 POST-CAMPAIGN-6 TOURNAMENT](123-POST-CAMPAIGN6-FRONTIER-TOURNAMENT-V1.md)
-4. [121 CAMPAIGN 6 ADJACENT DOGFOOD RESULT](121-CAMPAIGN6-ROUND2-ADJACENT-ENGINEERING-DOGFOOD-RESULT.md)
+4. [124 FOR DIRECT DOGFOOD EXPERIMENT CONTRACT](124-FOR-DIRECT-DOGFOOD-V1-EXPERIMENT-CONTRACT.md)
 
-## Post-Campaign-6 decision
+## Direct dogfood contract
 
-The dominant frontier is now empirical rather than theoretical. FOR has substantial conceptual structure but no direct true-federation engineering evidence.
+Prebound cases:
 
-A feasibility probe confirmed that current public Harness APIs can instantiate two independent bounded Runs on separate state roots with distinct Run identities without production changes. Therefore the next work is a prebound direct two-subject destructive dogfood branch, not Campaign 7 theory.
+- E1 shared objective / distinct local Runs;
+- E2 local completion while peer remains needs-input;
+- E3 A-derived evidence visible to B but not adopted;
+- E4 explicit B adoption of exact A-derived evidence;
+- E5 shared Realization Claim / local evidence asymmetry — currently expected to expose a generic claim-standing engineering gap rather than be faked in fixture code;
+- E6 two real Tool-bearing subjects issue distinct safe fake-runtime Invocations against the same capability/query.
 
-Initial direct targets: shared work/distinct Runs, local completion scope, delivery-vs-adoption, explicit evidence adoption, shared claim/local evidence asymmetry, and safe duplicate-Invocation pressure where existing primitives permit it.
+Production code changes are forbidden for this branch. Experimental code is confined to `research/experiments/`.
 
 ## Continuity
 
-- `task:harness-for-direct-federation-dogfood-v1-20260819` (to be opened after tournament durability)
+- `task:harness-for-direct-federation-dogfood-v1-20260819`
