@@ -9,10 +9,10 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - Project Constitution v1: materialized.
 - Research Programme Map v1: materialized.
 - Frontier Audit v1: materialized.
-- First Campaign Selection Tournament v1: completed.
 - Campaign 1 completed: Operational Identity Under Failure — Run Identity & Recovery Equivalence.
 - Post-Campaign-1 Frontier Tournament v1: completed.
-- **Selected Campaign 2:** Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission.
+- **Campaign 2 active:** Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission.
+- Campaign 2 Charter / Investigation Contract v1: prebound before destructive analysis.
 - HaF0–HaF61: frozen exact identities preserved through registry/provenance.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true at the current evidence frontier.
@@ -31,16 +31,13 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 7. [40 CROSS-OWNER-BRIDGES](40-CROSS-OWNER-BRIDGES.md)
 8. [85 FRONTIER AUDIT v1](85-FRONTIER-AUDIT-V1.md)
 9. [87 FIRST CAMPAIGN SELECTION TOURNAMENT v1](87-FIRST-CAMPAIGN-SELECTION-TOURNAMENT-V1.md)
-10. [88 CAMPAIGN 1 CHARTER v1](88-CAMPAIGN1-OPERATIONAL-IDENTITY-UNDER-FAILURE-CHARTER-V1.md)
-11. [89 CAMPAIGN 1 ROUND 1](89-CAMPAIGN1-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
-12. [90 CAMPAIGN 1 ROUND 2 DOGFOOD CONTRACT](90-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-CONTRACT.md)
-13. [91 CAMPAIGN 1 ROUND 2 RESULT](91-CAMPAIGN1-ROUND2-ENGINEERING-DOGFOOD-RESULT.md)
-14. [92 CAMPAIGN 1 BOUNDARY AUDIT + CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-15. [93 POST-CAMPAIGN-1 FRONTIER TOURNAMENT v1](93-POST-CAMPAIGN1-FRONTIER-TOURNAMENT-V1.md)
-16. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
-17. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
-18. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
-19. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
+10. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+11. [93 POST-CAMPAIGN-1 FRONTIER TOURNAMENT v1](93-POST-CAMPAIGN1-FRONTIER-TOURNAMENT-V1.md)
+12. [94 CAMPAIGN 2 CHARTER v1](94-CAMPAIGN2-OPERATIONAL-CONTEXT-EQUIVALENCE-CHARTER-V1.md)
+13. [50 ENGINEERING-CONSUMPTION-MAP](50-ENGINEERING-CONSUMPTION-MAP.md)
+14. [60 HAF-REGISTRY-AND-PROVENANCE](60-HAF-REGISTRY-AND-PROVENANCE.md)
+15. [70 HISTORY-NEGATIVE-RESULTS-AND-REPAIRS](70-HISTORY-NEGATIVE-RESULTS-AND-REPAIRS.md)
+16. [80 OPEN-FRONTIER-AND-REOPEN](80-OPEN-FRONTIER-AND-REOPEN.md)
 
 ## Long-lived research programmes
 
@@ -50,62 +47,35 @@ This research root does **not** replace product `README.md` / `ARCHITECTURE.md`,
 - **D — Operational Identity & Recovery**
 - **E — Accountability & Assurance**
 
-Cross-owner Runtime / Host / Network / Normative / Human / World-domain / Computing work is organized as owner-preserving bridge research rather than automatic Harness Foundation expansion.
-
 ## Campaign 1 result
 
-Campaign 1 established a three-stage recovery model separating Recovery Projection Standing, Run Identity Standing and Continuation Standing, plus explicit continuation topology.
+Campaign 1 established:
 
-Two campaign results are admitted as derived Harness laws:
-
-- **Recovery Validity != Run Identity != Resumability**.
+- **Recovery Validity != Run Identity != Resumability**;
 - **Lineage Ancestry != Continuation Identity**.
 
-Campaign 1 closed with `NO_FOUNDATION_PRESSURE`; HaF62 remained unknown/not admitted.
+It closed with `NO_FOUNDATION_PRESSURE`.
 
-## Post-Campaign-1 selection result
+## Active Campaign 2
 
-The tournament found that Context Equivalence/Sufficiency has become the current project bottleneck because Campaign 1 already depends on provenance-preserving Context change while deliberately leaving general Context Equivalence unresolved.
+Campaign 2 does not assume Context Equivalence is primitive. It prebinds a relation stack:
 
-Selected Campaign 2:
+1. **Context Projection Standing** — is the Context projection valid?
+2. **Decision Sufficiency Standing** — is it sufficient for a bounded decision frontier/horizon?
+3. **Directional Safe Substitution** — may `C2` replace `C1` for that frontier?
+4. **Operational Context Equivalence** — provisional mutual safe substitution under the same frontier/horizon.
 
-**Operational Context Equivalence — Decision-Sufficient Views, Provenance & Safe Omission**.
+The campaign explicitly rejects byte equality, model-output equality, superset monotonicity, provenance blindness and task-independent global semantic equivalence as default criteria.
 
-Rich Effect Semantics remains an independent high-value parallel frontier. Operational Accountability, Boundary Reconfiguration and Multi-Agent/Federated identity are deferred because each consumes a sharper Context relation. Cross-implementation invariance is retained as a falsification dimension rather than selected as a standalone campaign with insufficient independent evidence sources.
-
-## Post-Campaign 1 frontier
-
-Materially deepened:
-
-- Run Identity Equivalence;
-- Recovery Equivalence.
-
-Selected for next deepening:
-
-- Context Equivalence / Sufficiency.
-
-Still open:
-
-- Rich Effect Semantics;
-- Operational Accountability Graph;
-- Boundary Reconfiguration Equivalence;
-- Multi-Agent / federated operational identity;
-- cross-implementation invariance of Campaign-1 and future criteria.
+Rich Effect Semantics remains parallel. Accountability, Boundary Reconfiguration and Multi-Agent/Federated identity remain downstream/open rather than absorbed into Campaign 2.
 
 ## Historical materialization authority
 
-The frozen research core below this project layer was reconciled/materialized from:
-
-- `task:ordivon-research-core-consolidation-mainline-20260818`
-- `task:harness-research-core-consolidation-branch-20260818` rev3 completed
-- `task:harness-research-materialization-repair-20260818` rev3 completed
-- materialized research base `cbd606ae655522fac10798889086d9bbcfa8c193`
-
-Project control continuity:
+Frozen research provenance remains in the registry/history surfaces. Project continuity:
 
 - `task:harness-agent-operational-mediation-project-20260818`
-- `task:harness-first-campaign-selection-tournament-20260818`
 - `task:harness-campaign1-operational-identity-under-failure-20260818`
 - `task:harness-post-campaign1-frontier-tournament-20260818`
+- `task:harness-campaign2-operational-context-equivalence-20260818`
 
-Do not recover future Harness research by resuming from the largest HaF number. Recover from Constitution + Programme Map + Frontier Audit + completed campaign closeouts + latest selection control, then descend to exact HaF provenance only when needed.
+Do not recover future Harness research from the largest HaF number. Recover from Constitution + Programme Map + completed campaign closeouts + latest active campaign control.
