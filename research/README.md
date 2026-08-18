@@ -19,26 +19,32 @@
 - `OperationalClaimUseDisposition` remains research-approved but unimplemented; no real downstream Claim Standing settlement consumer has appeared.
 - No Campaign 7 theory selected.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
-- **SelectedHarnessEngineeringBranch:** Evidence Index Typed Ingestion & Currentness Repair v1 (selected by Tournament 146).
+- Evidence Index Typed Ingestion & Currentness Repair v1 completed with `EVIDENCE_INDEX_TYPED_INGESTION_CURRENTNESS_REPAIR_ACCEPTED`.
+- Current evidence contract preserves legacy embedded receipt binding and adds explicit `index-creation-lineage` binding for immutable research projections without rewriting frozen evidence bytes.
+- Evidence index currently classifies 70 entries as historical and 1 as verified; historical implementation status does not erase bounded research standing owned by research closeouts.
+- Extra wheel smoke exposed a separate release-currentness gap: `scripts/check_wheel.py` still expects the pre-Claim-Standing public API and is missing four already-public Claim Standing exports. This is not an Evidence Index repair falsifier and must enter the next typed tournament as independent direct engineering pressure.
+- **SelectedHarnessEngineeringBranch:** UNKNOWN pending fresh typed tournament.
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Recovery path
 
-1. [146 POST-NO-TOOL-REPAIR TYPED FRONTIER TOURNAMENT](146-POST-NO-TOOL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
-2. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
-3. [144 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR CONTRACT](144-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-CONTRACT.md)
-4. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
-5. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-6. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
-7. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
-8. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-9. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
-10. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
-11. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-12. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
-13. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-14. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+1. [148 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR RESULT](148-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+2. [147 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR CONTRACT](147-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-CONTRACT.md)
+3. [146 POST-NO-TOOL-REPAIR TYPED FRONTIER TOURNAMENT](146-POST-NO-TOOL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
+4. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+5. [144 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR CONTRACT](144-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-CONTRACT.md)
+6. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
+7. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+8. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
+9. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
+10. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+11. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
+12. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
+13. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+14. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
+15. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+16. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
 ## Current no-Tool conclusion/control currentness update
 
@@ -57,11 +63,11 @@ The current proof boundary is now post-contraction and permanent:
 
 Currentness law exposed: **Historical Task Completed != Current Product Property after later semantic contraction unless the property is revalidated against current source.**
 
-## Evidence/currentness branch selected by Tournament 146
+## Evidence/currentness repair outcome
 
-The current release evidence gate is intentionally fail-closed and is currently red for two reasons: one stale `verified` TS11 receipt has not been demoted after later source changes, and four newer immutable research/direct-evidence JSON files were never ingested into `evidence/index.json`.
+Tournament 146 rejected a second generic semantic-law/test-retention registry and selected repair of the existing evidence/file correspondence + revision-binding contract. Repair 147/148 is now complete: TS11 was demoted from stale `verified` to `historical`, four newer immutable evidence objects were ingested, and `index-creation-lineage` provides explicit Git-lineage/currentness binding without rewriting frozen evidence bytes.
 
-Tournament 146 rejected a second generic semantic-law/test-retention registry. The selected repair instead evolves the existing evidence/file correspondence + revision-binding contract so immutable research projections may use an explicit index/Git-lineage revision binding without rewriting frozen evidence bytes. Existing self-identifying receipts keep their current embedded-revision behavior and strict verified-currentness invalidation.
+Legacy self-identifying receipts retain embedded revision binding and strict verified-currentness invalidation. The current evidence contract is green at 70 historical / 1 verified. An additional wheel smoke independently exposed a stale `scripts/check_wheel.py` public-API expectation; that separate release-currentness pressure remains for the next typed tournament.
 
 ## Campaign-3 currentness update
 
