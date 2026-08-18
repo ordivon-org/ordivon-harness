@@ -22,12 +22,23 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Context Superset != Context Dominance** — adding Context does not automatically increase validity, sufficiency or equivalence.
 - **Operational Context Equivalence != Agent Behavioral Equivalence** — mutual obligation-preserving substitution under one bounded use contract does not assert identical Agent/model decisions or world outcomes.
 
+## Action, effect and realization evidence
+
+- **Selection != authorization != dispatch != effect != result != semantic success**.
+- **ToolIntent != PhysicalEffect != SemanticSuccess**.
+- **Realization Standing is Claim-Scope and Evidence Relative** — Harness evaluates explicit bounded realization claims from admissible evidence rather than owning one global world Effect variable.
+- **Dispatch Standing != Realization Claim Standing** — crossing an external dispatch boundary and supporting an external realization proposition are distinct.
+- **No Receipt != No Effect != Retry Permission** — missing terminal evidence after dispatch establishes neither non-realization nor universal permission to repeat.
+- **Local Terminality != External Causal Finality != Semantic Success** — local/issuer-owned terminal standing can coexist with unresolved broader consequences and domain failure/unknown.
+- **Partial Realization is Scoped Mixed Claim Standing** — absent an owner-defined aggregate, partiality is mixed evidence standing over explicit scoped claims rather than one universal completion scalar.
+- **Invocation Cardinality != External Realization Cardinality** — Harness logical Invocation identity/fencing does not universally determine the number of external realization events.
+- **Compensation != Prior Effect Erasure** — a later compensating operation/claim does not erase prior supported realization provenance.
+- **Reconciliation Settlement is Use-Relative and History-Preserving** — reconciliation may settle bounded downstream operation while preserving prior uncertainty/conflict/nonterminal evidence.
+
 ## Control and evaluation
 
 - **Universal scalarization fails** across value, risk, priority, trust, uncertainty, progress and assurance without a declared interpretation/governance context.
 - **Typed relation over scalar score** is the default when the underlying concept has distinct dimensions or authority sources.
-- **Selection != authorization != dispatch != effect != result != semantic success**.
-- **ToolIntent != PhysicalEffect != SemanticSuccess**.
 
 ## Change, lifecycle and recovery
 
@@ -47,6 +58,8 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 
 Campaign 1 — Operational Identity Under Failure admitted the two recovery/identity laws after prebound destructive analysis, six-fixture dogfood and owner-boundary audit.
 
-Campaign 2 — Operational Context Equivalence (`task:harness-campaign2-operational-context-equivalence-20260818`) admitted the five Context laws after prebound destructive analysis, seven-fixture dogfood and owner-boundary/Campaign-1 compatibility audit.
+Campaign 2 — Operational Context Equivalence admitted five Context laws after prebound destructive analysis, seven-fixture dogfood and boundary/compatibility audit.
 
-Neither campaign changes HaF0–HaF61 Foundation standing.
+Campaign 3 — Operational Effect Standing & Reconciliation (`task:harness-campaign3-operational-effect-standing-20260818`) admitted eight realization/effect laws after prebound destructive analysis, nine-fixture dogfood and boundary/Campaign-1/2 compatibility audit. Rich partial/delayed/compensating/interfering engineering evidence remains explicitly open.
+
+No completed campaign changes HaF0–HaF61 Foundation standing.
