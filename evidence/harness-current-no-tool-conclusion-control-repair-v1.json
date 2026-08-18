@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.current-no-tool-conclusion-control-repair-v1",
+  "classification": "CURRENT_NO_TOOL_CONCLUSION_CONTROL_REPAIR_ACCEPTED",
+  "startingCanonicalHead": "ee413f7af20e126656fa03c40e2cde56138c7e4c",
+  "historicalFalsifierSourceRevision": "6b4cc7724c83061a03fdb85df0003e9b4bff8d26",
+  "historicalFalsifierSha256": "4968d9c391bd5f425e8e45326132b45a45647080616d918f207ee101f7df6147",
+  "prebindCommit": "603cf0c9b6a1aa0bbe0d4c26ccaa80a99fb83fc6",
+  "repairCommit": "8925fdba026cdef4f9d8969fae244ee3e5e46730",
+  "baselineRed": {
+    "jobId": "job-01a01678-29f7-7782-b0c1-113ca765b999",
+    "tests": 7,
+    "passed": 1,
+    "failures": 4,
+    "errors": 2,
+    "classification": "CURRENT_NO_TOOL_CONCLUSION_CONTROL_REGRESSION_REPRODUCED"
+  },
+  "focusedRepairAcceptance": {
+    "jobId": "job-01a01679-acc0-7310-b122-72e5461cf62f",
+    "tests": 7,
+    "passed": 7,
+    "failures": 0,
+    "errors": 0
+  },
+  "currentCompatibilityGuards": {
+    "jobId": "job-01a01679-f9f7-7363-866d-1dab27e864df",
+    "tests": 23,
+    "passed": 23,
+    "modules": [
+      "tests.test_conclusion_correction_separation",
+      "tests.test_deepseek_mixed_turn",
+      "tests.test_p0_sqlite_agent_loop",
+      "tests.test_p0_standalone_runner"
+    ]
+  },
+  "repositoryGates": {
+    "jobId": "job-01a0167a-51fa-7141-ad79-3a5a96467a1c",
+    "diffCheck": "passed",
+    "documentationContract": "valid",
+    "dependencyContract": "valid",
+    "publicApiTests": 6,
+    "publicApiStatus": "OK"
+  },
+  "ruff": {
+    "jobId": "job-01a0167a-7f2c-78d0-a28c-7238664c4428",
+    "version": "0.15.17",
+    "status": "All checks passed"
+  },
+  "fullAcceptance": {
+    "jobId": "job-01a0167a-c807-7343-8e40-24d6f08bb6d3",
+    "tests": 444,
+    "status": "OK",
+    "skipped": 3,
+    "elapsedSeconds": 95.208
+  },
+  "scopeAudit": {
+    "jobId": "job-01a0167c-996f-7d80-b77b-96ab5fcd93db",
+    "sourceChangedPaths": [
+      "src/ordivon_harness/ordivon/loop.py"
+    ],
+    "sourceInsertions": 108,
+    "sourceDeletions": 0,
+    "sqliteHarnessAgentBridgeChanged": false,
+    "providerToolContinuationPresentInCurrentSourceOrTests": false,
+    "newPersistenceSchema": false,
+    "newAuthorityPlane": false
+  },
+  "acceptedLaws": {
+    "malformedHarnessConclusionControlIsNotRuntimeToolHistory": true,
+    "unavailableNoToolProviderActionIsCorrectionNotRuntimeToolHistory": true,
+    "multipleUnavailableActionsConsumeOneTurnCorrection": true,
+    "repeatedUnavailableTurnsAreBoundedByToolCorrections": true,
+    "repeatedMalformedConclusionsAreBoundedByConclusionCorrections": true,
+    "mixedActionConflictRemainsExplicit": true,
+    "strictNoToolBridgeRemainsStrict": true,
+    "toolAndConclusionCorrectionBudgetsRemainIndependent": true
+  },
+  "explicitNonClaims": [
+    "ProviderToolContinuation is not restored or supported by this repair.",
+    "No generic Provider continuation/session machinery is admitted.",
+    "No Campaign 7 or HaF62 is created.",
+    "The repair does not expand Runtime Tool authority for no-Tool Runs."
+  ]
+}

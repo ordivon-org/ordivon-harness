@@ -11,28 +11,50 @@
 - Campaign-5 Provider-Route Preservation Direct Dogfood v1 completed with `CAMPAIGN5_PROVIDER_ROUTE_PRESERVATION_DIRECT_SUPPORT_IN_SCOPE`.
 - Current Campaign-5 direct evidence now covers one exact `HarnessProviderUsePolicy` across genuinely distinct Scripted/DeepSeek adapter routes, pre-adapter/pre-state rejection of unlisted routes, exact restricted-byte binding, exact Contract↔policy binding, and use-relative/non-global route admission.
 - Full directional `Preserves_U(B0 -> B1)` remains open because current ProviderUsePolicy is route-membership based rather than a first-class transition relation.
+- Current No-Tool Conclusion-Control Regression Reopen & Repair v1 completed with `CURRENT_NO_TOOL_CONCLUSION_CONTROL_REPAIR_ACCEPTED`.
+- Current no-Tool coverage now permanently includes seven post-contraction falsifiers: malformed structured/JSON conclusion correction, mixed-action conflict, single/multiple unavailable action correction, repeated unavailable-turn exhaustion, and repeated malformed-conclusion exhaustion.
+- Strict `SQLiteHarnessAgentBridge` no-Tool authority remained unchanged; `ProviderToolContinuation` was not restored.
 - General locus migration/internalization remain unselected; fresh Workstation observations provide real negative locus pressure but no before→after transition pair.
 - Causal/common-cause independence, support cycles and cross-owner support composition remain without direct proof.
-- `OperationalClaimUseDisposition` remains research-approved but unimplemented; rich-effect dogfood did not create a real downstream settlement consumer.
+- `OperationalClaimUseDisposition` remains research-approved but unimplemented; no real downstream Claim Standing settlement consumer has appeared.
 - No Campaign 7 theory selected.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
-- **SelectedHarnessEngineeringBranch:** Current No-Tool Conclusion-Control Regression Reopen & Repair v1 (selected by Tournament 143).
+- **SelectedHarnessEngineeringBranch:** UNKNOWN pending fresh typed tournament.
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Recovery path
 
-1. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
-2. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-3. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
-4. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
-5. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-6. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
-7. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
-8. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-9. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
-10. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-11. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+1. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+2. [144 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR CONTRACT](144-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-CONTRACT.md)
+3. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
+4. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+5. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
+6. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
+7. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+8. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
+9. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
+10. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+11. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
+12. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+13. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+
+## Current no-Tool conclusion/control currentness update
+
+Historical P6 correctly proved and repaired the no-Tool conclusion/control failure at its own revision. Later contraction removed unearned Provider-continuation machinery and also removed the dedicated P6 falsifier file, so Host task completion could no longer be treated as current product proof without revalidation.
+
+Tournament 143 ran the exact historical seven-test file unchanged against current post-contraction source and found 6/7 red. Repair 144/145 then restored only the two causal Loop pre-classification boundaries: malformed Harness-native conclusion control is handled through `conclusionCorrections`, while unavailable Provider actions on a genuinely no-Tool surface are handled as bounded model-correctable action rejection before any Runtime Tool-history authority is created.
+
+The current proof boundary is now post-contraction and permanent:
+
+- pre-repair focused state: 1 pass / 4 failures / 2 errors;
+- post-repair focused state: 7/7 pass;
+- current compatibility guards: 23/23 pass;
+- full current suite: 444 tests OK, 3 skipped;
+- strict no-Tool bridge source: unchanged;
+- `ProviderToolContinuation`: absent from current source/tests.
+
+Currentness law exposed: **Historical Task Completed != Current Product Property after later semantic contraction unless the property is revalidated against current source.**
 
 ## Campaign-3 currentness update
 
