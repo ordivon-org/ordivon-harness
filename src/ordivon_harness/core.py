@@ -18,6 +18,12 @@ from .core_contracts import (
     HarnessRunContract,
     STRUCTURED_COMPLETION_MODE,
 )
+from .claim_standing import (
+    OperationalClaimEvidenceRole,
+    OperationalClaimRef,
+    OperationalClaimStandingView,
+    project_operational_claim_standing_view,
+)
 from .execution_binding import (
     HarnessExecutionBinding,
     HarnessRuntimeReference,
@@ -241,6 +247,9 @@ __all__ = [
     "IndependentRunRecorder",
     "NativeRunAbandonment",
     "NativeRunRecoveryAssessment",
+    "OperationalClaimEvidenceRole",
+    "OperationalClaimRef",
+    "OperationalClaimStandingView",
     "OrdivonAgentLoop",
     "RunBudget",
     "RunStopCode",
@@ -265,6 +274,7 @@ __all__ = [
     "decode_structured_completion_result",
     "find_runtime_jobs_by_client_request",
     "package_version",
+    "project_operational_claim_standing_view",
     "restore_harness_backup",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",

@@ -38,6 +38,9 @@ EXPECTED_API = {
     "HarnessPriorAttemptEvidence",
     "HarnessStrategyEvidence",
     "HarnessStrategySelectionContext",
+    "OperationalClaimEvidenceRole",
+    "OperationalClaimRef",
+    "OperationalClaimStandingView",
     "AgentToolDefinition",
     "DomainToolBridge",
     "DomainToolCatalog",
@@ -80,6 +83,7 @@ EXPECTED_API = {
     "compile_harness_selected_attempt",
     "decode_structured_completion_result",
     "derive_harness_mandate_consumption",
+    "project_operational_claim_standing_view",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",
 }
