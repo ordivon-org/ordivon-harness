@@ -23,13 +23,14 @@
 - Current evidence contract preserves legacy embedded receipt binding and adds explicit `index-creation-lineage` binding for immutable research projections without rewriting frozen evidence bytes.
 - Evidence index currently classifies 70 entries as historical and 1 as verified; historical implementation status does not erase bounded research standing owned by research closeouts.
 - Extra wheel smoke exposed a separate release-currentness gap: `scripts/check_wheel.py` still expects the pre-Claim-Standing public API and is missing four already-public Claim Standing exports. This is not an Evidence Index repair falsifier and must enter the next typed tournament as independent direct engineering pressure.
-- **SelectedHarnessEngineeringBranch:** UNKNOWN pending fresh typed tournament.
+- **SelectedHarnessEngineeringBranch:** Wheel Public API Contract Currentness Repair v1 (selected by Tournament 149).
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
 ## Recovery path
 
-1. [148 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR RESULT](148-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+1. [149 POST-EVIDENCE-REPAIR TYPED FRONTIER TOURNAMENT](149-POST-EVIDENCE-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
+2. [148 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR RESULT](148-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
 2. [147 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR CONTRACT](147-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-CONTRACT.md)
 3. [146 POST-NO-TOOL-REPAIR TYPED FRONTIER TOURNAMENT](146-POST-NO-TOOL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
 4. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
