@@ -3,26 +3,29 @@
 ## Current project state
 
 - Campaigns 1–5 completed.
-- **Campaign 6 active:** Federated Operational Relations (FOR), selected as Federated Operational Identity.
+- **Campaign 6 active:** Federated Operational Relations (FOR).
 - Campaign 6 Round 1: `P6 -> P6'`, `CRITERION_REVISED`.
-- Direct true federation engineering evidence: NONE; adjacent evidence only.
+- Campaign 6 Round 2: 12/12 adjacent existing fixtures PASS; `ADJACENT_ENGINEERING_SUPPORT_IN_SCOPE`.
+- **Direct federation engineering evidence:** NONE.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
 
 ## Recovery path
 
 1. [30 DERIVED LAWS](30-DERIVED-LAWS.md)
-2. [117 POST-CAMPAIGN-5 TOURNAMENT](117-POST-CAMPAIGN5-FRONTIER-TOURNAMENT-V1.md)
-3. [118 CAMPAIGN 6 CHARTER](118-CAMPAIGN6-FEDERATED-OPERATIONAL-IDENTITY-CHARTER-V1.md)
-4. [119 CAMPAIGN 6 ROUND 1](119-CAMPAIGN6-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
-5. [116 CAMPAIGN 5 CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+2. [118 CAMPAIGN 6 CHARTER](118-CAMPAIGN6-FEDERATED-OPERATIONAL-IDENTITY-CHARTER-V1.md)
+3. [119 CAMPAIGN 6 ROUND 1](119-CAMPAIGN6-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
+4. [120 CAMPAIGN 6 ROUND 2 CONTRACT](120-CAMPAIGN6-ROUND2-ADJACENT-ENGINEERING-DOGFOOD-CONTRACT.md)
+5. [121 CAMPAIGN 6 ROUND 2 RESULT](121-CAMPAIGN6-ROUND2-ADJACENT-ENGINEERING-DOGFOOD-RESULT.md)
+6. [117 POST-CAMPAIGN-5 TOURNAMENT](117-POST-CAMPAIGN5-FRONTIER-TOURNAMENT-V1.md)
+7. [116 CAMPAIGN 5 CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
 ## Campaign 6 — current theory
 
-Round 1 revises identity-centric federation into **Federated Operational Relations (FOR)**.
+FOR treats federation as local `AgentOperationalSubject S_i` instances plus typed relations for shared work, delegation, delivery/adoption, shared Realization Claims with local evidence standing, distinct Invocations, OCSS transfer, branching and reconciliation.
 
-A federation consists of local `AgentOperationalSubject S_i` instances with local Run/Context/authority standing plus typed relations for shared work, delegation, delivery/adoption, shared realization claims with local evidence standing, distinct Invocations, OCSS transfer, branching and reconciliation.
+Round 2 supplies adjacent engineering support for bounded authority, exact evidence adoption, delivery-vs-durable-cognition separation, provenance fencing, history-preserving supersession and infrastructure-independent continuity. It is **not** direct multi-Agent proof.
 
-Current provisional laws reject global Run/global Context, authority-copy delegation, delivery-as-cognition, shared-Q-as-global-evidence-state and one-Agent-completion-as-group-completion.
+Current standing: `CRITERION_REVISED` + `ADJACENT_ENGINEERING_SUPPORT_IN_SCOPE` + `DIRECT_FEDERATION_ENGINEERING_EVIDENCE_NONE` + `NO_FOUNDATION_PRESSURE`.
 
 ## Continuity
 
