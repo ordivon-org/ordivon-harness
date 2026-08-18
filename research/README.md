@@ -7,8 +7,9 @@ Current engineering contracts are downstream dogfood surfaces, not research onto
 - Campaign 1 completed: Operational Identity Under Failure.
 - Campaign 2 completed: Operational Context Equivalence.
 - Campaign 3 completed: Operational Effect Standing & Reconciliation.
-- **Campaign 4 active:** Operational Accountability Graph — Claim Support, Dependency, Contestability & Bounded Reproduction.
-- Campaign 4 Charter / Investigation Contract v1: prebound before destructive analysis.
+- **Campaign 4 active:** Operational Accountability Graph.
+- Campaign 4 Charter durably prebound.
+- Campaign 4 Round 1 conceptual destructive reconstruction complete: `P4 -> P4'`, `CRITERION_REVISED`.
 - HaF0–HaF61: frozen.
 - HaF62: UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - FoundationExpansionPause: true.
@@ -18,38 +19,41 @@ Current engineering contracts are downstream dogfood surfaces, not research onto
 
 1. [05 PROJECT CONSTITUTION](05-PROJECT-CONSTITUTION-V1.md)
 2. [30 DERIVED LAWS](30-DERIVED-LAWS.md)
-3. [104 CAMPAIGN 3 CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-4. [105 POST-CAMPAIGN-3 TOURNAMENT](105-POST-CAMPAIGN3-FRONTIER-TOURNAMENT-V1.md)
-5. [106 CAMPAIGN 4 CHARTER](106-CAMPAIGN4-OPERATIONAL-ACCOUNTABILITY-CHARTER-V1.md)
-6. [98 CAMPAIGN 2 CLOSEOUT](98-CAMPAIGN2-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-7. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-8. [60 HAF REGISTRY](60-HAF-REGISTRY-AND-PROVENANCE.md)
+3. [105 POST-CAMPAIGN-3 TOURNAMENT](105-POST-CAMPAIGN3-FRONTIER-TOURNAMENT-V1.md)
+4. [106 CAMPAIGN 4 CHARTER](106-CAMPAIGN4-OPERATIONAL-ACCOUNTABILITY-CHARTER-V1.md)
+5. [107 CAMPAIGN 4 ROUND 1](107-CAMPAIGN4-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
+6. [104 CAMPAIGN 3 CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+7. [98 CAMPAIGN 2 CLOSEOUT](98-CAMPAIGN2-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+8. [92 CAMPAIGN 1 CLOSEOUT](92-CAMPAIGN1-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
-## Active Campaign 4
+## Campaign 4 — current theory
 
-Campaign 4 treats `Operational Accountability Graph` as a project label, not a database/ontology commitment. For explicit bounded claim `C` and Accountability Use Contract `A`, the Charter separates:
+Round 1 demotes `Accountability Graph` to a presentation term. The technology-neutral semantic core is **Operational Claim Support Structure (OCSS)** for claim `C` under bounded Accountability Use Contract `A`.
+
+OCSS separates:
 
 1. Claim Contract;
-2. Evidence Admission Validity;
+2. Evidence Admission;
 3. Typed Bearing on C;
 4. Dependency / Independence Standing;
-5. Currentness / Contest / Unknown Standing;
-6. Attribution Binding;
-7. Bounded Reproduction Standing;
-8. Accountability Standing for A.
+5. Currentness / Contest / Unknowns;
+6. typed Operational Attribution;
+7. Bounded Reproduction;
+8. Accountability Adequacy for A.
 
-The central prohibitions are:
+Provisional laws:
 
-- provenance != support;
-- artifact count != corroboration count;
-- graph reachability != support;
-- CompletionProposal != completion;
-- realization evidence != semantic-success evidence;
-- operational attribution != normative blame;
-- bounded reproduction != identical external/model outcome.
+- **Accountability Graph is a Projection; Typed Claim Support is the Semantics**;
+- **Provenance Validity != Evidential Bearing != Accountability Adequacy**;
+- **Support is Non-Transitive by Default**;
+- **Unknown Dependency != Independence**;
+- **Counterevidence / Required Unknowns are First-Class Accountability Content**;
+- **Operational Attribution is Typed Role Binding, not Normative Blame**;
+- **Bounded Reproduction != Outcome Identity**;
+- **Support Cycles Do Not Self-Ground**.
+
+Current standing: `CRITERION_REVISED`, `NO_FOUNDATION_PRESSURE`.
 
 ## Continuity
 
 - `task:harness-campaign4-operational-accountability-20260819`
-
-Recover from current campaign control and completed closeouts, not from the largest HaF number.
