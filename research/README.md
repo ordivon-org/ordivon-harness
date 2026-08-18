@@ -3,9 +3,9 @@
 ## Current project state
 
 - Campaigns 1–5 completed.
-- **Campaign 6 active:** Federated Operational Identity — Delegation, Context Transfer, Shared Effects & Cross-Agent Accountability.
-- Campaign 6 Charter v1 prebound before destructive analysis.
-- Direct true multi-Agent engineering evidence: currently absent; adjacent evidence only.
+- **Campaign 6 active:** Federated Operational Relations (FOR), selected as Federated Operational Identity.
+- Campaign 6 Round 1: `P6 -> P6'`, `CRITERION_REVISED`.
+- Direct true federation engineering evidence: NONE; adjacent evidence only.
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
 
 ## Recovery path
@@ -13,13 +13,16 @@
 1. [30 DERIVED LAWS](30-DERIVED-LAWS.md)
 2. [117 POST-CAMPAIGN-5 TOURNAMENT](117-POST-CAMPAIGN5-FRONTIER-TOURNAMENT-V1.md)
 3. [118 CAMPAIGN 6 CHARTER](118-CAMPAIGN6-FEDERATED-OPERATIONAL-IDENTITY-CHARTER-V1.md)
-4. [116 CAMPAIGN 5 CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+4. [119 CAMPAIGN 6 ROUND 1](119-CAMPAIGN6-ROUND1-CONCEPTUAL-DESTRUCTIVE-RECONSTRUCTION.md)
+5. [116 CAMPAIGN 5 CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
-## Campaign 6 starting structure
+## Campaign 6 — current theory
 
-Local `AgentOperationalSubject S_i` retains local Run, Context and authority semantics. Federation is prebound through typed relations for shared work, delegation, delivery/adoption, shared Realization Claims with local evidence standing, distinct Invocations, OCSS transfer, branch continuation and reconciliation.
+Round 1 revises identity-centric federation into **Federated Operational Relations (FOR)**.
 
-The Charter explicitly rejects one global Run, one global Context, delegation-as-full-authority-copy and message-delivery-as-cognition.
+A federation consists of local `AgentOperationalSubject S_i` instances with local Run/Context/authority standing plus typed relations for shared work, delegation, delivery/adoption, shared realization claims with local evidence standing, distinct Invocations, OCSS transfer, branching and reconciliation.
+
+Current provisional laws reject global Run/global Context, authority-copy delegation, delivery-as-cognition, shared-Q-as-global-evidence-state and one-Agent-completion-as-group-completion.
 
 ## Continuity
 
