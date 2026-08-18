@@ -467,9 +467,41 @@
     {
       "claimId": "harness.tool-surface.ts11-turn-working-set",
       "file": "ts11-tool-surface-ablation.json",
-      "status": "verified",
+      "status": "historical",
       "implementationRevision": "a57963c476d366aea0d73d96cddd223f3bd5dbaf",
-      "scope": "TS11 structural ablation: explicit per-turn subset of already-admitted Tool definitions removes 62.5% of provider schema bytes in the measured repository-repair phase without expanding Tool authority; no model-behavior improvement is claimed."
+      "scope": "Historical TS11 turn-level WorkingSet receipt retained at a57963c; later verified implementation paths changed, so it no longer certifies current code."
+    },
+    {
+      "claimId": "harness.research.campaign3-rich-effect-owner-capture-v1",
+      "file": "harness-campaign3-rich-effect-owner-v1-capture.json",
+      "implementationRevision": "786d64a7cfb21d52e9e541331c3db67a9edd4f29",
+      "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical immutable Campaign-3 rich-effect Runtime owner-fact capture bound externally to the prebound validator/source revision; later Harness source changes prevent current implementation certification."
+    },
+    {
+      "claimId": "harness.research.campaign3-rich-effect-owner-result-v1",
+      "file": "harness-campaign3-rich-effect-owner-v1-result.json",
+      "implementationRevision": "786d64a7cfb21d52e9e541331c3db67a9edd4f29",
+      "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical immutable Campaign-3 rich-effect validated Claim Standing result bound to the same prebound implementation revision; scoped research standing remains in closeout 139."
+    },
+    {
+      "claimId": "harness.research.campaign5-provider-route-preservation-v1",
+      "file": "harness-campaign5-provider-route-preservation-v1-result.json",
+      "implementationRevision": "a1a61430047dfa0c43fb2f32d1d2529d57c19018",
+      "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical immutable Campaign-5 provider-route/use-policy direct result bound to its prebound implementation revision; later Harness source changes prevent current whole-implementation certification."
+    },
+    {
+      "claimId": "harness.execution.current-no-tool-conclusion-control-repair-v1",
+      "file": "harness-current-no-tool-conclusion-control-repair-v1.json",
+      "implementationRevision": "8925fdba026cdef4f9d8969fae244ee3e5e46730",
+      "revisionBinding": "index-creation-lineage",
+      "status": "verified",
+      "scope": "Current post-contraction no-Tool conclusion/control repair summary bound to the exact repair implementation revision; verified only while current implementation paths remain unchanged."
     }
   ]
 }

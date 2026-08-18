@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-05
+updated: 2026-08-19
 summary: Decision identifying the documents and machine sources allowed to define current Harness behavior, compatibility, evidence and operation.
 evidence_status: not_applicable
 readiness: READY
@@ -36,7 +36,7 @@ related:
 
 ## Context
 
-Harness contains current architecture, extraction history, OH/H/P/R closeouts, Provider experiments, fixtures and frozen evidence. These records do not have equal authority, and an older live receipt cannot silently certify current source.
+Harness contains current architecture, extraction history, OH/H/P/R closeouts, Provider experiments, fixtures and frozen evidence. These records do not have equal authority, and older evidence cannot silently certify current source.
 
 ## Decision
 
@@ -54,16 +54,17 @@ Harness contains current architecture, extraction history, OH/H/P/R closeouts, P
 | sensitive data, Provider disclosure, retention and deletion | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) |
 | versions, release gates and deprecation | [`RELEASES.md`](RELEASES.md) |
 
-Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, current Host Journal/CAS inspection, independent Harness Journal/CAS Doctor checks, canonical Traces and digest-bound receipts remain stronger owners for exact fields, transitions and observed results.
+Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, current Host Journal/CAS inspection, independent Harness Journal/CAS Doctor checks, canonical Traces and digest-bound evidence remain stronger owners for exact fields, transitions and observed results.
 
-`evidence/index.json` classifies repository receipts. Historical stage reports and closeouts preserve provenance but do not override current contracts. `CHANGELOG.md` records change and does not redefine current behavior.
+`evidence/index.json` classifies repository evidence and binds it to implementation/currentness provenance; it does not own the domain/research semantics asserted by that evidence. Historical stage reports and closeouts preserve provenance but do not override current contracts. `CHANGELOG.md` records change and does not redefine current behavior.
 
 ## Consequences
 
 - canonical documents are listed in `.ordivon/project.yaml` and validated by `scripts/check_docs.py`;
 - exact dependency truth is validated separately by `scripts/check_dependencies.py`;
-- evidence/file correspondence and revision binding are validated by `scripts/check_evidence.py`;
-- new current claims must identify tests or a receipt bound to the current graph;
+- evidence/file correspondence and revision/currentness binding are validated by `scripts/check_evidence.py`;
+- new current claims must identify current tests or evidence bound to the current graph;
+- immutable research evidence may use the explicit index/Git-lineage binding defined by [`VERIFICATION.md`](VERIFICATION.md) instead of rewriting frozen payload bytes to mimic a legacy receipt schema;
 - a new canonical document must declare which responsibility it owns and update this decision.
 
 ## Status

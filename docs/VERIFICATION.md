@@ -14,8 +14,8 @@ audience:
   - operator
   - researcher
   - agent
-updated: 2026-08-06
-summary: Claim classes, evidence strength, historical receipt interpretation and current release gates.
+updated: 2026-08-19
+summary: Claim classes, evidence strength, historical evidence interpretation and current release gates.
 evidence_status: verified
 readiness: READY
 applies_to:
@@ -34,9 +34,10 @@ related:
 | deterministic unit/integration test | current source invariant under controlled inputs | live Provider or Runtime behavior |
 | frozen fixture | a named failure trajectory and expected repair | arbitrary repositories or Providers |
 | live receipt | one real journey on an exact dependency graph | current `main` after later changes |
+| immutable research projection/result | one bounded owner/research observation bound to a tested implementation lineage | whole-current-product certification after later source changes |
 | historical closeout/report | design evolution and prior decisions | current implementation correctness |
 
-No receipt should be cited without its Harness/implementation revision and dependency context.
+No implementation-bound evidence should be cited without its Harness/implementation revision and dependency context.
 
 ## Current portable gate
 
@@ -52,6 +53,18 @@ The current release gate includes:
 - wheel metadata validation, isolated installation, CLI smoke testing and dependency audit;
 - bounded atomic Event-batch replay/rollback tests and the deterministic scale smoke.
 
+## Evidence index and revision binding
+
+`evidence/index.json` classifies every repository `evidence/*.json` object and `scripts/check_evidence.py` enforces exact file correspondence, revision binding and `verified` currentness.
+
+Two revision-binding modes are supported:
+
+- **embedded** — the default legacy receipt mode. The payload itself must carry the exact implementation/source revision recorded by the index.
+- **index-creation-lineage** — explicit opt-in for immutable research projections/results whose frozen payload shape does not carry the legacy receipt revision field. The index revision must be an ancestor of the evidence file's unique Git creation commit, no invalidating implementation path may change before evidence creation, and the evidence bytes must remain identical to the creation commit. Recognized embedded tested-revision hints, when present, must agree with the index.
+
+The second mode does not make the index semantic truth owner. It binds repository provenance/currentness without rewriting frozen evidence bytes.
+
+A `verified` entry is current only while no later invalidating implementation path has changed after its bound revision. Once that condition fails, the evidence remains useful historical evidence but must be demoted rather than silently certifying current code.
 
 ## P0 scale acceptance
 
@@ -69,7 +82,7 @@ The receipt must bind the exact implementation revision and prove 1,000 Runs, 10
 
 ## Historical live receipts
 
-`evidence/index.json` classifies repository receipts. Existing Codex, Hermes, DeepSeek, Runtime and replacement/recovery receipts are historical because they bind commits before current `main`. They remain valuable evidence for those trajectories but must not be described as certification of current code.
+`evidence/index.json` classifies repository evidence. Existing Codex, Hermes, DeepSeek, Runtime and replacement/recovery receipts are historical because they bind commits before current `main`. They remain valuable evidence for those trajectories but must not be described as certification of current code.
 
 ## Current live acceptance
 
@@ -97,4 +110,4 @@ Use these terms consistently:
 - **historical**: evidence exists only for an earlier graph;
 - **unsupported**: no contract or safe path exists.
 
-Tests and receipts verify bounded behavior. They do not turn Runtime success into semantic Task completion or remove Provider/domain uncertainty.
+Tests and evidence verify bounded behavior. They do not turn Runtime success into semantic Task completion or remove Provider/domain uncertainty.
