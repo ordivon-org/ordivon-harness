@@ -3,7 +3,7 @@
 
 **Task:** `task:harness-wheel-public-api-currentness-repair-v1-20260819`  
 **Selection authority:** Tournament 149.  
-**Prebind commit:** `45e8385be456d32b0c510768867d42a04295d3a2`.  
+**Prebind commit:** `329203e2cc82683ba6178868d0d2ac3c2fe8de72`.
 **Repair commit:** `28eba0c8ea9f58ef7a96ca8b7add37b5f3e3cf17`.  
 **Starting canonical:** `06270645500eb5b11cf32258c3fd289759df6b8d`.
 
