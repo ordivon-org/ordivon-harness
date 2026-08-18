@@ -7,6 +7,13 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Cut Relativity** — Harness/Agent/interface roles depend on an explicit operational cut; membership is not an intrinsic substance property.
 - **Truth Owner Separation** — mediation, storage, evidence or representation does not transfer external truth ownership into Harness.
 - **Local != Global** — local correctness/assurance/authorization/progress cannot be promoted globally without explicit composition assumptions.
+- **Reconfiguration Preservation is Use-Relative and Directional** — `Preserves_U(B0→B1)` is primitive; symmetric equivalence is derived only when required directions hold.
+- **Valid Reconfiguration != Old-Contract Preservation** — legitimate readmission under a new contract does not imply preservation of the old contract.
+- **Structural Sameness != Operational Preservation != Behavioral Agreement** — implementation/configuration identity and sampled behavior are neither necessary nor sufficient for semantic preservation.
+- **Run Identity != Reconfiguration Substitutability** — same-Run continuation and bounded successor substitution are distinct relations.
+- **Cut Movement != Truth-Owner Transfer** — moving functional placement/mediation across a cut does not automatically transfer external semantic authority.
+- **Transition Lineage is Semantically First-Class** — endpoint similarity cannot replace adoption/revocation/rebinding/reconciliation evidence carried by the transition.
+- **Preservation Composition Requires Obligation Compatibility** — preservation edges do not compose by path reachability alone.
 
 ## Epistemic separation and Context
 
@@ -16,35 +23,37 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Observation != Feedback** unless routed into a control relation.
 - **Unknown != probability 0.5**, and uncertainty has no universal scalar representation.
 - **Multiple artifacts != independent corroboration**; dependency/common-cause structure matters.
-- **Context Validity != Currentness != Sufficiency** — a Context may be grounded/valid yet stale, superseded, contradictory or insufficient for a bounded use.
-- **Durable Context Basis != Effective Decision Context** — durable selected Context is not identical to the Context admissibly exposed at a particular decision frontier; admitted transient cognition may alter effective Context without becoming durable basis.
-- **Context Sufficiency is Use-Contract and Horizon Relative** — sufficiency/equivalence are relative to explicit bounded operational obligations and continuation horizon, not intrinsic global properties of Context content.
-- **Context Superset != Context Dominance** — adding Context does not automatically increase validity, sufficiency or equivalence.
-- **Operational Context Equivalence != Agent Behavioral Equivalence** — mutual obligation-preserving substitution under one bounded use contract does not assert identical Agent/model decisions or world outcomes.
+- **Context Validity != Currentness != Sufficiency**.
+- **Durable Context Basis != Effective Decision Context**.
+- **Context Sufficiency is Use-Contract and Horizon Relative**.
+- **Context Superset != Context Dominance**.
+- **Operational Context Equivalence != Agent Behavioral Equivalence**.
 
 ## Action, effect and realization evidence
 
 - **Selection != authorization != dispatch != effect != result != semantic success**.
 - **ToolIntent != PhysicalEffect != SemanticSuccess**.
-- **Realization Standing is Claim-Scope and Evidence Relative** — Harness evaluates explicit bounded realization claims from admissible evidence rather than owning one global world Effect variable.
-- **Dispatch Standing != Realization Claim Standing** — crossing an external dispatch boundary and supporting an external realization proposition are distinct.
-- **No Receipt != No Effect != Retry Permission** — missing terminal evidence after dispatch establishes neither non-realization nor universal permission to repeat.
-- **Local Terminality != External Causal Finality != Semantic Success** — local/issuer-owned terminal standing can coexist with unresolved broader consequences and domain failure/unknown.
-- **Partial Realization is Scoped Mixed Claim Standing** — absent an owner-defined aggregate, partiality is mixed evidence standing over explicit scoped claims rather than one universal completion scalar.
-- **Invocation Cardinality != External Realization Cardinality** — Harness logical Invocation identity/fencing does not universally determine the number of external realization events.
-- **Compensation != Prior Effect Erasure** — a later compensating operation/claim does not erase prior supported realization provenance.
-- **Reconciliation Settlement is Use-Relative and History-Preserving** — reconciliation may settle bounded downstream operation while preserving prior uncertainty/conflict/nonterminal evidence.
+- **Realization Standing is Claim-Scope and Evidence Relative**.
+- **Dispatch Standing != Realization Claim Standing**.
+- **No Receipt != No Effect != Retry Permission**.
+- **Local Terminality != External Causal Finality != Semantic Success**.
+- **Partial Realization is Scoped Mixed Claim Standing**.
+- **Invocation Cardinality != External Realization Cardinality**.
+- **Compensation != Prior Effect Erasure**.
+- **Reconciliation Settlement is Use-Relative and History-Preserving**.
+- **Reconfiguration Cannot Reset Unresolved Realization Standing** — unresolved realization obligations cross a structural transition until admissibly reconciled.
 
 ## Accountability and assurance
 
-- **Accountability Graph is a Projection; Typed Claim Support is the Semantics** — graph topology/storage/reachability does not acquire support meaning without claim-relative typed relations.
-- **Provenance Validity != Evidential Bearing != Accountability Adequacy** — authentic origin, support relation and adequacy for a bounded accountability use are distinct.
-- **Support is Non-Transitive by Default** — support composition requires an explicit typed rule with compatible scope/owner semantics.
-- **Unknown Dependency != Independence** — missing dependency knowledge does not establish independent corroboration; independence is positively established only for a bounded criterion.
-- **Counterevidence / Required Unknowns are First-Class Accountability Content** — omission can make an accountability projection inadequate even when positive evidence is authentic.
-- **Operational Attribution is Typed Role Binding, not Normative Blame** — produced/observed/asserted/adopted/mediated roles do not imply liability or moral responsibility.
-- **Bounded Reproduction != Outcome Identity** — reconstructing/re-inspecting support basis/conditions does not guarantee identical model/world outcome.
-- **Support Cycles Do Not Self-Ground** — circular support relations require admissible grounding and valid composition.
+- **Accountability Graph is a Projection; Typed Claim Support is the Semantics**.
+- **Provenance Validity != Evidential Bearing != Accountability Adequacy**.
+- **Support is Non-Transitive by Default**.
+- **Unknown Dependency != Independence**.
+- **Counterevidence / Required Unknowns are First-Class Accountability Content**.
+- **Operational Attribution is Typed Role Binding, not Normative Blame**.
+- **Bounded Reproduction != Outcome Identity**.
+- **Support Cycles Do Not Self-Ground**.
+- **Evidence Copy != Accountability Preservation** — transition preservation requires role/currentness/unknown/lineage-aware adoption or rebinding.
 
 ## Control and evaluation
 
@@ -55,10 +64,10 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 
 - **Lineage/version/epoch/scope are first-class under change**.
 - **Lifecycle states must not be flattened** into a single done/failed/active boolean when the underlying role distinguishes admission, execution, settlement, revocation, supersession or reopenability.
-- **Authorized / Eligible / Admitted / Scheduled / Dispatched / Executing / Effected / Completed / Final are distinct roles**; no universal mandatory pipeline is implied.
+- **Authorized / Eligible / Admitted / Scheduled / Dispatched / Executing / Effected / Completed / Final are distinct roles**.
 - **CompletionProposal != caller/domain/Host Task completion**.
-- **Recovery Validity != Run Identity != Resumability** — whether a reconstructed state is an admissible projection, whether it continues the same RunEpisode, and whether external continuation is currently safe are independent semantic questions.
-- **Lineage Ancestry != Continuation Identity** — shared provenance or ancestor state does not establish same RunEpisode continuation identity; same-Run continuation requires an admitted continuation relation, while explicit branching may preserve ancestry and split continuation identity.
+- **Recovery Validity != Run Identity != Resumability**.
+- **Lineage Ancestry != Continuation Identity**.
 
 ## Composition and externality
 
@@ -67,12 +76,14 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 
 ## Campaign provenance
 
-Campaign 1 — Operational Identity Under Failure admitted two recovery/identity laws after prebound destructive analysis, six-fixture dogfood and owner-boundary audit.
+Campaign 1 — Operational Identity Under Failure admitted two recovery/identity laws after prebound destructive analysis and bounded dogfood.
 
-Campaign 2 — Operational Context Equivalence admitted five Context laws after prebound destructive analysis, seven-fixture dogfood and boundary/compatibility audit.
+Campaign 2 — Operational Context Equivalence admitted five Context laws after prebound destructive analysis and bounded dogfood.
 
-Campaign 3 — Operational Effect Standing & Reconciliation admitted eight realization/effect laws after prebound destructive analysis, nine-fixture dogfood and boundary/Campaign-1/2 compatibility audit. Rich partial/delayed/compensating/interfering engineering evidence remains explicitly open.
+Campaign 3 — Operational Effect Standing & Reconciliation admitted eight realization/effect laws after prebound destructive analysis and bounded dogfood.
 
-Campaign 4 — Operational Accountability Graph / OCSS (`task:harness-campaign4-operational-accountability-20260819`) admitted eight accountability laws after prebound destructive analysis, thirteen-fixture dogfood and owner-boundary/Campaign-1/2/3 compatibility audit. General evidence-independence, rebuttal, support-cycle and cross-owner-composition engineering evidence remains explicitly open.
+Campaign 4 — Operational Accountability / OCSS admitted eight accountability laws after prebound destructive analysis and thirteen-fixture dogfood.
+
+Campaign 5 — Boundary Reconfiguration Equivalence / OPUR (`task:harness-campaign5-boundary-reconfiguration-equivalence-20260819`) admitted nine reconfiguration/preservation laws after prebound destructive analysis, ten-fixture dogfood and owner-boundary/Campaign-1–4 compatibility audit. Provider/locus/internalization/authority-readmission/general OCSS-transition engineering evidence remains explicitly open.
 
 No completed campaign changes HaF0–HaF61 Foundation standing.
