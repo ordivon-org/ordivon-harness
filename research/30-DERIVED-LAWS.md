@@ -101,6 +101,8 @@ Campaign 4 — Operational Accountability / OCSS admitted eight accountability l
 
 Campaign 5 — Boundary Reconfiguration / OPUR admitted nine reconfiguration/preservation laws after prebound destructive analysis, ten-fixture dogfood and owner-boundary audit.
 
-Campaign 6 — Federated Operational Identity revised to Federated Operational Relations (`task:harness-campaign6-federated-operational-identity-20260819`) admitted twelve federation laws after prebound destructive analysis and twelve-fixture **adjacent** dogfood. Direct true-federation engineering evidence remains NONE and is explicitly open.
+Campaign 6 — Federated Operational Identity revised to Federated Operational Relations (`task:harness-campaign6-federated-operational-identity-20260819`) admitted twelve federation laws after prebound destructive analysis and twelve-fixture **adjacent** dogfood. At Campaign-6 closeout direct true-federation engineering evidence was NONE.
+
+Post-Campaign-6 `FOR Direct Destructive Dogfood v1` (`task:harness-for-direct-federation-dogfood-v1-20260819`) later established **bounded direct** two-subject support for shared-work/distinct-Run identity, local completion scope, visibility-vs-adoption, explicit cross-subject-origin evidence adoption/provenance, and non-deduplicated subject-local Invocations. It also exposed `ENGINEERING_GAP_SHARED_REALIZATION_CLAIM_SURFACE`; no FOR law or Foundation was added/reopened.
 
 No completed campaign changes HaF0–HaF61 Foundation standing.
