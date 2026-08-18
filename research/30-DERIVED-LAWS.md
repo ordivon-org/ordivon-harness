@@ -55,6 +55,21 @@ These laws are derived syntheses over the frozen HaF corpus and completed bounde
 - **Support Cycles Do Not Self-Ground**.
 - **Evidence Copy != Accountability Preservation** — transition preservation requires role/currentness/unknown/lineage-aware adoption or rebinding.
 
+## Federation and multi-subject operation
+
+- **Federation is Local Subjects + Typed Relations, not a Global Run** — multi-subject operation composes locally bounded operational subjects through explicit federation relations.
+- **Shared Work != Shared Run != Shared Context** — common task/goal identity does not collapse local Run identity or cognition.
+- **Operational Subject Identity != Infrastructure Identity** — process/provider/channel/thread identity is neither necessary nor sufficient for `AgentOperationalSubject` identity.
+- **Delegation != Authority Copy != Truth-Owner Transfer** — delegation is directional/scoped/attenuable/currentness-sensitive and does not transfer semantic truth authority.
+- **Delivery != Admission != Adoption != Cognition** — transport/exposure, local admissibility, operational adoption and cognition are distinct.
+- **Shared Realization Claim != Shared Evidence Standing** — subjects can refer to one Q while holding different admissible evidence standing.
+- **Federation Does Not Deduplicate Invocation or Effect Risk** — distinct subject-local Invocations remain distinct and may create duplicate/conflicting realization pressure.
+- **Cross-Subject Accountability Requires Explicit Evidence Adoption/Binding** — evidence visibility/citation does not transfer OCSS support standing.
+- **Local Completion != Federated/Host Completion** — local proposal/terminality does not close peers/shared work without owner-level completion authority.
+- **Shared Ancestry != Federation Convergence** — common lineage does not collapse partition/successor branches into one Run/current state.
+- **Federation Reconciliation is History-Preserving** — later convergence/settlement preserves prior branch/evidence history.
+- **Delegation Revocation != Prior Effect Erasure** — revocation changes future authority and does not delete prior Invocation/effect/provenance standing.
+
 ## Control and evaluation
 
 - **Universal scalarization fails** across value, risk, priority, trust, uncertainty, progress and assurance without a declared interpretation/governance context.
@@ -84,6 +99,8 @@ Campaign 3 — Operational Effect Standing & Reconciliation admitted eight reali
 
 Campaign 4 — Operational Accountability / OCSS admitted eight accountability laws after prebound destructive analysis and thirteen-fixture dogfood.
 
-Campaign 5 — Boundary Reconfiguration Equivalence / OPUR (`task:harness-campaign5-boundary-reconfiguration-equivalence-20260819`) admitted nine reconfiguration/preservation laws after prebound destructive analysis, ten-fixture dogfood and owner-boundary/Campaign-1–4 compatibility audit. Provider/locus/internalization/authority-readmission/general OCSS-transition engineering evidence remains explicitly open.
+Campaign 5 — Boundary Reconfiguration / OPUR admitted nine reconfiguration/preservation laws after prebound destructive analysis, ten-fixture dogfood and owner-boundary audit.
+
+Campaign 6 — Federated Operational Identity revised to Federated Operational Relations (`task:harness-campaign6-federated-operational-identity-20260819`) admitted twelve federation laws after prebound destructive analysis and twelve-fixture **adjacent** dogfood. Direct true-federation engineering evidence remains NONE and is explicitly open.
 
 No completed campaign changes HaF0–HaF61 Foundation standing.
