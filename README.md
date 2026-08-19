@@ -140,7 +140,7 @@ The current product includes:
 - `HarnessAgentRunToolSurface` as an explicit application-local advanced seam for exact non-default Runtime-backed Tool surfaces; it is not a registry and does not change an admitted Run;
 - durable `inspect` plus `explain` workbench projections over existing Journal/CAS state, with unavailable process-local facts left explicit rather than guessed;
 - multi-attempt Mandate/Strategy admission where Harness derives remaining resource authority mechanically but does not choose the Strategy;
-- caller-defined structured completion shapes while semantic admission remains outside Harness;
+- caller-defined structured completion shapes, with optional Contract-bound local structural conformance verification while semantic/evidence admission remains outside Harness;
 - explicit non-support for a generic opaque Provider-continuation primitive in the contracted current core; Provider-local continuation remains integration-local unless new direct pressure earns a bounded surface;
 - conservative UNKNOWN handling: ambiguous Provider or Tool delivery is reconciled from durable evidence rather than blindly repeated.
 

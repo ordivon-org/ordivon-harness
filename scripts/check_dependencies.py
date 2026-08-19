@@ -25,8 +25,9 @@ def main() -> int:
         + PROTOCOL_REVISION
         + "#subdirectory=packages/ordivon-protocol"
     )
-    if project.get("dependencies") != [expected_protocol]:
-        fail("base dependencies must contain only the exact Protocol graph")
+    expected_dependencies = ["jsonschema>=4.26,<5", expected_protocol]
+    if project.get("dependencies") != expected_dependencies:
+        fail("base dependencies must contain only jsonschema plus the exact Protocol graph")
     if "optional-dependencies" in project:
         fail("Harness must not expose compatibility dependency extras")
     if "dependency-groups" in raw:
@@ -38,13 +39,23 @@ def main() -> int:
     if "ordivon-host" in lock or "ordivon_host" in lock:
         fail("uv.lock still contains Ordivon Host")
 
-    audit = [
+    audit = sorted(
         line.strip()
         for line in (ROOT / "requirements-audit.txt").read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.lstrip().startswith("#")
-    ]
-    if audit:
-        fail("requirements-audit.txt must contain only third-party PyPI runtime dependencies")
+    )
+    lock_data = tomllib.loads(lock)
+    locked_pypi = sorted(
+        f"{package['name']}=={package['version']}"
+        for package in lock_data.get("package", [])
+        if isinstance(package, dict)
+        and isinstance(package.get("source"), dict)
+        and package["source"].get("registry") == "https://pypi.org/simple"
+    )
+    if audit != locked_pypi:
+        fail(
+            "requirements-audit.txt must exactly match registry-sourced uv.lock runtime packages"
+        )
 
     version_match = re.search(
         r'^version = "([^"]+)"$',

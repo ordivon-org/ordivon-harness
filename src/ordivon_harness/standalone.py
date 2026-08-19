@@ -6,7 +6,10 @@ from typing import Callable, Protocol
 
 from anc_canonical import JsonValue
 
-from .completion import structured_completion_contract_digest
+from .completion import (
+    structured_completion_conclusion_validator,
+    structured_completion_contract_digest,
+)
 from .core_contracts import HarnessRunContract
 from .independent_result import (
     IndependentRunRecorder,
@@ -177,6 +180,9 @@ class StandaloneHarnessRunner:
         self.continuity = continuity
         self.adapter = adapter
         self.tool_bridge = tool_bridge
+        self.conclusion_validator = structured_completion_conclusion_validator(
+            contract.completion_contract
+        )
         self.budget = budget
         self.clock_ms = clock_ms
         self.monotonic_ms = monotonic_ms or clock_ms
@@ -275,6 +281,7 @@ class StandaloneHarnessRunner:
                 clock_ms=self.clock_ms,
                 monotonic_ms=self.monotonic_ms,
                 assignment_deadline_ms=self.contract.deadline_ms,
+                conclusion_validator=self.conclusion_validator,
                 scheduling_mode=scheduling_mode,
             )
         projector = WorkingSetViewProjector(self.store, self.continuity)
@@ -285,6 +292,7 @@ class StandaloneHarnessRunner:
             clock_ms=self.clock_ms,
             monotonic_ms=self.monotonic_ms,
             assignment_deadline_ms=self.contract.deadline_ms,
+            conclusion_validator=self.conclusion_validator,
             working_view_projector=projector,
             working_set_transition_handler=(
                 self.continuity if profile.working_set_transitions else None

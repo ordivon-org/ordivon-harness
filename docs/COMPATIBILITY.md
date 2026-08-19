@@ -14,7 +14,7 @@ audience:
   - operator
   - maintainer
   - agent
-updated: 2026-08-04
+updated: 2026-08-20
 summary: Dependency graph, source-level Host boundary, persistent object compatibility and upgrade rules.
 evidence_status: verified
 readiness: READY
@@ -29,7 +29,7 @@ related:
 
 ## Dependency graph
 
-The current Harness runtime dependency graph is intentionally small: the package depends only on the exact Ordivon Protocol revision pinned by `pyproject.toml` and `uv.lock`. There is no Host dependency, optional Host extra, or Host development group.
+The current Harness runtime dependency graph is intentionally small and Host-free: the package depends on the exact Ordivon Protocol revision plus `jsonschema` for opt-in local structured-result conformance verification, with the exact third-party transitive graph pinned by `uv.lock` and mirrored in `requirements-audit.txt`. There is no Host dependency, optional Host extra, or Host development group.
 
 Python support is `>=3.12,<3.13`. Runtime integration is structural through the caller-supplied `HarnessRuntimeClient`; a Runtime server/version is not a Python package dependency.
 

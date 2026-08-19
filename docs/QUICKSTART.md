@@ -43,7 +43,7 @@ uv build --wheel --out-dir dist
 python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
 ```
 
-The wheel contains one runtime dependency: the exact Ordivon Protocol pin. It does not install Host or expose a Host extra.
+The wheel keeps a small Host-free runtime dependency graph: the exact Ordivon Protocol pin plus `jsonschema` for opt-in local structured-result conformance verification. It does not install Host or expose a Host extra.
 
 ## Initialize independent state
 
@@ -181,6 +181,7 @@ from ordivon_harness.api import (
 completion_contract = {
     "mode": "structured-result-v1",
     "resultKind": "my-domain-result",
+    "conformancePolicy": "local-json-schema-draft-2020-12-profile-v1",
     "resultSchema": {
         "type": "object",
         "additionalProperties": False,
@@ -196,6 +197,8 @@ adapter = DeepSeekTurnAdapter(
 value = decode_structured_completion_result(contract, execution.loop_result.conclusion)
 ```
 
+`conformancePolicy` is opt-in. When it is omitted, historical/current `structured-result-v1` behavior remains provider-constrained but **not locally schema-verified**. The current local profile uses Draft 2020-12 validation semantics and deliberately accepts only the bounded structural keywords currently contracted by Harness (`type`, `properties`, boolean `additionalProperties`, `required`, `items`, `enum`, string/item length bounds, numeric bounds, and array item-count bounds over object/array/string/integer/boolean types). Unsupported keywords or types fail at Contract admission rather than being silently ignored. With the policy bound, a Provider result that violates the schema is retained as Provider observation but is rejected before candidate completion through the existing model-correctable conclusion path. Structural conformance still does **not** establish semantic correctness, evidence sufficiency, or caller/domain admission.
+
 A candidate-completed Run may still carry explicit unresolved unknowns in
 `unresolved_unknowns`; that means the bounded Run produced its candidate while
 honestly reporting facts that remain unknown. The caller/domain, not Harness,
@@ -205,7 +208,7 @@ an Agent conclusion; inspect the stop code/detail and resume state instead. This
 keeps a caller-bound structured completion result distinct from Harness execution
 disposition.
 
-The exact completion Contract is part of `HarnessRunContract.digest`. `StandaloneHarnessRunner` fails closed if a `structured-result-v1` Contract is paired with an Adapter that was not bound to the same completion Contract. DeepSeek receives the caller schema as the `submit_run_conclusion.result` Tool schema, and Harness stores the canonical result JSON in the existing conclusion summary representation, so this adds no second durable result store or Host-specific result type. **Caller/domain verification remains mandatory**: `decode_structured_completion_result` is a codec, not semantic admission.
+The exact completion Contract is part of `HarnessRunContract.digest`. `StandaloneHarnessRunner` fails closed if a `structured-result-v1` Contract is paired with an Adapter that was not bound to the same completion Contract. DeepSeek receives the caller schema as the `submit_run_conclusion.result` Tool schema, and Harness stores the canonical result JSON in the existing conclusion summary representation, so this adds no second durable result store or Host-specific result type. `decode_structured_completion_result` remains compatible with policy-absent legacy results; when the local conformance policy is bound it also enforces the same mechanical schema check. **Caller/domain verification remains mandatory**: local schema conformance is not semantic admission.
 
 ## Pause and resume
 

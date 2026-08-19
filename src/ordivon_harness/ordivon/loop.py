@@ -295,6 +295,7 @@ class OrdivonAgentLoop:
         monotonic_ms: Callable[[], int] | None = None,
         assignment_deadline_ms: int | None = None,
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
+        conclusion_validator: Callable[[AgentRunConclusion], None] | None = None,
         working_view_projector: WorkingViewProjector | None = None,
         working_set_transition_handler: WorkingSetTransitionHandler | None = None,
         caller_ingress_promotion_handler: CallerIngressPromotionHandler | None = None,
@@ -350,6 +351,9 @@ class OrdivonAgentLoop:
             raise ValueError("Assignment deadline must be non-negative")
         self.assignment_deadline_ms = assignment_deadline_ms
         self.event_sink = event_sink
+        if conclusion_validator is not None and not callable(conclusion_validator):
+            raise TypeError("Harness conclusion validator must be callable")
+        self.conclusion_validator = conclusion_validator
         self.provider_lifecycle = ProviderCallLifecycle(
             bridge=self.tool_bridge,
             adapter=self.adapter,
@@ -2394,10 +2398,18 @@ class OrdivonAgentLoop:
                 conclusion_validator = getattr(
                     self.tool_bridge, "validate_conclusion", None
                 )
-                if callable(conclusion_validator):
-                    try:
+                try:
+                    if self.conclusion_validator is not None:
+                        try:
+                            self.conclusion_validator(result.conclusion)
+                        except ValueError as mechanical_error:
+                            raise ToolBridgeError(
+                                f"Structured result conformance rejected: {mechanical_error}",
+                                kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                            ) from mechanical_error
+                    if callable(conclusion_validator):
                         conclusion_validator(result.conclusion)
-                    except ToolBridgeError as error:
+                except ToolBridgeError as error:
                         if not error.recoverable_by_model:
                             return stop(
                                 RunStopCode.INVALID_MODEL_OUTPUT,
@@ -2460,7 +2472,7 @@ class OrdivonAgentLoop:
                                 ),
                             )
                         continue
-                    except Exception as error:  # noqa: BLE001
+                except Exception as error:  # noqa: BLE001
                         return stop(
                             RunStopCode.HARNESS_FAILED,
                             detail=(

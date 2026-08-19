@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from anc_canonical import (
@@ -13,6 +13,10 @@ from anc_canonical import (
 
 from .core_contracts import HarnessRunContract, STRUCTURED_COMPLETION_MODE
 from .ordivon.model import AgentRunConclusion
+from .structured_result_conformance import (
+    structured_result_conformance_policy,
+    validate_structured_result_instance,
+)
 
 _MAX_RESULT_SCHEMA_BYTES = 65_536
 
@@ -67,14 +71,32 @@ def encode_structured_completion_result(
     return canonical_bytes(result).decode("utf-8")
 
 
+def structured_completion_conclusion_validator(
+    completion_contract: Mapping[str, Any],
+) -> Callable[[AgentRunConclusion], None] | None:
+    """Return the Contract-bound local structural validator when one is admitted."""
+    if structured_completion_result_schema(completion_contract) is None:
+        return None
+    if structured_result_conformance_policy(completion_contract) is None:
+        return None
+
+    def validate(conclusion: AgentRunConclusion) -> None:
+        value = loads_strict(conclusion.summary.encode("utf-8"))
+        validate_json_value(value)
+        validate_structured_result_instance(completion_contract, value)
+
+    return validate
+
+
 def decode_structured_completion_result(
     contract: HarnessRunContract, conclusion: AgentRunConclusion
 ) -> JsonValue:
-    """Decode the Provider-constrained result; caller/domain admission remains external."""
+    """Decode the result; structural conformance is local only under an explicit policy."""
     if structured_completion_result_schema(contract.completion_contract) is None:
         raise ValueError("Harness Run Contract is not structured-result-v1")
     value = loads_strict(conclusion.summary.encode("utf-8"))
     validate_json_value(value)
+    validate_structured_result_instance(contract.completion_contract, value)
     return value
 
 
@@ -82,6 +104,7 @@ __all__ = [
     "STRUCTURED_COMPLETION_MODE",
     "decode_structured_completion_result",
     "encode_structured_completion_result",
+    "structured_completion_conclusion_validator",
     "structured_completion_contract_digest",
     "structured_completion_result_schema",
 ]

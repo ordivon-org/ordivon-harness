@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-12
+updated: 2026-08-20
 summary: Current maturity claim for Harness as an independent durable cognitive execution substrate, with supported cognition, Provider and Tool continuity, composition, verification, and known limits.
 evidence_status: verified
 readiness: READY
@@ -70,7 +70,7 @@ This page states current maturity. It does not replay the research sequence that
 - `HarnessAgentRunToolSurface` is an explicit application-local advanced seam for an exact Runtime-backed Tool catalog/grant pair. It performs pre-state-creation Contract/Binding checks and then reuses the existing Run continuity/Runner; it does not dynamically mutate active Run authority or create a global plugin tree.
 - caller-owned Adapter factories keep Provider choice outside Harness policy.
 - Tool-bearing applications provide a `HarnessRuntimeClient`; the primary CLI does not invent Runtime authority.
-- structured completion binds caller-defined result shape into the Run Contract while semantic validation remains caller/domain authority.
+- structured completion binds caller-defined result shape into the Run Contract. Policy-absent v1 remains provider-constrained but not locally schema-verified; opt-in `local-json-schema-draft-2020-12-profile-v1` performs fail-closed local structural validation before candidate completion, while semantic/evidence admission remains caller/domain authority.
 - the contracted current core does not expose a generic `ProviderToolContinuation`; Provider-specific opaque continuation remains integration-local unless fresh direct pressure earns a bounded Harness surface.
 
 ### Multi-attempt delegation

@@ -1,4 +1,8 @@
-# Intentionally empty: Harness has no third-party PyPI runtime dependencies.
-# ordivon-host and ordivon-protocol are internal exact Git dependencies and are
-# verified by commit pins, repository gates, lock validation and cross-repo tests.
-# Adding a PyPI runtime dependency requires adding its exact audit row here.
+# Exact third-party PyPI runtime packages locked for Harness.
+# This file must match every registry-sourced package in uv.lock.
+attrs==26.1.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.6.3
+typing-extensions==4.16.0
