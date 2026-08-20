@@ -111,6 +111,17 @@ from .ordivon.sqlite_runtime_bridge import (
     SEARCH_WORKSPACE_DEFINITION,
     SQLiteHarnessRuntimeBridge,
 )
+from .observation_tool_surface import (
+    OBSERVATION_TOOL_DEFINITIONS,
+    OBSERVATION_TOOL_SURFACE,
+    OBSERVATION_TOOL_SURFACE_DIGEST,
+    READ_WORKSPACE_DEFINITION,
+    HarnessObservationAuthorityStatementProjection,
+    HarnessObservationReadObject,
+    HarnessObservationSourceAuthority,
+    HarnessObservationToolGrant,
+    build_observation_tool_surface,
+)
 from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
 from .runtime_port import (
     HarnessRuntimeClient,
@@ -175,6 +186,10 @@ __all__ = [
     "NO_TOOL_AGENT_GRANT_DIGEST",
     "NO_TOOL_AGENT_SURFACE",
     "NO_TOOL_AGENT_SURFACE_DIGEST",
+    "OBSERVATION_TOOL_DEFINITIONS",
+    "OBSERVATION_TOOL_SURFACE",
+    "OBSERVATION_TOOL_SURFACE_DIGEST",
+    "READ_WORKSPACE_DEFINITION",
     "SEARCH_WORKSPACE_DEFINITION",
     "SEQUENTIAL_LOOP_DRIVER",
     "SUPPORTED_DEEPSEEK_MODELS",
@@ -213,6 +228,10 @@ __all__ = [
     "HarnessLeaseHeld",
     "HarnessObjectCorrupt",
     "HarnessObjectMissing",
+    "HarnessObservationAuthorityStatementProjection",
+    "HarnessObservationReadObject",
+    "HarnessObservationSourceAuthority",
+    "HarnessObservationToolGrant",
     "HarnessPrivacyPolicy",
     "HarnessProviderCallClaimHeld",
     "HarnessProviderCallRecordV2",
@@ -265,6 +284,7 @@ __all__ = [
     "StoredIndependentRunResult",
     "admit_harness_agent_strategy",
     "backup_harness_store",
+    "build_observation_tool_surface",
     "build_harness_strategy_selection_context",
     "build_harness_workspace_exec_request_from_binding",
     "compile_harness_attempt",

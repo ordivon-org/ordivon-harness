@@ -17,7 +17,9 @@ from ordivon_harness.api import (
 )
 from ordivon_harness.observation_tool_surface import (
     OBSERVATION_TOOL_SURFACE_DIGEST,
+    HarnessObservationAuthorityStatementProjection,
     HarnessObservationReadObject,
+    HarnessObservationSourceAuthority,
     HarnessObservationToolGrant,
     build_observation_tool_surface,
 )
@@ -66,8 +68,40 @@ def contract(suffix: str, grant: HarnessObservationToolGrant) -> HarnessRunContr
     )
 
 
-def binding(value: HarnessRunContract) -> HarnessExecutionBinding:
+def source_authority() -> HarnessObservationSourceAuthority:
+    return HarnessObservationSourceAuthority(
+        owner_research_ref="research-owner:human",
+        authority_ref="authority:ordivon:research-owner:human",
+        authority_version_ref=digest("human-authority-version"),
+        source_transport_revision="transport-human-v1",
+    )
+
+
+def binding(
+    value: HarnessRunContract,
+    authority: HarnessObservationSourceAuthority | None = None,
+) -> HarnessExecutionBinding:
     token = value.digest[7:31]
+    references = [
+        HarnessRuntimeReference(
+            namespace="ordivon.harness",
+            reference_type="harness_run",
+            reference_id=value.harness_run_id,
+            generation="1",
+            digest=value.digest,
+        ),
+    ]
+    if authority is not None:
+        references.append(
+            HarnessRuntimeReference(
+                namespace="ordivon.harness",
+                reference_type="source_authority",
+                reference_id=authority.authority_ref,
+                generation=authority.source_transport_revision,
+                digest=authority.authority_version_ref,
+            )
+        )
+    references.sort(key=lambda item: item.sort_key)
     return HarnessExecutionBinding(
         harness_run_id=value.harness_run_id,
         workspace_ref="workspace:observation-source",
@@ -78,15 +112,7 @@ def binding(value: HarnessRunContract) -> HarnessExecutionBinding:
         tool_catalog_digest=value.tool_catalog_digest,
         tool_grant_digest=value.tool_grant_digest,
         deadline_ms=value.deadline_ms,
-        runtime_references=(
-            HarnessRuntimeReference(
-                namespace="ordivon.harness",
-                reference_type="harness_run",
-                reference_id=value.harness_run_id,
-                generation="1",
-                digest=value.digest,
-            ),
-        ),
+        runtime_references=tuple(references),
     )
 
 
@@ -138,6 +164,22 @@ class FakeRuntime:
                     "submatches": [{"match": {"text": "HISTORICAL_PRESERVED"}, "start": 9, "end": 29}],
                 },
             }
+            unbound = {
+                "type": "match",
+                "data": {
+                    "path": {"text": "source/unbound.json"},
+                    "lines": {"text": "STANDING:HISTORICAL_PRESERVED=true\n"},
+                    "line_number": 1,
+                    "absolute_offset": 0,
+                    "submatches": [
+                        {
+                            "match": {"text": "HISTORICAL_PRESERVED"},
+                            "start": 9,
+                            "end": 29,
+                        }
+                    ],
+                },
+            }
             return {
                 "status": "succeeded",
                 "jobId": "job:observation-search",
@@ -148,7 +190,7 @@ class FakeRuntime:
                 "recoveryRequired": False,
                 "semanticCompletionEvaluated": False,
                 "exitCode": 0,
-                "stdoutTail": json.dumps(match) + "\n",
+                "stdoutTail": json.dumps(match) + "\n" + json.dumps(unbound) + "\n",
                 "stderrTail": "",
                 "resultAvailable": True,
                 "artifactsAvailable": False,
@@ -208,10 +250,36 @@ class ObservationToolSurfaceTests(unittest.TestCase):
         search_content = search_messages[0]["observation"]["content"]
         self.assertEqual(
             set(search_content),
-            {"query", "relativePath", "matchCount", "matches", "locationSemantics"},
+            {
+                "query",
+                "relativePath",
+                "matchCount",
+                "matches",
+                "totalMatchCount",
+                "readAdmittedMatchCount",
+                "readAdmittedObjectCount",
+                "omittedUnadmittedMatchCount",
+                "readRouting",
+            },
         )
         self.assertNotIn("stdoutTail", search_content)
         self.assertNotIn("artifacts", search_content)
+        self.assertTrue(search_content["matches"][0]["readAdmitted"])
+        self.assertEqual(
+            search_content["matches"][0]["readRelativePath"],
+            "source/standing.json",
+        )
+        self.assertFalse(search_content["matches"][0]["sourceAuthorityBound"])
+        self.assertEqual(search_content["totalMatchCount"], 2)
+        self.assertEqual(search_content["matchCount"], 1)
+        self.assertEqual(search_content["readAdmittedMatchCount"], 1)
+        self.assertEqual(search_content["readAdmittedObjectCount"], 1)
+        self.assertEqual(search_content["omittedUnadmittedMatchCount"], 1)
+        self.assertEqual(
+            search_content["readRouting"]["arguments"]["relativePath"],
+            "source/standing.json",
+        )
+        self.assertNotIn("source/unbound.json", json.dumps(search_content))
         self.assertNotIn("workspace.patch", grant.to_dict()["runtimeOperations"])
 
     def test_grant_rejects_unbound_paths_and_binds_expected_digest(self):
@@ -232,6 +300,213 @@ class ObservationToolSurfaceTests(unittest.TestCase):
         self.assertIsNone(grant.expected_digest("search_workspace", "."))
         with self.assertRaisesRegex(ValueError, "canonical relative spelling"):
             HarnessObservationReadObject("./source/standing.json", read_digest)
+
+    def test_exact_authority_publication_read_projects_only_bound_subject_statements(self):
+        authority = source_authority()
+        target = "result:human:generic-operational-core-sufficiency-falsified"
+        publication = json.dumps(
+            {
+                "kind": "ordivon.research-owner-publication",
+                "ownerResearchRef": authority.owner_research_ref,
+                "authorityRef": authority.authority_ref,
+                "statements": [
+                    {
+                        "predicate": "STANDING:HISTORICAL_PRESERVED",
+                        "scope": "RESULT",
+                        "subjectRef": target,
+                        "value": True,
+                    },
+                    {
+                        "predicate": "STANDING:FALSIFIED",
+                        "scope": "RESULT",
+                        "subjectRef": target,
+                        "value": True,
+                    },
+                    {
+                        "predicate": "STANDING:CURRENT",
+                        "scope": "RESULT",
+                        "subjectRef": "result:human:other",
+                        "value": True,
+                    },
+                ],
+            },
+            separators=(",", ":"),
+        )
+        read_object = HarnessObservationReadObject(
+            "source/authority.json",
+            authority.authority_version_ref,
+            source_authority=authority,
+            authority_statement_projection=HarnessObservationAuthorityStatementProjection(
+                target
+            ),
+        )
+        grant = HarnessObservationToolGrant(
+            search_paths=(".",),
+            read_objects=(read_object,),
+        )
+        value = contract("authority-publication-projection", grant)
+        runtime = FakeRuntime(publication, authority.authority_version_ref)
+        adapter = ScriptedTurnAdapter(
+            (
+                tool_turn(
+                    "read-publication",
+                    "read_workspace",
+                    {
+                        "relativePath": "source/authority.json",
+                        "mode": "FULL",
+                        "maxBytes": 262144,
+                    },
+                ),
+                completed(),
+            )
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            run = build_observation_tool_surface(grant).create(
+                Path(directory) / "state",
+                value,
+                lambda _contract: adapter,
+                execution_binding=binding(value, authority),
+                runtime=runtime,
+            )
+            result = run.run(
+                ({"role": "user", "content": "recover exact authority statements"},)
+            )
+        self.assertEqual(result.loop_result.stop_code.value, "candidate_completed")
+        read_messages = [
+            message
+            for message in adapter.requests[1].messages
+            if message.get("role") == "tool" and message.get("name") == "read_workspace"
+        ]
+        self.assertTrue(read_messages)
+        read_content = read_messages[-1]["observation"]["content"]
+        self.assertTrue(read_content["sourceFenceVerified"])
+        self.assertTrue(read_content["sourceProjectionVerified"])
+        self.assertNotIn("content", read_content)
+        projected = read_content["sourceProjection"]
+        self.assertEqual(projected["subjectRef"], target)
+        self.assertEqual(projected["statementCount"], 2)
+        self.assertEqual(
+            {statement["predicate"] for statement in projected["statements"]},
+            {"STANDING:HISTORICAL_PRESERVED", "STANDING:FALSIFIED"},
+        )
+        self.assertNotIn("result:human:other", json.dumps(projected))
+        self.assertFalse(projected["harnessMintsOwnerTruth"])
+
+    def test_authority_statement_projection_requires_authority_version_source_digest(self):
+        authority = source_authority()
+        with self.assertRaisesRegex(ValueError, "authorityVersionRef"):
+            HarnessObservationReadObject(
+                "source/authority.json",
+                digest("not-authority-version"),
+                source_authority=authority,
+                authority_statement_projection=HarnessObservationAuthorityStatementProjection(
+                    "result:human:target"
+                ),
+            )
+
+    def test_authority_qualified_read_projects_caller_bound_fence(self):
+        source = '{"standingStatements":["STANDING:HISTORICAL_PRESERVED=true"]}'
+        source_digest = "sha256:" + __import__("hashlib").sha256(source.encode()).hexdigest()
+        authority = source_authority()
+        read_object = HarnessObservationReadObject(
+            "source/standing.json",
+            source_digest,
+            source_authority=authority,
+        )
+        grant = HarnessObservationToolGrant(
+            search_paths=(".",),
+            read_objects=(read_object,),
+        )
+        generic_grant = HarnessObservationToolGrant(
+            search_paths=(".",),
+            read_objects=(HarnessObservationReadObject("source/standing.json", source_digest),),
+        )
+        self.assertNotEqual(grant.digest, generic_grant.digest)
+        self.assertFalse(grant.to_dict()["harnessMintsOwnerTruth"])
+        value = contract("authority-qualified", grant)
+        runtime = FakeRuntime(source, source_digest)
+        adapter = ScriptedTurnAdapter(
+            (
+                tool_turn("search-authority", "search_workspace", {"query": "HISTORICAL_PRESERVED"}),
+                tool_turn(
+                    "read-authority",
+                    "read_workspace",
+                    {"relativePath": "source/standing.json", "mode": "FULL", "maxBytes": 4096},
+                ),
+                completed(),
+            )
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            run = build_observation_tool_surface(grant).create(
+                Path(directory) / "state",
+                value,
+                lambda _contract: adapter,
+                execution_binding=binding(value, authority),
+                runtime=runtime,
+            )
+            result = run.run(({"role": "user", "content": "recover authority-qualified standing"},))
+        self.assertEqual(result.loop_result.stop_code.value, "candidate_completed")
+        search_messages = [
+            message
+            for message in adapter.requests[1].messages
+            if message.get("role") == "tool" and message.get("name") == "search_workspace"
+        ]
+        self.assertTrue(search_messages)
+        search_match = search_messages[-1]["observation"]["content"]["matches"][0]
+        self.assertTrue(search_match["readAdmitted"])
+        self.assertTrue(search_match["sourceAuthorityBound"])
+        read_messages = [
+            message
+            for message in adapter.requests[2].messages
+            if message.get("role") == "tool" and message.get("name") == "read_workspace"
+        ]
+        self.assertTrue(read_messages)
+        read_content = read_messages[-1]["observation"]["content"]
+        self.assertTrue(read_content["sourceFenceVerified"])
+        self.assertEqual(
+            read_content["sourceFenceRole"],
+            "CALLER_BOUND_SOURCE_AUTHORITY_EVIDENCE",
+        )
+        fence = read_content["sourceFence"]
+        self.assertEqual(fence["relativePath"], "source/standing.json")
+        self.assertEqual(fence["sourceDigest"], source_digest)
+        self.assertFalse(fence["harnessMintsOwnerTruth"])
+        projected_authority = fence["sourceAuthority"]
+        self.assertEqual(projected_authority["ownerResearchRef"], authority.owner_research_ref)
+        self.assertEqual(projected_authority["authorityRef"], authority.authority_ref)
+        self.assertEqual(
+            projected_authority["authorityVersionRef"],
+            authority.authority_version_ref,
+        )
+        self.assertEqual(
+            projected_authority["sourceTransportRevision"],
+            authority.source_transport_revision,
+        )
+        self.assertFalse(projected_authority["harnessMintsOwnerTruth"])
+
+    def test_authority_qualified_read_requires_matching_execution_reference(self):
+        authority = source_authority()
+        grant = HarnessObservationToolGrant(
+            search_paths=(".",),
+            read_objects=(
+                HarnessObservationReadObject(
+                    "source/standing.json",
+                    digest("authority-source"),
+                    source_authority=authority,
+                ),
+            ),
+        )
+        value = contract("authority-reference-required", grant)
+        with tempfile.TemporaryDirectory() as directory:
+            run = build_observation_tool_surface(grant).create(
+                Path(directory) / "state",
+                value,
+                lambda _contract: ScriptedTurnAdapter((completed(),)),
+                execution_binding=binding(value),
+                runtime=FakeRuntime("{}", digest("authority-source")),
+            )
+            with self.assertRaisesRegex(ValueError, "source_authority execution reference"):
+                run.run(({"role": "user", "content": "recover authority-qualified standing"},))
 
     def test_source_digest_mismatch_fails_closed_before_completion_claim(self):
         source = '{"standingStatements":["STANDING:HISTORICAL_PRESERVED=true"]}'

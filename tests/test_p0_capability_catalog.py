@@ -88,6 +88,12 @@ class CapabilityCatalogTests(unittest.TestCase):
             "compose_tool_program",
         )
         self.assertFalse(catalog["programmaticToolComposition"]["runtimeTool"])
+        observation = catalog["sourceFencedObservationComposition"]
+        self.assertEqual(observation["stage"], "installed")
+        self.assertEqual(observation["visibility"], "advanced-opt-in")
+        self.assertEqual(observation["grantIdentity"], "caller-bound-dynamic-source-fence")
+        self.assertFalse(observation["workspaceMutationAllowed"])
+        self.assertFalse(observation["harnessMintsOwnerTruth"])
         profile_fields = {
             item["profileField"]
             for item in mechanisms

@@ -37,6 +37,7 @@ from .ordivon.sqlite_runtime_bridge import (
     INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
 )
 from .knowledge_topology import effective_knowledge_topology
+from .observation_tool_surface import OBSERVATION_TOOL_SURFACE_DIGEST
 from .provider_use_policy import HarnessProviderUsePolicy
 from .standalone import HarnessCognitionProfile
 
@@ -270,6 +271,29 @@ def effective_capability_catalog() -> dict[str, JsonValue]:
             "unknownSemantics": "stop-without-later-program-dispatch",
             "semanticBranching": False,
             "arbitraryCodeExecution": False,
+        },
+        "sourceFencedObservationComposition": {
+            "stage": _INSTALLED,
+            "visibility": "advanced-opt-in",
+            "surfaceFactory": (
+                "ordivon_harness.observation_tool_surface:build_observation_tool_surface"
+            ),
+            "toolCatalogDigest": OBSERVATION_TOOL_SURFACE_DIGEST,
+            "tools": ["search_workspace", "read_workspace"],
+            "runtimeOperations": ["workspace.exec", "workspace.read"],
+            "workspaceMutationAllowed": False,
+            "grantIdentity": "caller-bound-dynamic-source-fence",
+            "authorityQualification": (
+                "optional owner/authority/version/transport evidence participates in the "
+                "exact Tool Grant and Execution Binding"
+            ),
+            "authorityPublicationProjection": (
+                "optional exact subjectRef projection only after complete publication digest "
+                "equals the bound AuthorityVersionRef"
+            ),
+            "searchProjection": "object-routing-not-semantic-line-evidence",
+            "authorityRole": "mechanism-only-until-caller-bound",
+            "harnessMintsOwnerTruth": False,
         },
     }
     validate_json_value(value)
