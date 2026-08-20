@@ -26,8 +26,8 @@ from ..runtime_port import (
 )
 from .control import ExecutionControl
 from .model import AgentToolCall, AgentToolDefinition
-from .runtime_lowering import lower_runtime_tool
 from .run_store_port import HarnessRunContinuityStore
+from .runtime_lowering import RuntimeToolGrantView, lower_runtime_tool
 from .sqlite_agent_bridge import SQLiteHarnessAgentBridge
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
@@ -136,14 +136,26 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         *,
         provider_source=None,
         provider_holder_id: str | None = None,
+        tool_definitions: tuple[AgentToolDefinition, ...] | None = None,
+        tool_surface_digest: str | None = None,
+        tool_grant_digest: str | None = None,
+        tool_grant: RuntimeToolGrantView | None = None,
     ) -> None:
+        self._tool_definitions = tool_definitions or (SEARCH_WORKSPACE_DEFINITION,)
+        self._tool_surface_digest = (
+            tool_surface_digest or INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST
+        )
+        self._tool_grant_digest = (
+            tool_grant_digest or INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST
+        )
+        self._tool_grant = tool_grant
         super().__init__(
             contract,
             run_store,
             provider_source=provider_source,
             provider_holder_id=provider_holder_id,
-            expected_tool_catalog_digest=INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST,
-            expected_tool_grant_digest=INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST,
+            expected_tool_catalog_digest=self._tool_surface_digest,
+            expected_tool_grant_digest=self._tool_grant_digest,
         )
         binding = run_store.binding
         if (
@@ -154,13 +166,13 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         ):
             raise ValueError("Harness Execution Binding differs from the independent Run binding")
         if (
-            execution_binding.tool_catalog_digest != INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST
+            execution_binding.tool_catalog_digest != self._tool_surface_digest
             or execution_binding.tool_catalog_digest != contract.tool_catalog_digest
         ):
             raise ValueError("Harness Execution Binding Tool catalog differs")
         if (
-            execution_binding.tool_grant_digest != INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST
-            or contract.tool_grant_digest != INDEPENDENT_SEARCH_TOOL_GRANT_DIGEST
+            execution_binding.tool_grant_digest != self._tool_grant_digest
+            or contract.tool_grant_digest != self._tool_grant_digest
         ):
             raise ValueError("Harness Execution Binding Tool Grant differs")
         if execution_binding.deadline_ms != contract.deadline_ms:
@@ -179,12 +191,12 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         self._seen_tool_call_ids: set[str] = set()
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]:
-        return (SEARCH_WORKSPACE_DEFINITION,)
+        return self._tool_definitions
 
     def validate_runtime_catalog(self) -> None:
         if (
-            self.contract.tool_catalog_digest != INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST
-            or self.execution_binding.tool_catalog_digest != INDEPENDENT_SEARCH_TOOL_SURFACE_DIGEST
+            self.contract.tool_catalog_digest != self._tool_surface_digest
+            or self.execution_binding.tool_catalog_digest != self._tool_surface_digest
         ):
             raise ToolBridgeError(
                 "independent Runtime Tool catalog drifted",
@@ -294,14 +306,28 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 "execution control stopped before Tool reconciliation",
                 kind=ToolBridgeErrorKind.CONTROL_STOPPED,
             )
-        observation = self._reconcile_by_client_request(
-            tool_call_id=current.intent.tool_call_id,
-            tool_name=current.intent.tool_name,
-            client_request_id=current.intent.client_request_id,
-            query=None,
-            relative_path=None,
-            control=control,
-        )
+        if current.intent.runtime_operation == "workspace.exec":
+            observation = self._reconcile_by_client_request(
+                tool_call_id=current.intent.tool_call_id,
+                tool_name=current.intent.tool_name,
+                client_request_id=current.intent.client_request_id,
+                query=None,
+                relative_path=None,
+                control=control,
+            )
+        else:
+            observation = self._unknown_observation(
+                current.intent.tool_call_id,
+                current.intent.tool_name,
+                reason=(
+                    "synchronous observation response was lost; the read is not blindly "
+                    "redispatched during recovery"
+                ),
+                client_request_id=current.intent.client_request_id,
+                query=None,
+                relative_path=None,
+                reconciled=True,
+            )
         return self._record_observation(
             current.intent,
             observation,
@@ -316,7 +342,8 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         turn_id: str,
         control: ExecutionControl | None,
     ) -> HarnessToolObservation:
-        if call.name != "search_workspace":
+        allowed = {definition.name for definition in self._tool_definitions}
+        if call.name not in allowed:
             raise ToolBridgeError(
                 f"independent Runtime surface does not expose {call.name}",
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
@@ -331,19 +358,30 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 "execution control stopped before Tool preparation",
                 kind=ToolBridgeErrorKind.CONTROL_STOPPED,
             )
-        operation, request, client_request_id = lower_runtime_tool(
+        operation, request, external_request_id = lower_runtime_tool(
             call,
             step_id=step_id,
             execution_binding=self.execution_binding,
-            tool_grant=None,
+            tool_grant=self._tool_grant,
             known_job_ids=frozenset(),
             known_artifacts=frozenset(),
         )
-        if operation != "workspace.exec":
+        if operation not in {"workspace.exec", "workspace.read"}:
             raise ToolBridgeError(
-                "independent search Tool did not lower to workspace.exec",
+                f"independent observation Tool lowered to unsupported operation {operation}",
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
+        client_request_id = external_request_id or (
+            "request:harness-observation:"
+            + canonical_digest(
+                {
+                    "harnessRunId": self.contract.harness_run_id,
+                    "stepId": step_id,
+                    "toolCallDigest": call.digest,
+                    "runtimeOperation": operation,
+                }
+            )[7:39]
+        )
         binding = self.run_store.binding
         durable_turn_id = self._durable_turn_id(turn_id, step_id)
         intent = HarnessToolStepIntent(
@@ -374,12 +412,16 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
         self.run_store.assert_dispatch_fence_current(current.fence)
-        fenced_request = self._with_dispatch_fence(request, current.fence)
-        query = call.arguments.get("query")
+        dispatch_request = (
+            self._with_dispatch_fence(request, current.fence)
+            if operation == "workspace.exec"
+            else request
+        )
+        query = call.arguments.get("query") if call.name == "search_workspace" else None
         relative_path = call.arguments.get("relativePath", ".")
-        if not isinstance(query, str) or not isinstance(relative_path, str):
+        if not isinstance(relative_path, str) or (query is not None and not isinstance(query, str)):
             raise ToolBridgeError(
-                "search_workspace arguments differ from the lowered request",
+                f"{call.name} arguments differ from the lowered request",
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
             )
         if control is not None and control.stop_requested:
@@ -395,17 +437,46 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             )
             return self._record_observation(intent, observation)
         try:
-            payload = self.runtime.call_tool(operation, fenced_request)
+            payload = self.runtime.call_tool(operation, dispatch_request)
             validate_json_value(payload)
-            observation = self._terminal_observation(
-                tool_call_id=call.tool_call_id,
-                tool_name=call.name,
-                payload=payload,
-                query=query,
-                relative_path=relative_path,
-                reconciled=False,
-                control=control,
-            )
+            if operation == "workspace.exec":
+                observation = self._terminal_observation(
+                    tool_call_id=call.tool_call_id,
+                    tool_name=call.name,
+                    payload=payload,
+                    query=query,
+                    relative_path=relative_path,
+                    reconciled=False,
+                    control=control,
+                )
+            else:
+                expected_digest = None
+                resolver = getattr(self._tool_grant, "expected_digest", None)
+                if callable(resolver):
+                    expected_digest = resolver(call.name, relative_path)
+                observed_digest = payload.get("digest")
+                if expected_digest is not None and observed_digest != expected_digest:
+                    observation = HarnessToolObservation(
+                        tool_call_id=call.tool_call_id,
+                        tool_name=call.name,
+                        status="rejected",
+                        structured_content={
+                            "type": "SourceFenceMismatch",
+                            "safeToCorrect": False,
+                            "relativePath": relative_path,
+                            "expectedDigest": expected_digest,
+                            "observedDigest": observed_digest,
+                        },
+                    )
+                else:
+                    observation = self._observation_from_payload(
+                        tool_call_id=call.tool_call_id,
+                        tool_name=call.name,
+                        payload=payload,
+                        query=None,
+                        relative_path=relative_path,
+                        reconciled=False,
+                    )
         except HarnessRuntimeToolRejected as error:
             if error.detail.commit_state in {"not_started", "not_committed"}:
                 observation = HarnessToolObservation(
@@ -419,7 +490,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                         "relativePath": relative_path,
                     },
                 )
-            else:
+            elif operation == "workspace.exec":
                 observation = self._reconcile_by_client_request(
                     tool_call_id=call.tool_call_id,
                     tool_name=call.name,
@@ -428,15 +499,36 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     relative_path=relative_path,
                     control=control,
                 )
-        except HarnessRuntimeClientError:
-            observation = self._reconcile_by_client_request(
-                tool_call_id=call.tool_call_id,
-                tool_name=call.name,
-                client_request_id=client_request_id,
-                query=query,
-                relative_path=relative_path,
-                control=control,
-            )
+            else:
+                observation = self._unknown_observation(
+                    call.tool_call_id,
+                    call.name,
+                    reason=f"synchronous read response failed: {error}",
+                    client_request_id=client_request_id,
+                    query=None,
+                    relative_path=relative_path,
+                    reconciled=True,
+                )
+        except HarnessRuntimeClientError as error:
+            if operation == "workspace.exec":
+                observation = self._reconcile_by_client_request(
+                    tool_call_id=call.tool_call_id,
+                    tool_name=call.name,
+                    client_request_id=client_request_id,
+                    query=query,
+                    relative_path=relative_path,
+                    control=control,
+                )
+            else:
+                observation = self._unknown_observation(
+                    call.tool_call_id,
+                    call.name,
+                    reason=f"synchronous read response failed: {error}",
+                    client_request_id=client_request_id,
+                    query=None,
+                    relative_path=relative_path,
+                    reconciled=True,
+                )
         return self._record_observation(intent, observation)
 
     def _terminal_observation(
