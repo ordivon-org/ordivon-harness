@@ -38,7 +38,7 @@ EXPECTED = {
     ),
     "harness.execution.current-no-tool-conclusion-control-repair-v1": (
         "harness-current-no-tool-conclusion-control-repair-v1.json",
-        "verified",
+        "historical",
         "8925fdba026cdef4f9d8969fae244ee3e5e46730",
         "d455cc726e6356e4463a6c7463d9573d3d2730c88b78723fa362129159b7b4ae",
     ),
@@ -89,8 +89,8 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         current, invalidating = check_evidence._verified_revision_is_current(
             "8925fdba026cdef4f9d8969fae244ee3e5e46730"
         )
-        self.assertTrue(current)
-        self.assertEqual(invalidating, [])
+        self.assertFalse(current)
+        self.assertTrue(invalidating)
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding

@@ -500,8 +500,8 @@
       "file": "harness-current-no-tool-conclusion-control-repair-v1.json",
       "implementationRevision": "8925fdba026cdef4f9d8969fae244ee3e5e46730",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current post-contraction no-Tool conclusion/control repair summary bound to the exact repair implementation revision; verified only while current implementation paths remain unchanged."
+      "status": "historical",
+      "scope": "Historical post-contraction no-Tool conclusion/control repair summary bound to 8925fdb; later Harness implementation changes invalidate whole-current certification while the immutable receipt remains exact for its tested revision."
     }
   ]
 }
