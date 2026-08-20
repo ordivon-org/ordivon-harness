@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
+from .agent_tool_observation import HarnessToolObservation
 from .ordivon.model import AgentToolDefinition
 from .ordivon.sqlite_runtime_bridge import (
     SEARCH_WORKSPACE_DEFINITION,
@@ -80,6 +81,53 @@ OBSERVATION_TOOL_SURFACE: dict[str, JsonValue] = {
     "tools": [definition.to_dict() for definition in OBSERVATION_TOOL_DEFINITIONS],
 }
 OBSERVATION_TOOL_SURFACE_DIGEST = canonical_digest(OBSERVATION_TOOL_SURFACE)
+
+
+class _CompactObservationRuntimeBridge(SQLiteHarnessRuntimeBridge):
+    """Project search semantics without replaying Runtime receipt bytes to the model."""
+
+    @classmethod
+    def _observation_from_payload(
+        cls,
+        *,
+        tool_call_id: str,
+        tool_name: str,
+        payload: dict[str, JsonValue],
+        query: str | None,
+        relative_path: str | None,
+        reconciled: bool,
+    ) -> HarnessToolObservation:
+        observation = super()._observation_from_payload(
+            tool_call_id=tool_call_id,
+            tool_name=tool_name,
+            payload=payload,
+            query=query,
+            relative_path=relative_path,
+            reconciled=reconciled,
+        )
+        if tool_name != "search_workspace" or observation.status != "observed":
+            return observation
+        source = observation.structured_content
+        compact: dict[str, JsonValue] = {}
+        for key in (
+            "query",
+            "relativePath",
+            "matchCount",
+            "matches",
+            "matchesTruncated",
+            "locationSemantics",
+        ):
+            if key in source:
+                compact[key] = source[key]
+        return HarnessToolObservation(
+            tool_call_id=observation.tool_call_id,
+            tool_name=observation.tool_name,
+            status=observation.status,
+            structured_content=compact,
+            runtime_job_ref=observation.runtime_job_ref,
+            artifact_refs=observation.artifact_refs,
+            reconciled=observation.reconciled,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,7 +229,7 @@ def build_observation_tool_surface(
     """Return one exact application-local search+read surface bound to ``grant``."""
 
     def bridge_factory(contract, continuity, execution_binding, runtime, provider_source):
-        return SQLiteHarnessRuntimeBridge(
+        return _CompactObservationRuntimeBridge(
             contract,
             continuity,
             execution_binding,

@@ -199,6 +199,19 @@ class ObservationToolSurfaceTests(unittest.TestCase):
             {tool.name for tool in adapter.requests[0].tools},
             {"search_workspace", "read_workspace"},
         )
+        search_messages = [
+            message
+            for message in adapter.requests[1].messages
+            if message.get("role") == "tool" and message.get("name") == "search_workspace"
+        ]
+        self.assertEqual(len(search_messages), 1)
+        search_content = search_messages[0]["observation"]["content"]
+        self.assertEqual(
+            set(search_content),
+            {"query", "relativePath", "matchCount", "matches", "locationSemantics"},
+        )
+        self.assertNotIn("stdoutTail", search_content)
+        self.assertNotIn("artifacts", search_content)
         self.assertNotIn("workspace.patch", grant.to_dict()["runtimeOperations"])
 
     def test_grant_rejects_unbound_paths_and_binds_expected_digest(self):
