@@ -65,22 +65,18 @@ class FakeRuntime:
 
 
 class EnvironmentRuntime:
-    def __init__(self, *, fail_ecosystem=None):
-        self.fail_ecosystem = fail_ecosystem
+    def __init__(self, *, failed=False):
+        self.failed = failed
         self.calls = []
 
     def call_tool(self, name, arguments):
         self.calls.append((name, arguments))
-        executable = arguments["execution"]["executable"]
-        ecosystem = "python" if executable == "/usr/bin/uv" else "node"
-        failed = ecosystem == self.fail_ecosystem
-        index = len(self.calls)
         return {
-            "jobId": f"job-env-{index}",
-            "attemptId": f"attempt-env-{index}",
-            "status": "failed" if failed else "succeeded",
+            "jobId": "job-env",
+            "attemptId": "attempt-env",
+            "status": "failed" if self.failed else "succeeded",
             "executionTerminal": True,
-            "exitCode": 2 if failed else 0,
+            "exitCode": 2 if self.failed else 0,
             "semanticCompletionEvaluated": False,
         }
 
@@ -136,47 +132,34 @@ def run(fake):
 
 
 class FinanceWorkstationCompositionTests(unittest.TestCase):
-    def test_default_project_environment_preparation_is_locked_offline_runtime_plumbing(self):
+    def test_default_project_environment_preparation_is_python_locked_offline_runtime_plumbing(self):
         fake = EnvironmentRuntime()
         receipt = module._prepare_finance_project_environment(
             fake,
             finance_workspace_id="finance-ws",
             client_request_id="fixture-finance-project-environment",
         )
-        self.assertEqual(receipt["mode"], "exact-project-locks-offline")
+        self.assertEqual(receipt["mode"], "finance-python-lock-offline")
         self.assertFalse(receipt["networkAcquisitionAllowed"])
         self.assertFalse(receipt["lockfileMutationAllowed"])
-        self.assertFalse(receipt["dependencyInstallScriptsAllowed"])
         self.assertFalse(receipt["agentToolAuthorityGranted"])
-        self.assertEqual([step["ecosystem"] for step in receipt["steps"]], ["python", "node"])
-        self.assertEqual(len(fake.calls), 2)
-        _, python = fake.calls[0]
-        _, node = fake.calls[1]
-        self.assertEqual(python["execution"]["workspaceId"], "finance-ws")
-        self.assertEqual(python["execution"]["executable"], "/usr/bin/uv")
-        self.assertEqual(python["execution"]["args"], ["sync", "--locked", "--offline"])
-        self.assertEqual(node["execution"]["executable"], "/usr/bin/npm")
-        self.assertEqual(node["execution"]["args"], ["ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"])
+        self.assertEqual(receipt["provider"], "/usr/bin/uv")
+        self.assertEqual(receipt["args"], ["sync", "--locked", "--offline"])
+        self.assertEqual(len(fake.calls), 1)
+        name, arguments = fake.calls[0]
+        self.assertEqual(name, "workspace.exec")
+        self.assertEqual(arguments["execution"]["workspaceId"], "finance-ws")
+        self.assertEqual(arguments["execution"]["executable"], "/usr/bin/uv")
+        self.assertEqual(arguments["execution"]["args"], ["sync", "--locked", "--offline"])
 
     def test_project_environment_preparation_fails_closed_when_python_offline_closure_is_unavailable(self):
-        fake = EnvironmentRuntime(fail_ecosystem="python")
-        with self.assertRaisesRegex(RuntimeError, "python project environment.*locked offline closure"):
+        fake = EnvironmentRuntime(failed=True)
+        with self.assertRaisesRegex(RuntimeError, "Python project environment.*locked offline closure"):
             module._prepare_finance_project_environment(
                 fake,
                 finance_workspace_id="finance-ws",
                 client_request_id="fixture-finance-project-environment-python-failed",
             )
-        self.assertEqual(len(fake.calls), 1)
-
-    def test_project_environment_preparation_fails_closed_when_node_offline_closure_is_unavailable(self):
-        fake = EnvironmentRuntime(fail_ecosystem="node")
-        with self.assertRaisesRegex(RuntimeError, "node project environment.*locked offline closure"):
-            module._prepare_finance_project_environment(
-                fake,
-                finance_workspace_id="finance-ws",
-                client_request_id="fixture-finance-project-environment-node-failed",
-            )
-        self.assertEqual(len(fake.calls), 2)
 
     def test_finance_env_omits_cross_checkout_interpreter_when_no_expert_override_is_supplied(self):
         env = module._finance_env("/tmp/finance-state", None)

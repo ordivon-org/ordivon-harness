@@ -213,67 +213,49 @@ def _prepare_finance_project_environment(
     finance_workspace_id: str,
     client_request_id: str,
 ) -> dict[str, Any]:
-    """Realize Finance's exact Python and Node lockfiles from local caches only.
+    """Realize the Finance Python lockfile from the already-local uv cache only.
 
-    This is deterministic application plumbing, not an Agent Tool and not package
-    acquisition authority. Both steps fail closed: no network acquisition, no
-    lockfile rewrite, and no dependency install scripts.
+    This is deterministic application plumbing for the current context/observe
+    composition path, not a full-repository dependency install, an Agent Tool,
+    or package-acquisition authority. `--locked --offline` fails closed instead
+    of consulting the network or rewriting the lockfile.
     """
-    specs = (
-        (
-            "python",
-            "/usr/bin/uv",
-            ["sync", "--locked", "--offline"],
-        ),
-        (
-            "node",
-            "/usr/bin/npm",
-            ["ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"],
-        ),
-    )
-    steps = []
-    for ecosystem, executable, args in specs:
-        result = client.call_tool(
-            "workspace.exec",
-            {
-                "clientRequestId": f"{client_request_id}-{ecosystem}",
-                "execution": {
-                    "workspaceId": finance_workspace_id,
-                    "cwdRelative": ".",
-                    "executable": executable,
-                    "args": args,
-                    "timeoutMs": 30000,
-                    "stdoutLimitBytes": 65536,
-                    "stderrLimitBytes": 65536,
-                },
-                "waitMs": 30000,
-                "stdoutTailBytes": 16384,
-                "stderrTailBytes": 16384,
+    result = client.call_tool(
+        "workspace.exec",
+        {
+            "clientRequestId": client_request_id,
+            "execution": {
+                "workspaceId": finance_workspace_id,
+                "cwdRelative": ".",
+                "executable": "/usr/bin/uv",
+                "args": ["sync", "--locked", "--offline"],
+                "timeoutMs": 30000,
+                "stdoutLimitBytes": 65536,
+                "stderrLimitBytes": 65536,
             },
+            "waitMs": 30000,
+            "stdoutTailBytes": 16384,
+            "stderrTailBytes": 16384,
+        },
+    )
+    if result.get("semanticCompletionEvaluated") is not False:
+        raise RuntimeError("Runtime must not claim project-environment semantic completion")
+    if result.get("status") != "succeeded" or result.get("executionTerminal") is not True or result.get("exitCode") != 0:
+        raise RuntimeError(
+            "Finance Python project environment is not available from the exact locked offline closure"
         )
-        if result.get("semanticCompletionEvaluated") is not False:
-            raise RuntimeError("Runtime must not claim project-environment semantic completion")
-        if result.get("status") != "succeeded" or result.get("executionTerminal") is not True or result.get("exitCode") != 0:
-            raise RuntimeError(
-                f"Finance {ecosystem} project environment is not available from the exact locked offline closure"
-            )
-        steps.append({
-            "ecosystem": ecosystem,
-            "provider": executable,
-            "args": list(args),
-            "runtimeJobId": str(result.get("jobId")),
-            "runtimeAttemptId": str(result.get("attemptId")) if result.get("attemptId") is not None else None,
-        })
     return {
         "schemaVersion": 1,
         "kind": "ordivon.first-interface.project-environment-preparation",
         "owner": "ordivon-finance",
         "workspaceId": finance_workspace_id,
-        "mode": "exact-project-locks-offline",
-        "steps": steps,
+        "mode": "finance-python-lock-offline",
+        "provider": "/usr/bin/uv",
+        "args": ["sync", "--locked", "--offline"],
+        "runtimeJobId": str(result.get("jobId")),
+        "runtimeAttemptId": str(result.get("attemptId")) if result.get("attemptId") is not None else None,
         "networkAcquisitionAllowed": False,
         "lockfileMutationAllowed": False,
-        "dependencyInstallScriptsAllowed": False,
         "agentToolAuthorityGranted": False,
     }
 
