@@ -498,6 +498,19 @@ def run_finance_workstation_composition(
         env=env,
     )
     calls.append(retry)
+    retry_error = _owner_error_code(retry)
+    if retry_error is not None:
+        if retry_error == "EGRESS_NOT_CURRENT":
+            recurrent = _materialized_stage(
+                "recurrent-egress-recovery", _recovery_context(retry_error)
+            )
+            stages.append(recurrent)
+            if recurrent["selectedTools"] != ["workstation_egress_observe"]:
+                raise RuntimeError(
+                    "recurrent egress recovery must expose only workstation_egress_observe"
+                )
+            return _receipt("blocked_recurrent_egress", calls, stages, retry)
+        return _receipt("blocked_owner_error_after_egress_recovery", calls, stages, retry)
     _validate_finance_observation(retry)
     return _receipt("completed_after_egress_recovery", calls, stages, retry)
 

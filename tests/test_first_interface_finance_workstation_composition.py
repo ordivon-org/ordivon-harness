@@ -268,6 +268,49 @@ class FinanceWorkstationCompositionTests(unittest.TestCase):
         self.assertEqual(receipt["ownerCalls"][0]["ownerErrorCode"], "EGRESS_NOT_CURRENT")
         self.assertFalse(receipt["invariants"]["environmentMutationAuthorityGranted"])
 
+    def test_recurrent_egress_staleness_recompiles_next_read_only_stage(self):
+        fake = FakeRuntime(
+            [
+                owner(True, "finance.context.compile", result={"stateVersion": "v1"}),
+                owner(False, "finance.observe", error={"code": "EGRESS_NOT_CURRENT"}),
+                owner(
+                    True,
+                    "workstation.egress.observe",
+                    result={
+                        "status": "AVAILABLE",
+                        "profileDigest": "sha256:" + "e" * 64,
+                        "listenerReachable": True,
+                    },
+                    effect=WORKSTATION_EFFECT,
+                ),
+                owner(False, "finance.observe", error={"code": "EGRESS_NOT_CURRENT"}),
+            ]
+        )
+        receipt = run(fake)
+        self.assertEqual(receipt["status"], "blocked_recurrent_egress")
+        self.assertEqual(
+            [row[1]["execution"]["args"][3] for row in fake.calls],
+            [
+                "finance.context.compile",
+                "finance.observe",
+                "workstation.egress.observe",
+                "finance.observe",
+            ],
+        )
+        self.assertEqual(
+            receipt["interactionStages"][-1]["selectedTools"],
+            ["workstation_egress_observe"],
+        )
+        self.assertNotIn(
+            "workstation_egress_pool_ensure",
+            receipt["interactionStages"][-1]["selectedTools"],
+        )
+        self.assertEqual(
+            receipt["ownerCalls"][-1]["ownerErrorCode"], "EGRESS_NOT_CURRENT"
+        )
+        self.assertFalse(receipt["invariants"]["environmentMutationAuthorityGranted"])
+        self.assertFalse(receipt["invariants"]["toolAuthorityExpanded"])
+
     def test_unavailable_egress_stops_without_environment_mutation(self):
         fake = FakeRuntime(
             [
