@@ -9,7 +9,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-APPLICATION_REVISION = "finance-current-state-application-v0"
+APPLICATION_REVISION = "finance-current-state-application-v1"
+CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 
 
 def _load_composition(path: Path) -> ModuleType:
@@ -26,6 +27,62 @@ def _load_composition(path: Path) -> ModuleType:
 
 def _text(value: object) -> str | None:
     return value if isinstance(value, str) and value else None
+
+
+def application_foreign_references(
+    consumer_episode_ref: str, consumer_class: str
+) -> list[dict[str, str]]:
+    episode = consumer_episode_ref.strip() if isinstance(consumer_episode_ref, str) else ""
+    if not episode or episode != consumer_episode_ref or len(episode.encode("utf-8")) > 300:
+        raise ValueError("consumer episode ref must be non-empty, trimmed, and <=300 UTF-8 bytes")
+    if consumer_class not in CONSUMER_CLASSES:
+        raise ValueError(f"consumer class must be one of {sorted(CONSUMER_CLASSES)}")
+    return [
+        {
+            "namespace": "ordivon.application",
+            "type": "application",
+            "id": "finance-current-state",
+            "generation": APPLICATION_REVISION,
+        },
+        {
+            "namespace": "ordivon.application",
+            "type": "consumer_class",
+            "id": consumer_class,
+        },
+        {
+            "namespace": "ordivon.application",
+            "type": "consumer_episode",
+            "id": episode,
+        },
+    ]
+
+
+class ProvenanceRuntimeClient:
+    """Inject caller-owned opaque consumer provenance into physical Runtime Jobs."""
+
+    def __init__(self, delegate: Any, references: list[dict[str, str]]):
+        self.delegate = delegate
+        self.references = [dict(item) for item in references]
+
+    def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if name != "workspace.exec":
+            return self.delegate.call_tool(name, arguments)
+        execution = arguments.get("execution")
+        if not isinstance(execution, dict):
+            raise TypeError("workspace.exec provenance injection requires execution object")
+        existing = execution.get("foreignReferences", [])
+        if not isinstance(existing, list) or not all(isinstance(item, dict) for item in existing):
+            raise TypeError("workspace.exec foreignReferences must be an array of objects")
+        combined = [dict(item) for item in existing] + [dict(item) for item in self.references]
+        keys = [(item.get("namespace"), item.get("type"), item.get("id")) for item in combined]
+        if len(keys) != len(set(keys)):
+            raise ValueError("application provenance would duplicate a Runtime foreign reference")
+        if len(combined) > 16:
+            raise ValueError("application provenance exceeds Runtime foreign reference bound")
+        combined.sort(key=lambda item: (str(item.get("namespace")), str(item.get("type")), str(item.get("id"))))
+        request = dict(arguments)
+        request["execution"] = {**execution, "foreignReferences": combined}
+        return self.delegate.call_tool(name, request)
 
 
 def _compact_obligation(value: object) -> dict[str, Any] | None:
@@ -203,6 +260,8 @@ def run_finance_current_state_application(
     finance_state_root: str,
     finance_app_python: str | None,
     request_prefix: str,
+    consumer_episode_ref: str,
+    consumer_class: str,
 ) -> dict[str, Any]:
     composition_receipt = composition.run_finance_workstation_composition(
         client,
@@ -220,6 +279,13 @@ def run_finance_current_state_application(
         "status": status,
         "composition": composition_receipt,
         "currentState": None,
+        "consumerProvenance": {
+            "truthRole": "caller-application-provenance-claim",
+            "episodeRef": consumer_episode_ref,
+            "consumerClass": consumer_class,
+            "adoptionProven": False,
+            "benefitProven": False,
+        },
         "claims": {
             "ownerTruthMinted": False,
             "providerPlumbingExposedToAgent": False,
@@ -274,6 +340,8 @@ def main() -> int:
     parser.add_argument("--finance-state-root", required=True)
     parser.add_argument("--finance-app-python")
     parser.add_argument("--request-prefix", required=True)
+    parser.add_argument("--consumer-episode-ref", required=True)
+    parser.add_argument("--consumer-class", choices=sorted(CONSUMER_CLASSES), required=True)
     parser.add_argument("--runtime-endpoint", default="http://127.0.0.1:8897/mcp")
     parser.add_argument(
         "--runtime-environment-file", default="/etc/ordivon/ordivon-runtime.env"
@@ -288,9 +356,13 @@ def main() -> int:
     args = parser.parse_args()
 
     composition = _load_composition(Path(args.composition_script))
-    client = composition._runtime_client(
+    raw_client = composition._runtime_client(
         Path(args.runtime_scripts), Path(args.runtime_environment_file), args.runtime_endpoint
     )
+    references = application_foreign_references(
+        args.consumer_episode_ref, args.consumer_class
+    )
+    client = ProvenanceRuntimeClient(raw_client, references)
     project_environment = None
     if args.finance_app_python is None:
         project_environment = composition._prepare_finance_project_environment(
@@ -306,6 +378,8 @@ def main() -> int:
         finance_state_root=args.finance_state_root,
         finance_app_python=args.finance_app_python,
         request_prefix=args.request_prefix,
+        consumer_episode_ref=args.consumer_episode_ref,
+        consumer_class=args.consumer_class,
     )
     if project_environment is not None:
         receipt["projectEnvironmentPreparation"] = project_environment

@@ -150,6 +150,8 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
             finance_state_root="/tmp/state",
             finance_app_python=None,
             request_prefix="ordinary-finance-current-state",
+            consumer_episode_ref="consumer-episode:test-finance-current-state",
+            consumer_class="test",
         )
         self.assertEqual(receipt["status"], "completed_current_state")
         self.assertEqual(receipt["currentContextRuntimeJobId"], "job-current-context")
@@ -175,10 +177,48 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
             finance_state_root="/tmp/state",
             finance_app_python=None,
             request_prefix="ordinary-finance-current-state",
+            consumer_episode_ref="consumer-episode:test-finance-current-state",
+            consumer_class="test",
         )
         self.assertEqual(receipt["status"], "blocked_environment")
         self.assertIsNone(receipt["currentState"])
         self.assertEqual(composition.domain_calls, [])
+
+    def test_application_foreign_references_are_explicit_and_bounded(self):
+        refs = module.application_foreign_references(
+            "consumer-episode:test-finance-current-state", "test"
+        )
+        self.assertEqual(
+            {(item["type"], item["id"]) for item in refs},
+            {
+                ("application", "finance-current-state"),
+                ("consumer_class", "test"),
+                ("consumer_episode", "consumer-episode:test-finance-current-state"),
+            },
+        )
+        with self.assertRaises(ValueError):
+            module.application_foreign_references("consumer-episode:x", "unknown")
+
+    def test_provenance_client_injects_only_workspace_exec(self):
+        class Delegate:
+            def __init__(self):
+                self.calls = []
+
+            def call_tool(self, name, arguments):
+                self.calls.append((name, arguments))
+                return {"ok": True}
+
+        delegate = Delegate()
+        refs = module.application_foreign_references("consumer-episode:x", "audit")
+        client = module.ProvenanceRuntimeClient(delegate, refs)
+        client.call_tool(
+            "workspace.exec",
+            {"clientRequestId": "r1", "execution": {"workspaceId": "w"}},
+        )
+        execution = delegate.calls[0][1]["execution"]
+        self.assertEqual(execution["foreignReferences"], sorted(refs, key=lambda item: (item["namespace"], item["type"], item["id"])))
+        client.call_tool("artifact.read", {"jobId": "j"})
+        self.assertNotIn("foreignReferences", delegate.calls[1][1])
 
 
 if __name__ == "__main__":
