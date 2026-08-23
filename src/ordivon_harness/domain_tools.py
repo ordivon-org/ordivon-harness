@@ -8,13 +8,14 @@ universal domain Tool registry.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
 from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
-from .ordivon.control import CancellationToken, RunDeadline
 from .loop_driver import HarnessLoopDriverRef, builtin_scheduling_mode
+from .ordivon.control import CancellationToken, RunDeadline
 from .ordivon.events import HarnessRunEvent
 from .ordivon.loop import (
     AgentLoopResult,
@@ -29,8 +30,9 @@ from .ordivon.model import (
     AgentToolDefinition,
     AgentTurnAdapter,
 )
-from .ordivon.tool_errors import ToolBridgeError, ToolBridgeErrorKind
 from .ordivon.tool_bridge import ToolObservation
+from .ordivon.tool_errors import ToolBridgeError, ToolBridgeErrorKind
+from .ordivon.turn_projection import TurnToolWorkingSetProjector
 from .version import package_version
 
 
@@ -177,6 +179,7 @@ class DomainToolLoopRunner:
         monotonic_ms: Callable[[], int] | None = None,
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
         loop_driver_ref: HarnessLoopDriverRef | None = None,
+        turn_tool_working_set_projector: TurnToolWorkingSetProjector | None = None,
     ) -> None:
         validate_json_value(bridge.bridge_identity)
         if not bridge.bridge_identity:
@@ -186,6 +189,7 @@ class DomainToolLoopRunner:
         self.clock_ms = clock_ms
         self.monotonic_ms = monotonic_ms
         self.event_sink = event_sink
+        self.turn_tool_working_set_projector = turn_tool_working_set_projector
         if loop_driver_ref is not None and not isinstance(loop_driver_ref, HarnessLoopDriverRef):
             raise TypeError("domain Tool Loop driver must be a HarnessLoopDriverRef")
         self.loop_driver_ref = loop_driver_ref
@@ -238,6 +242,7 @@ class DomainToolLoopRunner:
             assignment_deadline_ms=plan.assignment_deadline_ms,
             event_sink=self.event_sink,
             scheduling_mode=self.scheduling_mode,
+            turn_tool_working_set_projector=self.turn_tool_working_set_projector,
         )
         return loop.run(
             harness_run_id=plan.harness_run_id,

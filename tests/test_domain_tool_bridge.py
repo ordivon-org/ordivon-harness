@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from typing import ClassVar
 
 from anc_canonical import canonical_digest
 
@@ -45,7 +46,7 @@ class _SecurityPlanBridge:
             ),
         ),
     )
-    bridge_identity = {
+    bridge_identity: ClassVar[dict[str, str]] = {
         "bridgeId": "bridge:security-plan-test",
         "revision": "1",
     }
@@ -82,6 +83,61 @@ def _result(
         finish_reason="tool_calls" if calls else "stop",
         raw_response_digest=canonical_digest({"result": suffix}),
     )
+
+
+class _ProgressiveFinanceBridge:
+    catalog = DomainToolCatalog(
+        domain_id="domain:finance-progressive-test",
+        revision="first-interface-v1",
+        tools=(
+            AgentToolDefinition(
+                "finance_observe",
+                "Refresh current Finance observation state without a financial write.",
+                {"type": "object", "additionalProperties": False},
+            ),
+            AgentToolDefinition(
+                "finance_decide",
+                "Admit an already-complete Finance DecisionRecord after current observation.",
+                {"type": "object", "additionalProperties": False},
+            ),
+        ),
+    )
+    bridge_identity: ClassVar[dict[str, str]] = {
+        "bridgeId": "bridge:finance-progressive-test",
+        "revision": "1",
+    }
+
+    def __init__(self) -> None:
+        self.observed = False
+        self.calls: list[str] = []
+
+    def execute(self, call: AgentToolCall, *, step_id: str) -> ToolObservation:
+        del step_id
+        self.calls.append(call.name)
+        if call.name == "finance_observe":
+            self.observed = True
+        return ToolObservation(
+            tool_call_id=call.tool_call_id,
+            tool_name=call.name,
+            status="observed",
+            structured_content={"current": self.observed},
+        )
+
+
+class _ProgressiveFinanceProjector:
+    def __init__(self, bridge: _ProgressiveFinanceBridge) -> None:
+        self.bridge = bridge
+        self.sequences: list[int] = []
+
+    def project_turn_tool_names(self, **kwargs) -> tuple[str, ...]:
+        self.sequences.append(kwargs["sequence"])
+        return ("finance_decide",) if self.bridge.observed else ("finance_observe",)
+
+
+class _InvalidProgressiveProjector:
+    def project_turn_tool_names(self, **kwargs) -> tuple[str, ...]:
+        del kwargs
+        return ("not_run_admitted",)
 
 
 class DomainToolBridgeTests(unittest.TestCase):
@@ -159,6 +215,103 @@ class DomainToolBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown Tools"):
             runner.run(self._plan(allowed_tools=("missing_tool",)))
         self.assertEqual(adapter.requests, [])
+
+    def test_progressive_turn_tool_projection_changes_between_turns(self) -> None:
+        bridge = _ProgressiveFinanceBridge()
+        projector = _ProgressiveFinanceProjector(bridge)
+        adapter = ScriptedTurnAdapter(
+            (
+                _result(
+                    "observe",
+                    calls=(
+                        AgentToolCall(
+                            "tool-call:finance:observe",
+                            "finance_observe",
+                            {},
+                        ),
+                    ),
+                ),
+                _result(
+                    "decide",
+                    calls=(
+                        AgentToolCall(
+                            "tool-call:finance:decide",
+                            "finance_decide",
+                            {},
+                        ),
+                    ),
+                ),
+                _result(
+                    "done",
+                    conclusion=AgentRunConclusion(
+                        "candidate_completed",
+                        "Observed current state before admitting the decision.",
+                    ),
+                ),
+            )
+        )
+        plan = DomainToolLoopPlan(
+            harness_run_id="harness-run:finance:progressive",
+            assignment_id="assignment:finance:progressive",
+            context_digest=canonical_digest({"finance": "progressive"}),
+            initial_messages=(
+                {"role": "user", "content": "Observe before deciding."},
+            ),
+            allowed_tools=("finance_observe", "finance_decide"),
+            budget=RunBudget(4, 3, 100_000, 60_000),
+        )
+
+        result = DomainToolLoopRunner(
+            adapter,
+            bridge,
+            turn_tool_working_set_projector=projector,
+        ).run(plan)
+
+        self.assertIs(result.stop_code, RunStopCode.CANDIDATE_COMPLETED)
+        self.assertEqual(bridge.calls, ["finance_observe", "finance_decide"])
+        self.assertEqual(
+            tuple(tool.name for tool in adapter.requests[0].tools),
+            ("finance_observe",),
+        )
+        self.assertEqual(
+            tuple(tool.name for tool in adapter.requests[1].tools),
+            ("finance_decide",),
+        )
+        self.assertEqual(projector.sequences[:2], [1, 2])
+
+    def test_progressive_turn_tool_projection_cannot_expand_run_grant(self) -> None:
+        bridge = _ProgressiveFinanceBridge()
+        adapter = ScriptedTurnAdapter(
+            (
+                _result(
+                    "unused",
+                    conclusion=AgentRunConclusion(
+                        "candidate_completed",
+                        "Must not reach Provider.",
+                    ),
+                ),
+            )
+        )
+        plan = DomainToolLoopPlan(
+            harness_run_id="harness-run:finance:invalid-progressive",
+            assignment_id="assignment:finance:invalid-progressive",
+            context_digest=canonical_digest({"finance": "invalid-progressive"}),
+            initial_messages=(
+                {"role": "user", "content": "Do not expand authority."},
+            ),
+            allowed_tools=("finance_observe", "finance_decide"),
+            budget=RunBudget(2, 1, 100_000, 60_000),
+        )
+
+        result = DomainToolLoopRunner(
+            adapter,
+            bridge,
+            turn_tool_working_set_projector=_InvalidProgressiveProjector(),
+        ).run(plan)
+
+        self.assertIs(result.stop_code, RunStopCode.HARNESS_FAILED)
+        self.assertEqual(adapter.requests, [])
+        self.assertEqual(bridge.calls, [])
 
     def test_catalog_digest_binds_revision_and_tool_shape(self) -> None:
         first = _SecurityPlanBridge.catalog
