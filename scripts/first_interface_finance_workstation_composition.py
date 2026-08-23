@@ -54,6 +54,89 @@ ADMITTED_TOOLS = (
     ),
 )
 
+_OWNER_STDOUT_LIMIT_BYTES = 3_000_000
+_ARTIFACT_READ_MAX_BYTES = 1_048_576
+
+
+def _complete_owner_stdout(
+    client: RuntimeClient,
+    result: dict[str, Any],
+    *,
+    owner: str,
+    operation: str,
+) -> str:
+    stdout = result.get("stdoutTail")
+    artifacts = result.get("artifacts")
+    stdout_artifacts = (
+        [
+            artifact
+            for artifact in artifacts
+            if isinstance(artifact, dict) and artifact.get("kind") == "stdout"
+        ]
+        if isinstance(artifacts, list)
+        else []
+    )
+    if len(stdout_artifacts) > 1:
+        raise RuntimeError(f"{owner} {operation} Runtime result has multiple stdout artifacts")
+    if not stdout_artifacts:
+        if not isinstance(stdout, str) or not stdout.strip():
+            raise RuntimeError(f"{owner} {operation} Runtime result omitted owner stdout")
+        return stdout
+
+    artifact = stdout_artifacts[0]
+    dropped_bytes = artifact.get("droppedBytes")
+    if artifact.get("truncated") is True or (
+        isinstance(dropped_bytes, int) and dropped_bytes > 0
+    ):
+        raise RuntimeError(f"{owner} {operation} stdout exceeded runner retention bound")
+
+    retained_bytes = artifact.get("retainedBytes")
+    tail_bytes = len(stdout.encode("utf-8")) if isinstance(stdout, str) else 0
+    if (
+        isinstance(retained_bytes, int)
+        and retained_bytes <= tail_bytes
+        and isinstance(stdout, str)
+        and stdout.strip()
+    ):
+        return stdout
+
+    job_id = result.get("jobId")
+    artifact_id = artifact.get("artifactId")
+    if not isinstance(job_id, str) or not job_id:
+        raise RuntimeError(f"{owner} {operation} Runtime result omitted Job identity")
+    if not isinstance(artifact_id, str) or not artifact_id:
+        raise RuntimeError(f"{owner} {operation} Runtime result omitted stdout Artifact identity")
+
+    chunks: list[str] = []
+    offset = 0
+    while True:
+        chunk = client.call_tool(
+            "artifact.read",
+            {
+                "jobId": job_id,
+                "artifactId": artifact_id,
+                "offset": offset,
+                "maxBytes": _ARTIFACT_READ_MAX_BYTES,
+            },
+        )
+        content = chunk.get("content")
+        if not isinstance(content, str):
+            raise TypeError(f"{owner} {operation} stdout Artifact read omitted content")
+        chunks.append(content)
+        if chunk.get("eof") is True:
+            break
+        next_offset = chunk.get("nextOffset")
+        if not isinstance(next_offset, int) or next_offset <= offset:
+            raise RuntimeError(f"{owner} {operation} stdout Artifact read did not advance")
+        offset = next_offset
+
+    complete = "".join(chunks)
+    if not complete.strip():
+        raise RuntimeError(f"{owner} {operation} stdout Artifact was empty")
+    if isinstance(retained_bytes, int) and len(complete.encode("utf-8")) != retained_bytes:
+        raise RuntimeError(f"{owner} {operation} stdout Artifact byte length mismatched Runtime")
+    return complete
+
 
 def _domain_exec(
     client: RuntimeClient,
@@ -84,7 +167,7 @@ def _domain_exec(
                 ],
                 "env": dict(env or {}),
                 "timeoutMs": 30000,
-                "stdoutLimitBytes": 65536,
+                "stdoutLimitBytes": _OWNER_STDOUT_LIMIT_BYTES,
                 "stderrLimitBytes": 16384,
             },
             "waitMs": 30000,
@@ -94,9 +177,7 @@ def _domain_exec(
     )
     if result.get("semanticCompletionEvaluated") is not False:
         raise RuntimeError("Runtime must not claim domain semantic completion")
-    stdout = result.get("stdoutTail")
-    if not isinstance(stdout, str) or not stdout.strip():
-        raise RuntimeError(f"{owner} {operation} Runtime result omitted owner stdout")
+    stdout = _complete_owner_stdout(client, result, owner=owner, operation=operation)
     try:
         envelope = json.loads(stdout)
     except json.JSONDecodeError as error:

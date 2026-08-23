@@ -62,6 +62,45 @@ class FakeRuntime:
         }
 
 
+class ArtifactRuntime:
+    def __init__(self, envelope, *, truncated=False):
+        self.stdout = json.dumps(envelope, sort_keys=True)
+        self.truncated = truncated
+        self.calls = []
+
+    def call_tool(self, name, arguments):
+        self.calls.append((name, arguments))
+        if name == "workspace.exec":
+            retained = self.stdout.encode("utf-8")
+            return {
+                "jobId": "job-artifact",
+                "attemptId": "attempt-artifact",
+                "status": "succeeded",
+                "semanticCompletionEvaluated": False,
+                "stdoutTail": self.stdout[-1024:],
+                "artifacts": [
+                    {
+                        "artifactId": "stdout-artifact",
+                        "kind": "stdout",
+                        "retainedBytes": len(retained),
+                        "truncated": self.truncated,
+                        "droppedBytes": 1 if self.truncated else 0,
+                    }
+                ],
+            }
+        if name == "artifact.read":
+            encoded = self.stdout.encode("utf-8")
+            offset = arguments["offset"]
+            end = min(offset + arguments["maxBytes"], len(encoded))
+            return {
+                "content": encoded[offset:end].decode("utf-8"),
+                "offset": offset,
+                "nextOffset": end,
+                "eof": end == len(encoded),
+            }
+        raise AssertionError(name)
+
+
 def run(fake):
     return module.run_finance_workstation_composition(
         fake,
@@ -74,6 +113,47 @@ def run(fake):
 
 
 class FinanceWorkstationCompositionTests(unittest.TestCase):
+    def test_large_owner_stdout_is_recovered_from_runtime_artifact(self):
+        envelope = owner(
+            True,
+            "finance.context.compile",
+            result={"stateVersion": "v1", "padding": "x" * 70000},
+        )
+        fake = ArtifactRuntime(envelope)
+        call = module._domain_exec(
+            fake,
+            owner="ordivon-finance",
+            workspace_id="finance-ws",
+            script="scripts/finance-domain.mjs",
+            operation="finance.context.compile",
+            arguments={},
+            client_request_id="large-owner-output",
+        )
+        self.assertEqual(call.envelope, envelope)
+        self.assertEqual(fake.calls[0][0], "workspace.exec")
+        self.assertEqual(
+            fake.calls[0][1]["execution"]["stdoutLimitBytes"],
+            module._OWNER_STDOUT_LIMIT_BYTES,
+        )
+        self.assertEqual(fake.calls[1][0], "artifact.read")
+
+    def test_truncated_owner_stdout_fails_closed_before_json_parse(self):
+        fake = ArtifactRuntime(
+            owner(True, "finance.context.compile", result={"stateVersion": "v1"}),
+            truncated=True,
+        )
+        with self.assertRaisesRegex(RuntimeError, "retention bound"):
+            module._domain_exec(
+                fake,
+                owner="ordivon-finance",
+                workspace_id="finance-ws",
+                script="scripts/finance-domain.mjs",
+                operation="finance.context.compile",
+                arguments={},
+                client_request_id="truncated-owner-output",
+            )
+        self.assertEqual([name for name, _ in fake.calls], ["workspace.exec"])
+
     def test_healthy_path_exposes_only_finance_and_never_observes_or_mutates_workstation(self):
         fake = FakeRuntime(
             [
