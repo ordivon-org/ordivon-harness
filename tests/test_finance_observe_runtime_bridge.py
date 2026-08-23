@@ -330,9 +330,9 @@ class FinanceObserveRuntimeBridgeTests(unittest.TestCase):
             active_elapsed_ms=0,
         )
 
-    def test_surface_allows_only_optional_goal_identity_and_is_not_pure_read_only(self):
+    def test_surface_is_zero_argument_and_is_not_pure_read_only(self):
         schema = FINANCE_OBSERVE_DEFINITION.input_schema
-        self.assertEqual(set(schema["properties"]), {"goalId"})
+        self.assertEqual(schema["properties"], {})
         self.assertFalse(schema["additionalProperties"])
         value = grant().to_dict()
         self.assertEqual(value["effectClass"], "canonical-observation-external-read-no-financial-write")
@@ -344,15 +344,26 @@ class FinanceObserveRuntimeBridgeTests(unittest.TestCase):
             frozenset({"finance_observe"}),
         )
 
+    def test_agent_cannot_invent_goal_identity_for_current_observation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = FinanceFakeRuntime()
+            _, _, _, bridge = self.initialize(directory, "invented-goal", runtime)
+            self.bind_direct_state(bridge)
+            with self.assertRaisesRegex(
+                Exception, "accepts no Agent-authored arguments"
+            ):
+                bridge.execute(
+                    finance_call("invented-goal", {"goalId": "goal:current"}),
+                    step_id="step:1",
+                )
+            self.assertEqual(runtime.workspace_exec_count, 0)
+
     def test_lowering_hides_provider_plumbing_and_preserves_exact_owner_state_binding(self):
         with tempfile.TemporaryDirectory() as directory:
             runtime = FinanceFakeRuntime()
             _, _, _, bridge = self.initialize(directory, "lower", runtime)
             self.bind_direct_state(bridge)
-            observation = bridge.execute(
-                finance_call("lower", {"goalId": "goal:primary-capital-allocation"}),
-                step_id="step:1",
-            )
+            observation = bridge.execute(finance_call("lower"), step_id="step:1")
             self.assertEqual(observation.status, "observed")
             request = next(args for name, args in runtime.calls if name == "workspace.exec")
             execution = request["execution"]
@@ -366,7 +377,7 @@ class FinanceObserveRuntimeBridgeTests(unittest.TestCase):
                     "--operation",
                     "finance.observe",
                     "--arguments-json",
-                    '{"goalId":"goal:primary-capital-allocation"}',
+                    '{}',
                 ],
             )
             self.assertEqual(
@@ -443,7 +454,7 @@ class FinanceObserveRuntimeBridgeTests(unittest.TestCase):
             runtime = FinanceFakeRuntime()
             _, _, _, bridge = self.initialize(directory, "unknown-arg", runtime)
             self.bind_direct_state(bridge)
-            with self.assertRaisesRegex(Exception, "unknown fields"):
+            with self.assertRaisesRegex(Exception, "accepts no Agent-authored arguments"):
                 bridge.execute(
                     finance_call("unknown-arg", {"proxy": "http://127.0.0.1:1"}),
                     step_id="step:1",

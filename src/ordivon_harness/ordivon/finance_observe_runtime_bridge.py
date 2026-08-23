@@ -28,7 +28,6 @@ from .run_store_port import HarnessRunContinuityStore
 from .sqlite_runtime_bridge import SQLiteHarnessRuntimeBridge
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
-_GOAL_PREFIX = "goal:"
 _MAX_OWNER_STDOUT_BYTES = 1_048_576
 
 FINANCE_OBSERVE_DEFINITION = AgentToolDefinition(
@@ -41,12 +40,7 @@ FINANCE_OBSERVE_DEFINITION = AgentToolDefinition(
     ),
     input_schema={
         "type": "object",
-        "properties": {
-            "goalId": {
-                "type": "string",
-                "pattern": r"^goal:[A-Za-z0-9._:-]+$",
-            }
-        },
+        "properties": {},
         "additionalProperties": False,
     },
 )
@@ -86,17 +80,6 @@ def _absolute_path(value: Any, label: str) -> str:
         raise ValueError(f"{label} must be an absolute normalized POSIX path")
     return text
 
-
-def _goal_id(value: Any) -> str:
-    text = _text(value, "Finance goalId", max_bytes=300)
-    if not text.startswith(_GOAL_PREFIX) or any(
-        character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._:-"
-        for character in text[len(_GOAL_PREFIX) :]
-    ):
-        raise ValueError("Finance goalId must be a canonical goal:<id> reference")
-    if text == _GOAL_PREFIX:
-        raise ValueError("Finance goalId must include an identity")
-    return text
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,20 +175,12 @@ class SQLiteHarnessFinanceObserveRuntimeBridge(SQLiteHarnessRuntimeBridge):
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
             )
         arguments = dict(call.arguments)
-        if set(arguments) - {"goalId"}:
+        if arguments:
             raise ToolBridgeError(
-                "finance_observe received unknown fields",
+                "finance_observe accepts no Agent-authored arguments; Finance resolves the unique active Goal",
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
             )
         owner_arguments: dict[str, JsonValue] = {}
-        if "goalId" in arguments:
-            try:
-                owner_arguments["goalId"] = _goal_id(arguments["goalId"])
-            except ValueError as error:
-                raise ToolBridgeError(
-                    str(error),
-                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
-                ) from error
         try:
             request = build_harness_workspace_exec_request_from_binding(
                 self.execution_binding,
