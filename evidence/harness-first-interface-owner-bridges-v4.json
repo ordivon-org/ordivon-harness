@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.first-interface-owner-bridges-v4",
+  "classification": "CURRENT_OWNER_BRIDGES_FINANCE_RESEARCH_TYPED_REPRESENTATION_ACCEPTED",
+  "implementationSourceRevision": "f4b05bb38ef7bff10f889df69611de6aaff3a40c",
+  "financeSourceFence": {
+    "ownerWorkspaceId": "finance-research-owner-67aad23-20260824",
+    "researchRunnerWorkspaceId": "finance-research-runner-67aad23-20260824",
+    "sourceRevision": "67aad23cd1b293f16cacda894723921ed931bd57",
+    "sourceStateDigest": "sha256:d2a501091def5476a10e26d964fb096ede31a09b93ff10ded5bad18763b5990c",
+    "trustedResearchImplementationDigest": "sha256:1af2d9cc6b12d9bb9298f948161a2c64e6e31f1293f2cb2050544d4122e34a96"
+  },
+  "focusedCurrentRegression": {
+    "jobId": "job-01a03015-91b4-7813-99fc-7d7fbde747d8",
+    "tests": 34,
+    "passed": 34,
+    "failures": 0,
+    "errors": 0,
+    "ruff": "passed",
+    "scope": [
+      "Finance research source-fenced Runtime bridge",
+      "Finance observe Runtime bridge",
+      "latest Finance/Workstation first-interface composition",
+      "generic durable Runtime bridge"
+    ]
+  },
+  "financeResearchLiveAcceptance": {
+    "acceptanceHarnessJobId": "job-01a03015-5e80-7322-8281-42967cc556eb",
+    "outerFinanceRuntimeJobId": "job-01a03015-623d-74c3-9366-dd3414028be6",
+    "innerResearchRuntimeJobId": "job-01a03015-64bf-7f41-a587-180b6466d677",
+    "innerResearchRuntimeAttemptId": "attempt-01a03015-64bf-7f41-a587-1810755ea343",
+    "harnessObservationStatus": "observed",
+    "reconciled": false,
+    "recoveryConsequence": "process-or-external-effect-possible",
+    "evidenceRef": "evidence://sha256/1805f7dfc1db8b657b710d539e3ff8cd175e0b6da032286660953d0c033df546",
+    "experimentId": "experiment:carrier-holding-cost-sensitivity",
+    "semanticResultDigest": "sha256:4cde54dfe4e2e71c00d9aa960c4b7ea7908338ca18979b21ffc75d2939acca05",
+    "resultEncoding": "application/json; charset=utf-8",
+    "resultBytes": 5286,
+    "resultDigest": "sha256:053d81bae6fa298feaaac0f52e11d722d24a34e17aaec3ff5813879e0997d054",
+    "resultOmittedByHarnessBound": false,
+    "sourceStateVersionBefore": "1358:effd3e66b392ae27",
+    "sourceStateVersionAfter": "1361:e1a7817816f37c28",
+    "admissionCapability": "research.result.admit@5",
+    "floatWitness": {
+      "field": "horizons.1.0[0].fundingScenarioBps",
+      "valueRenderedInFinanceJson": "0.0547945205479452"
+    },
+    "decisionMutation": false,
+    "proposalMutation": false,
+    "externalEffectMutation": false,
+    "capitalLedgerMutation": false,
+    "externalWorldRead": false,
+    "externalFinancialWrite": false,
+    "financialSubmission": false,
+    "authorityMutation": false
+  },
+  "representationBoundary": {
+    "financeOwnsTypedResearchResult": true,
+    "harnessCanonicalJsonValueForbidsFloatingPoint": true,
+    "floatRichFinanceResultEmbeddedAsHarnessTypedObject": false,
+    "boundedFinanceResultPreservedAsUtf8JsonText": true,
+    "resultDigestAndByteLengthProjected": true,
+    "oversizedResultMayBeOmittedWhileDigestRemains": true,
+    "harnessDoesNotCoerceFinanceFloatsIntoStringsRecursively": true,
+    "harnessDoesNotMintFinanceNumericTruth": true
+  },
+  "evidenceLifecycle": {
+    "supersedesCurrentnessClaim": "harness.execution.first-interface-owner-bridges-v3",
+    "priorReceiptBytesRewritten": false,
+    "priorReceiptDisposition": "historical",
+    "reason": "v3 validated bridge/environment structure but did not cover live float-rich Finance research result canonicalization; f4b05bb changes verified implementation paths and v4 carries the missing live witness."
+  },
+  "acceptedLaws": {
+    "financeResearchAgentArgumentIsOnlyResearchRunSpec": true,
+    "runtimeRunnerInputAuthorityAndTrustConfigurationRemainEnvironmentOwned": true,
+    "researchMayAdvanceCanonicalResearchEvidenceButNotCapitalDecisionEffectOrLedgerState": true,
+    "researchExperimentReceivesNoVenueCredentialOrExternalNetworkAuthority": true,
+    "harnessUsesStrongerRecoveryConsequenceForResearchThanObservation": true,
+    "typedOwnerResultMayCrossHarnessBoundaryAsBoundedSerializedRepresentationWhenHarnessScalarAlgebraIsNarrower": true,
+    "runtimeIdempotencyFenceRejectsSameClientRequestIdentityWithDifferentPhysicalRequest": true
+  },
+  "explicitNonClaims": [
+    "This receipt does not enable live Finance venue submission.",
+    "This receipt does not make Harness the owner of Finance research schemas or numeric semantics.",
+    "This receipt does not claim every Finance research result fits the bounded Harness projection; oversized result bytes may remain Evidence-addressable only.",
+    "This receipt does not claim cross-incarnation Harness replay when assignment or dispatch fences differ.",
+    "This receipt does not certify finance.decide, finance.execute, or finance.reconcile as Harness Tools."
+  ]
+}
