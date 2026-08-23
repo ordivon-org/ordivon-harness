@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.first-interface-owner-composition-atlas-v1",
+  "classification": "CURRENT_OWNER_COMPOSITION_AND_ATLAS_FIRST_INTERFACE_ACCEPTED",
+  "startingCanonicalHead": "e0c2989d12752148c8285aa51551afe3f5215783",
+  "implementationSourceRevision": "792cd48cc9fbdddb7431462876d8e57d8f003643",
+  "atlasSourceFence": {
+    "workspaceId": "agent-experience-atlas-live-first-look-20260824",
+    "sourceRevision": "a0df2648fd3d0ccba4898b3e642275613d4fda9f",
+    "sourceStateDigest": "sha256:3abb2b00b5088981ebcf7039a09225367eea547cc0441b92560f01bca2a78f48",
+    "dirty": false
+  },
+  "focusedRegression": {
+    "jobId": "job-01a02fd4-b8f2-7bf3-b86c-f695bf98f3c7",
+    "tests": 29,
+    "passed": 29,
+    "failures": 0,
+    "errors": 0,
+    "scope": [
+      "Atlas first-look Runtime bridge",
+      "Finance-to-Workstation owner composition",
+      "Runtime Artifact recovery for complete owner stdout",
+      "generic Runtime bridge durability and response-loss reconciliation",
+      "InteractionContext",
+      "structured no-progress completion"
+    ]
+  },
+  "atlasLiveAcceptance": {
+    "jobId": "job-01a02fd5-2595-7a10-b41a-64c73d295bf6",
+    "runtimeJobIds": ["job-01a02fd5-398d-7841-8ac6-82e10cf1eb91"],
+    "provider": "deepseek-v4-flash",
+    "modelCalls": 2,
+    "toolCalls": 1,
+    "toolCorrections": 0,
+    "stopCode": "needs_input",
+    "totalTokens": 5099,
+    "observationBytes": 7797,
+    "observationOnlyTurns": 1,
+    "noveltyStanding": "UNKNOWN_CALLER_MUST_ADJUDICATE",
+    "semanticEquivalenceInferred": false,
+    "researchAdmissionGranted": false,
+    "ownerTruthMinted": false,
+    "candidateSetExhaustive": false
+  },
+  "financeWorkstationLiveAcceptance": {
+    "compositionJobId": "job-01a02fd5-a1ba-7ce3-9bf5-5f3dbcbf943f",
+    "capturedFinanceFailureJobId": "job-01a02f8d-b70d-7660-9635-2bd880625562",
+    "workstationObserveJobId": "job-01a02fd5-a39e-74f0-9a2f-302ece8b9617",
+    "financeRetryJobId": "job-01a02fd5-a5f1-7132-8a36-c994d95dcdd4",
+    "status": "completed_after_egress_recovery",
+    "stages": [
+      "captured finance.observe EGRESS_NOT_CURRENT",
+      "workstation.egress.observe",
+      "finance.observe retry"
+    ],
+    "environmentMutationAuthorityGranted": false,
+    "toolAuthorityExpanded": false,
+    "runtimeSemanticCompletionClaimed": false
+  },
+  "transportHardening": {
+    "completeOwnerStdoutRecoveredFromRuntimeArtifact": true,
+    "truncatedOwnerStdoutFailsClosed": true,
+    "ownerStdoutTransportDoesNotMintDomainSemanticCompletion": true
+  },
+  "acceptedLaws": {
+    "runtimeApiIsNotRuntimeFirstInterface": true,
+    "genericHarnessLoopIsNotCrossOwnerSemanticOrchestrator": true,
+    "crossOwnerContinuationIsApplicationOrDomainOwnedStageComposition": true,
+    "typedOwnerBlockerCanRecompileTheNextOwnerScopedStage": true,
+    "genericProgressiveTurnProjectorIsNotRequiredForOwnerComposition": true,
+    "runtimeOwnsPhysicalExecutionRecoveryAndArtifactTransportOnly": true,
+    "atlasOwnsPriorResultCandidateSemantics": true,
+    "atlasFirstLookLowersThroughExactRuntimeWithoutMovingAtlasSemanticsIntoRuntime": true,
+    "sourceRevisionAndSourceStateDigestAreCallerFencedBeforeAtlasRead": true,
+    "responseLossDoesNotRedispatchTheSameAtlasRead": true,
+    "domainObservationOnlyToolsDoNotCountAsActionProgress": true,
+    "observationGateClosureIsProjectedBeforeTheNextModelTurn": true,
+    "boundedCandidateAbsenceDoesNotEstablishNovelty": true,
+    "boundedCandidateAbsenceDoesNotEstablishSemanticNonEquivalence": true,
+    "directTextMatchDoesNotEstablishSemanticEquivalence": true,
+    "harnessDoesNotSynthesizeResearchAdmissionOrSemanticEquivalence": true,
+    "financeEgressRecoveryDoesNotImplyEnvironmentMutationAuthority": true
+  },
+  "explicitNonClaims": [
+    "Atlas first-look is not exhaustive prior-result search.",
+    "Atlas synthesis does not become owner truth.",
+    "Harness does not gain research-admission authority.",
+    "Runtime does not gain Atlas, Finance or Workstation domain semantics.",
+    "The explicitly reverted generic progressive-turn Tool projector is not restored by this revision.",
+    "Finance EGRESS_NOT_CURRENT does not authorize workstation.egress.ensure or workstation.egress.pool.ensure.",
+    "This receipt does not freeze a universal InteractionContext schema.",
+    "Global current-work priority remains outside this change.",
+    "Model prose is not itself Atlas or owner standing."
+  ]
+}

@@ -5,8 +5,8 @@ import importlib.util
 import json
 import subprocess
 import sys
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "evidence" / "index.json"
@@ -38,9 +38,15 @@ EXPECTED = {
     ),
     "harness.execution.current-no-tool-conclusion-control-repair-v1": (
         "harness-current-no-tool-conclusion-control-repair-v1.json",
-        "verified",
+        "historical",
         "8925fdba026cdef4f9d8969fae244ee3e5e46730",
         "d455cc726e6356e4463a6c7463d9573d3d2730c88b78723fa362129159b7b4ae",
+    ),
+    "harness.execution.first-interface-owner-composition-atlas-v1": (
+        "harness-first-interface-owner-composition-atlas-v1.json",
+        "verified",
+        "792cd48cc9fbdddb7431462876d8e57d8f003643",
+        "c14b0b932ed15a0f7483a69191a8b3c6f6cd1030377c2138e92d5c227363d329",
     ),
 }
 
@@ -89,12 +95,17 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         current, invalidating = check_evidence._verified_revision_is_current(
             "8925fdba026cdef4f9d8969fae244ee3e5e46730"
         )
+        self.assertFalse(current)
+        self.assertTrue(invalidating)
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "792cd48cc9fbdddb7431462876d8e57d8f003643"
+        )
         self.assertTrue(current)
         self.assertEqual(invalidating, [])
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
-        for _claim_id, (filename, _status, revision, _digest) in EXPECTED.items():
+        for filename, _status, revision, _digest in EXPECTED.values():
             self.assertEqual(validator(filename, revision), [])
         current_head = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -113,9 +124,9 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         completed = subprocess.run(
             [sys.executable, str(SCRIPT)],
             cwd=ROOT,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
+            check=False,
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("evidence contract: valid", completed.stdout)
