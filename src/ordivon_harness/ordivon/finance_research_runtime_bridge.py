@@ -17,7 +17,10 @@ from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
 from ..agent_tool_observation import HarnessToolObservation
 from ..core_contracts import HarnessRunContract
-from ..execution_binding import HarnessExecutionBinding, build_harness_workspace_exec_request_from_binding
+from ..execution_binding import (
+    HarnessExecutionBinding,
+    build_harness_workspace_exec_request_from_binding,
+)
 from ..protocol import HarnessRecoveryConsequence
 from ..runtime_port import HarnessRuntimeClient
 from .model import AgentToolCall, AgentToolDefinition
