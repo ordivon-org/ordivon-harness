@@ -138,7 +138,28 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
             ["finance.decide"],
         )
         self.assertFalse(value["currentAffordances"][0]["externalFinancialWritePotential"])
+        self.assertFalse(value["affordanceSelection"]["listOrderCarriesPriority"])
+        self.assertFalse(value["affordanceSelection"]["singleNextOperationClaimed"])
         self.assertFalse(value["claims"]["ownerTruthMinted"])
+
+    def test_multiple_obligation_affordances_remain_unordered(self):
+        current = context_result()
+        current["obligations"].append(
+            {
+                "kind": "observation",
+                "need": "refresh-portfolio-observation",
+                "status": "open",
+                "candidateOperationRefs": ["agent-operation://finance.observe"],
+            }
+        )
+        value = module.compact_current_finance_context(current)
+        self.assertEqual(
+            {item["operationId"] for item in value["currentAffordances"]},
+            {"finance.observe", "finance.decide"},
+        )
+        self.assertFalse(value["affordanceSelection"]["listOrderCarriesPriority"])
+        self.assertFalse(value["affordanceSelection"]["singleNextOperationClaimed"])
+        self.assertFalse(value["claims"]["priorityInferred"])
 
     def test_success_recompiles_after_observation_before_exposing_current_state(self):
         composition = FakeComposition()
@@ -157,6 +178,11 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
         self.assertEqual(receipt["currentContextRuntimeJobId"], "job-current-context")
         self.assertEqual(receipt["modelView"]["currentState"], receipt["currentState"])
         self.assertTrue(receipt["modelView"]["claims"]["diagnosticCompositionOmitted"])
+        self.assertEqual(
+            receipt["modelView"]["intent"],
+            "finance.current-state-and-current-affordances",
+        )
+        self.assertFalse(receipt["modelView"]["claims"]["singleNextOperationClaimed"])
         self.assertNotIn("researchNeeds", receipt["currentState"]["decision"])
         self.assertEqual(len(composition.domain_calls), 1)
         call = composition.domain_calls[0]

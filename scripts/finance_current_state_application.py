@@ -9,7 +9,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-APPLICATION_REVISION = "finance-current-state-application-v1"
+APPLICATION_REVISION = "finance-current-state-application-v2"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 
 
@@ -242,6 +242,11 @@ def compact_current_finance_context(context: dict[str, Any]) -> dict[str, Any]:
         },
         "obligations": obligations,
         "currentAffordances": current_affordances,
+        "affordanceSelection": {
+            "basis": "open-obligation-candidateOperationRefs",
+            "listOrderCarriesPriority": False,
+            "singleNextOperationClaimed": False,
+        },
         "claims": {
             "ownerTruthMinted": False,
             "priorityInferred": False,
@@ -319,12 +324,13 @@ def run_finance_current_state_application(
     base["modelView"] = {
         "schemaVersion": 0,
         "kind": "ordivon.application.finance-current-state-model-view",
-        "intent": "finance.current-state-and-next-action",
+        "intent": "finance.current-state-and-current-affordances",
         "currentState": projection,
         "claims": {
             "diagnosticCompositionOmitted": True,
             "ownerTruthMinted": False,
             "priorityInferred": False,
+            "singleNextOperationClaimed": False,
             "toolAuthorityExpanded": False,
         },
     }
