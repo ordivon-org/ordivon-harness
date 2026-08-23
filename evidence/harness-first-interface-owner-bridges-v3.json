@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.first-interface-owner-bridges-v3",
+  "classification": "CURRENT_OWNER_BRIDGES_AND_OPERATION_RELATIVE_ENVIRONMENT_ACCEPTED",
+  "implementationSourceRevision": "00edab4e4f6aeac395c9de3ab6a300162e56f6c1",
+  "focusedCurrentRegression": {
+    "jobId": "job-01a0300d-684f-74e2-b78e-6f5df93edb73",
+    "tests": 38,
+    "passed": 38,
+    "failures": 0,
+    "errors": 0,
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "documentationContract": "passed",
+    "scope": [
+      "Finance observe Runtime bridge",
+      "Atlas first-look Runtime bridge",
+      "Finance research Runtime bridge",
+      "Finance/Workstation first-interface composition",
+      "InteractionContext projection"
+    ]
+  },
+  "freshFinanceWorkspaceAcceptance": {
+    "outerJobId": "job-01a0300b-6c99-74b1-8e76-1125dae3c96c",
+    "financeSourceRevision": "7985f2958c2ee1084550760b84bc71fd34ba3c6c",
+    "projectEnvironment": {
+      "mode": "finance-python-lock-offline",
+      "provider": "/usr/bin/uv",
+      "args": [
+        "sync",
+        "--locked",
+        "--offline"
+      ],
+      "runtimeJobId": "job-01a0300b-6f68-7f81-a04a-758ea05cc032",
+      "networkAcquisitionAllowed": false,
+      "lockfileMutationAllowed": false,
+      "agentToolAuthorityGranted": false,
+      "nodeModulesPresentAfter": false,
+      "venvPresentAfter": true
+    },
+    "financeContextCompile": {
+      "runtimeJobId": "job-01a0300b-71dc-7a72-b33f-666601816c56",
+      "ownerOk": true
+    },
+    "financeObserve": {
+      "runtimeJobId": "job-01a0300b-74d7-77b1-8e88-c42badcd452c",
+      "ownerOk": true
+    },
+    "compositionStatus": "completed",
+    "externalFinancialWriteClaimed": false,
+    "toolAuthorityExpanded": false,
+    "environmentMutationAuthorityGranted": false,
+    "stateBinding": "isolated Finance state copy; canonical production Finance DB was not used as the acceptance mutation target"
+  },
+  "preEvidenceRepairRegression": {
+    "candidateJobId": "job-01a03007-f500-71d2-9696-2b0545c4c429",
+    "tests": 500,
+    "failures": 2,
+    "skipped": 3,
+    "failureScope": [
+      "stale verified evidence currentness for harness.execution.first-interface-owner-bridges-v2"
+    ],
+    "cleanFa63ControlJobId": "job-01a0300b-201e-7772-96de-ab52441b924a",
+    "controlResult": "same two evidence-currentness failures were already present on clean fa63dc0 before the uv-only subtraction"
+  },
+  "evidenceLifecycle": {
+    "supersedesCurrentnessClaim": "harness.execution.first-interface-owner-bridges-v2",
+    "priorReceiptBytesRewritten": false,
+    "priorReceiptDisposition": "historical",
+    "reason": "later verified implementation paths changed; old evidence remains exact for 0cfed23 but cannot certify current source"
+  },
+  "acceptedLaws": {
+    "exactSourceDoesNotImplyRunnableProjectEnvironment": true,
+    "fullRepositoryClosureDoesNotImplyCurrentOperationClosure": true,
+    "financeContextObserveRequiresPythonClosureButNotUnconditionalNodeClosure": true,
+    "projectEnvironmentRealizationIsApplicationPlumbingNotAgentToolAuthority": true,
+    "financeOwnsObservationSemanticsAndCanonicalObservationState": true,
+    "harnessOwnsAgentToolLifecycleAndResponseLossFencing": true,
+    "runtimeOwnsPhysicalExecutionRecoveryAndArtifactTransport": true,
+    "atlasFinanceAndFinanceResearchSemanticsRemainOwnerNative": true,
+    "recurrentEgressCurrentnessBlockerRemainsFailClosed": true
+  },
+  "explicitNonClaims": [
+    "This receipt does not claim the 0cfed23 live episode was rerun byte-for-byte.",
+    "This receipt does not make npm/node_modules universally unnecessary for Finance; full Node, MCP, HTTP, probe, or other operations may require their declared Node closure.",
+    "This receipt does not grant Harness financial decision, proposal, trading, egress-mutation, or authority-mutation semantics.",
+    "This receipt does not claim external capital benefit or trading alpha.",
+    "This receipt does not resolve the long-diverged GitHub origin/main lineage."
+  ]
+}

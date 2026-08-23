@@ -516,8 +516,16 @@
       "file": "harness-first-interface-owner-bridges-v2.json",
       "implementationRevision": "0cfed2338a28be428c11816668651463cd9ccb8b",
       "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical exact acceptance for 0cfed23 owner bridges. Later verified implementation paths changed in Finance research/SQLite bridge work, so this immutable receipt no longer certifies current Harness source."
+    },
+    {
+      "claimId": "harness.execution.first-interface-owner-bridges-v3",
+      "file": "harness-first-interface-owner-bridges-v3.json",
+      "implementationRevision": "00edab4e4f6aeac395c9de3ab6a300162e56f6c1",
+      "revisionBinding": "index-creation-lineage",
       "status": "verified",
-      "scope": "Current first-interface owner-bridge evidence: Atlas first-look remains source-fenced; Finance observe is now a supported source-fenced Harness bridge that preserves Finance-owned canonical observation semantics, distinguishes committed owner blockers from Runtime unknown, keeps provider/Workstation plumbing hidden, and projects float-rich owner truth through Artifact digest plus bounded canonical semantics."
+      "scope": "Current owner-bridge and operation-relative environment acceptance for 00edab4: Finance/Atlas/research bridges and InteractionContext pass focused regression; Finance fresh Workspace realizes only the locked offline Python closure and completes context+observe without node_modules or expanded Tool/environment authority."
     }
   ]
 }
