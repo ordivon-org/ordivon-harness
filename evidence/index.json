@@ -508,8 +508,16 @@
       "file": "harness-first-interface-owner-composition-atlas-v1.json",
       "implementationRevision": "792cd48cc9fbdddb7431462876d8e57d8f003643",
       "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical exact acceptance for 792cd48: Atlas first-look plus application-owned Finance/Workstation composition before the supported Finance observe bridge changed Harness src; bytes remain immutable and exact for that implementation revision."
+    },
+    {
+      "claimId": "harness.execution.first-interface-owner-bridges-v2",
+      "file": "harness-first-interface-owner-bridges-v2.json",
+      "implementationRevision": "0cfed2338a28be428c11816668651463cd9ccb8b",
+      "revisionBinding": "index-creation-lineage",
       "status": "verified",
-      "scope": "Current first-interface evidence: cross-owner continuation is application/domain-owned stage composition; complete owner envelopes may be recovered through Runtime Artifacts without Runtime claiming domain completion; Finance EGRESS_NOT_CURRENT progressed through read-only Workstation observation and successful Finance retry without mutation authority; Atlas first-look is exact-source fenced and preserves novelty/equivalence UNKNOWN."
+      "scope": "Current first-interface owner-bridge evidence: Atlas first-look remains source-fenced; Finance observe is now a supported source-fenced Harness bridge that preserves Finance-owned canonical observation semantics, distinguishes committed owner blockers from Runtime unknown, keeps provider/Workstation plumbing hidden, and projects float-rich owner truth through Artifact digest plus bounded canonical semantics."
     }
   ]
 }

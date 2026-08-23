@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.first-interface-owner-bridges-v2",
+  "classification": "CURRENT_ATLAS_AND_FINANCE_OWNER_BRIDGES_ACCEPTED",
+  "startingCanonicalHead": "26c4183c58d9ed5d1a5dde053fde94e41e3d7d8e",
+  "implementationSourceRevision": "0cfed2338a28be428c11816668651463cd9ccb8b",
+  "financeSourceFence": {
+    "workspaceId": "first-interface-finance-observe-bridge-live-20260824-0228",
+    "sourceRevision": "23dc1529683a9592d53391647b0e265c6a94c680",
+    "sourceStateDigest": "sha256:ffdc8328ec39e139a162ab15d459d74e5f914a51b5c37825fc175f932f510db9",
+    "dirty": false,
+    "stateBinding": "isolated Finance state copy with live external OKX observation; canonical production Finance DB was not mutated by this acceptance"
+  },
+  "focusedRegression": {
+    "jobId": "job-01a02fef-a305-72d0-a12f-85c2be36e1a4",
+    "tests": 28,
+    "passed": 28,
+    "failures": 0,
+    "errors": 0,
+    "scope": [
+      "source-fenced Finance observe Runtime bridge",
+      "source-fenced Atlas first-look Runtime bridge",
+      "Finance-to-Workstation owner composition research contract",
+      "InteractionContext subtractive projection"
+    ]
+  },
+  "lintRegression": {
+    "jobId": "job-01a02fef-cd6a-7ec2-b143-4f183954d3e5",
+    "status": "passed",
+    "scope": [
+      "Finance observe bridge and tests",
+      "Atlas first-look bridge and tests"
+    ]
+  },
+  "financeLiveKnownBlockerAcceptance": {
+    "outerHarnessJobId": "job-01a02ff0-1510-7683-a9ed-e3109acf9ba5",
+    "runtimeFinanceJobId": "job-01a02ff0-1785-7ce2-9ec8-089775ec5c5e",
+    "tool": "finance_observe",
+    "harnessObservationStatus": "observed",
+    "ownerOutcome": "blocked",
+    "ownerErrorCode": "EGRESS_NOT_CURRENT",
+    "runtimeExecutionDisposition": "failed",
+    "runtimeDeliveryDisposition": "committed",
+    "externalFinancialWriteAttempted": false,
+    "classifiedAsRuntimeUnknown": false
+  },
+  "workstationDiagnosticBetweenFinanceAttempts": {
+    "jobId": "job-01a02ff0-64b3-7102-8871-ede7981babd4",
+    "operation": "workstation.egress.observe",
+    "status": "AVAILABLE",
+    "effectClass": "READ_ONLY",
+    "environmentMutation": false,
+    "profileDigest": "sha256:3e993ee46cc5f9dbf0457c03464ba18fd5175bbfa27ff38a34d64c85125fb69e",
+    "leaseDigest": "sha256:c89e5b6c501734b02d73c7ec320046d590b09a899e58c710de4e05b0bc9f4f00",
+    "leaseConsumedByFinanceBridge": false
+  },
+  "financeLiveSuccessAcceptance": {
+    "outerHarnessJobId": "job-01a02ff0-b637-7e21-9c5c-31deb1a700fe",
+    "runtimeFinanceJobId": "job-01a02ff0-b8b5-7e13-b71f-7f3c740209b0",
+    "tool": "finance_observe",
+    "harnessObservationStatus": "observed",
+    "financeStatus": "refreshed",
+    "stateVersionBefore": "1363:d747c1700d0e6683",
+    "stateVersionAfter": "1368:df3b5b40116df726",
+    "decision": "abstain",
+    "obligationNeeds": [
+      "review-decision-epoch"
+    ],
+    "externalWorldRead": true,
+    "canonicalObservationStateMayMutate": true,
+    "externalFinancialWrite": false,
+    "financialSubmission": false,
+    "authorityMutation": false,
+    "providerPlumbingExposedToAgent": false,
+    "workstationMutationAuthorityGranted": false
+  },
+  "representationBoundary": {
+    "completeFinanceOwnerEnvelopeRetainedAsRuntimeArtifact": true,
+    "ownerEnvelopeDigestProjectedIntoHarness": true,
+    "floatRichFinanceOwnerTruthEmbeddedIntoHarnessJsonValue": false,
+    "boundedSemanticProjectionUsedForAgentObservation": true,
+    "runtimeArtifactCaptureFailsClosedWhenTruncated": true,
+    "harnessDoesNotMintFinanceNumericTruth": true
+  },
+  "acceptedLaws": {
+    "financeOwnsObservationSemanticsAndCanonicalObservationState": true,
+    "harnessOwnsDurableAgentToolLifecycleAndResponseLossFencingOnly": true,
+    "runtimeOwnsPhysicalExecutionRecoveryAndArtifactTransportOnly": true,
+    "knownFinanceOwnerFailureIsNotRuntimeUnknown": true,
+    "processExitFailureDoesNotEraseCommittedOwnerSemanticOutcome": true,
+    "financeObserveExposesOnlyOptionalGoalIdentity": true,
+    "providerAndNetworkPlumbingRemainBelowFinanceSemanticSurface": true,
+    "financeObserveObservationProgressDoesNotMeanPureReadOnlyState": true,
+    "externalFinancialWriteAuthorityIsNotGrantedByFinanceObserve": true,
+    "workstationLeaseIdentityIsNotPromotedIntoFinanceConsumerAuthority": true,
+    "atlasAndFinanceDomainSemanticsRemainOwnedByTheirRespectiveOwners": true,
+    "genericProgressiveTurnProjectorRemainsReverted": true
+  },
+  "explicitNonClaims": [
+    "This receipt does not admit finance.decide, finance.execute, or finance.reconcile as supported Harness first-interface Tools.",
+    "Finance EGRESS_NOT_CURRENT does not authorize Harness to start, repair, poll, or mutate Workstation egress.",
+    "Workstation leaseDigest is not a Finance freshness authority and is not consumed by the Finance observe bridge.",
+    "A Harness observation-only progress classification does not claim Finance canonical state is immutable.",
+    "The Finance source fence is caller supplied and is not owner truth minted by Harness.",
+    "The live Finance acceptance used an isolated Finance state copy while performing a real external OKX read.",
+    "This receipt does not freeze a universal InteractionContext or cross-owner orchestration schema.",
+    "Global current-work priority remains outside this change."
+  ]
+}
