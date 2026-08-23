@@ -189,8 +189,17 @@ class FinanceResearchRuntimeBridgeTests(unittest.TestCase):
             projection=observation.structured_content['financeProjection']
             self.assertEqual(projection['evidenceRef'],'evidence://sha256/'+'1'*64)
             self.assertEqual(projection['admissionCapability'],'research.result.admit@5')
-            self.assertEqual(projection['result'],{'answer':42})
+            self.assertEqual(json.loads(projection['resultJson']),{'answer':42})
+            self.assertEqual(projection['resultEncoding'],'application/json; charset=utf-8')
             self.assertFalse(observation.structured_content['effectBoundary']['externalFinancialWrite'])
+
+    def test_float_finance_result_is_preserved_as_json_text_without_violating_harness_canonical_values(self):
+        value={'ratio':0.0547945205479452,'nested':[{'costBps':10.183794520547945}]}
+        text,omitted,digest,size=SQLiteHarnessFinanceResearchRuntimeBridge._project_result(value)
+        self.assertFalse(omitted); self.assertIsNotNone(text); self.assertIsNotNone(digest); self.assertGreater(size,0)
+        self.assertEqual(json.loads(text),value)
+        from anc_canonical import validate_json_value
+        validate_json_value({'resultJson':text,'resultDigest':digest,'resultBytes':size})
 
     def test_runtime_response_loss_reattaches_outer_job_without_redispatch(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -205,7 +214,7 @@ class FinanceResearchRuntimeBridgeTests(unittest.TestCase):
             observation=bridge.execute(call('large'),step_id='step:research-large')
             self.assertEqual(observation.status,'observed'); self.assertIn('artifact.read',[name for name,_ in runtime.calls])
             projection=observation.structured_content['financeProjection']
-            self.assertTrue(projection['resultOmittedByHarnessBound']); self.assertIsNone(projection['result']); self.assertTrue(projection['resultDigest'].startswith('sha256:'))
+            self.assertTrue(projection['resultOmittedByHarnessBound']); self.assertIsNone(projection['resultJson']); self.assertGreater(projection['resultBytes'],128_000); self.assertTrue(projection['resultDigest'].startswith('sha256:'))
 
     def test_unknown_agent_deployment_argument_is_rejected_before_runtime(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -289,14 +289,16 @@ class SQLiteHarnessFinanceResearchRuntimeBridge(SQLiteHarnessRuntimeBridge):
         return content
 
     @staticmethod
-    def _project_result(value: Any) -> tuple[Any, bool, str | None]:
+    def _project_result(value: Any) -> tuple[str | None, bool, str | None, int | None]:
+        """Preserve Finance-owned result JSON without minting Harness float semantics."""
         if value is None:
-            return None, False, None
-        encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            return None, False, None, None
+        encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
         digest = "sha256:" + hashlib.sha256(encoded).hexdigest()
-        if len(encoded) > _MAX_PROJECTED_RESULT_BYTES:
-            return None, True, digest
-        return value, False, digest
+        byte_length = len(encoded)
+        if byte_length > _MAX_PROJECTED_RESULT_BYTES:
+            return None, True, digest, byte_length
+        return encoded.decode("utf-8"), False, digest, byte_length
 
     def _observation_from_payload(
         self, *, tool_call_id: str, tool_name: str, payload: dict[str, JsonValue],
@@ -354,7 +356,7 @@ class SQLiteHarnessFinanceResearchRuntimeBridge(SQLiteHarnessRuntimeBridge):
         )):
             return self._invalid(tool_call_id, tool_name, "Finance research consumer standing violated the no-capital/no-external-effect boundary", payload, reconciled)
 
-        projected_result, omitted, result_digest = self._project_result(result.get("result"))
+        result_json, omitted, result_digest, result_bytes = self._project_result(result.get("result"))
         projection: dict[str, JsonValue] = {
             "status": result.get("status"), "evidenceRef": result.get("evidenceRef"),
             "experimentId": result.get("experimentId"), "semanticResultDigest": result.get("semanticResultDigest"),
@@ -362,7 +364,8 @@ class SQLiteHarnessFinanceResearchRuntimeBridge(SQLiteHarnessRuntimeBridge):
             "innerRuntimeJobId": result.get("runtimeJobId"), "innerRuntimeAttemptId": result.get("runtimeAttemptId"),
             "admissionCapability": result.get("admissionCapability"), "replayed": result.get("replayed"),
             "stateVersionBefore": result.get("stateVersionBefore"), "stateVersionAfter": result.get("stateVersionAfter"),
-            "result": projected_result, "resultOmittedByHarnessBound": omitted, "resultDigest": result_digest,
+            "resultJson": result_json, "resultEncoding": "application/json; charset=utf-8",
+            "resultOmittedByHarnessBound": omitted, "resultDigest": result_digest, "resultBytes": result_bytes,
         }
         structured = {
             "schemaVersion": 0, "kind": "ordivon.harness-finance-research-observation-experimental",
