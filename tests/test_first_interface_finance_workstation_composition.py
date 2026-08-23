@@ -62,6 +62,29 @@ class FakeRuntime:
         }
 
 
+
+
+class EnvironmentRuntime:
+    def __init__(self, *, fail_ecosystem=None):
+        self.fail_ecosystem = fail_ecosystem
+        self.calls = []
+
+    def call_tool(self, name, arguments):
+        self.calls.append((name, arguments))
+        executable = arguments["execution"]["executable"]
+        ecosystem = "python" if executable == "/usr/bin/uv" else "node"
+        failed = ecosystem == self.fail_ecosystem
+        index = len(self.calls)
+        return {
+            "jobId": f"job-env-{index}",
+            "attemptId": f"attempt-env-{index}",
+            "status": "failed" if failed else "succeeded",
+            "executionTerminal": True,
+            "exitCode": 2 if failed else 0,
+            "semanticCompletionEvaluated": False,
+        }
+
+
 class ArtifactRuntime:
     def __init__(self, envelope, *, truncated=False):
         self.stdout = json.dumps(envelope, sort_keys=True)
@@ -113,6 +136,53 @@ def run(fake):
 
 
 class FinanceWorkstationCompositionTests(unittest.TestCase):
+    def test_default_project_environment_preparation_is_locked_offline_runtime_plumbing(self):
+        fake = EnvironmentRuntime()
+        receipt = module._prepare_finance_project_environment(
+            fake,
+            finance_workspace_id="finance-ws",
+            client_request_id="fixture-finance-project-environment",
+        )
+        self.assertEqual(receipt["mode"], "exact-project-locks-offline")
+        self.assertFalse(receipt["networkAcquisitionAllowed"])
+        self.assertFalse(receipt["lockfileMutationAllowed"])
+        self.assertFalse(receipt["dependencyInstallScriptsAllowed"])
+        self.assertFalse(receipt["agentToolAuthorityGranted"])
+        self.assertEqual([step["ecosystem"] for step in receipt["steps"]], ["python", "node"])
+        self.assertEqual(len(fake.calls), 2)
+        _, python = fake.calls[0]
+        _, node = fake.calls[1]
+        self.assertEqual(python["execution"]["workspaceId"], "finance-ws")
+        self.assertEqual(python["execution"]["executable"], "/usr/bin/uv")
+        self.assertEqual(python["execution"]["args"], ["sync", "--locked", "--offline"])
+        self.assertEqual(node["execution"]["executable"], "/usr/bin/npm")
+        self.assertEqual(node["execution"]["args"], ["ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"])
+
+    def test_project_environment_preparation_fails_closed_when_python_offline_closure_is_unavailable(self):
+        fake = EnvironmentRuntime(fail_ecosystem="python")
+        with self.assertRaisesRegex(RuntimeError, "python project environment.*locked offline closure"):
+            module._prepare_finance_project_environment(
+                fake,
+                finance_workspace_id="finance-ws",
+                client_request_id="fixture-finance-project-environment-python-failed",
+            )
+        self.assertEqual(len(fake.calls), 1)
+
+    def test_project_environment_preparation_fails_closed_when_node_offline_closure_is_unavailable(self):
+        fake = EnvironmentRuntime(fail_ecosystem="node")
+        with self.assertRaisesRegex(RuntimeError, "node project environment.*locked offline closure"):
+            module._prepare_finance_project_environment(
+                fake,
+                finance_workspace_id="finance-ws",
+                client_request_id="fixture-finance-project-environment-node-failed",
+            )
+        self.assertEqual(len(fake.calls), 2)
+
+    def test_finance_env_omits_cross_checkout_interpreter_when_no_expert_override_is_supplied(self):
+        env = module._finance_env("/tmp/finance-state", None)
+        self.assertNotIn("ORDIVON_FINANCE_APP_PYTHON", env)
+        self.assertEqual(env["ORDIVON_FINANCE_STATE_DB"], "/tmp/finance-state/control/finance.db")
+
     def test_large_owner_stdout_is_recovered_from_runtime_artifact(self):
         envelope = owner(
             True,

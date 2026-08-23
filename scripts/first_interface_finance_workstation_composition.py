@@ -196,14 +196,86 @@ def _domain_exec(
     )
 
 
-def _finance_env(state_root: str, app_python: str) -> dict[str, str]:
+def _finance_env(state_root: str, app_python: str | None) -> dict[str, str]:
     root = Path(state_root)
-    return {
+    env = {
         "ORDIVON_FINANCE_STATE_ROOT": str(root),
         "ORDIVON_FINANCE_STATE_DB": str(root / "control" / "finance.db"),
-        "ORDIVON_FINANCE_APP_PYTHON": app_python,
     }
+    if app_python is not None:
+        env["ORDIVON_FINANCE_APP_PYTHON"] = app_python
+    return env
 
+
+def _prepare_finance_project_environment(
+    client: RuntimeClient,
+    *,
+    finance_workspace_id: str,
+    client_request_id: str,
+) -> dict[str, Any]:
+    """Realize Finance's exact Python and Node lockfiles from local caches only.
+
+    This is deterministic application plumbing, not an Agent Tool and not package
+    acquisition authority. Both steps fail closed: no network acquisition, no
+    lockfile rewrite, and no dependency install scripts.
+    """
+    specs = (
+        (
+            "python",
+            "/usr/bin/uv",
+            ["sync", "--locked", "--offline"],
+        ),
+        (
+            "node",
+            "/usr/bin/npm",
+            ["ci", "--offline", "--ignore-scripts", "--no-audit", "--no-fund"],
+        ),
+    )
+    steps = []
+    for ecosystem, executable, args in specs:
+        result = client.call_tool(
+            "workspace.exec",
+            {
+                "clientRequestId": f"{client_request_id}-{ecosystem}",
+                "execution": {
+                    "workspaceId": finance_workspace_id,
+                    "cwdRelative": ".",
+                    "executable": executable,
+                    "args": args,
+                    "timeoutMs": 30000,
+                    "stdoutLimitBytes": 65536,
+                    "stderrLimitBytes": 65536,
+                },
+                "waitMs": 30000,
+                "stdoutTailBytes": 16384,
+                "stderrTailBytes": 16384,
+            },
+        )
+        if result.get("semanticCompletionEvaluated") is not False:
+            raise RuntimeError("Runtime must not claim project-environment semantic completion")
+        if result.get("status") != "succeeded" or result.get("executionTerminal") is not True or result.get("exitCode") != 0:
+            raise RuntimeError(
+                f"Finance {ecosystem} project environment is not available from the exact locked offline closure"
+            )
+        steps.append({
+            "ecosystem": ecosystem,
+            "provider": executable,
+            "args": list(args),
+            "runtimeJobId": str(result.get("jobId")),
+            "runtimeAttemptId": str(result.get("attemptId")) if result.get("attemptId") is not None else None,
+        })
+    return {
+        "schemaVersion": 1,
+        "kind": "ordivon.first-interface.project-environment-preparation",
+        "owner": "ordivon-finance",
+        "workspaceId": finance_workspace_id,
+        "mode": "exact-project-locks-offline",
+        "steps": steps,
+        "networkAcquisitionAllowed": False,
+        "lockfileMutationAllowed": False,
+        "dependencyInstallScriptsAllowed": False,
+        "agentToolAuthorityGranted": False,
+    }
 
 def _materialized_stage(label: str, context: InteractionContextInput) -> dict[str, Any]:
     materialized = compile_interaction_context(
@@ -576,7 +648,8 @@ def main() -> int:
     parser.add_argument("--workstation-workspace", required=True)
     parser.add_argument("--finance-state-root", required=True)
     parser.add_argument(
-        "--finance-app-python", default="/root/projects/ordivon-finance/.venv/bin/python"
+        "--finance-app-python",
+        help="expert override for an already-admitted Finance interpreter; default prepares and uses the exact Finance Workspace .venv",
     )
     parser.add_argument("--request-prefix", required=True)
     parser.add_argument("--initial-finance-envelope", type=Path)
@@ -599,6 +672,13 @@ def main() -> int:
         )
         if not isinstance(initial_finance_envelope, dict):
             raise TypeError("captured Finance standing must be one JSON object")
+    project_environment = None
+    if args.finance_app_python is None:
+        project_environment = _prepare_finance_project_environment(
+            client,
+            finance_workspace_id=args.finance_workspace,
+            client_request_id=f"{args.request_prefix}-finance-project-environment",
+        )
     receipt = run_finance_workstation_composition(
         client,
         finance_workspace_id=args.finance_workspace,
@@ -609,6 +689,8 @@ def main() -> int:
         initial_finance_envelope=initial_finance_envelope,
         initial_finance_runtime_job_id=args.initial_finance_runtime_job_id,
     )
+    if project_environment is not None:
+        receipt["projectEnvironmentPreparation"] = project_environment
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0 if receipt["status"].startswith("completed") else 2
 
