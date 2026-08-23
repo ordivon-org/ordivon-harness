@@ -8,6 +8,10 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
+from ..tool_program_recovery import (
+    derive_tool_program_inner_call,
+    recover_tool_program_action,
+)
 from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
     CallerIngressPromotionHandler,
@@ -16,8 +20,8 @@ from ..working_view import (
     WorkingViewProjector,
     parse_working_set_history_query,
 )
-from .control import CancellationToken, ExecutionControl, RunDeadline
 from .cognition_admission import CognitionAdmissionKernel, CognitionSurfaceUnavailable
+from .control import CancellationToken, ExecutionControl, RunDeadline
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
     AgentRunConclusion,
@@ -29,7 +33,6 @@ from .model import (
     AgentTurnFailureCode,
 )
 from .provider_lifecycle import ProviderCallLifecycle, ProviderLifecycleError
-from .run_store_port import HarnessProviderCallRecoveryRequired, StoredHarnessRunSnapshot
 from .run_recovery import (
     _observation_evidence_signature,
     _path_subsumes,
@@ -37,12 +40,9 @@ from .run_recovery import (
     _retained_tool_calls,
     _search_evidence,
 )
+from .run_store_port import HarnessProviderCallRecoveryRequired, StoredHarnessRunSnapshot
 from .tool_bridge import ToolBridge, ToolObservation
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
-from ..tool_program_recovery import (
-    derive_tool_program_inner_call,
-    recover_tool_program_action,
-)
 from .turn_projection import AgentTurnProjectionError, AgentTurnProjector
 
 _OBSERVATION_ONLY_TOOLS = frozenset(
@@ -306,6 +306,28 @@ class OrdivonAgentLoop:
         self.adapter = adapter
         self.tool_bridge = tool_bridge
         self.budget = budget
+        bridge_observation_only = getattr(
+            tool_bridge, "observation_only_tool_names", ()
+        )
+        if not isinstance(bridge_observation_only, (tuple, list, set, frozenset)) or any(
+            not isinstance(name, str) or not name or name != name.strip()
+            for name in bridge_observation_only
+        ):
+            raise TypeError(
+                "Tool Bridge observation_only_tool_names must contain trimmed Tool names"
+            )
+        bridge_definitions = getattr(tool_bridge, "definitions", None)
+        if bridge_observation_only and callable(bridge_definitions):
+            defined_names = {definition.name for definition in bridge_definitions()}
+            missing_progress_names = sorted(set(bridge_observation_only) - defined_names)
+            if missing_progress_names:
+                raise ValueError(
+                    "Tool Bridge observation-only semantics reference undefined Tools: "
+                    f"{missing_progress_names}"
+                )
+        self.observation_only_tool_names = _OBSERVATION_ONLY_TOOLS | frozenset(
+            bridge_observation_only
+        )
         self.working_view_projector = working_view_projector
         self.working_set_transition_handler = working_set_transition_handler
         self.caller_ingress_promotion_handler = caller_ingress_promotion_handler
@@ -1174,8 +1196,10 @@ class OrdivonAgentLoop:
             }
             observation_only = bool(
                 observed_tool_names
-            ) and observed_tool_names.issubset(_OBSERVATION_ONLY_TOOLS)
-            action_progress = bool(observed_tool_names - _OBSERVATION_ONLY_TOOLS)
+            ) and observed_tool_names.issubset(self.observation_only_tool_names)
+            action_progress = bool(
+                observed_tool_names - self.observation_only_tool_names
+            )
             new_evidence = False
             calls_by_id = {call.tool_call_id: call for call in calls}
             for observation in turn_observations:
@@ -1226,7 +1250,21 @@ class OrdivonAgentLoop:
             )
             gate_reason = soft_observation_gate_reason()
             if gate_reason is not None:
+                newly_closed = external_observation_gate_reason is None
                 external_observation_gate_reason = gate_reason
+                if newly_closed:
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": (
+                                "Harness external observation gate is now closed: "
+                                f"{gate_reason}. External Tools will not be admitted on "
+                                "the next turn. Consume the observations already present "
+                                "and choose a conclusion or an available Harness cognition "
+                                "transition; do not retry unavailable external Tool names."
+                            ),
+                        }
+                    )
             return None
 
         def restore_projected_cognition_overlay() -> AgentLoopResult | None:

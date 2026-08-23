@@ -334,6 +334,28 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             previous_receipt=current.receipt,
         )
 
+    def _lower_runtime_tool_call(
+        self,
+        call: AgentToolCall,
+        *,
+        step_id: str,
+    ) -> tuple[str, dict[str, JsonValue], str | None]:
+        """Lower one admitted model Tool without assigning domain semantics to Runtime.
+
+        The default independent bridge uses the generic Harness ACI lowering. A
+        domain-owned semantic bridge may override this hook to compile one of its
+        already-admitted semantic operations into an exact Runtime request while
+        retaining the same durable Tool-step and response-loss machinery.
+        """
+        return lower_runtime_tool(
+            call,
+            step_id=step_id,
+            execution_binding=self.execution_binding,
+            tool_grant=self._tool_grant,
+            known_job_ids=frozenset(),
+            known_artifacts=frozenset(),
+        )
+
     def _execute(
         self,
         call: AgentToolCall,
@@ -358,13 +380,9 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 "execution control stopped before Tool preparation",
                 kind=ToolBridgeErrorKind.CONTROL_STOPPED,
             )
-        operation, request, external_request_id = lower_runtime_tool(
+        operation, request, external_request_id = self._lower_runtime_tool_call(
             call,
             step_id=step_id,
-            execution_binding=self.execution_binding,
-            tool_grant=self._tool_grant,
-            known_job_ids=frozenset(),
-            known_artifacts=frozenset(),
         )
         if operation not in {"workspace.exec", "workspace.read"}:
             raise ToolBridgeError(
