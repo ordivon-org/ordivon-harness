@@ -6,6 +6,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
+from anc_canonical import validate_json_value
+
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "finance_current_state_application.py"
 spec = importlib.util.spec_from_file_location("finance_current_state_application", SCRIPT)
 assert spec is not None and spec.loader is not None
@@ -132,7 +134,12 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
         self.assertEqual(value["decision"]["standing"], "abstain")
         self.assertEqual(value["decision"]["verdict"], "needs_revision")
         self.assertEqual(value["portfolioStanding"]["observationHealth"], "ok")
-        self.assertEqual(value["portfolioStanding"]["totalEquity"]["value"], 35.0)
+        self.assertEqual(value["portfolioStanding"]["totalEquity"]["valueJson"], "35.0")
+        self.assertEqual(
+            value["portfolioStanding"]["totalEquity"]["valueEncoding"],
+            "application/json scalar; charset=utf-8",
+        )
+        validate_json_value(value)
         self.assertEqual(
             [item["operationId"] for item in value["currentAffordances"]],
             ["finance.decide"],
@@ -141,6 +148,13 @@ class FinanceCurrentStateApplicationTests(unittest.TestCase):
         self.assertFalse(value["affordanceSelection"]["listOrderCarriesPriority"])
         self.assertFalse(value["affordanceSelection"]["singleNextOperationClaimed"])
         self.assertFalse(value["claims"]["ownerTruthMinted"])
+
+    def test_owner_float_never_crosses_the_harness_json_boundary(self):
+        current = context_result()
+        current["portfolioState"]["latestSnapshot"]["totalEquity"]["value"] = 35.125
+        value = module.compact_current_finance_context(current)
+        self.assertEqual(value["portfolioStanding"]["totalEquity"]["valueJson"], "35.125")
+        validate_json_value(value)
 
     def test_multiple_obligation_affordances_remain_unordered(self):
         current = context_result()

@@ -9,6 +9,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from anc_canonical import validate_json_value
+
 APPLICATION_REVISION = "finance-current-state-application-v2"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 
@@ -99,6 +101,12 @@ def _compact_obligation(value: object) -> dict[str, Any] | None:
     }
 
 
+def _json_scalar_text(value: object) -> str:
+    if value is not None and not isinstance(value, (str, int, float, bool)):
+        raise TypeError("Finance owner numeric projection requires one JSON scalar")
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+
+
 def _compact_operation(value: object) -> dict[str, Any] | None:
     if not isinstance(value, dict):
         return None
@@ -185,13 +193,14 @@ def compact_current_finance_context(context: dict[str, Any]) -> dict[str, Any]:
         equity = latest_snapshot.get("totalEquity")
         if isinstance(equity, dict):
             total_equity = {
-                "value": equity.get("value"),
+                "valueJson": _json_scalar_text(equity.get("value")),
+                "valueEncoding": "application/json scalar; charset=utf-8",
                 "currency": _text(equity.get("currency")),
                 "basis": _text(equity.get("basis")),
                 "sourceField": _text(equity.get("sourceField")),
             }
 
-    return {
+    projection = {
         "schemaVersion": 0,
         "kind": "ordivon.application.finance-current-state-projection",
         "truthRole": "bounded-source-preserving-projection-of-finance-context",
@@ -254,6 +263,8 @@ def compact_current_finance_context(context: dict[str, Any]) -> dict[str, Any]:
             "decisionConclusionSynthesized": False,
         },
     }
+    validate_json_value(projection)
+    return projection
 
 
 def run_finance_current_state_application(
