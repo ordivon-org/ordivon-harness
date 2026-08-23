@@ -62,9 +62,15 @@ EXPECTED = {
     ),
     "harness.execution.first-interface-owner-bridges-v4": (
         "harness-first-interface-owner-bridges-v4.json",
-        "verified",
+        "historical",
         "f4b05bb38ef7bff10f889df69611de6aaff3a40c",
         "3a2bd1a860714b27672fa228dd25b6660bb318a75320deb18292c4461c49404d",
+    ),
+    "harness.execution.first-interface-owner-bridges-v5": (
+        "harness-first-interface-owner-bridges-v5.json",
+        "verified",
+        "233bb6354f81eff070996cef898b91726857ca8e",
+        "2a2c8eaf2f38af01e129d0a24cdcb1dc406e97a659f42d8cf1cb32f32dde634e",
     ),
 }
 
@@ -138,6 +144,14 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         self.assertIn("src/ordivon_harness/ordivon/finance_research_runtime_bridge.py", invalidating)
         current, invalidating = check_evidence._verified_revision_is_current(
             "f4b05bb38ef7bff10f889df69611de6aaff3a40c"
+        )
+        self.assertFalse(current)
+        self.assertIn(
+            "src/ordivon_harness/ordivon/finance_observe_runtime_bridge.py",
+            invalidating,
+        )
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "233bb6354f81eff070996cef898b91726857ca8e"
         )
         self.assertTrue(current)
         self.assertEqual(invalidating, [])

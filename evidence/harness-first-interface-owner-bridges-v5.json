@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.first-interface-owner-bridges-v5",
+  "classification": "CURRENT_FINANCE_OBSERVE_IDENTITY_FREEDOM_REMOVED_AND_AGENT_CONSUMPTION_VERIFIED",
+  "implementationSourceRevision": "233bb6354f81eff070996cef898b91726857ca8e",
+  "problemWitness": {
+    "priorToolSurface": "finance_observe accepted optional Agent-authored goalId",
+    "replicate2RuntimeJobId": "job-01a03018-4d85-7a71-a9fa-9d2bfae49507",
+    "replicate2InventedGoalId": "goal:ordivon-finance-owner-current",
+    "replicate3RuntimeJobId": "job-01a03018-69d1-7bf1-b834-657883c6454c",
+    "replicate3InventedGoalId": "goal:current",
+    "observedFailure": "COMMAND_NON_JSON after the invented explicit owner identity reached Finance",
+    "counterEvidence": "The real unique active Goal was goal:primary-capital-allocation; direct owner resolution and later zero-argument owner calls succeeded."
+  },
+  "interfaceRepair": {
+    "tool": "finance_observe",
+    "agentInputSchema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "ownerApiStillSupportsExplicitGoalId": true,
+    "ordinaryCurrentObservationBehavior": "Finance resolves the unique active Goal; if owner state is ambiguous, application/caller must ground identity before recomposition rather than letting the model guess.",
+    "runtimeDispatchOnAgentAuthoredArgument": false,
+    "authorityExpansion": false
+  },
+  "focusedAcceptance": {
+    "jobId": "job-01a03021-5994-7593-87a8-43230a9ada3a",
+    "tests": 35,
+    "passed": 35,
+    "failures": 0,
+    "errors": 0,
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "documentationContract": "passed"
+  },
+  "candidateFullRegression": {
+    "jobId": "job-01a0301c-7a03-7540-a27f-9cf33f2fa55a",
+    "tests": 502,
+    "passed": 502,
+    "skipped": 3,
+    "failures": 0,
+    "note": "Executed on the exact candidate content before its source-only commit; focused acceptance was then rerun on exact committed 233bb63."
+  },
+  "freshAgentProof": {
+    "jobId": "job-01a0301f-cdd2-7d93-a4b8-891d2c3ac7ff",
+    "harnessRevision": "233bb6354f81eff070996cef898b91726857ca8e",
+    "financeRevision": "67aad23cd1b293f16cacda894723921ed931bd57",
+    "replicates": 3,
+    "allModelArguments": [
+      {},
+      {},
+      {}
+    ],
+    "allOwnerObserveSucceeded": true,
+    "allOwnerResultStatus": "refreshed",
+    "allConclusions": "candidate_completed",
+    "allReviewJudgments": "review-decision-epoch required",
+    "agentRepoPlumbingActionsPerReplicate": 0,
+    "modelCallsPerReplicate": 2,
+    "agentToolCallsPerReplicate": 1,
+    "observationBytesPerReplicate": 1713,
+    "totalTokensPerReplicate": [
+      2413,
+      2647,
+      2512
+    ],
+    "externalFinancialWrite": false
+  },
+  "historicalBaselineComparison": {
+    "baselineJobId": "job-01a02ff5-2bf8-7370-8678-0f9623b3a819",
+    "baseline": {
+      "modelCalls": 7,
+      "agentTools": 13,
+      "repoPlumbingActions": 12,
+      "observationBytes": 200476,
+      "totalTokens": 135241,
+      "outcome": "needs_input / turn budget exhausted"
+    },
+    "treatmentTypical": {
+      "modelCalls": 2,
+      "agentTools": 1,
+      "repoPlumbingActions": 0,
+      "observationBytes": 1713,
+      "totalTokensMean": 2524.0,
+      "outcome": "3/3 candidate_completed"
+    },
+    "scope": "Historical baseline versus current treatment, not a simultaneous randomized same-state experiment."
+  },
+  "evidenceLifecycle": {
+    "supersedesCurrentnessClaim": "harness.execution.first-interface-owner-bridges-v4",
+    "priorReceiptBytesRewritten": false,
+    "priorReceiptDisposition": "historical",
+    "reason": "finance_observe_runtime_bridge.py changed in a verified implementation path; v4 remains exact for f4b05bb but cannot certify the zero-argument current surface."
+  },
+  "acceptedLaws": {
+    "ungroundedOptionalIdentityIsNotAUsefulAgentAffordance": true,
+    "removeMechanicallyResolvableIdentityFromProviderFacingSchema": true,
+    "ownerRetainsMultiGoalAndExplicitIdentitySemantics": true,
+    "applicationGroundsIdentityBeforeReexposureWhenAmbiguous": true,
+    "targetStandingRepresentationDeterminesReachableSafeAction": true,
+    "targetedDogfoodCanBecomeMateriallyLowerBurdenWithoutCentralizingOwnerAuthority": true
+  },
+  "explicitNonClaims": [
+    "This does not prove every Finance operation should be zero-argument.",
+    "This does not remove explicit goalId from Finance owner-native APIs or expert/caller surfaces.",
+    "This does not claim the historical baseline and treatment were simultaneous randomized trials.",
+    "This does not claim capital benefit, trading alpha, Proposal authority, or execution authority.",
+    "This does not resolve default routing/adoption for all Ordivon workflows or the long-diverged GitHub remote lineage."
+  ]
+}

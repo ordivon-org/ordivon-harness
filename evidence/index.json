@@ -532,8 +532,16 @@
       "file": "harness-first-interface-owner-bridges-v4.json",
       "implementationRevision": "f4b05bb38ef7bff10f889df69611de6aaff3a40c",
       "revisionBinding": "index-creation-lineage",
+      "status": "historical",
+      "scope": "Historical exact current-owner-bridge receipt for f4b05bb. The later Finance observe Agent-facing surface removed optional ungrounded goalId, so v4 bytes remain immutable but no longer certify current source."
+    },
+    {
+      "claimId": "harness.execution.first-interface-owner-bridges-v5",
+      "file": "harness-first-interface-owner-bridges-v5.json",
+      "implementationRevision": "233bb6354f81eff070996cef898b91726857ca8e",
+      "revisionBinding": "index-creation-lineage",
       "status": "verified",
-      "scope": "Current owner-bridge evidence for f4b05bb: source-fenced Finance research executes through Runtime immutable-input machinery and research.result.admit@5, while float-rich Finance result semantics cross the Harness boundary as bounded UTF-8 JSON text plus digest/length rather than invalid Harness floating-point scalar values."
+      "scope": "Current first-interface owner-bridge evidence for 233bb63: finance_observe is zero-argument at the Agent surface, Finance resolves the unique active Goal, invented model Goal identities are impossible to dispatch, and 3/3 fresh-Agent current-Finance replicates completed in two model calls with one owner Tool and zero repository plumbing."
     }
   ]
 }
