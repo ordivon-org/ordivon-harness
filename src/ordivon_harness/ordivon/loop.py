@@ -8,10 +8,6 @@ from enum import Enum
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest
 
 from ..protocol import HarnessProviderCallFailureReceipt
-from ..tool_program_recovery import (
-    derive_tool_program_inner_call,
-    recover_tool_program_action,
-)
 from ..working_view import (
     WORKING_SET_HISTORY_CONTROL_NAME,
     CallerIngressPromotionHandler,
@@ -20,8 +16,8 @@ from ..working_view import (
     WorkingViewProjector,
     parse_working_set_history_query,
 )
-from .cognition_admission import CognitionAdmissionKernel, CognitionSurfaceUnavailable
 from .control import CancellationToken, ExecutionControl, RunDeadline
+from .cognition_admission import CognitionAdmissionKernel, CognitionSurfaceUnavailable
 from .events import HarnessRunEvent, HarnessTrace, TraceRecorder
 from .model import (
     AgentRunConclusion,
@@ -33,6 +29,7 @@ from .model import (
     AgentTurnFailureCode,
 )
 from .provider_lifecycle import ProviderCallLifecycle, ProviderLifecycleError
+from .run_store_port import HarnessProviderCallRecoveryRequired, StoredHarnessRunSnapshot
 from .run_recovery import (
     _observation_evidence_signature,
     _path_subsumes,
@@ -40,15 +37,13 @@ from .run_recovery import (
     _retained_tool_calls,
     _search_evidence,
 )
-from .run_store_port import HarnessProviderCallRecoveryRequired, StoredHarnessRunSnapshot
 from .tool_bridge import ToolBridge, ToolObservation
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
-from .turn_projection import (
-    AgentTurnProjectionError,
-    AgentTurnProjector,
-    TurnToolWorkingSetProjector,
-    project_turn_tool_working_set,
+from ..tool_program_recovery import (
+    derive_tool_program_inner_call,
+    recover_tool_program_action,
 )
+from .turn_projection import AgentTurnProjectionError, AgentTurnProjector
 
 _OBSERVATION_ONLY_TOOLS = frozenset(
     {
@@ -302,7 +297,6 @@ class OrdivonAgentLoop:
         event_sink: Callable[[HarnessRunEvent], None] | None = None,
         conclusion_validator: Callable[[AgentRunConclusion], None] | None = None,
         working_view_projector: WorkingViewProjector | None = None,
-        turn_tool_working_set_projector: TurnToolWorkingSetProjector | None = None,
         working_set_transition_handler: WorkingSetTransitionHandler | None = None,
         caller_ingress_promotion_handler: CallerIngressPromotionHandler | None = None,
         working_set_history_reader: WorkingSetHistoryReader | None = None,
@@ -313,7 +307,6 @@ class OrdivonAgentLoop:
         self.tool_bridge = tool_bridge
         self.budget = budget
         self.working_view_projector = working_view_projector
-        self.turn_tool_working_set_projector = turn_tool_working_set_projector
         self.working_set_transition_handler = working_set_transition_handler
         self.caller_ingress_promotion_handler = caller_ingress_promotion_handler
         self.working_set_history_reader = working_set_history_reader
@@ -1525,56 +1518,6 @@ class OrdivonAgentLoop:
                     "external Tool Call budget is exhausted; choose cognition transition "
                     "or conclusion without further external Tool effects"
                 )
-            remaining_budget = self.budget.remaining(
-                model_calls=model_calls,
-                tool_calls=tool_calls,
-                observation_bytes=observation_bytes,
-                elapsed_ms=elapsed_ms(),
-                total_tokens=total_tokens,
-                model_retries=model_retries,
-                tool_corrections=tool_corrections,
-                conclusion_corrections=conclusion_corrections,
-                observation_only_turns=observation_only_turns,
-                no_progress_turns=no_progress_turns,
-            )
-            admit_runtime_tools = (
-                external_observation_gate_reason is None
-                and not (
-                    self.scheduling_mode is LoopSchedulingMode.DELIBERATE_THEN_ACT
-                    and sequence == 1
-                )
-            )
-            runtime_tool_names: tuple[str, ...] | None = None
-            if (
-                admit_runtime_tools
-                and self.turn_tool_working_set_projector is not None
-            ):
-                try:
-                    runtime_tool_names = (
-                        self.turn_tool_working_set_projector.project_turn_tool_names(
-                            harness_run_id=harness_run_id,
-                            assignment_id=assignment_id,
-                            sequence=sequence,
-                            remaining_budget=dict(remaining_budget),
-                        )
-                    )
-                    if runtime_tool_names is not None and not isinstance(
-                        runtime_tool_names, tuple
-                    ):
-                        raise TypeError(
-                            "turn Tool Working Set projector must return tuple[str, ...] or None"
-                        )
-                    project_turn_tool_working_set(
-                        self.tool_bridge.definitions(), runtime_tool_names
-                    )
-                except Exception as error:  # noqa: BLE001 - application projection boundary
-                    return stop(
-                        RunStopCode.HARNESS_FAILED,
-                        detail=(
-                            "turn Tool Working Set projection failed: "
-                            f"{type(error).__name__}: {error}"
-                        ),
-                    )
             try:
                 projection = self.turn_projector.project(
                     harness_run_id=harness_run_id,
@@ -1583,8 +1526,25 @@ class OrdivonAgentLoop:
                     assignment_id=assignment_id,
                     canonical_context_digest=context_digest,
                     canonical_messages=tuple(messages),
-                    remaining_budget=remaining_budget,
-                    admit_runtime_tools=admit_runtime_tools,
+                    remaining_budget=self.budget.remaining(
+                        model_calls=model_calls,
+                        tool_calls=tool_calls,
+                        observation_bytes=observation_bytes,
+                        elapsed_ms=elapsed_ms(),
+                        total_tokens=total_tokens,
+                        model_retries=model_retries,
+                        tool_corrections=tool_corrections,
+                        conclusion_corrections=conclusion_corrections,
+                        observation_only_turns=observation_only_turns,
+                        no_progress_turns=no_progress_turns,
+                    ),
+                    admit_runtime_tools=(
+                        external_observation_gate_reason is None
+                        and not (
+                            self.scheduling_mode is LoopSchedulingMode.DELIBERATE_THEN_ACT
+                            and sequence == 1
+                        )
+                    ),
                     transient_working_set_digest=transient_working_set_digest,
                     caller_ingress_messages=tuple(caller_ingress_messages),
                     pre_caller_tool_exchange_messages=tuple(
@@ -1593,7 +1553,6 @@ class OrdivonAgentLoop:
                     post_caller_tool_exchange_messages=tuple(
                         post_caller_tool_exchange_messages
                     ),
-                    runtime_tool_names=runtime_tool_names,
                 )
             except AgentTurnProjectionError as error:
                 return stop(RunStopCode.HARNESS_FAILED, detail=str(error))

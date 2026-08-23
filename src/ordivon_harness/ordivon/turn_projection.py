@@ -11,42 +11,15 @@ from ..working_view import (
     WorkingViewProjector,
     overlay_working_view,
 )
-from .model import (
-    AgentCallerIngressRef,
-    AgentToolDefinition,
-    AgentTurnCapabilities,
-    AgentTurnRequest,
-)
+from .model import AgentCallerIngressRef, AgentToolDefinition, AgentTurnCapabilities, AgentTurnRequest
+
+
 
 
 class AgentToolSurface(Protocol):
     catalog_digest: str
 
     def definitions(self) -> tuple[AgentToolDefinition, ...]: ...
-
-
-class TurnToolWorkingSetProjector(Protocol):
-    """Application-owned read-side projection of one turn-visible Tool subset.
-
-    Implementations may consume already-fenced owner/application state, including
-    an ``InteractionContextMaterialization`` compiled outside the generic loop.
-    Returned names are not authority: Harness validates them as a strict subset of
-    the exact Run-admitted Tool definitions before Provider admission. ``None``
-    preserves the full admitted surface; an empty tuple intentionally exposes none.
-
-    A projector must be reconstructible for replay of the same turn. If its source
-    facts drift, the existing exact request/continuity fences fail closed rather
-    than silently replaying a different Provider request.
-    """
-
-    def project_turn_tool_names(
-        self,
-        *,
-        harness_run_id: str,
-        assignment_id: str,
-        sequence: int,
-        remaining_budget: dict[str, JsonValue],
-    ) -> tuple[str, ...] | None: ...
 
 
 def select_turn_tool_working_set(
@@ -287,7 +260,7 @@ class AgentTurnProjector:
                     base_working_view, working_set_refs = project_with_refs()
                 else:
                     base_working_view = self.working_view_projector.project()
-            except Exception as error:
+            except Exception as error:  # noqa: BLE001 - component boundary
                 raise AgentTurnProjectionError(
                     "Working View projection failed: "
                     f"{type(error).__name__}: {error}"
@@ -311,7 +284,7 @@ class AgentTurnProjector:
                     caller_entries = self.caller_ingress_projector.project_current_caller_ingress(
                         canonical_messages
                     )
-                except Exception as error:
+                except Exception as error:  # noqa: BLE001 - component boundary
                     raise AgentTurnProjectionError(
                         "caller ingress projection failed: "
                         f"{type(error).__name__}: {error}"
@@ -363,7 +336,6 @@ __all__ = [
     "AgentTurnProjectionError",
     "AgentTurnProjector",
     "CallerIngressProjector",
-    "TurnToolWorkingSetProjector",
     "project_agent_turn",
     "project_turn_tool_working_set",
     "select_turn_tool_working_set",
