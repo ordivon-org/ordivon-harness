@@ -119,13 +119,14 @@ def _runtime_delivery_state(payload: dict[str, JsonValue]) -> str:
 
 
 class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
-    """Independent Provider + observation-only Runtime bridge.
+    """Independent Provider + Runtime bridge with explicit recovery consequence.
 
-    P0 supports exactly ``search_workspace`` lowered to one ``workspace.exec``.
-    The Runtime request is fenced by Harness-owned authority. Transport response
-    loss is reconciled by the original ``clientRequestId`` and is never repaired
-    through blind redispatch.
+    The default surface remains observation-only. Domain-owned subclasses may strengthen
+    the consequence when their exact Runtime call can execute a process or commit owner
+    state; lowering/reconciliation semantics remain unchanged.
     """
+
+    recovery_consequence = HarnessRecoveryConsequence.OBSERVATION_ONLY
 
     def __init__(
         self,
@@ -419,7 +420,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             runtime_operation=operation,
             runtime_arguments_digest=canonical_digest(request),
             client_request_id=client_request_id,
-            recovery_consequence=HarnessRecoveryConsequence.OBSERVATION_ONLY,
+            recovery_consequence=self.recovery_consequence,
             created_at_ms=self.run_store.clock_ms(),
         )
         self.run_store.prepare_tool_step(intent)
