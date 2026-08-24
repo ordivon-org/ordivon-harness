@@ -360,47 +360,56 @@ def run_episode(
             consumer_class="dogfood",
         )
         inspection_view = inspection_receipt["modelView"]
-    adjudication, adjudication_telemetry = _structured_turn(
-        settings,
-        label=f"{label}-adjudication",
-        sequence=3,
-        context={
-            "intent": intent,
-            "agentAuthoredQueries": queries,
-            "boundedFirstLook": first_look_view,
-            "agentCandidateSelection": selection,
-            "ownerCandidateInspection": inspection_view,
+    adjudication_context: dict[str, JsonValue] = {
+        "intent": intent,
+        "agentCandidateSelection": selection,
+    }
+    adjudication_messages: list[dict[str, JsonValue]] = [
+        {
+            "role": "system",
+            "content": (
+                "You are the caller-side research consumer after a bounded Atlas first-look and, "
+                "when selected, one exact owner candidate inspection. Judge only whether the currently "
+                "relevant non-authoritative prior-work evidence is substantial enough to consume before "
+                "opening new research, or whether more input is needed. Candidate presence/inspection does "
+                "not establish semantic equivalence; absence does not establish novelty. You may not grant "
+                "research admission. Earlier alternatives that have already served candidate selection are "
+                "not required once exact selected-candidate evidence is available. Submit only the structured "
+                "adjudication result."
+            ),
         },
-        completion=ADJUDICATION_COMPLETION,
-        messages=(
-            {
-                "role": "system",
-                "content": (
-                    "You are the caller-side research consumer after a bounded Atlas first-look and, "
-                    "when selected, one exact owner candidate inspection. Judge only whether the available "
-                    "non-authoritative prior-work evidence is substantial enough to consume before opening "
-                    "new research, or whether more input is needed. Candidate presence/inspection does not "
-                    "establish semantic equivalence; absence does not establish novelty. You may not grant "
-                    "research admission. Submit only the structured adjudication result."
-                ),
-            },
-            {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
-            {
-                "role": "user",
-                "content": "ATLAS_BOUNDED_FIRST_LOOK:\n"
-                + json.dumps(first_look_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-            },
-            {
-                "role": "user",
-                "content": "AGENT_CANDIDATE_SELECTION:\n"
-                + json.dumps(selection, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-            },
+        {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
+        {
+            "role": "user",
+            "content": "AGENT_CANDIDATE_SELECTION:\n"
+            + json.dumps(selection, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        },
+    ]
+    if inspection_view is not None:
+        adjudication_context["ownerCandidateInspection"] = inspection_view
+        adjudication_messages.append(
             {
                 "role": "user",
                 "content": "ATLAS_SELECTED_CANDIDATE_INSPECTION:\n"
                 + json.dumps(inspection_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-            },
-        ),
+            }
+        )
+    else:
+        adjudication_context["boundedFirstLook"] = first_look_view
+        adjudication_messages.append(
+            {
+                "role": "user",
+                "content": "ATLAS_BOUNDED_FIRST_LOOK_WITH_NO_SELECTED_INSPECTION:\n"
+                + json.dumps(first_look_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            }
+        )
+    adjudication, adjudication_telemetry = _structured_turn(
+        settings,
+        label=f"{label}-adjudication",
+        sequence=3,
+        context=adjudication_context,
+        completion=ADJUDICATION_COMPLETION,
+        messages=tuple(adjudication_messages),
     )
     if (
         adjudication.get("semanticEquivalenceEstablished") is not False
