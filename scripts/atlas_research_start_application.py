@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from anc_canonical import validate_json_value
 
-APPLICATION_REVISION = "atlas-research-start-application-v1"
+APPLICATION_REVISION = "atlas-research-start-application-v2"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 _OWNER_STDOUT_LIMIT_BYTES = 262_144
 _ARTIFACT_READ_MAX_BYTES = 1_048_576
@@ -218,6 +218,12 @@ def _require_non_authoritative_claims(value: dict[str, Any], *, phase: str) -> N
         or claims.get("noveltyStanding") != "UNKNOWN_CALLER_MUST_ADJUDICATE"
         or claims.get("researchAdmissionGranted") is not False
         or claims.get("ownerTruthMinted") is not False
+        or ("callerIntentTranslated" in claims and claims.get("callerIntentTranslated") is not False)
+        or ("queryVariantGenerated" in claims and claims.get("queryVariantGenerated") is not False)
+        or (
+            "queryVariantsSemanticallyEquivalent" in claims
+            and claims.get("queryVariantsSemanticallyEquivalent") is not False
+        )
     ):
         raise RuntimeError(f"Atlas {phase} result violated non-authoritative standing")
 
@@ -228,7 +234,7 @@ def _compact_candidate(value: object, rank: int) -> dict[str, Any]:
     path = _text(value.get("path"), "Atlas candidate path", max_bytes=2_048)
     locator = _text(value.get("locator"), "Atlas candidate locator", max_bytes=2_048)
     excerpt = value.get("excerpt")
-    return {
+    result = {
         "rank": rank,
         "path": path,
         "locator": locator,
@@ -237,34 +243,172 @@ def _compact_candidate(value: object, rank: int) -> dict[str, Any]:
         "score": value.get("score"),
         "excerpt": excerpt if isinstance(excerpt, str) else None,
     }
+    for field in ("bestVariantIndex", "bestVariantRank", "matchedVariantIndexes"):
+        if field in value:
+            result[field] = value.get(field)
+    return result
+
+
+def _query_variants(
+    *,
+    query: str | None,
+    queries: list[str] | tuple[str, ...] | None,
+) -> tuple[str, ...]:
+    if query is not None and queries is not None:
+        raise ValueError("provide either query or queries, not both")
+    if query is not None:
+        return (_text(query, "research-start query"),)
+    if not isinstance(queries, (list, tuple)) or not 1 <= len(queries) <= 4:
+        raise ValueError("research-start queries must contain one to four variants")
+    normalized: list[str] = []
+    for value in queries:
+        item = _text(value, "research-start query variant")
+        if item not in normalized:
+            normalized.append(item)
+    if not normalized:
+        raise ValueError("research-start requires at least one distinct query variant")
+    return tuple(normalized)
+
+
+def run_atlas_query_authoring_context_application(
+    client: RuntimeClient,
+    *,
+    atlas_workspace_id: str,
+    request_prefix: str,
+    consumer_episode_ref: str,
+    consumer_class: str,
+) -> dict[str, Any]:
+    request_prefix = _text(request_prefix, "request prefix", max_bytes=300)
+    context, runtime = _owner_json_exec(
+        client,
+        atlas_workspace_id=atlas_workspace_id,
+        args=["-m", "ordivon_atlas.cli", "retrieval-authoring-context"],
+        request_id=f"{request_prefix}-atlas-retrieval-authoring-context",
+        phase="retrieval-authoring-context",
+        references=application_foreign_references(
+            consumer_episode_ref, consumer_class, phase="retrieval-authoring-context"
+        ),
+    )
+    if context.get("kind") != "ordivon.atlas-retrieval-authoring-context-experimental":
+        raise RuntimeError("Atlas retrieval authoring context kind differs")
+    _require_non_authoritative_claims(context, phase="retrieval-authoring-context")
+    if context.get("truthRole") != "mechanical-retrieval-authoring-context-not-query-or-semantic-truth":
+        raise RuntimeError("Atlas retrieval authoring context truth role differs")
+    representation = context.get("representationProfile")
+    coordinates = context.get("coordinateProfile")
+    if not isinstance(representation, dict) or not isinstance(coordinates, dict):
+        raise TypeError("Atlas retrieval authoring context omitted owner profiles")
+    retrieval = representation.get("retrieval")
+    representation_claims = representation.get("claims")
+    coordinate_selection = coordinates.get("selection")
+    coordinate_rows = coordinates.get("coordinates")
+    coordinate_claims = coordinates.get("claims")
+    if (
+        not isinstance(retrieval, dict)
+        or not isinstance(representation_claims, dict)
+        or not isinstance(coordinate_selection, dict)
+        or not isinstance(coordinate_rows, list)
+        or not isinstance(coordinate_claims, dict)
+    ):
+        raise TypeError("Atlas retrieval authoring context profile shape differs")
+    if (
+        retrieval.get("queryExpansionByAtlas") is not False
+        or retrieval.get("crossLanguageTranslationByAtlas") is not False
+        or retrieval.get("semanticSimilarityByAtlas") is not False
+        or representation_claims.get("callerIntentTranslated") is not False
+        or representation_claims.get("queryVariantGenerated") is not False
+        or representation_claims.get("queryVariantsSemanticallyEquivalent") is not False
+        or representation_claims.get("semanticEquivalenceInferred") is not False
+        or representation_claims.get("researchAdmissionGranted") is not False
+        or representation_claims.get("ownerTruthMinted") is not False
+        or coordinate_selection.get("taskConditioned") is not False
+        or coordinate_selection.get("semanticRankingPerformed") is not False
+        or coordinate_claims.get("callerIntentTranslated") is not False
+        or coordinate_claims.get("queryVariantGenerated") is not False
+        or coordinate_claims.get("coordinatesSemanticallyEquivalentToIntent") is not False
+        or coordinate_claims.get("semanticEquivalenceInferred") is not False
+        or coordinate_claims.get("researchAdmissionGranted") is not False
+        or coordinate_claims.get("ownerTruthMinted") is not False
+    ):
+        raise RuntimeError("Atlas retrieval authoring context exceeded mechanical authority")
+    receipt = {
+        "schemaVersion": 1,
+        "kind": "ordivon.application.atlas-query-authoring-context-receipt",
+        "revision": APPLICATION_REVISION,
+        "consumerProvenance": {
+            "truthRole": "caller-application-provenance-claim",
+            "episodeRef": consumer_episode_ref,
+            "consumerClass": consumer_class,
+        },
+        "ownerCall": {
+            "phase": "retrieval-authoring-context",
+            "runtimeJobId": runtime.get("jobId"),
+            "runtimeAttemptId": runtime.get("attemptId"),
+            "runtimeStatus": runtime.get("status"),
+        },
+        "modelView": {
+            "schemaVersion": 0,
+            "kind": "ordivon.application.atlas-query-authoring-context-model-view",
+            "truthRole": "mechanical-owner-environment-for-caller-query-authoring",
+            "representationProfile": representation,
+            "coordinateProfile": coordinates,
+            "authoringConstraints": [
+                "Caller/Agent authors retrieval variants; Atlas did not translate the intent or generate queries.",
+                "Use at most four distinct trimmed query variants.",
+                "Retrieval coordinates are task-neutral handles, not semantic-equivalence claims.",
+                "Search results remain candidates; absence does not establish novelty.",
+            ],
+            "claims": {
+                "callerIntentTranslated": False,
+                "queryVariantGeneratedByApplication": False,
+                "semanticEquivalenceInferred": False,
+                "researchAdmissionGranted": False,
+                "ownerTruthMinted": False,
+            },
+        },
+    }
+    validate_json_value(receipt)
+    return receipt
 
 
 def run_atlas_research_start_application(
     client: RuntimeClient,
     *,
     atlas_workspace_id: str,
-    query: str,
+    query: str | None = None,
+    queries: list[str] | tuple[str, ...] | None = None,
     limit: int,
     request_prefix: str,
     consumer_episode_ref: str,
     consumer_class: str,
 ) -> dict[str, Any]:
-    query = _text(query, "research-start query")
+    variants = _query_variants(query=query, queries=queries)
     request_prefix = _text(request_prefix, "request prefix", max_bytes=300)
     if type(limit) is not int or not 1 <= limit <= 32:
         raise ValueError("Atlas first-look limit must be an integer from 1 to 32")
-
+    batch = len(variants) > 1
+    first_phase = "first-look-many" if batch else "first-look"
+    first_args = (
+        ["-m", "ordivon_atlas.cli", "first-look-many", *variants, "--limit", str(limit)]
+        if batch
+        else ["-m", "ordivon_atlas.cli", "first-look", variants[0], "--limit", str(limit)]
+    )
     first, first_runtime = _owner_json_exec(
         client,
         atlas_workspace_id=atlas_workspace_id,
-        args=["-m", "ordivon_atlas.cli", "first-look", query, "--limit", str(limit)],
-        request_id=f"{request_prefix}-atlas-first-look",
-        phase="first-look",
+        args=first_args,
+        request_id=f"{request_prefix}-atlas-{first_phase}",
+        phase=first_phase,
         references=application_foreign_references(
-            consumer_episode_ref, consumer_class, phase="first-look"
+            consumer_episode_ref, consumer_class, phase=first_phase
         ),
     )
-    if first.get("kind") != "ordivon.atlas-prior-result-first-look-experimental":
+    expected_kind = (
+        "ordivon.atlas-prior-result-first-look-many-experimental"
+        if batch
+        else "ordivon.atlas-prior-result-first-look-experimental"
+    )
+    if first.get("kind") != expected_kind:
         raise RuntimeError("Atlas first-look result kind differs")
     _require_non_authoritative_claims(first, phase="first-look")
     candidates_raw = first.get("candidates")
@@ -292,14 +436,15 @@ def run_atlas_research_start_application(
         },
         "ownerCalls": [
             {
-                "phase": "first-look",
+                "phase": first_phase,
                 "runtimeJobId": first_runtime.get("jobId"),
                 "runtimeAttemptId": first_runtime.get("attemptId"),
                 "runtimeStatus": first_runtime.get("status"),
             }
         ],
         "firstLook": {
-            "query": first.get("query"),
+            "query": first.get("query") if not batch else None,
+            "queryVariants": first.get("queryVariants") if batch else [first.get("query")],
             "candidateCount": candidate_count,
             "candidates": candidates,
             "projectionHealth": first.get("projectionHealth"),
@@ -311,6 +456,14 @@ def run_atlas_research_start_application(
     if candidates:
         top_raw = candidates_raw[0]
         top = candidates[0]
+        inspection_query = variants[0]
+        inspection_limit = limit
+        if batch:
+            best_variant_index = top_raw.get("bestVariantIndex")
+            if type(best_variant_index) is not int or not 0 <= best_variant_index < len(variants):
+                raise RuntimeError("Atlas batch rank-1 candidate omitted valid bestVariantIndex")
+            inspection_query = variants[best_variant_index]
+            inspection_limit = 32
         inspection, inspection_runtime = _owner_json_exec(
             client,
             atlas_workspace_id=atlas_workspace_id,
@@ -318,11 +471,11 @@ def run_atlas_research_start_application(
                 "-m",
                 "ordivon_atlas.cli",
                 "inspect-candidate",
-                query,
+                inspection_query,
                 top["path"],
                 top["locator"],
                 "--limit",
-                str(limit),
+                str(inspection_limit),
             ],
             request_id=f"{request_prefix}-atlas-inspect-candidate",
             phase="inspect-candidate",
@@ -342,6 +495,8 @@ def run_atlas_research_start_application(
         receipt["status"] = "completed_rank1_candidate_inspected"
         receipt["inspection"] = {
             "selectedBy": "owner-first-look-rank-1-policy",
+            "inspectionQuery": inspection_query,
+            "inspectionLimit": inspection_limit,
             "rank": 1,
             "candidate": top,
             "contentBytes": inspection.get("contentBytes"),
@@ -369,6 +524,7 @@ def run_atlas_research_start_application(
         inspection_receipt = receipt["inspection"]
         inspection_view = {
             "rank": inspection_receipt["rank"],
+            "inspectionQuery": inspection_receipt["inspectionQuery"],
             "contentBytes": inspection_receipt["contentBytes"],
             "contentDigest": inspection_receipt["contentDigest"],
             "content": inspection_receipt["content"],
@@ -379,6 +535,7 @@ def run_atlas_research_start_application(
         "intent": "atlas.prior-result-recovery-and-caller-adjudication",
         "firstLook": {
             "query": receipt["firstLook"]["query"],
+            "queryVariants": receipt["firstLook"]["queryVariants"],
             "candidateCount": receipt["firstLook"]["candidateCount"],
             "topCandidate": top_candidate,
             "alternatives": alternatives,
@@ -400,6 +557,8 @@ def run_atlas_research_start_application(
             "researchAdmissionGranted": False,
             "noveltyStanding": "UNKNOWN_CALLER_MUST_ADJUDICATE",
             "requeryFreedomWithdrawnAfterFirstLook": True,
+            "queryVariantsGeneratedByApplication": False,
+            "queryVariantsSemanticallyEquivalent": False,
         },
     }
     validate_json_value(receipt)
@@ -427,7 +586,8 @@ def _runtime_client(runtime_scripts: Path, environment_file: Path, endpoint: str
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--atlas-workspace", required=True)
-    parser.add_argument("--query", required=True)
+    parser.add_argument("--query")
+    parser.add_argument("--query-variant", action="append", dest="query_variants")
     parser.add_argument("--limit", type=int, default=8)
     parser.add_argument("--request-prefix", required=True)
     parser.add_argument("--consumer-episode-ref", required=True)
@@ -443,6 +603,7 @@ def main() -> int:
         client,
         atlas_workspace_id=args.atlas_workspace,
         query=args.query,
+        queries=args.query_variants,
         limit=args.limit,
         request_prefix=args.request_prefix,
         consumer_episode_ref=args.consumer_episode_ref,

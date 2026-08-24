@@ -36,11 +36,79 @@ class FakeRuntime:
             raise AssertionError(f"unexpected Runtime Tool {name}")
         execution = arguments["execution"]
         args = execution["args"]
-        phase = "inspect-candidate" if "inspect-candidate" in args else "first-look"
+        if "retrieval-authoring-context" in args:
+            phase = "retrieval-authoring-context"
+        elif "inspect-candidate" in args:
+            phase = "inspect-candidate"
+        elif "first-look-many" in args:
+            phase = "first-look-many"
+        else:
+            phase = "first-look"
         claims = self._claims()
-        if self.invalid_claims and phase == "first-look":
+        if self.invalid_claims and phase in {"first-look", "first-look-many", "retrieval-authoring-context"}:
             claims["semanticEquivalenceInferred"] = True
-        if phase == "first-look":
+        if phase == "retrieval-authoring-context":
+            value = {
+                "schemaVersion": 0,
+                "kind": "ordivon.atlas-retrieval-authoring-context-experimental",
+                "truthRole": "mechanical-retrieval-authoring-context-not-query-or-semantic-truth",
+                "representationProfile": {
+                    "schemaVersion": 0,
+                    "kind": "ordivon.atlas-retrieval-representation-profile-experimental",
+                    "truthRole": "mechanical-retrieval-environment-profile-not-semantic-truth",
+                    "retrieval": {
+                        "mode": "lexical-substring-and-path-match",
+                        "queryExpansionByAtlas": False,
+                        "crossLanguageTranslationByAtlas": False,
+                        "semanticSimilarityByAtlas": False,
+                        "callerAuthoredQueryVariantsSupported": True,
+                        "maxCallerAuthoredQueryVariants": 4,
+                    },
+                    "curatedSynthesisCorpus": {
+                        "markdownFileCount": 115,
+                        "dominantObservedScript": "latin",
+                        "dominantObservedScriptShareOfLatinPlusCjk": "0.999731238824",
+                    },
+                    "claims": {
+                        **self._claims(),
+                        "callerIntentTranslated": False,
+                        "queryVariantGenerated": False,
+                        "queryVariantsSemanticallyEquivalent": False,
+                    },
+                },
+                "coordinateProfile": {
+                    "schemaVersion": 0,
+                    "kind": "ordivon.atlas-retrieval-coordinate-profile-experimental",
+                    "truthRole": "mechanical-source-grounded-retrieval-coordinates-not-query-translation",
+                    "source": {
+                        "path": "synthesis/research-process-lineage/SOURCE-INDEX.md",
+                        "contentDigest": "sha256:" + "b" * 64,
+                    },
+                    "selection": {
+                        "method": "first-alias-per-retrieval-section-in-source-order",
+                        "taskConditioned": False,
+                        "semanticRankingPerformed": False,
+                    },
+                    "coordinates": [
+                        {
+                            "sectionHeading": "Episode 8 — Theory-to-Engineering Expansion / Contraction / Rejection",
+                            "retrievalAlias": "theory to engineering / research-to-engineering bridge / theory does not compile to code",
+                        }
+                    ],
+                    "claims": {
+                        **self._claims(),
+                        "callerIntentTranslated": False,
+                        "queryVariantGenerated": False,
+                        "coordinatesSemanticallyEquivalentToIntent": False,
+                    },
+                },
+                "claims": {
+                    **claims,
+                    "callerIntentTranslated": False,
+                    "queryVariantGenerated": False,
+                },
+            }
+        elif phase in {"first-look", "first-look-many"}:
             candidates = (
                 [
                     {
@@ -65,22 +133,46 @@ class FakeRuntime:
                 if self.candidates
                 else []
             )
-            value = {
-                "schemaVersion": 0,
-                "kind": "ordivon.atlas-prior-result-first-look-experimental",
-                "truthRole": "non-authoritative-prior-result-candidate-projection",
-                "query": "result consumer benefit",
-                "candidateCount": len(candidates),
-                "candidates": candidates,
-                "projectionHealth": {"available": False, "currentness": "UNKNOWN", "counts": {}},
-                "claims": claims,
-            }
+            if phase == "first-look-many":
+                for index, candidate in enumerate(candidates):
+                    candidate["bestVariantIndex"] = 1 if index == 0 else 0
+                    candidate["bestVariantRank"] = index + 1
+                    candidate["matchedVariantIndexes"] = [0, 1] if index == 0 else [0]
+                value = {
+                    "schemaVersion": 0,
+                    "kind": "ordivon.atlas-prior-result-first-look-many-experimental",
+                    "truthRole": "non-authoritative-prior-result-candidate-projection",
+                    "queryVariants": [
+                        "研究成果未转化工程能力",
+                        "research engineering capability consequences",
+                    ],
+                    "candidateCount": len(candidates),
+                    "candidates": candidates,
+                    "projectionHealth": {"available": False, "currentness": "UNKNOWN", "counts": {}},
+                    "claims": {
+                        **claims,
+                        "callerIntentTranslated": False,
+                        "queryVariantGenerated": False,
+                        "queryVariantsSemanticallyEquivalent": False,
+                    },
+                }
+            else:
+                value = {
+                    "schemaVersion": 0,
+                    "kind": "ordivon.atlas-prior-result-first-look-experimental",
+                    "truthRole": "non-authoritative-prior-result-candidate-projection",
+                    "query": "result consumer benefit",
+                    "candidateCount": len(candidates),
+                    "candidates": candidates,
+                    "projectionHealth": {"available": False, "currentness": "UNKNOWN", "counts": {}},
+                    "claims": claims,
+                }
         else:
             value = {
                 "schemaVersion": 0,
                 "kind": "ordivon.atlas-prior-result-candidate-inspection-experimental",
                 "truthRole": "non-authoritative-first-look-candidate-content",
-                "query": "result consumer benefit",
+                "query": args[args.index("inspect-candidate") + 1],
                 "candidate": {
                     "path": "synthesis/result-value/README.md",
                     "locator": "$file",
@@ -192,6 +284,139 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
     def test_owner_authority_inflation_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "non-authoritative standing"):
             self.run_app(FakeRuntime(invalid_claims=True))
+
+    def test_query_authoring_context_is_one_mechanical_owner_read(self):
+        runtime = FakeRuntime()
+        receipt = module.run_atlas_query_authoring_context_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            request_prefix="ordinary-atlas-authoring",
+            consumer_episode_ref="consumer-episode:atlas-authoring-test",
+            consumer_class="test",
+        )
+        self.assertEqual(len(runtime.calls), 1)
+        execution = runtime.calls[0][1]["execution"]
+        self.assertEqual(
+            execution["args"],
+            ["-m", "ordivon_atlas.cli", "retrieval-authoring-context"],
+        )
+        refs = {(item["type"], item["id"]) for item in execution["foreignReferences"]}
+        self.assertIn(("application_phase", "retrieval-authoring-context"), refs)
+        view = receipt["modelView"]
+        self.assertFalse(view["representationProfile"]["retrieval"]["crossLanguageTranslationByAtlas"])
+        self.assertFalse(view["representationProfile"]["retrieval"]["semanticSimilarityByAtlas"])
+        self.assertFalse(view["coordinateProfile"]["selection"]["taskConditioned"])
+        self.assertFalse(view["coordinateProfile"]["selection"]["semanticRankingPerformed"])
+        self.assertFalse(view["claims"]["callerIntentTranslated"])
+        self.assertFalse(view["claims"]["queryVariantGeneratedByApplication"])
+        self.assertFalse(view["claims"]["semanticEquivalenceInferred"])
+
+    def test_batch_first_look_inspects_rank1_with_owner_best_variant(self):
+        runtime = FakeRuntime()
+        receipt = module.run_atlas_research_start_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            queries=[
+                "研究成果未转化工程能力",
+                "research engineering capability consequences",
+            ],
+            limit=4,
+            request_prefix="ordinary-atlas-batch",
+            consumer_episode_ref="consumer-episode:atlas-batch-test",
+            consumer_class="test",
+        )
+        self.assertEqual(len(runtime.calls), 2)
+        first = runtime.calls[0][1]["execution"]
+        inspect = runtime.calls[1][1]["execution"]
+        self.assertEqual(
+            first["args"],
+            [
+                "-m",
+                "ordivon_atlas.cli",
+                "first-look-many",
+                "研究成果未转化工程能力",
+                "research engineering capability consequences",
+                "--limit",
+                "4",
+            ],
+        )
+        self.assertEqual(
+            inspect["args"],
+            [
+                "-m",
+                "ordivon_atlas.cli",
+                "inspect-candidate",
+                "research engineering capability consequences",
+                "synthesis/result-value/README.md",
+                "$file",
+                "--limit",
+                "32",
+            ],
+        )
+        self.assertEqual(receipt["ownerCalls"][0]["phase"], "first-look-many")
+        self.assertEqual(receipt["inspection"]["inspectionQuery"], "research engineering capability consequences")
+        self.assertEqual(receipt["inspection"]["inspectionLimit"], 32)
+        self.assertEqual(
+            receipt["modelView"]["firstLook"]["queryVariants"],
+            ["研究成果未转化工程能力", "research engineering capability consequences"],
+        )
+        self.assertFalse(receipt["modelView"]["claims"]["queryVariantsGeneratedByApplication"])
+        self.assertFalse(receipt["modelView"]["claims"]["queryVariantsSemanticallyEquivalent"])
+
+    def test_batch_query_variants_are_bounded_and_not_mixed_with_single_query(self):
+        runtime = FakeRuntime()
+        with self.assertRaisesRegex(ValueError, "either query or queries"):
+            module.run_atlas_research_start_application(
+                runtime,
+                atlas_workspace_id="atlas-current",
+                query="one",
+                queries=["two"],
+                limit=4,
+                request_prefix="bad-mixed",
+                consumer_episode_ref="consumer-episode:atlas-test",
+                consumer_class="test",
+            )
+        with self.assertRaisesRegex(ValueError, "one to four"):
+            module.run_atlas_research_start_application(
+                runtime,
+                atlas_workspace_id="atlas-current",
+                queries=["a", "b", "c", "d", "e"],
+                limit=4,
+                request_prefix="bad-width",
+                consumer_episode_ref="consumer-episode:atlas-test",
+                consumer_class="test",
+            )
+        self.assertEqual(runtime.calls, [])
+
+    def test_nested_authoring_profile_authority_inflation_fails_closed(self):
+        class InflatedRuntime(FakeRuntime):
+            def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+                result = super().call_tool(name, arguments)
+                args = arguments["execution"]["args"] if name == "workspace.exec" else []
+                if "retrieval-authoring-context" in args:
+                    value = json.loads(result["stdoutTail"])
+                    value["coordinateProfile"]["claims"]["coordinatesSemanticallyEquivalentToIntent"] = True
+                    result["stdoutTail"] = json.dumps(value)
+                return result
+
+        with self.assertRaisesRegex(RuntimeError, "exceeded mechanical authority"):
+            module.run_atlas_query_authoring_context_application(
+                InflatedRuntime(),
+                atlas_workspace_id="atlas-current",
+                request_prefix="bad-nested-authoring",
+                consumer_episode_ref="consumer-episode:atlas-test",
+                consumer_class="test",
+            )
+
+    def test_authoring_context_authority_inflation_fails_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "non-authoritative standing"):
+            module.run_atlas_query_authoring_context_application(
+                FakeRuntime(invalid_claims=True),
+                atlas_workspace_id="atlas-current",
+                request_prefix="bad-authoring",
+                consumer_episode_ref="consumer-episode:atlas-test",
+                consumer_class="test",
+            )
 
     def test_invalid_limit_and_consumer_class_fail_before_dispatch(self):
         runtime = FakeRuntime()
