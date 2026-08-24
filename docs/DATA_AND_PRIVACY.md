@@ -14,7 +14,7 @@ audience:
   - operator
   - builder
   - agent
-updated: 2026-08-08
+updated: 2026-08-24
 summary: Privacy authority for model and Tool content, durable metadata, recovery, retention, export and deletion boundaries.
 evidence_status: verified
 readiness: READY
@@ -55,6 +55,8 @@ Under `metadata-only`, current Harness-managed persistence preserves the facts n
 | terminal Run receipt and conclusion/proposal digests | exact conclusion and CompletionProposal omitted |
 
 The exact content remains available to the current in-memory execution when it was just produced. Durable omission is therefore not the same as deleting the current Agent's working memory mid-turn.
+
+A dedicated structured completion carrier is model-produced content, not metadata. Under `allow_model_content=True`, its versioned bounded value is retained inside the existing terminal conclusion object and is recoverable through the same conclusion digest/object reference. Under `metadata-only`, Harness retains only the terminal conclusion/proposal digests and does not create a side-channel result store. The compact summary's result digest does not recreate omitted result bytes and does not authorize redispatch.
 
 ## Recovery consequence
 

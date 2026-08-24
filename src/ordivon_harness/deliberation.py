@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
 import time
 from collections.abc import Callable
+from dataclasses import dataclass, replace
 from typing import cast
 
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest, validate_json_value
@@ -11,6 +11,7 @@ from .domain_tools import DomainToolBridge, DomainToolLoopPlan, DomainToolLoopRu
 from .ordivon.control import CancellationToken, ExecutionControl, RunDeadline
 from .ordivon.loop import AgentLoopResult, RunBudget, RunStopCode, _usage_total_tokens
 from .ordivon.model import (
+    AgentStructuredResult,
     AgentTurnAdapter,
     AgentTurnAdapterError,
     AgentTurnCallHandle,
@@ -19,7 +20,6 @@ from .ordivon.model import (
     AgentTurnRequest,
     AgentTurnResult,
 )
-
 
 _DELIBERATION_RECORD_REVISION = "deliberation-before-tools-v1"
 _RECORD_MARKER = "PRIOR_NON_AUTHORITATIVE_SELF_DELIBERATION_RECORD"
@@ -41,6 +41,7 @@ class NonAuthoritativeDeliberationRecord:
     effective_model_id: str
     summary: str
     unresolved_unknowns: tuple[str, ...] = ()
+    structured_result: AgentStructuredResult | None = None
 
     def __post_init__(self) -> None:
         value = self.to_dict()
@@ -57,13 +58,17 @@ class NonAuthoritativeDeliberationRecord:
             raise ValueError("deliberation effective model identity must be non-empty")
         if not self.summary.strip():
             raise ValueError("deliberation summary must be non-empty")
+        if self.structured_result is not None and not isinstance(
+            self.structured_result, AgentStructuredResult
+        ):
+            raise TypeError("deliberation structured result carrier is invalid")
 
     @property
     def digest(self) -> str:
         return canonical_digest(self.to_dict())
 
     def to_dict(self) -> dict[str, JsonValue]:
-        return {
+        value: dict[str, JsonValue] = {
             "schemaVersion": 1,
             "kind": "ordivon.non-authoritative-deliberation-record",
             "revision": _DELIBERATION_RECORD_REVISION,
@@ -80,6 +85,9 @@ class NonAuthoritativeDeliberationRecord:
             "domainAdmission": False,
             "externalEffect": False,
         }
+        if self.structured_result is not None:
+            value["structuredResult"] = self.structured_result.to_dict()
+        return value
 
     def to_model_message(self) -> dict[str, JsonValue]:
         projection = canonical_bytes(self.to_dict()).decode("utf-8")
@@ -555,6 +563,7 @@ class DeliberationThenToolRunner:
             effective_model_id=result.effective_model,
             summary=result.conclusion.summary,
             unresolved_unknowns=result.conclusion.unresolved_unknowns,
+            structured_result=result.conclusion.structured_result,
         )
 
 

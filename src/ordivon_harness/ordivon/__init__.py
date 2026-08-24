@@ -14,6 +14,7 @@ _EXPORTS: dict[str, tuple[str, str]] = {
     'SUPPORTED_DEEPSEEK_MODELS': ('.deepseek', 'SUPPORTED_DEEPSEEK_MODELS'),
     'AgentLoopResult': ('.loop', 'AgentLoopResult'),
     'AgentRunConclusion': ('.model', 'AgentRunConclusion'),
+    'AgentStructuredResult': ('.model', 'AgentStructuredResult'),
     'AgentToolCall': ('.model', 'AgentToolCall'),
     'AgentToolDefinition': ('.model', 'AgentToolDefinition'),
     'AgentTurnAdapter': ('.model', 'AgentTurnAdapter'),

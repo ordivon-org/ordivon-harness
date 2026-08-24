@@ -14,7 +14,7 @@ audience:
   - operator
   - maintainer
   - agent
-updated: 2026-08-20
+updated: 2026-08-24
 summary: Dependency graph, source-level Host boundary, persistent object compatibility and upgrade rules.
 evidence_status: verified
 readiness: READY
@@ -42,6 +42,8 @@ H3 intentionally removed historical package-root aliases, `host_api`, `HarnessRu
 ## Durable state
 
 Current writers own only independent Harness state: `HarnessRunContract`, Run projection/events, Provider Call records, Tool-step intents/fences/receipts, Run snapshots, Trace, recovery assessment, Run Receipt and CompletionProposal.
+
+`AgentRunConclusion` now has one optional `structuredResult` object containing the versioned `ordivon.agent-structured-result` carrier. Absence preserves the exact legacy unstructured serialization and digest. Current writers keep `summary` bounded to 8,000 UTF-8 bytes and bound the carrier value to one MiB. Current readers accept both the dedicated carrier and historical `structured-result-v1` conclusions whose canonical JSON was stored directly in `summary`; no old durable object is silently reinterpreted. The legacy summary encoder now fails closed above 8,000 bytes and directs current callers to the carrier.
 
 Pre-H3 Host-backed state is not a current compatibility obligation. Historical receipts remain evidence of the implementation that produced them; they are not a decoder requirement for H3.
 

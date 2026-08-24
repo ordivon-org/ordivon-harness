@@ -2401,6 +2401,10 @@ class OrdivonAgentLoop:
                     "summary": result.conclusion.summary,
                     "unresolvedUnknowns": list(result.conclusion.unresolved_unknowns),
                 }
+                if result.conclusion.structured_result is not None:
+                    deliberation_record["structuredResult"] = (
+                        result.conclusion.structured_result.to_dict()
+                    )
                 messages.append({
                     "role": "user",
                     "content": (

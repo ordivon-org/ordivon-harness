@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import replace
 import json
 import unittest
+from dataclasses import replace
 
 from anc_canonical import canonical_bytes, loads_strict
 
@@ -13,8 +13,7 @@ from ordivon_harness.api import (
 )
 from ordivon_harness.completion import structured_completion_result_schema
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
-from ordivon_harness.ordivon.model import AgentTurnRequest
-
+from ordivon_harness.ordivon.model import AgentStructuredResult, AgentTurnRequest
 from tests.test_p0_core_contracts import DIGEST_C, contract
 
 
@@ -123,7 +122,13 @@ class StructuredCompletionTests(unittest.TestCase):
         result = adapter.invoke(request)
         self.assertIsNotNone(result.conclusion)
         assert result.conclusion is not None
-        self.assertEqual(decode_structured_completion_result(run_contract, result.conclusion), expected)
+        self.assertIsInstance(result.conclusion.structured_result, AgentStructuredResult)
+        self.assertTrue(result.conclusion.summary.startswith("Structured result sha256:"))
+        self.assertLess(len(result.conclusion.summary.encode("utf-8")), 8_000)
+        self.assertEqual(
+            decode_structured_completion_result(run_contract, result.conclusion),
+            expected,
+        )
         self.assertEqual(
             adapter.structured_completion_contract_digest,
             structured_completion_contract_digest(run_contract.completion_contract),
@@ -143,8 +148,62 @@ class StructuredCompletionTests(unittest.TestCase):
         assert isinstance(properties, dict)
         self.assertIn("result", properties)
         self.assertNotIn("summary", properties)
-        self.assertEqual(properties["result"], run_contract.to_dict()["completionContract"]["resultSchema"])
+        self.assertEqual(
+            properties["result"],
+            run_contract.to_dict()["completionContract"]["resultSchema"],
+        )
 
+
+
+    def test_deepseek_result_larger_than_summary_limit_uses_separate_carrier(self) -> None:
+        completion_contract = {
+            "mode": STRUCTURED_COMPLETION_MODE,
+            "resultKind": "large-test-result",
+            "resultSchema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "payload": {"type": "string", "minLength": 9_000, "maxLength": 12_000},
+                },
+                "required": ["payload"],
+            },
+        }
+        run_contract = replace(
+            self.structured_contract(),
+            completion_contract=completion_contract,
+        )
+        expected = {"payload": "x" * 9_500}
+        transport = RecordingTransport(provider_response(expected))
+        adapter = DeepSeekTurnAdapter(
+            DeepSeekSettings(api_key="k" * 40, max_output_tokens=4_096),
+            transport=transport,
+            completion_contract=run_contract.completion_contract,
+        )
+        request = AgentTurnRequest(
+            harness_run_id=run_contract.harness_run_id,
+            turn_id="turn:structured-large",
+            sequence=1,
+            assignment_id="assignment:external:structured-large",
+            context_digest=run_contract.context_refs[0].digest,
+            tool_catalog_digest=DIGEST_C,
+            messages=({"role": "user", "content": "return the large result"},),
+            tools=(),
+            remaining_budget={"modelCalls": 1, "toolCalls": 0, "totalTokens": 16_384},
+        )
+
+        result = adapter.invoke(request)
+
+        assert result.conclusion is not None
+        assert result.conclusion.structured_result is not None
+        self.assertLess(len(result.conclusion.summary.encode("utf-8")), 8_000)
+        self.assertGreater(
+            len(canonical_bytes(result.conclusion.structured_result.value)),
+            8_000,
+        )
+        self.assertEqual(
+            decode_structured_completion_result(run_contract, result.conclusion),
+            expected,
+        )
 
     def test_structured_schema_rejects_non_string_object_keys(self) -> None:
         with self.assertRaisesRegex(ValueError, "completion schema object keys must be strings"):

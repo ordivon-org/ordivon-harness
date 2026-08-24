@@ -213,7 +213,12 @@ class DeepSeekMixedTurnTests(unittest.TestCase):
         self.assertTrue(error["safeToCorrect"])
         self.assertIsNotNone(result.conclusion)
         assert result.conclusion is not None
-        self.assertIn('"corrected"', result.conclusion.summary)
+        assert result.conclusion.structured_result is not None
+        self.assertEqual(
+            result.conclusion.structured_result.value,
+            {"answer": "corrected"},
+        )
+        self.assertTrue(result.conclusion.summary.startswith("Structured result sha256:"))
         self.assertEqual(len(transport.requests), 2)
 
 

@@ -9,9 +9,9 @@ import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Protocol
 
 from anc_canonical import (
@@ -23,7 +23,6 @@ from anc_canonical import (
 )
 
 from ..completion import (
-    encode_structured_completion_result,
     structured_completion_contract_digest,
     structured_completion_result_schema,
 )
@@ -42,6 +41,7 @@ from ..working_view import (
 from .control import ExecutionControl
 from .model import (
     AgentRunConclusion,
+    AgentStructuredResult,
     AgentToolCall,
     AgentToolDefinition,
     AgentTurnAdapterError,
@@ -1020,14 +1020,14 @@ def _parse_conclusion(
     status = arguments["status"]
     if not isinstance(status, str):
         raise TypeError("DeepSeek conclusion status must be a string")
+    structured_result: AgentStructuredResult | None = None
     if structured is None:
         summary = arguments["summary"]
         if not isinstance(summary, str):
             raise TypeError("DeepSeek conclusion summary must be a string")
     else:
-        summary = encode_structured_completion_result(
-            completion_contract, arguments["result"]
-        )
+        structured_result = AgentStructuredResult(arguments["result"])
+        summary = f"Structured result {structured_result.digest}"
     return AgentRunConclusion(
         status=status,
         summary=summary,
@@ -1036,6 +1036,7 @@ def _parse_conclusion(
         unresolved_unknowns=_string_tuple(
             arguments["unresolved_unknowns"], "unresolved unknowns"
         ),
+        structured_result=structured_result,
     )
 
 

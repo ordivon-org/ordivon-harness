@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol
 
-from anc_canonical import JsonValue, canonical_digest, validate_json_value
+from anc_canonical import JsonValue, canonical_bytes, canonical_digest, validate_json_value
 
 from ..working_view import (
     AgentCallerIngressPromotionProposal,
@@ -169,6 +169,47 @@ class AgentToolCall:
         )
 
 
+_MAX_AGENT_STRUCTURED_RESULT_BYTES = 1_048_576
+
+
+@dataclass(frozen=True, slots=True)
+class AgentStructuredResult:
+    """Versioned bounded carrier for a caller-owned structured completion result."""
+
+    value: JsonValue
+
+    def __post_init__(self) -> None:
+        validate_json_value(self.value)
+        if len(canonical_bytes(self.value)) > _MAX_AGENT_STRUCTURED_RESULT_BYTES:
+            raise ValueError("Agent structured result exceeds one MiB")
+
+    @property
+    def digest(self) -> str:
+        return canonical_digest(self.value)
+
+    def to_dict(self) -> dict[str, JsonValue]:
+        return {
+            "schemaVersion": 1,
+            "kind": "ordivon.agent-structured-result",
+            "value": self.value,
+        }
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> AgentStructuredResult:
+        _exact(
+            value,
+            {"schemaVersion", "kind", "value"},
+            "AgentStructuredResult",
+        )
+        if (
+            type(value["schemaVersion"]) is not int
+            or value["schemaVersion"] != 1
+            or value["kind"] != "ordivon.agent-structured-result"
+        ):
+            raise ValueError("AgentStructuredResult version or kind is invalid")
+        return cls(value=value["value"])
+
+
 _CONCLUSION_STATUSES = {"candidate_completed", "needs_input"}
 
 
@@ -179,11 +220,16 @@ class AgentRunConclusion:
     artifact_refs: tuple[str, ...] = ()
     evidence_refs: tuple[str, ...] = ()
     unresolved_unknowns: tuple[str, ...] = ()
+    structured_result: AgentStructuredResult | None = None
 
     def __post_init__(self) -> None:
         if self.status not in _CONCLUSION_STATUSES:
             raise ValueError(f"unsupported Agent conclusion status: {self.status}")
         _text(self.summary, "Agent conclusion summary", max_bytes=8_000)
+        if self.structured_result is not None and not isinstance(
+            self.structured_result, AgentStructuredResult
+        ):
+            raise TypeError("Agent conclusion structured result carrier is invalid")
         for values, label in (
             (self.artifact_refs, "Artifact reference"),
             (self.evidence_refs, "evidence reference"),
@@ -195,27 +241,35 @@ class AgentRunConclusion:
                 raise ValueError(f"{label} values must be unique")
 
     def to_dict(self) -> dict[str, JsonValue]:
-        return {
+        value: dict[str, JsonValue] = {
             "status": self.status,
             "summary": self.summary,
             "artifactRefs": list(self.artifact_refs),
             "evidenceRefs": list(self.evidence_refs),
             "unresolvedUnknowns": list(self.unresolved_unknowns),
         }
+        if self.structured_result is not None:
+            value["structuredResult"] = self.structured_result.to_dict()
+        return value
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> AgentRunConclusion:
-        _exact(
-            value,
-            {
-                "status",
-                "summary",
-                "artifactRefs",
-                "evidenceRefs",
-                "unresolvedUnknowns",
-            },
-            "AgentRunConclusion",
-        )
+        required = {
+            "status",
+            "summary",
+            "artifactRefs",
+            "evidenceRefs",
+            "unresolvedUnknowns",
+        }
+        optional = {"structuredResult"}
+        if not required.issubset(value) or set(value) - (required | optional):
+            raise ValueError(
+                "AgentRunConclusion fields differ: "
+                f"{sorted(set(value) ^ (required | optional))}"
+            )
+        raw_structured_result = value.get("structuredResult")
+        if "structuredResult" in value and not isinstance(raw_structured_result, dict):
+            raise ValueError("AgentRunConclusion structuredResult must be an object")
         return cls(
             status=value["status"],
             summary=value["summary"],
@@ -224,6 +278,11 @@ class AgentRunConclusion:
             unresolved_unknowns=_text_tuple(
                 value["unresolvedUnknowns"],
                 "unresolved unknown",
+            ),
+            structured_result=(
+                None
+                if raw_structured_result is None
+                else AgentStructuredResult.from_dict(raw_structured_result)
             ),
         )
 
