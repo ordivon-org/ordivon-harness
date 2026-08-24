@@ -174,8 +174,8 @@ class FakeRuntime:
                 "truthRole": "non-authoritative-first-look-candidate-content",
                 "query": args[args.index("inspect-candidate") + 1],
                 "candidate": {
-                    "path": "synthesis/result-value/README.md",
-                    "locator": "$file",
+                    "path": args[args.index("inspect-candidate") + 2],
+                    "locator": args[args.index("inspect-candidate") + 3],
                     "sourceClass": "curated-synthesis",
                     "truthRole": "non-authoritative-cross-owner-synthesis",
                     "score": 42,
@@ -284,6 +284,99 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
     def test_owner_authority_inflation_fails_closed(self):
         with self.assertRaisesRegex(RuntimeError, "non-authoritative standing"):
             self.run_app(FakeRuntime(invalid_claims=True))
+
+    def test_first_look_stage_preserves_agent_candidate_selection(self):
+        runtime = FakeRuntime()
+        receipt = module.run_atlas_first_look_stage_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            queries=[
+                "研究成果未转化工程能力",
+                "research engineering capability consequences",
+            ],
+            limit=4,
+            request_prefix="ordinary-atlas-stage",
+            consumer_episode_ref="consumer-episode:atlas-stage-test",
+            consumer_class="test",
+        )
+        self.assertEqual(len(runtime.calls), 1)
+        self.assertEqual(receipt["status"], "bounded_candidates_available")
+        view = receipt["modelView"]
+        self.assertEqual(view["nextSemanticAffordance"]["selectionAuthority"], "caller-agent")
+        self.assertFalse(view["nextSemanticAffordance"]["arbitraryPathAuthority"])
+        self.assertFalse(view["nextSemanticAffordance"]["requeryAvailable"])
+        self.assertFalse(view["claims"]["candidateSelectedByApplication"])
+        self.assertEqual(view["nextSemanticAffordance"]["candidateRanks"], [1, 2])
+        self.assertEqual(view["candidates"][0]["bestVariantIndex"], 1)
+        self.assertIn("excerpt", view["candidates"][1])
+
+    def test_candidate_inspection_stage_uses_agent_rank_and_owner_best_variant(self):
+        runtime = FakeRuntime()
+        first = module.run_atlas_first_look_stage_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            queries=[
+                "研究成果未转化工程能力",
+                "research engineering capability consequences",
+            ],
+            limit=4,
+            request_prefix="ordinary-atlas-stage-select",
+            consumer_episode_ref="consumer-episode:atlas-stage-select-test",
+            consumer_class="test",
+        )
+        inspected = module.run_atlas_candidate_inspection_stage_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            first_look_receipt=first,
+            selected_rank=2,
+            request_prefix="ordinary-atlas-stage-select",
+            consumer_episode_ref="consumer-episode:atlas-stage-select-test",
+            consumer_class="test",
+        )
+        self.assertEqual(len(runtime.calls), 2)
+        execution = runtime.calls[1][1]["execution"]
+        self.assertEqual(
+            execution["args"],
+            [
+                "-m",
+                "ordivon_atlas.cli",
+                "inspect-candidate",
+                "研究成果未转化工程能力",
+                "synthesis/other.md",
+                "$file",
+                "--limit",
+                "32",
+            ],
+        )
+        self.assertEqual(inspected["selection"]["rank"], 2)
+        self.assertEqual(inspected["selection"]["selectedBy"], "caller-agent-bounded-candidate-selection")
+        self.assertFalse(inspected["selection"]["arbitraryPathAuthority"])
+        self.assertFalse(inspected["modelView"]["claims"]["candidateSelectedByApplication"])
+        self.assertFalse(inspected["modelView"]["claims"]["arbitraryPathAuthorityGranted"])
+
+    def test_candidate_inspection_stage_rejects_unbounded_rank_before_dispatch(self):
+        runtime = FakeRuntime()
+        first = module.run_atlas_first_look_stage_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            query="result consumer benefit",
+            limit=4,
+            request_prefix="ordinary-atlas-stage-bad-rank",
+            consumer_episode_ref="consumer-episode:atlas-stage-bad-rank",
+            consumer_class="test",
+        )
+        before = len(runtime.calls)
+        with self.assertRaisesRegex(ValueError, "outside the bounded first-look set"):
+            module.run_atlas_candidate_inspection_stage_application(
+                runtime,
+                atlas_workspace_id="atlas-current",
+                first_look_receipt=first,
+                selected_rank=3,
+                request_prefix="ordinary-atlas-stage-bad-rank",
+                consumer_episode_ref="consumer-episode:atlas-stage-bad-rank",
+                consumer_class="test",
+            )
+        self.assertEqual(len(runtime.calls), before)
 
     def test_query_authoring_context_is_one_mechanical_owner_read(self):
         runtime = FakeRuntime()

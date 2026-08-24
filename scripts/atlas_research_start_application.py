@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from anc_canonical import validate_json_value
 
-APPLICATION_REVISION = "atlas-research-start-application-v2"
+APPLICATION_REVISION = "atlas-research-start-application-v3"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 _OWNER_STDOUT_LIMIT_BYTES = 262_144
 _ARTIFACT_READ_MAX_BYTES = 1_048_576
@@ -364,6 +364,245 @@ def run_atlas_query_authoring_context_application(
                 "semanticEquivalenceInferred": False,
                 "researchAdmissionGranted": False,
                 "ownerTruthMinted": False,
+            },
+        },
+    }
+    validate_json_value(receipt)
+    return receipt
+
+
+def run_atlas_first_look_stage_application(
+    client: RuntimeClient,
+    *,
+    atlas_workspace_id: str,
+    query: str | None = None,
+    queries: list[str] | tuple[str, ...] | None = None,
+    limit: int,
+    request_prefix: str,
+    consumer_episode_ref: str,
+    consumer_class: str,
+) -> dict[str, Any]:
+    variants = _query_variants(query=query, queries=queries)
+    request_prefix = _text(request_prefix, "request prefix", max_bytes=300)
+    if type(limit) is not int or not 1 <= limit <= 32:
+        raise ValueError("Atlas first-look limit must be an integer from 1 to 32")
+    batch = len(variants) > 1
+    phase = "first-look-many" if batch else "first-look"
+    args = (
+        ["-m", "ordivon_atlas.cli", "first-look-many", *variants, "--limit", str(limit)]
+        if batch
+        else ["-m", "ordivon_atlas.cli", "first-look", variants[0], "--limit", str(limit)]
+    )
+    first, runtime = _owner_json_exec(
+        client,
+        atlas_workspace_id=atlas_workspace_id,
+        args=args,
+        request_id=f"{request_prefix}-atlas-{phase}",
+        phase=phase,
+        references=application_foreign_references(
+            consumer_episode_ref, consumer_class, phase=phase
+        ),
+    )
+    expected_kind = (
+        "ordivon.atlas-prior-result-first-look-many-experimental"
+        if batch
+        else "ordivon.atlas-prior-result-first-look-experimental"
+    )
+    if first.get("kind") != expected_kind:
+        raise RuntimeError("Atlas first-look result kind differs")
+    _require_non_authoritative_claims(first, phase=phase)
+    candidates_raw = first.get("candidates")
+    if not isinstance(candidates_raw, list):
+        raise TypeError("Atlas first-look candidates must be an array")
+    candidate_count = first.get("candidateCount")
+    if type(candidate_count) is not int or candidate_count != len(candidates_raw):
+        raise RuntimeError("Atlas first-look candidate count differs")
+    candidates = [
+        _compact_candidate(candidate, rank)
+        for rank, candidate in enumerate(candidates_raw, start=1)
+    ]
+    receipt: dict[str, Any] = {
+        "schemaVersion": 1,
+        "kind": "ordivon.application.atlas-first-look-stage-receipt",
+        "revision": APPLICATION_REVISION,
+        "status": "bounded_candidates_available" if candidates else "no_bounded_candidate",
+        "consumerProvenance": {
+            "truthRole": "caller-application-provenance-claim",
+            "episodeRef": consumer_episode_ref,
+            "consumerClass": consumer_class,
+            "adoptionProven": False,
+            "benefitProven": False,
+        },
+        "ownerCall": {
+            "phase": phase,
+            "runtimeJobId": runtime.get("jobId"),
+            "runtimeAttemptId": runtime.get("attemptId"),
+            "runtimeStatus": runtime.get("status"),
+        },
+        "lookup": {
+            "queryVariants": list(variants),
+            "limit": limit,
+            "candidateCount": candidate_count,
+            "candidates": candidates,
+            "projectionHealth": first.get("projectionHealth"),
+            "claims": first.get("claims"),
+        },
+        "modelView": {
+            "schemaVersion": 0,
+            "kind": "ordivon.application.atlas-first-look-stage-model-view",
+            "intent": "select-one-bounded-prior-result-candidate-for-inspection",
+            "queryVariants": list(variants),
+            "candidates": candidates,
+            "projectionHealth": first.get("projectionHealth"),
+            "nextSemanticAffordance": {
+                "operation": "inspect-one-bounded-candidate",
+                "candidateRanks": [item["rank"] for item in candidates],
+                "selectionAuthority": "caller-agent",
+                "arbitraryPathAuthority": False,
+                "requeryAvailable": False,
+            },
+            "epistemicGuard": {
+                "candidateSetExhaustive": False,
+                "candidatePresenceDoesNotEstablishSemanticEquivalence": True,
+                "candidateAbsenceDoesNotEstablishNovelty": True,
+                "requiredCallerAdjudication": ["candidate selection", "semantic equivalence", "research admission"],
+            },
+            "claims": {
+                "ownerTruthMinted": False,
+                "candidateRankingChanged": False,
+                "candidateSelectedByApplication": False,
+                "semanticEquivalenceInferred": False,
+                "researchAdmissionGranted": False,
+                "noveltyStanding": "UNKNOWN_CALLER_MUST_ADJUDICATE",
+                "requeryFreedomWithdrawnAfterFirstLook": True,
+                "queryVariantsGeneratedByApplication": False,
+                "queryVariantsSemanticallyEquivalent": False,
+            },
+        },
+    }
+    validate_json_value(receipt)
+    return receipt
+
+
+def run_atlas_candidate_inspection_stage_application(
+    client: RuntimeClient,
+    *,
+    atlas_workspace_id: str,
+    first_look_receipt: dict[str, Any],
+    selected_rank: int,
+    request_prefix: str,
+    consumer_episode_ref: str,
+    consumer_class: str,
+) -> dict[str, Any]:
+    if first_look_receipt.get("kind") != "ordivon.application.atlas-first-look-stage-receipt":
+        raise ValueError("Atlas candidate inspection requires a first-look-stage receipt")
+    if first_look_receipt.get("revision") != APPLICATION_REVISION:
+        raise ValueError("Atlas first-look-stage receipt revision differs")
+    lookup = first_look_receipt.get("lookup")
+    if not isinstance(lookup, dict):
+        raise TypeError("Atlas first-look-stage receipt omitted lookup")
+    variants = lookup.get("queryVariants")
+    candidates = lookup.get("candidates")
+    original_limit = lookup.get("limit")
+    if (
+        not isinstance(variants, list)
+        or not all(isinstance(item, str) and item for item in variants)
+        or not isinstance(candidates, list)
+        or type(original_limit) is not int
+    ):
+        raise TypeError("Atlas first-look-stage lookup shape differs")
+    if type(selected_rank) is not int or not 1 <= selected_rank <= len(candidates):
+        raise ValueError("selected Atlas candidate rank is outside the bounded first-look set")
+    selected = candidates[selected_rank - 1]
+    if not isinstance(selected, dict) or selected.get("rank") != selected_rank:
+        raise RuntimeError("Atlas bounded candidate rank identity differs")
+    path = _text(selected.get("path"), "Atlas candidate path", max_bytes=2_048)
+    locator = _text(selected.get("locator"), "Atlas candidate locator", max_bytes=2_048)
+    inspection_query = variants[0]
+    inspection_limit = original_limit
+    best_variant_index = selected.get("bestVariantIndex")
+    if best_variant_index is not None:
+        if type(best_variant_index) is not int or not 0 <= best_variant_index < len(variants):
+            raise RuntimeError("Atlas selected candidate has invalid bestVariantIndex")
+        inspection_query = variants[best_variant_index]
+        inspection_limit = 32
+    request_prefix = _text(request_prefix, "request prefix", max_bytes=300)
+    inspection, runtime = _owner_json_exec(
+        client,
+        atlas_workspace_id=atlas_workspace_id,
+        args=[
+            "-m",
+            "ordivon_atlas.cli",
+            "inspect-candidate",
+            inspection_query,
+            path,
+            locator,
+            "--limit",
+            str(inspection_limit),
+        ],
+        request_id=f"{request_prefix}-atlas-inspect-candidate-r{selected_rank}",
+        phase="inspect-candidate",
+        references=application_foreign_references(
+            consumer_episode_ref, consumer_class, phase="inspect-candidate"
+        ),
+    )
+    if inspection.get("kind") != "ordivon.atlas-prior-result-candidate-inspection-experimental":
+        raise RuntimeError("Atlas candidate inspection result kind differs")
+    _require_non_authoritative_claims(inspection, phase="inspect-candidate")
+    inspected = inspection.get("candidate")
+    if not isinstance(inspected, dict):
+        raise TypeError("Atlas candidate inspection omitted candidate identity")
+    for field, expected in (("path", path), ("locator", locator)):
+        if inspected.get(field) != expected:
+            raise RuntimeError(f"Atlas inspected candidate {field} differs from Agent-selected candidate")
+    receipt: dict[str, Any] = {
+        "schemaVersion": 1,
+        "kind": "ordivon.application.atlas-candidate-inspection-stage-receipt",
+        "revision": APPLICATION_REVISION,
+        "status": "selected_candidate_inspected",
+        "consumerProvenance": first_look_receipt.get("consumerProvenance"),
+        "selection": {
+            "selectedBy": "caller-agent-bounded-candidate-selection",
+            "rank": selected_rank,
+            "candidate": selected,
+            "inspectionQuery": inspection_query,
+            "inspectionLimit": inspection_limit,
+            "arbitraryPathAuthority": False,
+        },
+        "ownerCall": {
+            "phase": "inspect-candidate",
+            "runtimeJobId": runtime.get("jobId"),
+            "runtimeAttemptId": runtime.get("attemptId"),
+            "runtimeStatus": runtime.get("status"),
+        },
+        "inspection": {
+            "contentBytes": inspection.get("contentBytes"),
+            "contentDigest": inspection.get("contentDigest"),
+            "content": inspection.get("content"),
+            "projectionHealth": inspection.get("projectionHealth"),
+            "claims": inspection.get("claims"),
+        },
+        "modelView": {
+            "schemaVersion": 0,
+            "kind": "ordivon.application.atlas-candidate-inspection-stage-model-view",
+            "selectedCandidate": selected,
+            "inspectionQuery": inspection_query,
+            "contentBytes": inspection.get("contentBytes"),
+            "contentDigest": inspection.get("contentDigest"),
+            "content": inspection.get("content"),
+            "epistemicGuard": {
+                "candidatePresenceDoesNotEstablishSemanticEquivalence": True,
+                "candidateInspectionDoesNotEstablishSemanticEquivalence": True,
+                "candidateAbsenceDoesNotEstablishNovelty": True,
+                "requiredCallerAdjudication": ["semantic equivalence", "research admission"],
+            },
+            "claims": {
+                "ownerTruthMinted": False,
+                "candidateSelectedByApplication": False,
+                "semanticEquivalenceInferred": False,
+                "researchAdmissionGranted": False,
+                "noveltyStanding": "UNKNOWN_CALLER_MUST_ADJUDICATE",
+                "arbitraryPathAuthorityGranted": False,
             },
         },
     }
