@@ -303,6 +303,14 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "bounded_candidates_available")
         view = receipt["modelView"]
         self.assertEqual(view["nextSemanticAffordance"]["selectionAuthority"], "caller-agent")
+        self.assertIn("exact inspection", view["nextSemanticAffordance"]["selectionObjective"])
+        self.assertIn("materially change", view["nextSemanticAffordance"]["rankZeroCondition"])
+        self.assertTrue(
+            view["nextSemanticAffordance"]["nonAuthoritativeRoleDoesNotDisqualifyInspection"]
+        )
+        self.assertTrue(
+            view["nextSemanticAffordance"]["historicalOrProcessRoleDoesNotDisqualifyInspection"]
+        )
         self.assertFalse(view["nextSemanticAffordance"]["arbitraryPathAuthority"])
         self.assertFalse(view["nextSemanticAffordance"]["requeryAvailable"])
         self.assertFalse(view["claims"]["candidateSelectedByApplication"])

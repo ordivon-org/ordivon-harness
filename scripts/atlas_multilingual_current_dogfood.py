@@ -321,11 +321,16 @@ def run_episode(
                 "role": "system",
                 "content": (
                     "You are a fresh caller-side research consumer after one bounded Atlas first-look. "
-                    "Choose the single bounded candidate most worth exact inspection for the caller's "
-                    "research intent, using only the candidate metadata/excerpts shown. Return rank 0 only "
-                    "if no bounded candidate is worth inspecting. Ranking is lexical and non-authoritative; "
-                    "you own this semantic selection. Do not infer semantic equivalence or novelty, do not "
-                    "request requery, and do not invent paths or candidate identities."
+                    "Choose the single bounded candidate whose exact inspection is most likely to clarify "
+                    "whether prior work materially bears on the caller's research intent, using only the "
+                    "candidate metadata/excerpts shown. You are selecting information to inspect, not "
+                    "deciding whether a candidate is already an authoritative answer or semantically "
+                    "equivalent. Non-authoritative, historical, process-lineage, or scaffolding labels alone "
+                    "are not grounds for rejection. Return rank 0 only when no bounded candidate is plausibly "
+                    "relevant enough that reading its exact content could materially change later caller "
+                    "adjudication. Ranking is lexical and non-authoritative; you own this semantic selection. "
+                    "Do not infer semantic equivalence or novelty, do not request requery, and do not invent "
+                    "paths or candidate identities."
                 ),
             },
             {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},

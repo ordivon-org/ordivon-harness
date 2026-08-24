@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from anc_canonical import validate_json_value
 
-APPLICATION_REVISION = "atlas-research-start-application-v3"
+APPLICATION_REVISION = "atlas-research-start-application-v4"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 _OWNER_STDOUT_LIMIT_BYTES = 262_144
 _ARTIFACT_READ_MAX_BYTES = 1_048_576
@@ -458,6 +458,16 @@ def run_atlas_first_look_stage_application(
                 "operation": "inspect-one-bounded-candidate",
                 "candidateRanks": [item["rank"] for item in candidates],
                 "selectionAuthority": "caller-agent",
+                "selectionObjective": (
+                    "choose the bounded candidate whose exact inspection is most likely "
+                    "to clarify whether prior work materially bears on the caller intent"
+                ),
+                "rankZeroCondition": (
+                    "only when no bounded candidate is plausibly relevant enough that "
+                    "exact inspection could materially change later caller adjudication"
+                ),
+                "nonAuthoritativeRoleDoesNotDisqualifyInspection": True,
+                "historicalOrProcessRoleDoesNotDisqualifyInspection": True,
                 "arbitraryPathAuthority": False,
                 "requeryAvailable": False,
             },
