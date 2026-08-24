@@ -117,7 +117,7 @@ def _structured_turn(
         objective_ref=HarnessBoundReference(
             f"objective:atlas-multilingual-current-{label}",
             "objective",
-            canonical_digest({"label": label, "sequence": sequence, "messages": messages[:1]}),
+            canonical_digest({"label": label, "sequence": sequence, "messages": list(messages[:1])}),
         ),
         context_refs=(
             HarnessBoundReference(
