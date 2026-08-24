@@ -48,6 +48,21 @@ QUERY_COMPLETION: dict[str, JsonValue] = {
     },
 }
 
+CANDIDATE_SELECTION_COMPLETION: dict[str, JsonValue] = {
+    "mode": "structured-result-v1",
+    "resultKind": "atlas-bounded-candidate-selection",
+    "conformancePolicy": LOCAL_JSON_SCHEMA_DRAFT_2020_12_PROFILE_V1,
+    "resultSchema": {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "selectedRank": {"type": "integer", "minimum": 0, "maximum": 4},
+            "reason": {"type": "string", "minLength": 1, "maxLength": 3000},
+        },
+        "required": ["selectedRank", "reason"],
+    },
+}
+
 ADJUDICATION_COMPLETION: dict[str, JsonValue] = {
     "mode": "structured-result-v1",
     "resultKind": "atlas-prior-work-adjudication",
@@ -146,6 +161,7 @@ def run_episode(
     runtime_scripts: Path,
     runtime_environment_file: Path,
     runtime_endpoint: str,
+    fixed_queries: list[str] | None = None,
 ) -> dict[str, JsonValue]:
     settings = DeepSeekSettings.from_secret_file(
         secret,
@@ -163,37 +179,53 @@ def run_episode(
         consumer_class="dogfood",
     )
     authoring_view = authoring_receipt["modelView"]
-    query_result, query_telemetry = _structured_turn(
-        settings,
-        label=f"{label}-query",
-        sequence=1,
-        context={"intent": intent, "ownerAuthoringContext": authoring_view},
-        completion=QUERY_COMPLETION,
-        messages=(
-            {
-                "role": "system",
-                "content": (
-                    "You are a fresh Ordivon research consumer. Author one to four lexical retrieval "
-                    "query variants for the caller's research intent using the Atlas owner environment "
-                    "facts and task-neutral retrieval coordinates below. You own the wording. Atlas and "
-                    "the application did not translate the intent or generate a query. Do not claim that "
-                    "any coordinate or variant is semantically equivalent to the intent. Submit only the "
-                    "structured query-authorship result; no Runtime or domain Tools are available."
-                ),
-            },
-            {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
-            {
-                "role": "user",
-                "content": "ATLAS_OWNER_QUERY_AUTHORING_CONTEXT:\n"
-                + json.dumps(authoring_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
-            },
-        ),
-    )
-    queries = query_result.get("queries")
-    if not isinstance(queries, list) or not all(isinstance(item, str) for item in queries):
-        raise TypeError("query Agent result omitted query strings")
+    if fixed_queries is None:
+        query_result, query_telemetry = _structured_turn(
+            settings,
+            label=f"{label}-query",
+            sequence=1,
+            context={"intent": intent, "ownerAuthoringContext": authoring_view},
+            completion=QUERY_COMPLETION,
+            messages=(
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a fresh Ordivon research consumer. Author one to four lexical retrieval "
+                        "query variants for the caller's research intent using the Atlas owner environment "
+                        "facts and task-neutral retrieval coordinates below. You own the wording. Atlas and "
+                        "the application did not translate the intent or generate a query. Do not claim that "
+                        "any coordinate or variant is semantically equivalent to the intent. Submit only the "
+                        "structured query-authorship result; no Runtime or domain Tools are available."
+                    ),
+                },
+                {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
+                {
+                    "role": "user",
+                    "content": "ATLAS_OWNER_QUERY_AUTHORING_CONTEXT:\n"
+                    + json.dumps(authoring_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                },
+            ),
+        )
+        queries = query_result.get("queries")
+        if not isinstance(queries, list) or not all(isinstance(item, str) for item in queries):
+            raise TypeError("query Agent result omitted query strings")
+        query_authorship_source = "fresh-agent"
+        provider_model_calls = 3
+    else:
+        queries = list(atlas_app._query_variants(query=None, queries=fixed_queries))
+        query_result = {
+            "queries": queries,
+            "reason": "Frozen caller-supplied variants from a prior source-fenced episode isolate candidate-selection behavior.",
+        }
+        query_telemetry = {
+            "source": "caller-frozen-prior-episode",
+            "domainToolCalls": 0,
+            "providerModelCallPerformed": False,
+        }
+        query_authorship_source = "caller-frozen-prior-episode"
+        provider_model_calls = 2
 
-    research_receipt = atlas_app.run_atlas_research_start_application(
+    first_look_receipt = atlas_app.run_atlas_first_look_stage_application(
         runtime,
         atlas_workspace_id=atlas_workspace,
         queries=queries,
@@ -202,39 +234,95 @@ def run_episode(
         consumer_episode_ref=episode_ref,
         consumer_class="dogfood",
     )
-    research_view = research_receipt["modelView"]
-    adjudication, adjudication_telemetry = _structured_turn(
+    first_look_view = first_look_receipt["modelView"]
+    selection, selection_telemetry = _structured_turn(
         settings,
-        label=f"{label}-adjudication",
+        label=f"{label}-candidate-selection",
         sequence=2,
         context={
             "intent": intent,
             "agentAuthoredQueries": queries,
-            "ownerResearchStartView": research_view,
+            "boundedFirstLook": first_look_view,
+        },
+        completion=CANDIDATE_SELECTION_COMPLETION,
+        messages=(
+            {
+                "role": "system",
+                "content": (
+                    "You are a fresh caller-side research consumer after one bounded Atlas first-look. "
+                    "Choose the single bounded candidate most worth exact inspection for the caller's "
+                    "research intent, using only the candidate metadata/excerpts shown. Return rank 0 only "
+                    "if no bounded candidate is worth inspecting. Ranking is lexical and non-authoritative; "
+                    "you own this semantic selection. Do not infer semantic equivalence or novelty, do not "
+                    "request requery, and do not invent paths or candidate identities."
+                ),
+            },
+            {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
+            {
+                "role": "user",
+                "content": "ATLAS_BOUNDED_FIRST_LOOK:\n"
+                + json.dumps(first_look_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            },
+        ),
+    )
+    selected_rank = selection.get("selectedRank")
+    candidates = first_look_view.get("candidates")
+    if type(selected_rank) is not int or not isinstance(candidates, list):
+        raise TypeError("candidate selection result or first-look candidate list is invalid")
+    if selected_rank < 0 or selected_rank > len(candidates):
+        raise RuntimeError("candidate selection escaped the bounded first-look set")
+    inspection_receipt = None
+    inspection_view = None
+    if selected_rank:
+        inspection_receipt = atlas_app.run_atlas_candidate_inspection_stage_application(
+            runtime,
+            atlas_workspace_id=atlas_workspace,
+            first_look_receipt=first_look_receipt,
+            selected_rank=selected_rank,
+            request_prefix=f"atlas-multilingual-current-{label}",
+            consumer_episode_ref=episode_ref,
+            consumer_class="dogfood",
+        )
+        inspection_view = inspection_receipt["modelView"]
+    adjudication, adjudication_telemetry = _structured_turn(
+        settings,
+        label=f"{label}-adjudication",
+        sequence=3,
+        context={
+            "intent": intent,
+            "agentAuthoredQueries": queries,
+            "boundedFirstLook": first_look_view,
+            "agentCandidateSelection": selection,
+            "ownerCandidateInspection": inspection_view,
         },
         completion=ADJUDICATION_COMPLETION,
         messages=(
             {
                 "role": "system",
                 "content": (
-                    "You are the caller-side research consumer after one bounded Atlas research-start "
-                    "episode. Judge only whether the returned non-authoritative prior-work evidence is "
-                    "substantial enough to consume before opening new research, or whether more input is "
-                    "needed. Candidate presence does not establish semantic equivalence; candidate absence "
-                    "does not establish novelty. You may not grant research admission. Submit only the "
-                    "structured adjudication result; no Runtime or domain Tools are available."
+                    "You are the caller-side research consumer after a bounded Atlas first-look and, "
+                    "when selected, one exact owner candidate inspection. Judge only whether the available "
+                    "non-authoritative prior-work evidence is substantial enough to consume before opening "
+                    "new research, or whether more input is needed. Candidate presence/inspection does not "
+                    "establish semantic equivalence; absence does not establish novelty. You may not grant "
+                    "research admission. Submit only the structured adjudication result."
                 ),
             },
             {"role": "user", "content": "CALLER_RESEARCH_INTENT:\n" + intent},
             {
                 "role": "user",
-                "content": "AGENT_AUTHORED_QUERY_VARIANTS:\n"
-                + json.dumps(queries, ensure_ascii=False, separators=(",", ":")),
+                "content": "ATLAS_BOUNDED_FIRST_LOOK:\n"
+                + json.dumps(first_look_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
             },
             {
                 "role": "user",
-                "content": "ATLAS_RESEARCH_START_MODEL_VIEW:\n"
-                + json.dumps(research_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+                "content": "AGENT_CANDIDATE_SELECTION:\n"
+                + json.dumps(selection, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+            },
+            {
+                "role": "user",
+                "content": "ATLAS_SELECTED_CANDIDATE_INSPECTION:\n"
+                + json.dumps(inspection_view, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
             },
         ),
     )
@@ -245,10 +333,17 @@ def run_episode(
     ):
         raise RuntimeError("caller adjudication inflated Atlas epistemic standing")
 
-    first_look = research_receipt.get("firstLook")
-    candidates = first_look.get("candidates") if isinstance(first_look, dict) else None
-    top = candidates[0] if isinstance(candidates, list) and candidates else None
-    owner_jobs = _owner_job_ids(authoring_receipt) + _owner_job_ids(research_receipt)
+    top = candidates[0] if candidates else None
+    selected_candidate = (
+        candidates[selected_rank - 1]
+        if selected_rank and selected_rank <= len(candidates)
+        else None
+    )
+    owner_jobs = (
+        _owner_job_ids(authoring_receipt)
+        + _owner_job_ids(first_look_receipt)
+        + ([] if inspection_receipt is None else _owner_job_ids(inspection_receipt))
+    )
     receipt: dict[str, JsonValue] = {
         "schemaVersion": 1,
         "kind": "ordivon.atlas-multilingual-current-dogfood",
@@ -256,6 +351,7 @@ def run_episode(
         "intent": intent,
         "agentAuthoredQueries": list(queries),
         "queryAuthorshipReason": query_result["reason"],
+        "queryAuthorshipSource": query_authorship_source,
         "queryAuthorshipTelemetry": query_telemetry,
         "ownerAuthoringContext": {
             "kind": authoring_view["kind"],
@@ -266,18 +362,21 @@ def run_episode(
             "semanticSimilarityByAtlas": authoring_view["representationProfile"]["retrieval"]["semanticSimilarityByAtlas"],
         },
         "researchStart": {
-            "status": research_receipt["status"],
-            "candidateCount": first_look["candidateCount"] if isinstance(first_look, dict) else 0,
+            "status": first_look_receipt["status"],
+            "candidateCount": len(candidates),
             "topCandidate": top,
-            "inspection": research_view.get("inspection"),
-            "epistemicGuard": research_view["epistemicGuard"],
-            "claims": research_view["claims"],
+            "candidateSelection": selection,
+            "candidateSelectionTelemetry": selection_telemetry,
+            "selectedCandidate": selected_candidate,
+            "inspection": inspection_view,
+            "epistemicGuard": first_look_view["epistemicGuard"],
+            "claims": first_look_view["claims"],
         },
         "adjudication": adjudication,
         "adjudicationTelemetry": adjudication_telemetry,
         "runtimeJobIds": owner_jobs,
         "ownerReadCount": len(owner_jobs),
-        "providerModelCallCount": 2,
+        "providerModelCallCount": provider_model_calls,
         "providerDomainToolCallCount": 0,
         "applicationGeneratedQueryVariant": False,
         "atlasGeneratedQueryVariant": False,
@@ -294,6 +393,7 @@ def main() -> int:
     parser.add_argument("--intent", required=True)
     parser.add_argument("--label", required=True)
     parser.add_argument("--atlas-workspace", required=True)
+    parser.add_argument("--fixed-query-variant", action="append", dest="fixed_queries")
     parser.add_argument("--secret", type=Path, default=Path("/root/.config/ordivon/secrets/deepseek.json"))
     parser.add_argument("--runtime-endpoint", default="http://127.0.0.1:8897/mcp")
     parser.add_argument("--runtime-environment-file", type=Path, default=Path("/etc/ordivon/ordivon-runtime.env"))
@@ -307,6 +407,7 @@ def main() -> int:
         runtime_scripts=args.runtime_scripts,
         runtime_environment_file=args.runtime_environment_file,
         runtime_endpoint=args.runtime_endpoint,
+        fixed_queries=args.fixed_queries,
     )
     print(json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
