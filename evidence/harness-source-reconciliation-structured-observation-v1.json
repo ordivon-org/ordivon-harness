@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness.source-reconciliation-structured-observation-v1",
+  "classification": "CURRENT_SOURCE_RECONCILIATION_AND_PORTABLE_RELEASE_ACCEPTED",
+  "implementationSourceRevision": "e983c79f5582160b37ac56c1898efa80e486880d",
+  "sourceIntegration": {
+    "mergeRevision": "e983c79f5582160b37ac56c1898efa80e486880d",
+    "localParentRevision": "d7935d47c27822859ee87dd5c6039947cd9f313c",
+    "remoteParentRevision": "b14df3e0aa5764f9661c4b0881774f4434b8353a",
+    "resolution": "The remote authority-fenced observation recovery and capability-catalog changes were merged with the local structured-result carrier and owner-native application bridges.",
+    "conflictFiles": [
+      "evidence/index.json",
+      "tests/test_evidence_index_typed_ingestion.py"
+    ],
+    "conflictDisposition": "The local evidence projection was the semantic superset: all older owner-bridge receipts remain immutable, and stale whole-current claims are historical."
+  },
+  "integratedCapabilities": {
+    "structuredResultCarrier": "Large caller-owned structured results use the existing conclusion CAS carrier and stay outside the bounded summary.",
+    "observationRecovery": "Agent observation surfaces recover exact owner/tool state through explicit authority-fenced catalogs and do not infer domain completion.",
+    "ownerBoundary": "Atlas and Finance semantics remain owner-native; Harness composes bounded interfaces without becoming their truth owner."
+  },
+  "evidenceLifecycle": {
+    "supersedesCurrentnessClaim": "harness.execution.first-interface-owner-bridges-v5",
+    "priorReceiptBytesRewritten": false,
+    "priorReceiptDisposition": "historical",
+    "demotionCommit": "bded0b793701061fe7ca7e41fb4554b48040439a",
+    "reason": "Later structured-result and observation-recovery implementation paths invalidate v5 as whole-current certification while preserving its exact historical result."
+  },
+  "portableAcceptance": {
+    "runtimeJobId": "job-01a0339c-36a3-7e53-bbec-dd750ed1b6fd",
+    "terminalEvidenceArtifactDigest": "sha256:0c1c35239a513eceeeff74cf75069edef981f5c30feba65c742c5842f786f342",
+    "implementationUnderTest": "e983c79f5582160b37ac56c1898efa80e486880d",
+    "evidenceProjectionUnderTest": "bded0b793701061fe7ca7e41fb4554b48040439a",
+    "python": "3.12",
+    "tests": 530,
+    "passed": 530,
+    "skipped": 3,
+    "failures": 0,
+    "compileall": "passed",
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "documentationContract": "passed",
+    "evidenceContractBeforeNewReceipt": "valid historical_receipts=76 verified_receipts=0",
+    "lockCheck": "passed",
+    "deterministicDemo": "passed",
+    "scaleSmoke": {
+      "runs": 8,
+      "eventsPerRun": 12,
+      "batchSize": 11,
+      "status": "passed"
+    },
+    "wheel": {
+      "filename": "ordivon_harness-0.6.0-py3-none-any.whl",
+      "installedVersion": "0.6.0",
+      "cliCommandsVerified": 14,
+      "hostFreeCoreVerified": true,
+      "status": "passed"
+    },
+    "overall": "passed"
+  },
+  "acceptedLaws": {
+    "immutableHistoricalEvidenceIsNotCurrentStanding": true,
+    "currentStandingRequiresExactImplementationLineage": true,
+    "sourceReconciliationMustPreserveBothParentLineages": true,
+    "portableAcceptancePrecedesCurrentReceiptPublication": true,
+    "runtimeSuccessDoesNotAssertDomainSemanticCompletion": true
+  },
+  "explicitNonClaims": [
+    "This does not claim live Provider acceptance for the reconciled revision.",
+    "This does not prove universal Agent behavior improvement or cross-model stability.",
+    "This does not transfer Atlas, Finance, Host, or Runtime truth authority into Harness.",
+    "This does not claim domain semantic completion from the Runtime Job.",
+    "This receipt is local candidate evidence until its creation commit is validated and normally published."
+  ]
+}
