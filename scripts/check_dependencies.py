@@ -25,9 +25,9 @@ def main() -> int:
         + PROTOCOL_REVISION
         + "#subdirectory=packages/ordivon-protocol"
     )
-    expected_dependencies = ["jsonschema>=4.26,<5", expected_protocol]
+    expected_dependencies = ["httpx==0.28.1", "jsonschema>=4.26,<5", expected_protocol]
     if project.get("dependencies") != expected_dependencies:
-        fail("base dependencies must contain only jsonschema plus the exact Protocol graph")
+        fail("base dependencies must contain only HTTPX, jsonschema, and the exact Protocol graph")
     if "optional-dependencies" in project:
         fail("Harness must not expose compatibility dependency extras")
     if "dependency-groups" in raw:

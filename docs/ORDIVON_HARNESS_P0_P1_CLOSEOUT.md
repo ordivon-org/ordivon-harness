@@ -42,7 +42,7 @@ cancel()
 
 The Loop concurrently respects Provider completion, cancellation and the monotonic Run deadline. A cancellation or deadline closes the active handle and drains it for a bounded period before emitting the terminal Run result.
 
-The default DeepSeek path now owns one `http.client` connection per call. Cancellation closes the response, shuts down the socket and closes the connection. The former `urllib` transport remains available for compatibility and deterministic fault tests, but is no longer the default.
+The default DeepSeek path owns one pinned-HTTPX `AsyncClient` and asyncio Task per call. Cancellation is scheduled onto that Task from the synchronous Handle boundary, and the worker drains pending tasks and async generators before closing its event loop. Exact request bytes, response bounds, failure mapping and retry authority remain Harness-owned. The former `urllib` transport remains available for compatibility and deterministic fault tests, but is no longer the default.
 
 Codex and Hermes retain provider-faithful lifecycle implementations and bounded subprocess cleanup. Requested and effective Provider model identities remain separately recorded and unadmitted routing fails closed.
 

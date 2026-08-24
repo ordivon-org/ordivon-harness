@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import http.client
 import os
-import socket
 import stat
 import threading
 import urllib.error
@@ -13,6 +13,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
+
+import httpx
 
 from anc_canonical import (
     JsonValue,
@@ -287,28 +289,7 @@ class CancellableDeepSeekTransport(Protocol):
     ) -> DeepSeekPostHandle: ...
 
 
-def _response_socket(response: http.client.HTTPResponse) -> socket.socket | None:
-    """Return the socket retained by HTTPResponse after HTTPConnection releases it."""
-    stream = response.fp
-    raw = getattr(stream, "raw", None)
-    candidate = getattr(raw, "_sock", None)
-    return candidate if isinstance(candidate, socket.socket) else None
-
-
-def _shutdown_socket(sock: socket.socket | None) -> None:
-    if sock is None:
-        return
-    try:
-        sock.shutdown(socket.SHUT_RDWR)
-    except (OSError, ValueError):
-        pass
-    try:
-        sock.close()
-    except OSError:
-        pass
-
-
-class _HttpClientPostHandle:
+class _HttpxPostHandle:
     def __init__(
         self,
         url: str,
@@ -321,20 +302,20 @@ class _HttpClientPostHandle:
     ) -> None:
         self._url = url
         self._headers = dict(headers)
-        self._body = body
+        self._body = bytes(body)
         self._timeout_seconds = timeout_seconds
         self._max_response_bytes = max_response_bytes
         self._https_proxy = _validated_loopback_https_proxy(https_proxy)
         self._done = threading.Event()
         self._cancelled = threading.Event()
         self._lock = threading.Lock()
-        self._connection: http.client.HTTPConnection | None = None
-        self._response: http.client.HTTPResponse | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._task: asyncio.Task[bytes] | None = None
         self._result: bytes | None = None
         self._error: Exception | None = None
         self._thread = threading.Thread(
             target=self._run,
-            name="ordivon-deepseek-http",
+            name="ordivon-deepseek-httpx",
             daemon=True,
         )
         self._thread.start()
@@ -352,140 +333,127 @@ class _HttpClientPostHandle:
     def cancel(self) -> None:
         self._cancelled.set()
         with self._lock:
-            response = self._response
-            connection = self._connection
-        response_socket = _response_socket(response) if response is not None else None
-        connection_socket = connection.sock if connection is not None else None
-        _shutdown_socket(response_socket)
-        if connection_socket is not response_socket:
-            _shutdown_socket(connection_socket)
-        if response is not None:
-            try:
-                response.close()
-            except (OSError, AttributeError):
-                pass
-        if connection is not None:
-            try:
-                connection.close()
-            except OSError:
-                pass
-
-    def _run(self) -> None:
-        connection: http.client.HTTPConnection | None = None
-        response: http.client.HTTPResponse | None = None
+            loop, task = self._loop, self._task
+        if loop is None or task is None or task.done():
+            return
         try:
-            parsed = urllib.parse.urlsplit(self._url)
-            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-                raise ValueError("DeepSeek URL must be absolute HTTP(S)")
-            target_port = parsed.port or (443 if parsed.scheme == "https" else 80)
-            if self._https_proxy is not None:
-                if parsed.scheme != "https":
-                    raise ValueError("DeepSeek loopback CONNECT proxy requires an HTTPS target")
-                proxy = urllib.parse.urlsplit(self._https_proxy)
-                assert proxy.hostname == "127.0.0.1" and proxy.port is not None
-                connection = http.client.HTTPSConnection(
-                    proxy.hostname,
-                    port=proxy.port,
-                    timeout=self._timeout_seconds,
-                )
-                connection.set_tunnel(parsed.hostname, port=target_port)
-            else:
-                connection_type = (
-                    http.client.HTTPSConnection
-                    if parsed.scheme == "https"
-                    else http.client.HTTPConnection
-                )
-                connection = connection_type(
-                    parsed.hostname,
-                    port=parsed.port,
-                    timeout=self._timeout_seconds,
-                )
-            with self._lock:
+            loop.call_soon_threadsafe(task.cancel)
+        except RuntimeError:
+            pass
+
+    async def _post(self) -> bytes:
+        parsed = urllib.parse.urlsplit(self._url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            raise ValueError("DeepSeek URL must be absolute HTTP(S)")
+        if self._https_proxy is not None and parsed.scheme != "https":
+            raise ValueError("DeepSeek loopback CONNECT proxy requires an HTTPS target")
+        if self._cancelled.is_set():
+            raise AgentTurnAdapterError(
+                "DeepSeek request was cancelled before connection",
+                failure_code=AgentTurnFailureCode.FAILED,
+            )
+        headers = {**self._headers, "Accept-Encoding": "identity"}
+        async with httpx.AsyncClient(
+            proxy=self._https_proxy,
+            timeout=httpx.Timeout(self._timeout_seconds),
+            trust_env=False,
+            follow_redirects=False,
+            http1=True,
+            http2=False,
+        ) as client:
+            async with client.stream(
+                "POST",
+                self._url,
+                headers=headers,
+                content=self._body,
+            ) as response:
+                raw = bytearray()
+                async for chunk in response.aiter_raw():
+                    remaining = self._max_response_bytes + 1 - len(raw)
+                    raw.extend(chunk[:remaining])
+                    if len(raw) > self._max_response_bytes:
+                        break
+                body = bytes(raw)
                 if self._cancelled.is_set():
                     raise AgentTurnAdapterError(
-                        "DeepSeek request was cancelled before connection",
+                        "DeepSeek request was cancelled in flight",
                         failure_code=AgentTurnFailureCode.FAILED,
                     )
-                self._connection = connection
-            path = parsed.path or "/"
-            if parsed.query:
-                path += "?" + parsed.query
-            connection.request("POST", path, body=self._body, headers=self._headers)
-            response = connection.getresponse()
+                if not 200 <= response.status_code < 300:
+                    detail = body[:8_192].decode("utf-8", errors="replace")
+                    if response.status_code in {408, 504}:
+                        failure_code = AgentTurnFailureCode.TIMEOUT
+                    elif response.status_code == 429 or response.status_code >= 500:
+                        failure_code = AgentTurnFailureCode.UNAVAILABLE
+                    else:
+                        failure_code = AgentTurnFailureCode.REJECTED
+                    raise AgentTurnAdapterError(
+                        f"DeepSeek returned HTTP {response.status_code}: {detail}",
+                        failure_code=failure_code,
+                        dispatch_safety=AgentTurnDispatchSafety.PROVIDER_REJECTED,
+                    )
+                if len(body) > self._max_response_bytes:
+                    raise AgentTurnAdapterError(
+                        "DeepSeek response exceeds the configured byte bound"
+                    )
+                return body
+
+    def _run(self) -> None:
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
             with self._lock:
-                self._response = response
-            raw = response.read(self._max_response_bytes + 1)
-            if self._cancelled.is_set():
-                raise AgentTurnAdapterError(
-                    "DeepSeek request was cancelled in flight",
-                    failure_code=AgentTurnFailureCode.FAILED,
-                )
-            if not 200 <= response.status < 300:
-                detail = raw[:8_192].decode("utf-8", errors="replace")
-                if response.status in {408, 504}:
-                    failure_code = AgentTurnFailureCode.TIMEOUT
-                elif response.status == 429 or response.status >= 500:
-                    failure_code = AgentTurnFailureCode.UNAVAILABLE
-                else:
-                    failure_code = AgentTurnFailureCode.REJECTED
-                raise AgentTurnAdapterError(
-                    f"DeepSeek returned HTTP {response.status}: {detail}",
-                    failure_code=failure_code,
-                    dispatch_safety=AgentTurnDispatchSafety.PROVIDER_REJECTED,
-                )
-            if len(raw) > self._max_response_bytes:
-                raise AgentTurnAdapterError(
-                    "DeepSeek response exceeds the configured byte bound"
-                )
-            self._result = raw
+                self._loop = loop
+                self._task = loop.create_task(self._post())
+                task = self._task
+                if self._cancelled.is_set():
+                    task.cancel()
+            self._result = loop.run_until_complete(task)
+        except asyncio.CancelledError as error:
+            self._error = AgentTurnAdapterError(
+                "DeepSeek request was cancelled in flight",
+                failure_code=AgentTurnFailureCode.FAILED,
+            )
+            self._error.__cause__ = error
         except AgentTurnAdapterError as error:
             self._error = error
-        except TimeoutError as error:
+        except httpx.TimeoutException as error:
             self._error = AgentTurnAdapterError(
                 "DeepSeek request timed out",
                 failure_code=AgentTurnFailureCode.TIMEOUT,
             )
             self._error.__cause__ = error
-        except (OSError, AttributeError, http.client.HTTPException) as error:
-            message = (
-                "DeepSeek request was cancelled in flight"
-                if self._cancelled.is_set()
-                else f"DeepSeek connection failed: {error}"
-            )
+        except httpx.RequestError as error:
             self._error = AgentTurnAdapterError(
-                message,
-                failure_code=(
-                    AgentTurnFailureCode.FAILED
-                    if self._cancelled.is_set()
-                    else AgentTurnFailureCode.TRANSPORT_FAILED
-                ),
+                f"DeepSeek connection failed: {error}",
+                failure_code=AgentTurnFailureCode.TRANSPORT_FAILED,
             )
             self._error.__cause__ = error
-        except Exception as error:  # noqa: BLE001 - preserve unexpected worker failure for poll().
+        except Exception as error:  # noqa: BLE001 - preserve worker failure for poll().
             self._error = error
         finally:
-            if response is not None:
-                try:
-                    response.close()
-                except (OSError, AttributeError):
-                    pass
-            if connection is not None:
-                try:
-                    connection.close()
-                except OSError:
-                    pass
+            pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            loop.run_until_complete(loop.shutdown_asyncgens())
             with self._lock:
-                self._response = None
-                self._connection = None
+                self._loop = None
+                self._task = None
+            asyncio.set_event_loop(None)
+            loop.close()
             self._done.set()
 
 
 class HttpClientDeepSeekTransport:
-    """One-request-per-handle transport with active socket cancellation.
+    """One-request-per-handle HTTPX transport with active task cancellation.
 
     The optional proxy is deliberately restricted to a Workstation-owned IPv4
-    loopback CONNECT endpoint. This preserves end-to-end TLS and prevents an
-    arbitrary inherited proxy from becoming a credential exfiltration path.
+    loopback CONNECT endpoint. HTTPX establishes an HTTP tunnel and performs
+    end-to-end TLS with the target; inherited proxy state is disabled.
     """
 
     def __init__(self, *, https_proxy: str | None = None) -> None:
@@ -504,7 +472,7 @@ class HttpClientDeepSeekTransport:
         timeout_seconds: float,
         max_response_bytes: int,
     ) -> DeepSeekPostHandle:
-        return _HttpClientPostHandle(
+        return _HttpxPostHandle(
             url,
             headers=headers,
             body=body,
@@ -532,12 +500,16 @@ class HttpClientDeepSeekTransport:
         raw = handle.poll(timeout_seconds + 0.25)
         if raw is None:
             handle.cancel()
-            handle.poll(0.5)
+            try:
+                handle.poll(0.5)
+            except AgentTurnAdapterError:
+                pass
             raise AgentTurnAdapterError(
                 "DeepSeek request timed out",
                 failure_code=AgentTurnFailureCode.TIMEOUT,
             )
         return raw
+
 
 
 def _conclusion_tool(
