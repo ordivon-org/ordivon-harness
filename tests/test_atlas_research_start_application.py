@@ -187,6 +187,8 @@ class FakeRuntime:
                 "content": {
                     "encoding": "text/markdown-sections; charset=utf-8",
                     "projectedBytes": 120,
+                    "projectionByteLimit": 8192,
+                    "fullContentAvailableViaRawEscape": True,
                     "sections": [
                         {
                             "heading": "Consumption",
@@ -241,10 +243,13 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
                 "$file",
                 "--limit",
                 "8",
+                "--max-projection-bytes",
+                "8192",
             ],
         )
         self.assertEqual(receipt["inspection"]["selectedBy"], "owner-first-look-rank-1-policy")
         self.assertEqual(receipt["inspection"]["content"]["sections"][0]["heading"], "Consumption")
+        self.assertEqual(receipt["inspection"]["content"]["projectionByteLimit"], 8192)
         view = receipt["modelView"]
         self.assertEqual(view["firstLook"]["topCandidate"]["path"], "synthesis/result-value/README.md")
         self.assertEqual(view["firstLook"]["alternatives"], [{"rank": 2, "path": "synthesis/other.md", "score": 20}])
@@ -354,11 +359,14 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
                 "$file",
                 "--limit",
                 "32",
+                "--max-projection-bytes",
+                "8192",
             ],
         )
         self.assertEqual(inspected["selection"]["rank"], 2)
         self.assertEqual(inspected["selection"]["selectedBy"], "caller-agent-bounded-candidate-selection")
         self.assertFalse(inspected["selection"]["arbitraryPathAuthority"])
+        self.assertEqual(inspected["inspection"]["content"]["projectionByteLimit"], 8192)
         self.assertFalse(inspected["modelView"]["claims"]["candidateSelectedByApplication"])
         self.assertFalse(inspected["modelView"]["claims"]["arbitraryPathAuthorityGranted"])
 
@@ -385,6 +393,38 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
                 consumer_class="test",
             )
         self.assertEqual(len(runtime.calls), before)
+
+    def test_candidate_inspection_rejects_owner_projection_bound_mismatch(self):
+        class WrongProjectionBoundRuntime(FakeRuntime):
+            def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+                result = super().call_tool(name, arguments)
+                args = arguments["execution"]["args"] if name == "workspace.exec" else []
+                if "inspect-candidate" in args:
+                    value = json.loads(result["stdoutTail"])
+                    value["content"]["projectionByteLimit"] = 12288
+                    result["stdoutTail"] = json.dumps(value)
+                return result
+
+        runtime = WrongProjectionBoundRuntime()
+        first = module.run_atlas_first_look_stage_application(
+            runtime,
+            atlas_workspace_id="atlas-current",
+            query="result consumer benefit",
+            limit=4,
+            request_prefix="wrong-projection-bound",
+            consumer_episode_ref="consumer-episode:atlas-bound-test",
+            consumer_class="test",
+        )
+        with self.assertRaisesRegex(RuntimeError, "projection bound"):
+            module.run_atlas_candidate_inspection_stage_application(
+                runtime,
+                atlas_workspace_id="atlas-current",
+                first_look_receipt=first,
+                selected_rank=1,
+                request_prefix="wrong-projection-bound",
+                consumer_episode_ref="consumer-episode:atlas-bound-test",
+                consumer_class="test",
+            )
 
     def test_query_authoring_context_is_one_mechanical_owner_read(self):
         runtime = FakeRuntime()
@@ -452,6 +492,8 @@ class AtlasResearchStartApplicationTests(unittest.TestCase):
                 "$file",
                 "--limit",
                 "32",
+                "--max-projection-bytes",
+                "8192",
             ],
         )
         self.assertEqual(receipt["ownerCalls"][0]["phase"], "first-look-many")

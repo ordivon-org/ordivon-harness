@@ -10,10 +10,11 @@ from typing import Any, Protocol
 
 from anc_canonical import validate_json_value
 
-APPLICATION_REVISION = "atlas-research-start-application-v4"
+APPLICATION_REVISION = "atlas-research-start-application-v5"
 CONSUMER_CLASSES = frozenset({"ordinary", "audit", "dogfood", "test"})
 _OWNER_STDOUT_LIMIT_BYTES = 262_144
 _ARTIFACT_READ_MAX_BYTES = 1_048_576
+_ATLAS_INSPECTION_PROJECTION_BYTES = 8_192
 
 
 class RuntimeClient(Protocol):
@@ -226,6 +227,26 @@ def _require_non_authoritative_claims(value: dict[str, Any], *, phase: str) -> N
         )
     ):
         raise RuntimeError(f"Atlas {phase} result violated non-authoritative standing")
+
+
+def _require_bounded_owner_inspection_content(inspection: dict[str, Any]) -> dict[str, Any]:
+    content = inspection.get("content")
+    if not isinstance(content, dict):
+        raise TypeError("Atlas candidate inspection omitted content projection")
+    if content.get("encoding") == "text/markdown-sections; charset=utf-8":
+        projected_bytes = content.get("projectedBytes")
+        projection_limit = content.get("projectionByteLimit")
+        if (
+            type(projected_bytes) is not int
+            or projected_bytes < 0
+            or projected_bytes > _ATLAS_INSPECTION_PROJECTION_BYTES
+            or projection_limit != _ATLAS_INSPECTION_PROJECTION_BYTES
+            or content.get("fullContentAvailableViaRawEscape") is not True
+        ):
+            raise RuntimeError(
+                "Atlas Markdown inspection exceeded or omitted the application projection bound"
+            )
+    return content
 
 
 def _compact_candidate(value: object, rank: int) -> dict[str, Any]:
@@ -549,6 +570,8 @@ def run_atlas_candidate_inspection_stage_application(
             locator,
             "--limit",
             str(inspection_limit),
+            "--max-projection-bytes",
+            str(_ATLAS_INSPECTION_PROJECTION_BYTES),
         ],
         request_id=f"{request_prefix}-atlas-inspect-candidate-r{selected_rank}",
         phase="inspect-candidate",
@@ -559,6 +582,7 @@ def run_atlas_candidate_inspection_stage_application(
     if inspection.get("kind") != "ordivon.atlas-prior-result-candidate-inspection-experimental":
         raise RuntimeError("Atlas candidate inspection result kind differs")
     _require_non_authoritative_claims(inspection, phase="inspect-candidate")
+    inspection_content = _require_bounded_owner_inspection_content(inspection)
     inspected = inspection.get("candidate")
     if not isinstance(inspected, dict):
         raise TypeError("Atlas candidate inspection omitted candidate identity")
@@ -588,7 +612,7 @@ def run_atlas_candidate_inspection_stage_application(
         "inspection": {
             "contentBytes": inspection.get("contentBytes"),
             "contentDigest": inspection.get("contentDigest"),
-            "content": inspection.get("content"),
+            "content": inspection_content,
             "projectionHealth": inspection.get("projectionHealth"),
             "claims": inspection.get("claims"),
         },
@@ -599,7 +623,7 @@ def run_atlas_candidate_inspection_stage_application(
             "inspectionQuery": inspection_query,
             "contentBytes": inspection.get("contentBytes"),
             "contentDigest": inspection.get("contentDigest"),
-            "content": inspection.get("content"),
+            "content": inspection_content,
             "epistemicGuard": {
                 "candidatePresenceDoesNotEstablishSemanticEquivalence": True,
                 "candidateInspectionDoesNotEstablishSemanticEquivalence": True,
@@ -725,6 +749,8 @@ def run_atlas_research_start_application(
                 top["locator"],
                 "--limit",
                 str(inspection_limit),
+                "--max-projection-bytes",
+                str(_ATLAS_INSPECTION_PROJECTION_BYTES),
             ],
             request_id=f"{request_prefix}-atlas-inspect-candidate",
             phase="inspect-candidate",
@@ -735,6 +761,7 @@ def run_atlas_research_start_application(
         if inspection.get("kind") != "ordivon.atlas-prior-result-candidate-inspection-experimental":
             raise RuntimeError("Atlas candidate inspection result kind differs")
         _require_non_authoritative_claims(inspection, phase="inspect-candidate")
+        inspection_content = _require_bounded_owner_inspection_content(inspection)
         inspected_candidate = inspection.get("candidate")
         if not isinstance(inspected_candidate, dict):
             raise TypeError("Atlas candidate inspection omitted candidate identity")
@@ -750,7 +777,7 @@ def run_atlas_research_start_application(
             "candidate": top,
             "contentBytes": inspection.get("contentBytes"),
             "contentDigest": inspection.get("contentDigest"),
-            "content": inspection.get("content"),
+            "content": inspection_content,
             "projectionHealth": inspection.get("projectionHealth"),
             "claims": inspection.get("claims"),
         }
