@@ -20,6 +20,7 @@ from ordivon_harness.api import (
     HarnessPrivacyPolicy,
     HarnessRunContract,
     decode_structured_completion_result,
+    structured_completion_contract_digest,
 )
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
 from ordivon_harness.structured_result_conformance import (
@@ -191,7 +192,9 @@ def _structured_turn(
             "usage": result.usage,
             "traceDigest": canonical_digest(result.trace.to_dict()),
             "domainToolCalls": 0,
-            "completionContractDigest": canonical_digest(dict(contract.completion_contract)),
+            "completionContractDigest": structured_completion_contract_digest(
+                contract.completion_contract
+            ),
         }
         validate_json_value(telemetry)
         return dict(value), telemetry
