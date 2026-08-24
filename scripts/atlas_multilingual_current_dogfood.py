@@ -175,8 +175,16 @@ def _structured_turn(
         execution = run.run(messages)
         result = execution.loop_result
         if result.conclusion is None:
+            diagnostics = {
+                "stopCode": result.stop_code.value,
+                "modelCalls": result.model_calls,
+                "toolCalls": result.tool_calls,
+                "usage": result.usage,
+                "traceDigest": canonical_digest(result.trace.to_dict()),
+            }
             raise RuntimeError(
-                f"structured Harness Agent Run omitted conclusion: {result.stop_code.value}"
+                "structured Harness Agent Run omitted conclusion: "
+                + json.dumps(diagnostics, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             )
         value = decode_structured_completion_result(contract, result.conclusion)
         if not isinstance(value, dict):
