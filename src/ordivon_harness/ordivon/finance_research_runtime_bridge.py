@@ -280,7 +280,8 @@ class SQLiteHarnessFinanceResearchRuntimeBridge(SQLiteHarnessRuntimeBridge):
             content, next_offset = read.get("content"), read.get("nextOffset")
             if not isinstance(content, str) or type(next_offset) is not int or next_offset <= offset:
                 raise ValueError("Finance research stdout Artifact read did not advance")
-            chunks.append(content); offset = next_offset
+            chunks.append(content)
+            offset = next_offset
             if read.get("eof") is True:
                 break
         content = "".join(chunks)
