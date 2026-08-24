@@ -5,16 +5,25 @@ import argparse
 import importlib.util
 import json
 import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
-from anc_canonical import JsonValue, canonical_digest, loads_strict, validate_json_value
+from anc_canonical import JsonValue, canonical_digest, validate_json_value
 
+from ordivon_harness.api import (
+    NO_TOOL_AGENT_GRANT_DIGEST,
+    NO_TOOL_AGENT_SURFACE_DIGEST,
+    HarnessAgentRun,
+    HarnessBoundReference,
+    HarnessPrivacyPolicy,
+    HarnessRunContract,
+    decode_structured_completion_result,
+)
 from ordivon_harness.ordivon.deepseek import DeepSeekSettings, DeepSeekTurnAdapter
-from ordivon_harness.ordivon.model import AgentTurnRequest
 from ordivon_harness.structured_result_conformance import (
     LOCAL_JSON_SCHEMA_DRAFT_2020_12_PROFILE_V1,
-    validate_structured_result_instance,
     validate_structured_result_schema_policy,
 )
 
@@ -25,8 +34,6 @@ if spec is None or spec.loader is None:
 atlas_app = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = atlas_app
 spec.loader.exec_module(atlas_app)
-
-NO_TOOL_CATALOG_DIGEST = canonical_digest({"tools": []})
 
 QUERY_COMPLETION: dict[str, JsonValue] = {
     "mode": "structured-result-v1",
@@ -100,45 +107,94 @@ def _structured_turn(
     completion: dict[str, JsonValue],
 ) -> tuple[dict[str, JsonValue], dict[str, JsonValue]]:
     validate_structured_result_schema_policy(completion)
-    adapter = DeepSeekTurnAdapter(settings, completion_contract=completion)
-    request = AgentTurnRequest(
+    created_at_ms = time.time_ns() // 1_000_000
+    context_digest = canonical_digest(context)
+    contract = HarnessRunContract(
         harness_run_id=f"harness-run:atlas-multilingual-current-{label}",
-        turn_id=f"turn:atlas-multilingual-current-{label}-{sequence}",
-        sequence=sequence,
-        assignment_id=f"assignment:atlas-multilingual-current-{label}",
-        context_digest=canonical_digest(context),
-        tool_catalog_digest=NO_TOOL_CATALOG_DIGEST,
-        messages=messages,
-        tools=(),
-        remaining_budget={"modelCalls": 1, "toolCalls": 0, "totalTokens": 12000},
+        harness_implementation_id="ordivon-harness@atlas-multilingual-current-dogfood",
+        caller_id="caller:atlas-multilingual-current-dogfood",
+        caller_run_ref=f"episode:{label}:sequence:{sequence}",
+        objective_ref=HarnessBoundReference(
+            f"objective:atlas-multilingual-current-{label}",
+            "objective",
+            canonical_digest({"label": label, "sequence": sequence, "messages": messages[:1]}),
+        ),
+        context_refs=(
+            HarnessBoundReference(
+                f"context:atlas-multilingual-current-{label}",
+                "context",
+                context_digest,
+            ),
+        ),
+        provider_id="provider:deepseek",
+        adapter_id=DeepSeekTurnAdapter.adapter_id,
+        requested_model_id=settings.model,
+        tool_catalog_digest=NO_TOOL_AGENT_SURFACE_DIGEST,
+        tool_grant_digest=NO_TOOL_AGENT_GRANT_DIGEST,
+        budget={
+            "maxModelCalls": 3,
+            "maxToolCalls": 0,
+            "maxObservationBytes": 0,
+            "maxWallTimeMs": 120000,
+            "maxTotalTokens": 24000,
+            "maxModelRetries": 1,
+            "maxToolCorrections": 0,
+            "maxConclusionCorrections": 2,
+            "maxObservationOnlyTurns": 0,
+            "maxNoProgressTurns": 2,
+        },
+        completion_contract=completion,
+        system_manifest_ref=HarnessBoundReference(
+            f"manifest:atlas-multilingual-current-{label}",
+            "system-manifest",
+            canonical_digest(
+                {
+                    "surface": "no-domain-tools-structured-result",
+                    "completionKind": completion.get("resultKind"),
+                    "conclusionCorrection": "harness-native-bounded",
+                }
+            ),
+        ),
+        created_at_ms=created_at_ms,
+        privacy=HarnessPrivacyPolicy(
+            content_policy="bounded-private-content",
+            allow_model_content=True,
+            allow_tool_content=False,
+        ),
     )
-    result = adapter.invoke(request)
-    if result.tool_calls:
-        diagnostics = [call.to_dict() for call in result.tool_calls]
-        raise RuntimeError(
-            "structured Provider turn returned non-conclusion Tool-call diagnostics: "
-            + json.dumps(diagnostics, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    with tempfile.TemporaryDirectory(prefix=f"atlas-{sequence}-") as directory:
+        run = HarnessAgentRun.create(
+            Path(directory) / "state",
+            contract,
+            lambda active_contract: DeepSeekTurnAdapter(
+                settings,
+                completion_contract=active_contract.completion_contract,
+            ),
         )
-    if result.conclusion is None:
-        raise RuntimeError("query/adjudication Agent omitted structured conclusion")
-    value = loads_strict(result.conclusion.summary.encode("utf-8"))
-    validate_json_value(value)
-    validate_structured_result_instance(completion, value)
-    if not isinstance(value, dict):
-        raise TypeError("structured result must be an object")
-    telemetry: dict[str, JsonValue] = {
-        "modelCallId": result.model_call_id,
-        "modelId": result.model_id,
-        "finishReason": result.finish_reason,
-        "conclusionStatus": result.conclusion.status,
-        "usage": result.usage,
-        "rawResponseDigest": result.raw_response_digest,
-        "requestDigest": request.digest,
-        "providerRequestDigest": adapter.provider_request_digest(request),
-        "domainToolCalls": 0,
-    }
-    validate_json_value(telemetry)
-    return dict(value), telemetry
+        execution = run.run(messages)
+        result = execution.loop_result
+        if result.conclusion is None:
+            raise RuntimeError(
+                f"structured Harness Agent Run omitted conclusion: {result.stop_code.value}"
+            )
+        value = decode_structured_completion_result(contract, result.conclusion)
+        if not isinstance(value, dict):
+            raise TypeError("structured result must be an object")
+        telemetry: dict[str, JsonValue] = {
+            "executionMode": "supported-harness-agent-run",
+            "harnessRunId": contract.harness_run_id,
+            "stopCode": result.stop_code.value,
+            "modelCalls": result.model_calls,
+            "toolCalls": result.tool_calls,
+            "conclusionCorrections": result.usage.get("conclusionCorrections", 0),
+            "toolCorrections": result.usage.get("toolCorrections", 0),
+            "usage": result.usage,
+            "traceDigest": canonical_digest(result.trace.to_dict()),
+            "domainToolCalls": 0,
+            "completionContractDigest": canonical_digest(dict(contract.completion_contract)),
+        }
+        validate_json_value(telemetry)
+        return dict(value), telemetry
 
 
 def _owner_job_ids(receipt: dict[str, Any]) -> list[str]:
