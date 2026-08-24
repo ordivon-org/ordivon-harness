@@ -114,7 +114,11 @@ def _structured_turn(
     )
     result = adapter.invoke(request)
     if result.tool_calls:
-        raise RuntimeError("query/adjudication Agent emitted a Domain Tool call")
+        diagnostics = [call.to_dict() for call in result.tool_calls]
+        raise RuntimeError(
+            "structured Provider turn returned non-conclusion Tool-call diagnostics: "
+            + json.dumps(diagnostics, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        )
     if result.conclusion is None:
         raise RuntimeError("query/adjudication Agent omitted structured conclusion")
     value = loads_strict(result.conclusion.summary.encode("utf-8"))
