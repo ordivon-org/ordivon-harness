@@ -540,8 +540,8 @@
       "file": "harness-first-interface-owner-bridges-v5.json",
       "implementationRevision": "233bb6354f81eff070996cef898b91726857ca8e",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current first-interface owner-bridge evidence for 233bb63: finance_observe is zero-argument at the Agent surface, Finance resolves the unique active Goal, invented model Goal identities are impossible to dispatch, and 3/3 fresh-Agent current-Finance replicates completed in two model calls with one owner Tool and zero repository plumbing."
+      "status": "historical",
+      "scope": "Historical exact first-interface owner-bridge evidence for 233bb63. Later structured-result carrier and observation-recovery/source-reconciliation changes advanced current Harness implementation paths, so the immutable v5 receipt no longer certifies whole-current source."
     }
   ]
 }

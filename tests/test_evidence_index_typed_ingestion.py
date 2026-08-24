@@ -68,7 +68,7 @@ EXPECTED = {
     ),
     "harness.execution.first-interface-owner-bridges-v5": (
         "harness-first-interface-owner-bridges-v5.json",
-        "verified",
+        "historical",
         "233bb6354f81eff070996cef898b91726857ca8e",
         "2a2c8eaf2f38af01e129d0a24cdcb1dc406e97a659f42d8cf1cb32f32dde634e",
     ),
@@ -153,8 +153,8 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         current, invalidating = check_evidence._verified_revision_is_current(
             "233bb6354f81eff070996cef898b91726857ca8e"
         )
-        self.assertTrue(current)
-        self.assertEqual(invalidating, [])
+        self.assertFalse(current)
+        self.assertIn("src/ordivon_harness/capability_catalog.py", invalidating)
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
