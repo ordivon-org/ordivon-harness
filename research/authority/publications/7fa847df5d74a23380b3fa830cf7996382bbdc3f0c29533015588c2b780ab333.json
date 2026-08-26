@@ -1,0 +1,290 @@
+{
+  "authorityRef": "authority:ordivon:research-owner:harness",
+  "closeouts": [
+    {
+      "closure": [
+        {
+          "scope": "HaF0-HaF61",
+          "status": "FROZEN_CURRENT"
+        },
+        {
+          "scope": "HaF62",
+          "status": "NOT_ADMITTED"
+        },
+        {
+          "scope": "CAMPAIGN_7",
+          "status": "NOT_SELECTED"
+        },
+        {
+          "scope": "CURRENT_ENGINEERING_BRANCH",
+          "status": "NONE_SELECTED"
+        },
+        {
+          "scope": "PROVIDER_FIRST_HTTPX_REVALIDATION_153",
+          "status": "ACCEPTED_BOUNDED"
+        },
+        {
+          "scope": "POST_HTTPX_EVIDENCE_CURRENTNESS_REPAIR_155",
+          "status": "ACCEPTED"
+        }
+      ],
+      "epistemicVerdict": "ESTABLISHED_IN_SCOPE",
+      "evidenceScope": "Current Harness research recovery root and linked closeouts at owner-adjudicated source revision e41a32621ad1a8fb918aa98f22f40367cb5b7e71; product/source behavior and evidence-currentness remain separately owned.",
+      "materialLineage": [
+        "Campaigns 1-6 remain completed; Campaign 7 is not selected.",
+        "HaF0-HaF61 remain frozen; HaF62 remains UNKNOWN / NOT SELECTED / NOT ADMITTED.",
+        "Tournament 152 selected no next branch; unresolved frontiers remain relation-, consumer-, owner-transition-, or implementation-diversity-blocked.",
+        "Revalidation 153 admitted pinned async HTTPX only into DeepSeek physical transport after destructive current tests; it selected no new semantic Campaign or Foundation.",
+        "Owner-publication preparation exposed a stale verified evidence classification after the HTTPX change; repair 154/155 baseline-red reproduced and demoted it without rewriting immutable receipt bytes or inventing replacement verified evidence.",
+        "The current evidence census is 77 historical / 0 verified; bounded research standing and whole-current implementation certification remain distinct truth roles.",
+        "Current no-Tool conclusion/control repair remains accepted with permanent falsifiers; ProviderToolContinuation remains absent."
+      ],
+      "profile": "OWNER_CURRENTNESS_MATERIALIZATION",
+      "provenance": [
+        "research/README.md",
+        "research/155-POST-HTTPX-EVIDENCE-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md",
+        "research/154-POST-HTTPX-EVIDENCE-CURRENTNESS-REPAIR-V1-CONTRACT.md",
+        "research/153-PROVIDER-FIRST-HTTPX-TRANSPORT-CURRENT-REVALIDATION-V1-RESULT-AND-CLOSEOUT.md",
+        "research/152-POST-WHEEL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md",
+        "research/145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md",
+        "docs/authority.md",
+        "evidence/index.json"
+      ],
+      "reopenPolicy": "Reopen the held frontier only for a real first-class relation/transition, a deletion-essential consumer, independent implementation evidence, a current production/release regression, or another owner-grounded contradiction. Numbering, symmetry, Atlas admission, or repository growth do not select Campaign 7 or HaF62.",
+      "researchRef": "research:harness:current-owner-materialization-20260827",
+      "residualState": "HaF62_NOT_ADMITTED; CAMPAIGN7_NOT_SELECTED; NO_NEXT_BRANCH_SELECTED; EVIDENCE_77_HISTORICAL_0_VERIFIED; OPEN_RELATION_CONSUMER_OWNER_TRANSITION_IMPLEMENTATION_DIVERSITY_GAPS",
+      "resultRefs": [
+        "result:harness:owner-boundary-current",
+        "result:harness:haf0-haf61-current-frozen",
+        "result:harness:haf62-not-admitted",
+        "result:harness:campaign7-not-selected",
+        "result:harness:current-frontier-hold",
+        "result:harness:provider-first-httpx-current-revalidation",
+        "result:harness:post-httpx-evidence-currentness-repair",
+        "result:harness:current-no-tool-conclusion-control-repair"
+      ],
+      "scopeRefs": [
+        "research-owner:harness"
+      ],
+      "standing": [
+        "CURRENT",
+        "FROZEN_BOUNDARY"
+      ]
+    }
+  ],
+  "currentRecovery": {
+    "locator": "research/README.md",
+    "targetRole": "OWNER_RESEARCH_CORPUS"
+  },
+  "kind": "ordivon.research-owner-publication",
+  "ownerResearchRef": "research-owner:harness",
+  "profile": "OWNER_CURRENTNESS_MATERIALIZATION",
+  "schemaVersion": 1,
+  "source": {
+    "authorityBranch": "refs/heads/main",
+    "corpusRoot": "research",
+    "kind": "git",
+    "repository": "git@github.com:zycxfyh/ordivon-harness.git",
+    "sourceRevision": "e41a32621ad1a8fb918aa98f22f40367cb5b7e71"
+  },
+  "statements": [
+    {
+      "predicate": "OWNER_BINDING",
+      "scope": "OWNER",
+      "subjectRef": "research-owner:harness",
+      "value": "harness"
+    },
+    {
+      "predicate": "CANONICAL_NAME",
+      "scope": "OWNER",
+      "subjectRef": "research-owner:harness",
+      "value": "Ordivon Harness"
+    },
+    {
+      "predicate": "CANONICAL_REFERENT",
+      "scope": "OWNER",
+      "subjectRef": "research-owner:harness",
+      "value": "Agent Operational Mediation"
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "OWNER",
+      "subjectRef": "research-owner:harness",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:owner-boundary-current",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:FROZEN",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:owner-boundary-current",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:owner-boundary-current",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:owner-boundary-current",
+      "value": "Harness owns bounded Agent Run structural cognition/execution continuity while Agent/caller/domain/Runtime/external owners retain their respective semantics and physical truth; current research recovery is rooted at research/README.md."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf0-haf61-current-frozen",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:FROZEN",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf0-haf61-current-frozen",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf0-haf61-current-frozen",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf0-haf61-current-frozen",
+      "value": "Current research root explicitly keeps HaF0-HaF61 frozen."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf62-not-admitted",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:NOT_ADMITTED",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf62-not-admitted",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf62-not-admitted",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:haf62-not-admitted",
+      "value": "Current research root explicitly states HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:campaign7-not-selected",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:NOT_SELECTED",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:campaign7-not-selected",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:campaign7-not-selected",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:campaign7-not-selected",
+      "value": "Current research root and Tournament 152 explicitly state Campaign 7 is not selected."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-frontier-hold",
+      "value": true
+    },
+    {
+      "predicate": "STANDING:HOLD",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-frontier-hold",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-frontier-hold",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-frontier-hold",
+      "value": "Tournament 152 selected no next branch; later transport revalidation 153 consumed a concrete reopen pressure without selecting a new semantic Campaign/Foundation."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:provider-first-httpx-current-revalidation",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:provider-first-httpx-current-revalidation",
+      "value": "SUPPORTED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:provider-first-httpx-current-revalidation",
+      "value": "Closeout 153 admits pinned async HTTPX only for DeepSeek physical transport after current destructive wire/repository tests; larger prototype compression and phase-transition claims were rejected."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:post-httpx-evidence-currentness-repair",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:post-httpx-evidence-currentness-repair",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:post-httpx-evidence-currentness-repair",
+      "value": "Repair 154/155 reproduced the stale verified classification after HTTPX and demoted it to historical; immutable receipt bytes remain unchanged and current evidence census is 77 historical / 0 verified."
+    },
+    {
+      "predicate": "STANDING:CURRENT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-no-tool-conclusion-control-repair",
+      "value": true
+    },
+    {
+      "predicate": "EPISTEMIC_VERDICT",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-no-tool-conclusion-control-repair",
+      "value": "ESTABLISHED_IN_SCOPE"
+    },
+    {
+      "predicate": "EVIDENCE_SCOPE",
+      "scope": "RESULT",
+      "subjectRef": "result:harness:current-no-tool-conclusion-control-repair",
+      "value": "Closeout 145 and permanent regression coverage preserve Harness-native conclusion/control correction separately from Runtime Tool-history authority without restoring ProviderToolContinuation."
+    }
+  ]
+}
