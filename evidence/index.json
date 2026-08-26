@@ -548,8 +548,8 @@
       "file": "harness-source-reconciliation-structured-observation-v1.json",
       "implementationRevision": "e983c79f5582160b37ac56c1898efa80e486880d",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current portable acceptance for the reconciled Harness source graph: structured-result carrier plus authority-fenced observation recovery, with owner truth boundaries preserved and 530-test release regression passing."
+      "status": "historical",
+      "scope": "Historical portable acceptance for the reconciled Harness source graph at e983c79: structured-result carrier plus authority-fenced observation recovery. The later DeepSeek HTTPX transport/dependency change at 917087e modified verified implementation paths (pyproject.toml, deepseek.py, uv.lock), so this immutable receipt no longer certifies whole-current source."
     }
   ]
 }
