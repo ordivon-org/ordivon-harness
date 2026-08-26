@@ -30,6 +30,14 @@
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
+## Owner research authority publication
+
+This file is the current recovery root for **Harness research semantics**. Exact product behavior remains owned by the product/source authorities named in [`../docs/authority.md`](../docs/authority.md); exact evidence/currentness remains owned by the evidence contract and bound receipts.
+
+`research/authority/CURRENT.json` may publish a digest-bound immutable machine projection of the research state rooted here for Atlas and other read-only consumers. That publication is a **carrier of owner-native research authority**, not a second research corpus and not permission for Atlas to infer, repair, or upgrade Harness standing. A publication may source-fence this corpus at an exact Git revision even when later implementation-only changes advance repository HEAD; a new publication is required when the owner judges the represented research standing/recovery boundary to have materially changed.
+
+The owner identity used by that publication is `research-owner:harness`. Repository identity, product ownership, Run authority, and research-owner identity remain related but non-identical facts.
+
 ## Recovery path
 
 1. [153 PROVIDER-FIRST HTTPX TRANSPORT CURRENT REVALIDATION](153-PROVIDER-FIRST-HTTPX-TRANSPORT-CURRENT-REVALIDATION-V1-RESULT-AND-CLOSEOUT.md)
