@@ -30,9 +30,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="DeepSeek settings for the built-in no-Tool execution profile",
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser(
+    capabilities = commands.add_parser(
         "capabilities",
-        help="project the package-resolved effective capability surface",
+        help="project, search, or inspect the package-resolved capability surface",
+    )
+    capabilities.add_argument(
+        "--query",
+        help="return bounded task-conditioned capability candidates instead of the full catalog",
+    )
+    capabilities.add_argument(
+        "--term",
+        action="append",
+        default=[],
+        help="add an explicit discovery term; may be repeated",
+    )
+    capabilities.add_argument(
+        "--owner",
+        action="append",
+        default=[],
+        help="prefer candidates from an exact owner id; may be repeated",
+    )
+    capabilities.add_argument(
+        "--limit",
+        type=int,
+        default=8,
+        help="maximum candidates returned by --query (1-64)",
+    )
+    capabilities.add_argument(
+        "--inspect",
+        dest="inspect_capability_id",
+        help="inspect one exact source-derived capability descriptor",
     )
     commands.add_parser("doctor")
     status = commands.add_parser("status")

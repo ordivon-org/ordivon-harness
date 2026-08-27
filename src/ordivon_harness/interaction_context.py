@@ -20,6 +20,13 @@ from typing import Any
 
 from anc_canonical import JsonValue, canonical_bytes, canonical_digest, validate_json_value
 
+from .capability_discovery import (
+    CapabilityAffordanceSet,
+    CapabilityCandidateSet,
+    CapabilityDescriptor,
+    CapabilityStanding,
+    compile_capability_affordances,
+)
 from .ordivon.model import AgentToolDefinition
 from .ordivon.turn_projection import (
     project_turn_tool_working_set,
@@ -129,6 +136,7 @@ class InteractionContextInput:
     intent: str
     sources: tuple[InteractionSourceRef, ...]
     affordances: tuple[InteractionAffordance, ...]
+    capability_affordances: CapabilityAffordanceSet | None = None
     action_slice: InteractionActionSlice | None = None
     blockers: tuple[str, ...] = ()
     unknowns: tuple[str, ...] = ()
@@ -226,6 +234,8 @@ def compile_interaction_context(
             "toolAuthorityExpanded": False,
         },
     }
+    if context.capability_affordances is not None:
+        payload["capabilityAffordances"] = context.capability_affordances.to_dict()
     if context.action_slice is not None:
         payload["action"] = context.action_slice.to_dict()
     if context.blockers:
@@ -260,11 +270,73 @@ def compile_interaction_context(
     )
 
 
+def compile_capability_interaction_context(
+    *,
+    intent: str,
+    sources: tuple[InteractionSourceRef, ...],
+    candidate_set: CapabilityCandidateSet,
+    descriptors: tuple[CapabilityDescriptor, ...],
+    standings: tuple[CapabilityStanding, ...],
+    admitted_tools: tuple[AgentToolDefinition, ...],
+    logical_ref: str,
+    logical_generation: str,
+    action_slice: InteractionActionSlice | None = None,
+    blockers: tuple[str, ...] = (),
+    unknowns: tuple[str, ...] = (),
+    raw_escape_available: bool = True,
+) -> InteractionContextMaterialization:
+    """Bridge discovered candidates into the existing subtractive First Interface.
+
+    Candidate discovery remains visible even when a candidate action is not admitted.
+    Only already-admitted Tool actions are copied into the legacy Tool-affordance
+    slice, so this helper cannot turn retrieval into execution authority.
+    """
+
+    admitted_names = tuple(tool.name for tool in admitted_tools)
+    capability_affordances = compile_capability_affordances(
+        candidate_set,
+        descriptors,
+        standings,
+        admitted_action_names=admitted_names,
+    )
+    descriptor_by_id = {item.capability_id: item for item in descriptors}
+    legacy_affordances: list[InteractionAffordance] = []
+    for item in capability_affordances.affordances:
+        descriptor = descriptor_by_id[item.candidate.capability_id]
+        if descriptor.action_kind != "tool" or not item.action_admitted:
+            continue
+        legacy_affordances.append(
+            InteractionAffordance(
+                tool_name=descriptor.action_name,
+                owner=descriptor.owner,
+                standing=item.standing.standing,
+                effect_class=descriptor.effect_class,
+                requires=item.standing.reasons,
+            )
+        )
+    return compile_interaction_context(
+        InteractionContextInput(
+            intent=intent,
+            sources=sources,
+            affordances=tuple(legacy_affordances),
+            capability_affordances=capability_affordances,
+            action_slice=action_slice,
+            blockers=blockers,
+            unknowns=unknowns,
+            raw_escape_available=raw_escape_available,
+        ),
+        admitted_tools,
+        logical_ref=logical_ref,
+        logical_generation=logical_generation,
+    )
+
+
 __all__ = [
     "InteractionActionSlice",
     "InteractionAffordance",
     "InteractionContextInput",
     "InteractionContextMaterialization",
     "InteractionSourceRef",
+    "compile_capability_interaction_context",
     "compile_interaction_context",
 ]

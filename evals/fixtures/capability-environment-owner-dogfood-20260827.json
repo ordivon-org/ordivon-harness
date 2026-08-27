@@ -1,0 +1,314 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-capability-environment-owner-dogfood-v1",
+  "truthRole": "bounded-source-fenced-dogfood-capture-not-owner-truth",
+  "observedDate": "2026-08-27",
+  "boundary": {
+    "ownerTruthMinted": false,
+    "currentnessAfterObservedCutImplied": false,
+    "executionAuthorityGranted": false,
+    "purpose": "mechanically test discovery/progressive disclosure against real current owner consumption surfaces observed at this cut"
+  },
+  "sources": [
+    {
+      "owner": "ordivon-atlas",
+      "repository": "/root/projects/ordivon-atlas",
+      "revision": "71b1613060f9dafe3f56361b29ea55eacba7504a",
+      "files": {
+        "README.md": "sha256:61bdad7098a807058e73d9269dfaf5ae7693fc199d4f697782c5544d5f9908c1",
+        "src/ordivon_atlas/first_look.py": "sha256:1969cecc54b3430c64c471328b2800910ead28c5f7176f709ab87eb3434a4c6b"
+      }
+    },
+    {
+      "owner": "ordivon-security",
+      "repository": "/root/projects/ordivon-security",
+      "revision": "ad2c24645e4da20137a9a15f327a38e806059281",
+      "files": {
+        "README.md": "sha256:491b268ba87887d3ddd376fa9e2b755667919ca7f82bdfa73850f48b8c46412e",
+        "src/ordivon_security/surface.py": "sha256:de8cb957fac5183cc627774dc803a18b8ef571ad0a2589f5f0c5c694d1cb0b98"
+      }
+    },
+    {
+      "owner": "workstation-lab",
+      "repository": "/root/workstation-lab",
+      "revision": "8f7ddc7dbb29a36d885d1221db48a344d495cdcb",
+      "files": {
+        "Taskfile.yml": "sha256:9ded47975fa314da0af073e10b6be067b73ebd2429404fa2e3f85f6ca0c7a838",
+        "scripts/network_surface.py": "sha256:7db48cd7b6c17d4da3006371ec8b0af3f5b2fb3250fdc4633a11b5f49dda9391"
+      }
+    },
+    {
+      "owner": "ordivon-computing",
+      "repository": "/root/projects/ordivon-computing",
+      "revision": "161bf74be2400de3de1caca8a1e74c8e0d099509",
+      "files": {
+        "README.md": "sha256:285b371b726045be04e52b988d5e1c2c289f1d73d2fb77c6503d7c5e5fef289b",
+        "research/PORTFOLIO.md": "sha256:3797924b4a9de3eaeb3c8cb7e8511af564a361160d024da3ead48abaddfbfd20",
+        "projects/README.md": "sha256:5c6ef48f950ea2834b4c203926109301d43d72aa88cb451931cea621a66b9860"
+      }
+    }
+  ],
+  "descriptors": [
+    {
+      "capabilityId": "atlas.prior-result.first-look",
+      "owner": "ordivon-atlas",
+      "summary": "Search bounded prior-result candidates before replaying research chronology or opening whole Atlas views.",
+      "sourceRef": "README.md + src/ordivon_atlas/first_look.py",
+      "sourceVersion": "71b1613060f9dafe3f56361b29ea55eacba7504a",
+      "actionKind": "reference",
+      "actionName": "PYTHONPATH=src python -m ordivon_atlas first-look <query>",
+      "effectClass": "READ_ONLY_CANDIDATE_DISCOVERY",
+      "tags": [
+        "atlas",
+        "research",
+        "prior result",
+        "retrieval",
+        "first look"
+      ],
+      "requirements": [
+        "caller authors the retrieval expression"
+      ],
+      "authorityRequirements": [
+        "research admission and semantic equivalence remain caller/domain authority"
+      ],
+      "currentnessRequirements": [
+        "generated owner-source health may be mixed/unknown and must remain visible"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "atlas.prior-result.inspect-candidate",
+      "owner": "ordivon-atlas",
+      "summary": "Inspect one exact bounded first-look candidate after candidate selection without becoming an arbitrary file reader.",
+      "sourceRef": "README.md + src/ordivon_atlas/first_look.py",
+      "sourceVersion": "71b1613060f9dafe3f56361b29ea55eacba7504a",
+      "actionKind": "reference",
+      "actionName": "PYTHONPATH=src python -m ordivon_atlas inspect-candidate <query> <path> <locator>",
+      "effectClass": "READ_ONLY_EXACT_INSPECTION",
+      "tags": [
+        "atlas",
+        "research",
+        "candidate",
+        "inspect",
+        "exact"
+      ],
+      "requirements": [
+        "candidate must be present in the bounded first-look result for the same query"
+      ],
+      "authorityRequirements": [
+        "inspection does not grant novelty or research admission"
+      ],
+      "currentnessRequirements": [
+        "candidate locator/source must still resolve under the observed source fence"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "security.ordinary.surface",
+      "owner": "ordivon-security",
+      "summary": "Project the smallest ordinary Security task navigation surface without browsing research chronology, running an experiment, or granting authority.",
+      "sourceRef": "README.md + src/ordivon_security/surface.py",
+      "sourceVersion": "ad2c24645e4da20137a9a15f327a38e806059281",
+      "actionKind": "reference",
+      "actionName": "uv run ordivon-security-surface",
+      "effectClass": "READ_ONLY_OWNER_NAVIGATION",
+      "tags": [
+        "security",
+        "ordinary",
+        "surface",
+        "task navigation",
+        "capability"
+      ],
+      "requirements": [
+        "owner-native Security checkout/environment"
+      ],
+      "authorityRequirements": [
+        "surface projection grants no experiment or effect authority"
+      ],
+      "currentnessRequirements": [
+        "owner source revision remains the source of current surface semantics"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "workstation.network.surface",
+      "owner": "workstation-lab",
+      "summary": "Project bounded read-only HTTPS transport observation affordances while omitting route selection, admission, start/run and route/proxy/TUN mutation.",
+      "sourceRef": "Taskfile.yml + scripts/network_surface.py",
+      "sourceVersion": "8f7ddc7dbb29a36d885d1221db48a344d495cdcb",
+      "actionKind": "reference",
+      "actionName": "task network:surface",
+      "effectClass": "READ_ONLY_OWNER_NAVIGATION",
+      "tags": [
+        "workstation",
+        "network",
+        "surface",
+        "https",
+        "transport",
+        "observation"
+      ],
+      "requirements": [
+        "workstation task surface available"
+      ],
+      "authorityRequirements": [
+        "observing reachability does not grant route or transport selection authority"
+      ],
+      "currentnessRequirements": [
+        "profile and matrix results are observations at call time"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "workstation.network.matrix",
+      "owner": "workstation-lab",
+      "summary": "Observe which declared HTTPS profiles currently reach the bounded destination set without performing selection.",
+      "sourceRef": "scripts/network_surface.py",
+      "sourceVersion": "8f7ddc7dbb29a36d885d1221db48a344d495cdcb",
+      "actionKind": "reference",
+      "actionName": "task network:matrix",
+      "effectClass": "READ_ONLY_CURRENTNESS_OBSERVATION",
+      "tags": [
+        "workstation",
+        "network",
+        "matrix",
+        "reachability",
+        "currentness",
+        "profiles"
+      ],
+      "requirements": [
+        "network surface points to the current matrix operation"
+      ],
+      "authorityRequirements": [
+        "selectionPerformed=false; no route mutation authority"
+      ],
+      "currentnessRequirements": [
+        "result is point-in-time currentness only"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "workstation.network.profile-probe",
+      "owner": "workstation-lab",
+      "summary": "Probe whether one explicit profile currently reaches one exact HTTPS URL without selecting or mutating routing.",
+      "sourceRef": "scripts/network_surface.py",
+      "sourceVersion": "8f7ddc7dbb29a36d885d1221db48a344d495cdcb",
+      "actionKind": "reference",
+      "actionName": "task network:profile-probe PROFILE=<profile> URL=<https-url>",
+      "effectClass": "READ_ONLY_CURRENTNESS_OBSERVATION",
+      "tags": [
+        "workstation",
+        "network",
+        "profile",
+        "probe",
+        "https",
+        "reachability"
+      ],
+      "requirements": [
+        "caller supplies an explicit profile and HTTPS URL"
+      ],
+      "authorityRequirements": [
+        "selectionPerformed=false; no route mutation authority"
+      ],
+      "currentnessRequirements": [
+        "result is point-in-time currentness only"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "computing.research.portfolio",
+      "owner": "ordivon-computing",
+      "summary": "Read the current Computing research-state projection while leaving owner implementation and domain currentness with their native owners.",
+      "sourceRef": "README.md + research/PORTFOLIO.md",
+      "sourceVersion": "161bf74be2400de3de1caca8a1e74c8e0d099509",
+      "actionKind": "reference",
+      "actionName": "read research/PORTFOLIO.md",
+      "effectClass": "READ_ONLY_NAVIGATION",
+      "tags": [
+        "computing",
+        "research",
+        "portfolio",
+        "current research state"
+      ],
+      "requirements": [
+        "Computing repository source is available"
+      ],
+      "authorityRequirements": [
+        "Computing research status cannot override another owner current truth"
+      ],
+      "currentnessRequirements": [
+        "research/portfolio.json owns mutable Computing research status; PORTFOLIO.md is its generated projection"
+      ],
+      "visibility": "ordinary"
+    },
+    {
+      "capabilityId": "computing.project-family.navigation",
+      "owner": "ordivon-computing",
+      "summary": "Navigate bounded project-family packaging and history without treating the roster as exhaustive current semantic-owner truth.",
+      "sourceRef": "README.md + projects/README.md",
+      "sourceVersion": "161bf74be2400de3de1caca8a1e74c8e0d099509",
+      "actionKind": "reference",
+      "actionName": "read projects/README.md",
+      "effectClass": "READ_ONLY_NAVIGATION",
+      "tags": [
+        "computing",
+        "projects",
+        "owner",
+        "navigation",
+        "history"
+      ],
+      "requirements": [
+        "Computing repository source is available"
+      ],
+      "authorityRequirements": [
+        "current owner identity/authority must resolve from owner-native sources or Atlas where covered"
+      ],
+      "currentnessRequirements": [
+        "packaging roster is non-exhaustive and not semantic currentness authority"
+      ],
+      "visibility": "ordinary"
+    }
+  ],
+  "queries": [
+    {
+      "intent": "recover prior successor continuity research without replaying chronology",
+      "terms": [
+        "successor",
+        "continuity",
+        "research",
+        "prior result"
+      ],
+      "expectedFirst": "atlas.prior-result.first-look"
+    },
+    {
+      "intent": "start an ordinary Security task without browsing research apparatus",
+      "terms": [
+        "security",
+        "ordinary",
+        "task",
+        "surface"
+      ],
+      "expectedFirst": "security.ordinary.surface"
+    },
+    {
+      "intent": "which declared network profiles currently reach the bounded destination set",
+      "terms": [
+        "network",
+        "profiles",
+        "current",
+        "reachability",
+        "matrix"
+      ],
+      "expectedFirst": "workstation.network.matrix"
+    },
+    {
+      "intent": "inspect current Computing research portfolio state",
+      "terms": [
+        "computing",
+        "research",
+        "portfolio",
+        "current research state"
+      ],
+      "expectedFirst": "computing.research.portfolio"
+    }
+  ]
+}

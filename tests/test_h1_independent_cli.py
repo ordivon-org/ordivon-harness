@@ -54,6 +54,58 @@ class IndependentCliTests(unittest.TestCase):
         self.assertEqual(len(catalog["executionSurfaces"]), 4)
         self.assertTrue(value["effectiveCapabilityCatalogDigest"].startswith("sha256:"))
 
+    def test_capability_query_progressively_discloses_candidates(self) -> None:
+        code, value, error = self.invoke(
+            "capabilities",
+            "--query",
+            "search workspace observation",
+            "--term",
+            "search",
+            "--term",
+            "workspace",
+            "--limit",
+            "3",
+        )
+        self.assertEqual(code, 0, error)
+        assert value is not None
+        self.assertEqual(value["kind"], "ordivon.harness-cli-capability-discovery")
+        self.assertNotIn("effectiveCapabilityCatalog", value)
+        discovery = value["discovery"]
+        self.assertLessEqual(discovery["returnedCount"], 3)
+        ids = [item["capabilityId"] for item in discovery["candidates"]]
+        self.assertIn(
+            "harness.execution.runtime-search.v1.tool.search_workspace",
+            ids,
+        )
+        candidate = next(
+            item
+            for item in discovery["candidates"]
+            if item["capabilityId"]
+            == "harness.execution.runtime-search.v1.tool.search_workspace"
+        )
+        self.assertFalse(candidate["claims"]["authorityGranted"])
+        self.assertFalse(candidate["claims"]["executionAdmitted"])
+
+    def test_capability_inspection_is_exact_and_still_not_authority(self) -> None:
+        capability_id = "harness.execution.runtime-search.v1.tool.search_workspace"
+        code, value, error = self.invoke(
+            "capabilities", "--inspect", capability_id
+        )
+        self.assertEqual(code, 0, error)
+        assert value is not None
+        self.assertEqual(value["kind"], "ordivon.harness-cli-capability-inspection")
+        inspection = value["inspection"]
+        self.assertEqual(inspection["descriptor"]["capabilityId"], capability_id)
+        self.assertIn("authorityRequirements", inspection["descriptor"])
+        self.assertFalse(inspection["claims"]["authorityGranted"])
+        self.assertFalse(inspection["claims"]["executionAdmitted"])
+
+    def test_capability_discovery_options_fail_closed_without_query(self) -> None:
+        code, value, error = self.invoke("capabilities", "--term", "search")
+        self.assertEqual(code, 1)
+        self.assertIsNone(value)
+        self.assertIn("require --query", error)
+
     def test_independent_run_pause_resume_status_and_inspect_are_first_class(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "harness"
