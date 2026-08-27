@@ -556,8 +556,8 @@
       "file": "harness-capability-environment-v1.json",
       "implementationRevision": "830dd160b1025928521204f4713cbe0e1bbbf589",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; semantic ranking and fresh-Agent behavioral gain remain explicitly unproven."
+      "status": "historical",
+      "scope": "Historical portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; retained unchanged after compact current-affordance model projection changed current Harness implementation paths."
     }
   ]
 }
