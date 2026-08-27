@@ -1,0 +1,69 @@
+{
+  "accuracyDeltaCMinusA": 0.462122,
+  "classification": "positive_currentness_dependent_gain",
+  "completedCalls": 35,
+  "requiredCompletedCalls": 30,
+  "thresholds": {
+    "cAccuracyAdvantageMin": 0.25,
+    "cCompletedMin": 10,
+    "cCurrentTargetAccuracyMin": 0.833333,
+    "cStaleTwinMustNotExceedA": true,
+    "totalCompletedMin": 30
+  },
+  "treatments": {
+    "A": {
+      "completed": 11,
+      "currentTargetAccuracy": 0.454545,
+      "meanCompletionTokens": 31.091,
+      "meanLatencyMs": 2701.965,
+      "meanPromptCacheHitTokens": 593.455,
+      "meanPromptCacheMissTokens": 3083.545,
+      "meanPromptTokens": 3677,
+      "meanProviderRequestBytes": 15941,
+      "meanTotalTokens": 3708.091,
+      "medianLatencyMs": 2296.783,
+      "noToolOrConclusionRate": 0.0,
+      "otherWrongSelectionRate": 0.090909,
+      "providerErrors": 1,
+      "staleTwinSelectionRate": 0.454545,
+      "trials": 12,
+      "zeroOrMultipleToolCallCount": 0
+    },
+    "B": {
+      "completed": 12,
+      "currentTargetAccuracy": 0.25,
+      "meanCompletionTokens": 30.25,
+      "meanLatencyMs": 2222.481,
+      "meanPromptCacheHitTokens": 384,
+      "meanPromptCacheMissTokens": 3397.417,
+      "meanPromptTokens": 3781.417,
+      "meanProviderRequestBytes": 16428.25,
+      "meanTotalTokens": 3811.667,
+      "medianLatencyMs": 1836.577,
+      "noToolOrConclusionRate": 0.0,
+      "otherWrongSelectionRate": 0.083333,
+      "providerErrors": 0,
+      "staleTwinSelectionRate": 0.666667,
+      "trials": 12,
+      "zeroOrMultipleToolCallCount": 0
+    },
+    "C": {
+      "completed": 12,
+      "currentTargetAccuracy": 0.916667,
+      "meanCompletionTokens": 21,
+      "meanLatencyMs": 2114.583,
+      "meanPromptCacheHitTokens": 0,
+      "meanPromptCacheMissTokens": 1115.5,
+      "meanPromptTokens": 1115.5,
+      "meanProviderRequestBytes": 4235.667,
+      "meanTotalTokens": 1136.5,
+      "medianLatencyMs": 1662.98,
+      "noToolOrConclusionRate": 0.0,
+      "otherWrongSelectionRate": 0.083333,
+      "providerErrors": 0,
+      "staleTwinSelectionRate": 0.0,
+      "trials": 12,
+      "zeroOrMultipleToolCallCount": 0
+    }
+  }
+}

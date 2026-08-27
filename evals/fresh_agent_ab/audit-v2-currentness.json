@@ -1,0 +1,83 @@
+{
+  "cOnlyError": {
+    "caseId": "prior-research",
+    "selectedStanding": "AVAILABLE",
+    "selectedTool": "cap_005"
+  },
+  "claims": {
+    "compactCurrentAffordanceProviderProjectionEarnedForEngineeringEvaluation": true,
+    "crossModelGeneralizationEstablished": false,
+    "currentStandingCompilationBehavioralGainEstablishedUnderFrozenSemanticTwinPressure": true,
+    "endToEndTaskSuccessEstablished": false,
+    "retrievalAloneBehavioralGainEstablished": false,
+    "semanticRetrieverChallengerEarnedByThisResult": false
+  },
+  "classification": "positive_currentness_dependent_gain",
+  "kind": "ordivon.harness-fresh-agent-currentness-ab-audit-v2",
+  "opaqueOrderSplit": {
+    "A": {
+      "targetHigher": {
+        "currentTargetAccuracy": 0.0,
+        "n": 5,
+        "staleTwinSelectionRate": 1.0
+      },
+      "targetLower": {
+        "currentTargetAccuracy": 0.833333,
+        "n": 6,
+        "staleTwinSelectionRate": 0.0
+      }
+    },
+    "B": {
+      "targetHigher": {
+        "currentTargetAccuracy": 0.0,
+        "n": 6,
+        "staleTwinSelectionRate": 1.0
+      },
+      "targetLower": {
+        "currentTargetAccuracy": 0.5,
+        "n": 6,
+        "staleTwinSelectionRate": 0.333333
+      }
+    },
+    "C": {
+      "targetHigher": {
+        "currentTargetAccuracy": 1.0,
+        "n": 6,
+        "staleTwinSelectionRate": 0.0
+      },
+      "targetLower": {
+        "currentTargetAccuracy": 0.833333,
+        "n": 6,
+        "staleTwinSelectionRate": 0.0
+      }
+    }
+  },
+  "providerError": {
+    "caseId": "source-fenced-read",
+    "error": "DeepSeek connection failed: Remote end closed connection without response",
+    "errorType": "AgentTurnAdapterError",
+    "treatment": "A"
+  },
+  "ratios": {
+    "meanLatencyMs": {
+      "B/A": 0.8225,
+      "C/A": 0.7826
+    },
+    "meanPromptTokens": {
+      "B/A": 1.0284,
+      "C/A": 0.3034
+    },
+    "meanProviderRequestBytes": {
+      "B/A": 1.0306,
+      "C/A": 0.2657
+    },
+    "meanTotalTokens": {
+      "B/A": 1.0279,
+      "C/A": 0.3065
+    }
+  },
+  "rawResultSha256": "eeadbc748c4d7ddf57f0d5a700e35d23a7973b2682b82dd7d8160548ea6b2873",
+  "schemaVersion": 1,
+  "summarySha256": "2ac76154b383864de410d4671620f253bde10b204756d66563f79eb428a2c061",
+  "truthRole": "frozen-outcome-audit-not-new-treatment"
+}
