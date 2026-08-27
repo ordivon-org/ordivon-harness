@@ -84,6 +84,12 @@ EXPECTED = {
         "830dd160b1025928521204f4713cbe0e1bbbf589",
         "aa7d2c696268b218fd32ea09edaa27699d444da2632943b9824cd828a137209e",
     ),
+    "harness.execution.current-affordance-compact-v2": (
+        "harness-current-affordance-compact-v2.json",
+        "verified",
+        "17e8943edb16c0f586d5a8d022c63590755a7d6b",
+        "e3a24628400842fcb9563969101b2ab7335326c2bb90128b14c51a2bf41c3598",
+    ),
 }
 
 
@@ -183,6 +189,11 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         self.assertFalse(current)
         self.assertIn("src/ordivon_harness/capability_discovery.py", invalidating)
         self.assertIn("src/ordivon_harness/interaction_context.py", invalidating)
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "17e8943edb16c0f586d5a8d022c63590755a7d6b"
+        )
+        self.assertTrue(current)
+        self.assertEqual(invalidating, [])
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding

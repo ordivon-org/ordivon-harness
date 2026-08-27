@@ -558,6 +558,14 @@
       "revisionBinding": "index-creation-lineage",
       "status": "historical",
       "scope": "Historical portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; retained unchanged after compact current-affordance model projection changed current Harness implementation paths."
+    },
+    {
+      "claimId": "harness.execution.current-affordance-compact-v2",
+      "file": "harness-current-affordance-compact-v2.json",
+      "implementationRevision": "17e8943edb16c0f586d5a8d022c63590755a7d6b",
+      "revisionBinding": "index-creation-lineage",
+      "status": "verified",
+      "scope": "Current portable acceptance for compact model-facing capability affordances: exact audit evidence remains on-demand, supplied current standing is intersected with existing admission, admission drift fails closed, and 546-test/wheel release acceptance passes at 17e8943; bounded V2 fresh-Agent evidence supports currentness-dependent carrier selection without claiming semantic retrieval superiority."
     }
   ]
 }

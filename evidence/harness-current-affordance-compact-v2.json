@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-current-affordance-compact-v2",
+  "classification": "CURRENT_COMPACT_AFFORDANCE_AND_PORTABLE_RELEASE_ACCEPTED",
+  "implementationSourceRevision": "17e8943edb16c0f586d5a8d022c63590755a7d6b",
+  "implementationLineage": {
+    "freshAgentResearchCloseoutCommit": "1f4c792c73ae090052ca0c38c2383022be997691",
+    "compactProjectionImplementationCommit": "cc18c9306bb022caaf7887fe2206596facb5e2ba",
+    "staleEvidenceDemotionCommit": "17e8943edb16c0f586d5a8d022c63590755a7d6b",
+    "boundary": "Harness compiles supplied owner/caller current standing against existing admission and projects actionability; it does not own capability truth, currentness truth, semantic ranking, or execution authority."
+  },
+  "portableAcceptance": {
+    "runtimeJobId": "job-01a04430-8d7f-7f83-8239-2882f8f931c7",
+    "terminalEvidenceArtifactDigest": "sha256:b5ec985d8cf41e43447e568aace595b9c200322f812ba15f01cbb7be0ac09114",
+    "implementationUnderTest": "17e8943edb16c0f586d5a8d022c63590755a7d6b",
+    "workingTreeCleanAtAdmission": true,
+    "testsDiscovered": 546,
+    "testsSkipped": 3,
+    "failures": 0,
+    "unittest": "passed",
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "documentationContract": "passed",
+    "evidenceContractBeforeNewReceipt": "valid historical_receipts=78 verified_receipts=0",
+    "lockCheck": "passed",
+    "deterministicDemo": {
+      "status": "passed",
+      "modelCalls": 2,
+      "toolCalls": 1,
+      "stopCode": "candidate_completed",
+      "traceDigest": "sha256:6787ca0c0c7240db6ecb71d797b860d8ab9737dc2705a28e4b885e2f04717fb1"
+    },
+    "scaleSmoke": {
+      "runs": 8,
+      "eventsPerRun": 12,
+      "batchSize": 11,
+      "inspectSamples": 4,
+      "status": "passed"
+    },
+    "wheel": {
+      "filename": "ordivon_harness-0.6.0-py3-none-any.whl",
+      "installedVersion": "0.6.0",
+      "cliCommandsVerified": 14,
+      "hostFreeCoreVerified": true,
+      "status": "passed"
+    },
+    "overall": "passed"
+  },
+  "freshAgentBehavioralEvidence": {
+    "truthRole": "bounded-preregistered-live-provider-research-not-universal-product-proof",
+    "providerModel": "deepseek-v4-flash",
+    "v1": {
+      "preregistrationCommit": "bd9e1adecc45a0e9e74a7ddd143c146612df7825",
+      "corpusRunnerCommit": "4ef83268ca6507cbdc905833d782304e921036bb",
+      "resultCommit": "debe4edcc7a0f1ab3a47ea3dcf93da87a3deae75",
+      "rawResultSha256": "5acffe6e11925287701f86f3201365462c5192d106b5628ab73a584ae8533dd8",
+      "completedCalls": 36,
+      "accuracy": {
+        "A": 1.0,
+        "B": 1.0,
+        "C": 1.0
+      },
+      "classification": "negative_or_insufficient",
+      "finding": "Tool-space size alone did not produce selection pressure; verbose candidate/inspection/affordance projection increased Provider context."
+    },
+    "v2": {
+      "preregistrationCommit": "00587de943645ee9713d36e88755b258d3c33b1d",
+      "corpusRunnerCommit": "0ef8ea98fd0e5b9522409e5b95a9e1943a7ce93b",
+      "resultCommit": "1f4c792c73ae090052ca0c38c2383022be997691",
+      "rawResultSha256": "eeadbc748c4d7ddf57f0d5a700e35d23a7973b2682b82dd7d8160548ea6b2873",
+      "completedCalls": 35,
+      "currentTargetAccuracy": {
+        "A": 0.454545,
+        "B": 0.25,
+        "C": 0.916667
+      },
+      "staleTwinSelectionRate": {
+        "A": 0.454545,
+        "B": 0.666667,
+        "C": 0.0
+      },
+      "accuracyDeltaCMinusA": 0.462122,
+      "meanPromptTokens": {
+        "A": 3677.0,
+        "B": 3781.417,
+        "C": 1115.5
+      },
+      "meanProviderRequestBytes": {
+        "A": 15941.0,
+        "B": 16428.25,
+        "C": 4235.667
+      },
+      "classification": "positive_currentness_dependent_gain",
+      "finding": "When static Tool semantics were byte-identical across an AVAILABLE carrier and a BLOCKED/UNKNOWN twin, supplied current standing plus existing admission removed stale-carrier selection in the controlled ecology; retrieval-only did not."
+    }
+  },
+  "engineeringConsumption": {
+    "exactAuditCarrier": "CapabilityAffordanceSet.to_dict",
+    "compactModelCarrier": "CapabilityAffordanceSet.to_model_dict",
+    "compactFields": [
+      "capabilityId",
+      "owner",
+      "action.kind",
+      "action.name",
+      "standing",
+      "admitted",
+      "canInvokeNow"
+    ],
+    "fullEvidenceDefaultProjected": false,
+    "exactEvidenceElidedClaim": true,
+    "parallelLegacyAffordanceListInCapabilityPath": false,
+    "selectedActionsSource": "CapabilityAffordanceSet.selected_action_names",
+    "admissionDriftFailsClosed": true,
+    "candidateImpliesAvailability": false,
+    "authorityExpanded": false,
+    "ownerTruthMinted": false,
+    "currentnessMinted": false
+  },
+  "acceptedLaws": {
+    "toolSpaceSizeIsNotSelectionPressure": true,
+    "retrievalIsNotCurrentness": true,
+    "capabilityIsNotCurrentAffordance": true,
+    "staticCapabilitySemanticsMayUnderdetermineCurrentCarrier": true,
+    "auditRepresentationIsNotDefaultModelRepresentation": true,
+    "currentAffordanceRequiresSuppliedStandingAndExistingAdmission": true,
+    "providerContextMustBeMeasuredAfterComposition": true,
+    "historicalEvidenceIsNotCurrentStanding": true
+  },
+  "evidenceLifecycle": {
+    "priorWholeCurrentClaim": "harness.execution.capability-environment-v1",
+    "priorDisposition": "historical",
+    "priorReceiptBytesRewritten": false,
+    "currentnessRestoredBy": "new clean implementation acceptance and a new immutable receipt; stale-evidence validation was not weakened"
+  },
+  "explicitNonClaims": [
+    "This does not prove cross-model behavioral generalization.",
+    "This does not prove multi-turn or end-to-end task-success improvement.",
+    "This does not prove semantic, vector, or LLM retrieval superiority over deterministic retrieval.",
+    "This does not establish a global capability registry, Skill store, semantic Memory system, or owner-currentness service inside Harness.",
+    "This does not transfer owner, Host, Runtime, Security, Workstation, Atlas, Computing, or domain truth authority into Harness.",
+    "This does not establish universal latency superiority or a universal current-affordance schema.",
+    "Runtime/local acceptance proves release mechanics for the bound revision and does not assert external domain semantic completion."
+  ]
+}
