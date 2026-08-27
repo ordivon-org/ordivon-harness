@@ -20,6 +20,9 @@ dependencies = [
   "ordivon-protocol @ git+https://github.com/zycxfyh/ordivon-computing.git@420dc356cb664d75db0f34f356156baebe5843db#subdirectory=packages/ordivon-protocol",
 ]
 
+[dependency-groups]
+dev = ["ruff==0.15.17"]
+
 [project.scripts]
 ordivon-harness = "ordivon_harness.cli:entrypoint"
 

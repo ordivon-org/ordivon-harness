@@ -16,7 +16,8 @@ EOF
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 python_bin=${PYTHON_BIN:-$(command -v python3.12 || true)}
 uv_bin=${UV_BIN:-$(command -v uv || true)}
-uvx_bin=${UVX_BIN:-$(command -v uvx || true)}
+env_dir=${ORDIVON_OWNER_ENV_DIR:-"$repo/.venv"}
+owner_environment="$repo/scripts/owner-environment"
 mode=${1:-}
 
 case "$mode" in
@@ -29,7 +30,8 @@ case "$mode" in
       scripts/check_evidence.py \
       scripts/check_wheel.py \
       scripts/check_core_without_host.py \
-      scripts/harness_p0_scale_acceptance.py; do
+      scripts/harness_p0_scale_acceptance.py \
+      scripts/owner-environment; do
       test -f "$repo/$path"
     done
     "$python_bin" "$repo/scripts/check_dependencies.py"
@@ -38,13 +40,14 @@ case "$mode" in
     printf '%s\n' 'local acceptance contract: present' 'run with: scripts/local-acceptance run'
     ;;
   run)
-    test -n "$python_bin" || { echo 'Python 3.12 is required' >&2; exit 1; }
     test -n "$uv_bin" || { echo 'uv is required' >&2; exit 1; }
-    test -n "$uvx_bin" || { echo 'uvx is required' >&2; exit 1; }
+    ORDIVON_OWNER_ENV_DIR="$env_dir" "$owner_environment" bootstrap
+    ORDIVON_OWNER_ENV_DIR="$env_dir" "$owner_environment" doctor
+    python_bin="$env_dir/bin/python"
     cd "$repo"
     "$python_bin" -m compileall -q src tests scripts evals
-    "$uvx_bin" ruff==0.15.17 check src tests scripts
-    "$uv_bin" run python -W error::ResourceWarning -m unittest discover -s tests -v
+    "$python_bin" -m ruff check src tests scripts
+    "$python_bin" -W error::ResourceWarning -m unittest discover -s tests -v
     "$python_bin" scripts/check_dependencies.py
     "$python_bin" scripts/check_docs.py
     "$python_bin" scripts/check_evidence.py

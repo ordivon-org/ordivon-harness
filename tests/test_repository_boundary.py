@@ -22,7 +22,8 @@ class RepositoryBoundaryTests(unittest.TestCase):
             1,
         )
         self.assertNotIn("optional-dependencies", project["project"])
-        self.assertNotIn("dependency-groups", project)
+        self.assertEqual(project.get("dependency-groups"), {"dev": ["ruff==0.15.17"]})
+        self.assertNotIn("ordivon-host", str(project.get("dependency-groups", {})))
         package = ROOT / "src" / "ordivon_harness"
         self.assertFalse((package / "_host_compat").exists())
         self.assertFalse((package / "host.py").exists())

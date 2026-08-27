@@ -183,13 +183,15 @@ python scripts/check_docs.py
 Set up and verify the checkout:
 
 ```bash
-uv sync
-uvx ruff==0.15.17 check src tests scripts
-uv run python -m unittest discover -s tests -v
+scripts/owner-environment bootstrap
+scripts/owner-environment doctor
+scripts/owner-environment test
 rm -rf dist
 uv build --wheel --out-dir dist
-python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
+.venv/bin/python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
 ```
+
+The owner environment binds the exact development lint dependency separately from Harness runtime semantics; it does not reintroduce Host as a Harness dependency. `scripts/owner-environment cold-start` proves the default suite from an empty temporary venv.
 
 Initialize an independent state root and inspect available capabilities:
 

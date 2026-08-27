@@ -30,8 +30,8 @@ def main() -> int:
         fail("base dependencies must contain only jsonschema plus the exact Protocol graph")
     if "optional-dependencies" in project:
         fail("Harness must not expose compatibility dependency extras")
-    if "dependency-groups" in raw:
-        fail("Harness repository must not require Host development dependencies")
+    if raw.get("dependency-groups") != {"dev": ["ruff==0.15.17"]}:
+        fail("Harness dev dependency group must contain only ruff==0.15.17")
 
     lock = (ROOT / "uv.lock").read_text(encoding="utf-8")
     if f"rev={PROTOCOL_REVISION}" not in lock or f"#{PROTOCOL_REVISION}" not in lock:
@@ -45,12 +45,14 @@ def main() -> int:
         if line.strip() and not line.lstrip().startswith("#")
     )
     lock_data = tomllib.loads(lock)
+    dev_names = {item.split("==", 1)[0] for item in raw["dependency-groups"]["dev"]}
     locked_pypi = sorted(
         f"{package['name']}=={package['version']}"
         for package in lock_data.get("package", [])
         if isinstance(package, dict)
         and isinstance(package.get("source"), dict)
         and package["source"].get("registry") == "https://pypi.org/simple"
+        and package.get("name") not in dev_names
     )
     if audit != locked_pypi:
         fail(
@@ -74,7 +76,7 @@ def main() -> int:
     ):
         fail("package version and source-checkout fallback differ")
 
-    print(f"dependency contract: valid protocol={PROTOCOL_REVISION} host=absent")
+    print(f"dependency contract: valid protocol={PROTOCOL_REVISION} host=absent dev=ruff==0.15.17")
     return 0
 
 
