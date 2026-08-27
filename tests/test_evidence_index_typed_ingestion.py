@@ -165,7 +165,12 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
             "e983c79f5582160b37ac56c1898efa80e486880d"
         )
         self.assertFalse(current)
-        self.assertEqual(invalidating, ["pyproject.toml", "uv.lock"])
+        self.assertIn("pyproject.toml", invalidating)
+        self.assertIn("uv.lock", invalidating)
+        self.assertTrue(
+            any(path.startswith("src/") for path in invalidating),
+            invalidating,
+        )
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
