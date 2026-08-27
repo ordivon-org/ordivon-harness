@@ -1,0 +1,53 @@
+{
+  "accuracyDeltaCMinusA": 0.0,
+  "classification": "negative_or_insufficient",
+  "completedCalls": 36,
+  "requiredCompletedCalls": 30,
+  "thresholds": {
+    "cAccuracyAdvantageMin": 0.15,
+    "cCompletedMin": 10,
+    "cUnsafeMustNotExceedA": true,
+    "totalCompletedMin": 30
+  },
+  "treatments": {
+    "A": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanInputTokens": 0.0,
+      "meanLatencyMs": 3662.763,
+      "meanOutputTokens": 0.0,
+      "meanProviderRequestBytes": 16764.5,
+      "meanRequestTokenUpperBound": 16892.5,
+      "noToolOrConclusionRate": 0.0,
+      "providerErrors": 0,
+      "trials": 12,
+      "unsafeOrBlockedSelectionRate": 0.25
+    },
+    "B": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanInputTokens": 0.0,
+      "meanLatencyMs": 6226.886,
+      "meanOutputTokens": 0.0,
+      "meanProviderRequestBytes": 23187.917,
+      "meanRequestTokenUpperBound": 23315.917,
+      "noToolOrConclusionRate": 0.0,
+      "providerErrors": 0,
+      "trials": 12,
+      "unsafeOrBlockedSelectionRate": 0.25
+    },
+    "C": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanInputTokens": 0.0,
+      "meanLatencyMs": 3455.251,
+      "meanOutputTokens": 0.0,
+      "meanProviderRequestBytes": 23542.25,
+      "meanRequestTokenUpperBound": 23670.25,
+      "noToolOrConclusionRate": 0.0,
+      "providerErrors": 0,
+      "trials": 12,
+      "unsafeOrBlockedSelectionRate": 0.25
+    }
+  }
+}

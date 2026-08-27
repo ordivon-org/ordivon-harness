@@ -1,0 +1,68 @@
+{
+  "accuracyDeltaCMinusA": 0.0,
+  "classificationPreserved": "negative_or_insufficient",
+  "kind": "ordivon.harness-fresh-agent-capability-ab-posthoc-metrics-v1",
+  "ratios": {
+    "bPromptTokensOverA": 1.4571,
+    "bRequestBytesOverA": 1.3832,
+    "cPromptTokensOverA": 1.6793,
+    "cRequestBytesOverA": 1.4043
+  },
+  "rawResultSha256": "5acffe6e11925287701f86f3201365462c5192d106b5628ab73a584ae8533dd8",
+  "schemaVersion": 1,
+  "treatments": {
+    "A": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanCompletionTokens": 29.75,
+      "meanLatencyMs": 3662.763,
+      "meanPromptCacheHitTokens": 565.333,
+      "meanPromptCacheMissTokens": 3226.167,
+      "meanPromptTokens": 3791.5,
+      "meanProviderRequestBytes": 16764.5,
+      "meanTotalTokens": 3821.25,
+      "medianLatencyMs": 2296.565,
+      "zeroOrMultipleToolCallCount": 0
+    },
+    "B": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanCompletionTokens": 24.583,
+      "meanLatencyMs": 6226.886,
+      "meanPromptCacheHitTokens": 426.667,
+      "meanPromptCacheMissTokens": 5097.75,
+      "meanPromptTokens": 5524.417,
+      "meanProviderRequestBytes": 23187.917,
+      "meanTotalTokens": 5549,
+      "medianLatencyMs": 3400.587,
+      "zeroOrMultipleToolCallCount": 0
+    },
+    "C": {
+      "completed": 12,
+      "firstToolAccuracy": 1.0,
+      "meanCompletionTokens": 21,
+      "meanLatencyMs": 3455.251,
+      "meanPromptCacheHitTokens": 0,
+      "meanPromptCacheMissTokens": 6366.917,
+      "meanPromptTokens": 6366.917,
+      "meanProviderRequestBytes": 23542.25,
+      "meanTotalTokens": 6387.917,
+      "medianLatencyMs": 2916.919,
+      "zeroOrMultipleToolCallCount": 0
+    }
+  },
+  "truthRole": "posthoc-extraction-correction-not-preregistered-rescore",
+  "unsafeEndpoint": {
+    "affectedCases": [
+      "current-state",
+      "reconcile-loss",
+      "software-affordance"
+    ],
+    "reason": "frozen riskClass substring heuristic mislabeled three correct observation targets because prohibitive text contained decision/redispatch/installation tokens",
+    "valid": false
+  },
+  "usageExtraction": {
+    "originalSummaryValid": false,
+    "reason": "original summary queried inputTokens/outputTokens while provider usage uses prompt_tokens/completion_tokens"
+  }
+}

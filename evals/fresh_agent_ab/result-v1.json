@@ -1,0 +1,1629 @@
+{
+  "corpusSha256": "e0f9399e1c5cd7b555c262e9b006d165992ade6473b0af97fcda03b39d5650b6",
+  "kind": "ordivon.harness-fresh-agent-capability-ab-result-v1",
+  "preregistrationSha256": "0e234b264b0db57e42e38b87e051e4711e735336f9f8474e872fe27d0061740a",
+  "providerModel": "deepseek-v4-flash",
+  "schemaVersion": 1,
+  "status": "completed",
+  "trials": [
+    {
+      "candidateCount": 8,
+      "caseId": "workspace-search",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_032",
+      "firstToolCorrect": true,
+      "latencyMs": 3562.076,
+      "modelCallId": "0fb0ccb1-fc84-41f8-996e-8e79425bcb79",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 1,
+      "providerRequestBytes": 23621,
+      "providerRequestDigest": "sha256:d202c2cf1ea75f4b557265feaf8be12f0b4088fbd3879a749058f598e0a84fb3",
+      "rawResponseDigest": "sha256:429d5ce83efc37833731d112166cbd3d49343150d7737a14fb8813c47cbedf00",
+      "requestTokenUpperBound": 23749,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_032"
+      ],
+      "status": "completed",
+      "targetTool": "cap_032",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6390,
+        "prompt_tokens": 6390,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6411
+      },
+      "visibleToolCount": 5
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "evidence-currentness",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_029",
+      "firstToolCorrect": true,
+      "latencyMs": 1790.446,
+      "modelCallId": "347a4203-ac6c-47a6-868b-4b01a320e9ae",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 2,
+      "providerRequestBytes": 23681,
+      "providerRequestDigest": "sha256:e49d2e02b27e4ae8a9c603a2659a2d81dc60a800c94002d34e896503af70bdea",
+      "rawResponseDigest": "sha256:4c023ab601d8b57134be8bbcf507cbb58ae63139c4b9b8d4b5fba06a1c34cef8",
+      "requestTokenUpperBound": 23809,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_029"
+      ],
+      "status": "completed",
+      "targetTool": "cap_029",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 5582,
+        "prompt_tokens": 5582,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5603
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "network-matrix",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_042",
+      "firstToolCorrect": true,
+      "latencyMs": 4116.265,
+      "modelCallId": "1a37e84e-ac07-44d3-9774-21d3b9729035",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 3,
+      "providerRequestBytes": 23418,
+      "providerRequestDigest": "sha256:0a0f292045f2bfdae88ba7e4e4d1b4ad05644a86bfe471d2e1e4bf02a36d6d85",
+      "rawResponseDigest": "sha256:663611ac4f14f33eab07cf2009c4d0d0d835453467d7bc26cb14d0fef64bee73",
+      "requestTokenUpperBound": 23546,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_042"
+      ],
+      "status": "completed",
+      "targetTool": "cap_042",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 49,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 5573,
+        "prompt_tokens": 5573,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5622
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "software-affordance",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_000",
+      "firstToolCorrect": true,
+      "latencyMs": 2244.977,
+      "modelCallId": "49133b85-6b94-45d0-b1aa-363404d96ba1",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 4,
+      "providerRequestBytes": 16772,
+      "providerRequestDigest": "sha256:73668c61650cb0c044c0b0ae259918735eef8c046812fe05bbf08023fb337db7",
+      "rawResponseDigest": "sha256:10718b8004a8a55194fa535d780c1713aa8e3fe36eaaf31a47197c4c74ae7b63",
+      "requestTokenUpperBound": 16900,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_000"
+      ],
+      "status": "completed",
+      "targetTool": "cap_000",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 3777,
+        "prompt_tokens": 3777,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3813
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "evidence-currentness",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_029",
+      "firstToolCorrect": true,
+      "latencyMs": 2000.503,
+      "modelCallId": "919f0b49-a968-4d10-afc6-64a5800ad6b0",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 5,
+      "providerRequestBytes": 16894,
+      "providerRequestDigest": "sha256:1da67b3902be1e3a33fe52b250c21591488958c65c8a5750e3b5b5ffd277e600",
+      "rawResponseDigest": "sha256:7700a382741d99d95f85ab4450d5bcdf70cba17dcfd87d3264ca5245ba8bfa0c",
+      "requestTokenUpperBound": 17022,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_029"
+      ],
+      "status": "completed",
+      "targetTool": "cap_029",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 384,
+        "prompt_cache_miss_tokens": 3421,
+        "prompt_tokens": 3805,
+        "prompt_tokens_details": {
+          "cached_tokens": 384
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3826
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "inspect-candidate",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_056",
+      "firstToolCorrect": true,
+      "latencyMs": 8548.472,
+      "modelCallId": "58a09c16-3c56-43ce-9652-3b888f0c58ee",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 6,
+      "providerRequestBytes": 23139,
+      "providerRequestDigest": "sha256:b806e6e22711764aa58db56a64f2e881b4505c8327d657ec3d27c789969f813c",
+      "rawResponseDigest": "sha256:287cd676b4f1cce098c7b9a59508456482b3757294494ea4f0a5e70af1e16664",
+      "requestTokenUpperBound": 23267,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_056"
+      ],
+      "status": "completed",
+      "targetTool": "cap_056",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5032,
+        "prompt_tokens": 5544,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5565
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "reconcile-loss",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_041",
+      "firstToolCorrect": true,
+      "latencyMs": 1214.806,
+      "modelCallId": "11bee387-1d8b-4cf6-8873-bf8a6ddf1a8e",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 7,
+      "providerRequestBytes": 23186,
+      "providerRequestDigest": "sha256:121247dee8d3e695efda46f4c2d779cfe830cf554047aad04714a6e26b19246d",
+      "rawResponseDigest": "sha256:fcac97d1753f86f13aa615da0a46ca4735e01d30960fd90a9746025a1c031679",
+      "requestTokenUpperBound": 23314,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_041"
+      ],
+      "status": "completed",
+      "targetTool": "cap_041",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5034,
+        "prompt_tokens": 5546,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5567
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "current-state",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_006",
+      "firstToolCorrect": true,
+      "latencyMs": 6576.824,
+      "modelCallId": "5015134c-cbeb-4496-a89f-6a5ce1d72f6c",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 8,
+      "providerRequestBytes": 23016,
+      "providerRequestDigest": "sha256:c8954e3933b09893e71e176fc1493649cf2950d66163694e80682f21df6229a5",
+      "rawResponseDigest": "sha256:d9b64a94cbf8b7747dd53e7fbeb605adc093b2af22d584cf114196ba7ecb6d4c",
+      "requestTokenUpperBound": 23144,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_006"
+      ],
+      "status": "completed",
+      "targetTool": "cap_006",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 4990,
+        "prompt_tokens": 5502,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5523
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "network-matrix",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_042",
+      "firstToolCorrect": true,
+      "latencyMs": 3546.017,
+      "modelCallId": "65ffbe41-3ab9-452b-9b3b-009e6a914341",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 9,
+      "providerRequestBytes": 23798,
+      "providerRequestDigest": "sha256:f64bc4b1719214e6d94ca5f5889fa9ee105587ea34357985777f0c01e66156f2",
+      "rawResponseDigest": "sha256:f24557bc9d506cf7ddd3fb12736f3a96bea38592687aa16cf0f2d2bb082be844",
+      "requestTokenUpperBound": 23926,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_042"
+      ],
+      "status": "completed",
+      "targetTool": "cap_042",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6410,
+        "prompt_tokens": 6410,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6431
+      },
+      "visibleToolCount": 3
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "source-fenced-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_045",
+      "firstToolCorrect": true,
+      "latencyMs": 12123.709,
+      "modelCallId": "41e6f535-114d-474e-9069-05b6ee08c0f0",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 10,
+      "providerRequestBytes": 23275,
+      "providerRequestDigest": "sha256:af61d1633d354738a53c28fe0f31afeff824b1b30d97f4401887bdff47283c41",
+      "rawResponseDigest": "sha256:01ea7c0cb2cd193fe646799f2114c16591401a0c9638fd4ff252b2043dc7d34f",
+      "requestTokenUpperBound": 23403,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_045"
+      ],
+      "status": "completed",
+      "targetTool": "cap_045",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6356,
+        "prompt_tokens": 6356,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6377
+      },
+      "visibleToolCount": 2
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "run-check",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_010",
+      "firstToolCorrect": true,
+      "latencyMs": 1046.847,
+      "modelCallId": "57d9d674-f9e7-4c69-8f1a-e91bd8457ff8",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 11,
+      "providerRequestBytes": 23158,
+      "providerRequestDigest": "sha256:df151f9253f850f5a3720cf807e791ed4ed9c66695d120e38e6cf26f21495b47",
+      "rawResponseDigest": "sha256:12e8efdbbe207f5b78f9be0dc9930668951f19f3cdceadc434f3327663e6932f",
+      "requestTokenUpperBound": 23286,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_010"
+      ],
+      "status": "completed",
+      "targetTool": "cap_010",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6281,
+        "prompt_tokens": 6281,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6302
+      },
+      "visibleToolCount": 4
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "prior-research",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 12866.08,
+      "modelCallId": "51826114-3db5-4a54-a7eb-e840c7fccf75",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 12,
+      "providerRequestBytes": 23274,
+      "providerRequestDigest": "sha256:d758fd64144171b74158a80dd4fb7051ee3449a95fbb534ec3b3735f0a0af645",
+      "rawResponseDigest": "sha256:166ef92ff955332a1d3431b7f0f49a8ba71b7b2e96d2417ae6ecb50475823454",
+      "requestTokenUpperBound": 23402,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5029,
+        "prompt_tokens": 5541,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5577
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "repo-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 2684.909,
+      "modelCallId": "c201ecd0-baee-4f6b-80fc-2797fd76df22",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 13,
+      "providerRequestBytes": 23172,
+      "providerRequestDigest": "sha256:4137d3126a4e7c880affe10170c4bb104315827d74474292922f35ff2163bb53",
+      "rawResponseDigest": "sha256:7cdaa6d213a89aef1b76894e9a7ed8ca64793dea109ad158a098fee6893c68cb",
+      "requestTokenUpperBound": 23300,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5026,
+        "prompt_tokens": 5538,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5559
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "repo-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 9032.787,
+      "modelCallId": "6cc0e58e-9a1b-4a0d-8846-a0eedaaaf00b",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 14,
+      "providerRequestBytes": 16771,
+      "providerRequestDigest": "sha256:4c61e6b495806c97486c608c2a1dcd96a7f6f5fc91d5d5a2296423f5b1a219ce",
+      "rawResponseDigest": "sha256:7ab0681417de52ed7947cefe228543078ebbb2d1465c78521ea21181ab079c81",
+      "requestTokenUpperBound": 16899,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 33,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3163,
+        "prompt_tokens": 3803,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3836
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "source-fenced-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_045",
+      "firstToolCorrect": true,
+      "latencyMs": 3621.832,
+      "modelCallId": "31263515-d16e-4393-b771-0fb21c5e7462",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 15,
+      "providerRequestBytes": 16817,
+      "providerRequestDigest": "sha256:2bffb557e389f7d689f0fa1c32d85e78f2fb2fa0c4730e8ae10b455999203f95",
+      "rawResponseDigest": "sha256:39b596f7008c0518dbe7f261f31e1e9b2335ff979134cf1f2269db1eb1b1d4ba",
+      "requestTokenUpperBound": 16945,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_045"
+      ],
+      "status": "completed",
+      "targetTool": "cap_045",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3165,
+        "prompt_tokens": 3805,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3826
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "security-range",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_050",
+      "firstToolCorrect": true,
+      "latencyMs": 5432.195,
+      "modelCallId": "f7317fce-6f07-4f21-8590-cddb4e9c5e9c",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 16,
+      "providerRequestBytes": 16753,
+      "providerRequestDigest": "sha256:cb0ed8a16dc000004534ce39996fe8e4995f2c1db5a72fbb3e3c79183dc16f38",
+      "rawResponseDigest": "sha256:e110e5b962aa7716d6c5650ee133fd79e13328e6e89ce191185390f0d6360f4f",
+      "requestTokenUpperBound": 16881,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_050"
+      ],
+      "status": "completed",
+      "targetTool": "cap_050",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3143,
+        "prompt_tokens": 3783,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3804
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "prior-research",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 1818.797,
+      "modelCallId": "2f1ecd64-a058-4a7d-8a84-540047d2d847",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 17,
+      "providerRequestBytes": 23771,
+      "providerRequestDigest": "sha256:8bd27b35f0823ccd384b01894f5b780ab159b83c750916b70984fb6897832427",
+      "rawResponseDigest": "sha256:9bf083c5426d510c981111e4cf2243d97a03feda895be86e2ab6f463d96e9973",
+      "requestTokenUpperBound": 23899,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6422,
+        "prompt_tokens": 6422,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6443
+      },
+      "visibleToolCount": 4
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "evidence-currentness",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_029",
+      "firstToolCorrect": true,
+      "latencyMs": 3947.544,
+      "modelCallId": "e0cd6e10-5f33-4455-948b-133f923cc5d7",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 18,
+      "providerRequestBytes": 23992,
+      "providerRequestDigest": "sha256:64e2bcd6ae28eacecca3eea065f0098afacddacabf121f484e5e2549314a95f3",
+      "rawResponseDigest": "sha256:c85e9afcb6284a62dada3ed8ea3818d1bb097b69191fa0706e09e53cf9b4073e",
+      "requestTokenUpperBound": 24120,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_029"
+      ],
+      "status": "completed",
+      "targetTool": "cap_029",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6375,
+        "prompt_tokens": 6375,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6396
+      },
+      "visibleToolCount": 2
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "network-matrix",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_042",
+      "firstToolCorrect": true,
+      "latencyMs": 1688.69,
+      "modelCallId": "35a15082-02fe-4d63-a89b-1ada99df964f",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 19,
+      "providerRequestBytes": 16779,
+      "providerRequestDigest": "sha256:6e350170ab0f34e2805436f1d2fb1364252d1e7ab242fb8e3b3a8cd4f2e7cb5b",
+      "rawResponseDigest": "sha256:e51e96b713282689beda9b768a0888da2d56bd11d90ab05c761362956685da76",
+      "requestTokenUpperBound": 16907,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_042"
+      ],
+      "status": "completed",
+      "targetTool": "cap_042",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 36,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3157,
+        "prompt_tokens": 3797,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3833
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "software-affordance",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_000",
+      "firstToolCorrect": true,
+      "latencyMs": 23983.084,
+      "modelCallId": "e3ccc1ba-78ef-4ebd-8d67-47ede01770bb",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 20,
+      "providerRequestBytes": 23104,
+      "providerRequestDigest": "sha256:252ab5595f7342488f25a59e76bcf62e9388595f8c50ba36b9e79d7f7341dccf",
+      "rawResponseDigest": "sha256:14add17824c96104d016d4ed2de7d90a806a0b12d54d08cacae99c284cc510c9",
+      "requestTokenUpperBound": 23232,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_000"
+      ],
+      "status": "completed",
+      "targetTool": "cap_000",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 4952,
+        "prompt_tokens": 5464,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5485
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "repo-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 2766.031,
+      "modelCallId": "7e391b10-58a4-4dc1-88a1-c318d436efba",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 21,
+      "providerRequestBytes": 23622,
+      "providerRequestDigest": "sha256:662e3f4620b3508193dbba6227a6ecf649b7838a61d3e76758994be7570bcf8f",
+      "rawResponseDigest": "sha256:ef2079dd732fc94da9a81fe57fca3a740f0f9e7bb4142babffc7debed9d33d90",
+      "requestTokenUpperBound": 23750,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6409,
+        "prompt_tokens": 6409,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6430
+      },
+      "visibleToolCount": 4
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "run-check",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_010",
+      "firstToolCorrect": true,
+      "latencyMs": 1373.296,
+      "modelCallId": "5fc70ed2-f45d-436d-8bde-dcd686cb40c1",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 22,
+      "providerRequestBytes": 16645,
+      "providerRequestDigest": "sha256:811dc4586ad53fa0eecbbac5eb8d37d8164d7b7ca4e02e96a5f2e0a31d5ec8b1",
+      "rawResponseDigest": "sha256:efb926f24e4afa6af6cb44885ec83fe4dedcbd6605468e13bca5b14c9f5b85fe",
+      "requestTokenUpperBound": 16773,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_010"
+      ],
+      "status": "completed",
+      "targetTool": "cap_010",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 33,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3125,
+        "prompt_tokens": 3765,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3798
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "security-range",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_050",
+      "firstToolCorrect": true,
+      "latencyMs": 1620.353,
+      "modelCallId": "20cbd274-ffe5-4358-bc96-6452edfba4ba",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 23,
+      "providerRequestBytes": 23669,
+      "providerRequestDigest": "sha256:fec303f15af22f5d6ab4b6a17a1639aa100925a4727388d8206108fd35115d46",
+      "rawResponseDigest": "sha256:d46fdad1dc430f0825f4fd41230e89880d35f08ce3f2ac102a6e149e63eb3165",
+      "requestTokenUpperBound": 23797,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_050"
+      ],
+      "status": "completed",
+      "targetTool": "cap_050",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6356,
+        "prompt_tokens": 6356,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6377
+      },
+      "visibleToolCount": 4
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "inspect-candidate",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_056",
+      "firstToolCorrect": true,
+      "latencyMs": 2348.153,
+      "modelCallId": "ceaace99-36f8-4974-9aa1-c2b7269432d6",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 24,
+      "providerRequestBytes": 16751,
+      "providerRequestDigest": "sha256:329e355ea52e43a168889ba7fd46575c223db093f1751afaead30b1bdc87eca3",
+      "rawResponseDigest": "sha256:3e511c04777c132b19dafa62fb900bc95c038e6d8937c3643bbf0d07f0f08bf3",
+      "requestTokenUpperBound": 16879,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_056"
+      ],
+      "status": "completed",
+      "targetTool": "cap_056",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3153,
+        "prompt_tokens": 3793,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3814
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "prior-research",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_039",
+      "firstToolCorrect": true,
+      "latencyMs": 8364.016,
+      "modelCallId": "bac84dff-05e0-48f7-8eea-1a642b202b6f",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 25,
+      "providerRequestBytes": 16782,
+      "providerRequestDigest": "sha256:1666dcd9e952db8047af64a3b11d0cd7569d376d9576a8198a4902d325bd7e08",
+      "rawResponseDigest": "sha256:c0def909bef686789a88e24016ef0ce1701409ebb1dfdcbcd4018c7afecf024e",
+      "requestTokenUpperBound": 16910,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_039"
+      ],
+      "status": "completed",
+      "targetTool": "cap_039",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 44,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3152,
+        "prompt_tokens": 3792,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3836
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "security-range",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_050",
+      "firstToolCorrect": true,
+      "latencyMs": 7346.768,
+      "modelCallId": "b4bc1d00-85a4-4b32-8fbb-fa5ce4b23e7b",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 26,
+      "providerRequestBytes": 23166,
+      "providerRequestDigest": "sha256:b5092913a2168373404f0e7a4af6a3ff26af5b268462abcfbb699bdeed36772a",
+      "rawResponseDigest": "sha256:9b368a5b0405a3f4a6f7a9db941e27c5468cf96d93614a3e3f3b006ee53ae1b7",
+      "requestTokenUpperBound": 23294,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_050"
+      ],
+      "status": "completed",
+      "targetTool": "cap_050",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 4992,
+        "prompt_tokens": 5504,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5525
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "workspace-search",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_032",
+      "firstToolCorrect": true,
+      "latencyMs": 2050.843,
+      "modelCallId": "4eb40441-3420-40f1-b092-bb0a7394ce4b",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 27,
+      "providerRequestBytes": 22991,
+      "providerRequestDigest": "sha256:a0ac80a2a1140cc106872480d6ac2c75c8caa658553e5e49912971e36ad4357b",
+      "rawResponseDigest": "sha256:4297ba7d518ea5b331665a25e83354f9c8039dcb498ec0c6ef4d3e26312f31a7",
+      "requestTokenUpperBound": 23119,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_032"
+      ],
+      "status": "completed",
+      "targetTool": "cap_032",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 4979,
+        "prompt_tokens": 5491,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5512
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "current-state",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_006",
+      "firstToolCorrect": true,
+      "latencyMs": 3067.807,
+      "modelCallId": "ef95a23d-1809-4884-afbf-3391a9eb1e4c",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 28,
+      "providerRequestBytes": 23208,
+      "providerRequestDigest": "sha256:6d0181692501e7e500a7c5569e0f9243596cc7830b7d327ea777ba551369157c",
+      "rawResponseDigest": "sha256:003faa0122104881db1860c32f26f5ccc18be4c69c0cef794539d107719ada48",
+      "requestTokenUpperBound": 23336,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_006"
+      ],
+      "status": "completed",
+      "targetTool": "cap_006",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6299,
+        "prompt_tokens": 6299,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6320
+      },
+      "visibleToolCount": 3
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "current-state",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_006",
+      "firstToolCorrect": true,
+      "latencyMs": 4105.751,
+      "modelCallId": "84e9818a-c65a-49f8-9f7a-bbfa55cff791",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 29,
+      "providerRequestBytes": 16746,
+      "providerRequestDigest": "sha256:ff81db1eb7e18b02fc7056bba3d6e899254501d944ac2449f27f78118e3a430e",
+      "rawResponseDigest": "sha256:18e51f7cc04ea4408bc3b2ed5b20d3841f56390ed336b4ba3f1a1f852f7e7b5f",
+      "requestTokenUpperBound": 16874,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_006"
+      ],
+      "status": "completed",
+      "targetTool": "cap_006",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 33,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3155,
+        "prompt_tokens": 3795,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3828
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "workspace-search",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_032",
+      "firstToolCorrect": true,
+      "latencyMs": 1951.005,
+      "modelCallId": "048d70e9-bf68-447e-bdd1-09127799fe4f",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 30,
+      "providerRequestBytes": 16678,
+      "providerRequestDigest": "sha256:e834afbcf041f29e84c95b51a011854e94aa3e782c8eca16ffa8869619be742e",
+      "rawResponseDigest": "sha256:790c4e08013f46c93ed90fa0c2a3e12cd74c2df344b3780da240554e625c87e8",
+      "requestTokenUpperBound": 16806,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_032"
+      ],
+      "status": "completed",
+      "targetTool": "cap_032",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 37,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3139,
+        "prompt_tokens": 3779,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3816
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "source-fenced-read",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_045",
+      "firstToolCorrect": true,
+      "latencyMs": 1833.336,
+      "modelCallId": "69bea8fe-2bf4-4ee0-b322-adb4125a7426",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 31,
+      "providerRequestBytes": 23208,
+      "providerRequestDigest": "sha256:00baf0f21b360d1d6e78609a2099a3bcfdd33d12cd4c4c9fca7b9c992ffa1283",
+      "rawResponseDigest": "sha256:64260d06569e79a32126a20d23ff5908446b1c59db33eab4851ca36d1049ae34",
+      "requestTokenUpperBound": 23336,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_045"
+      ],
+      "status": "completed",
+      "targetTool": "cap_045",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 5041,
+        "prompt_tokens": 5553,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5574
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "software-affordance",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_000",
+      "firstToolCorrect": true,
+      "latencyMs": 2010.79,
+      "modelCallId": "62de618c-ff70-4022-9bb7-5afc4cfd44d4",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 32,
+      "providerRequestBytes": 23494,
+      "providerRequestDigest": "sha256:f18532b9316aab34fc9f9b52954cc915364b57b76bda17415df7240a6afcc939",
+      "rawResponseDigest": "sha256:8e426bb1fb461ef96d3aebf0d093a405df6633bacd300c618e942b64e6bb9621",
+      "requestTokenUpperBound": 23622,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_000"
+      ],
+      "status": "completed",
+      "targetTool": "cap_000",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6293,
+        "prompt_tokens": 6293,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6314
+      },
+      "visibleToolCount": 3
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "inspect-candidate",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_056",
+      "firstToolCorrect": true,
+      "latencyMs": 2228.46,
+      "modelCallId": "bb9fc14f-e3ab-48e2-b7c8-0553257abe2a",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 33,
+      "providerRequestBytes": 23401,
+      "providerRequestDigest": "sha256:b5a7e1d71fdaa6ef0e2fce6ca39f9ecadd5fe8033e3d4833c7d16184fb085953",
+      "rawResponseDigest": "sha256:e841add6ba2cf09f212b6725ef8bc6283f617c78c96df837257a5c3c6008692a",
+      "requestTokenUpperBound": 23529,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_056"
+      ],
+      "status": "completed",
+      "targetTool": "cap_056",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6397,
+        "prompt_tokens": 6397,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6418
+      },
+      "visibleToolCount": 3
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "run-check",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_010",
+      "firstToolCorrect": true,
+      "latencyMs": 1710.805,
+      "modelCallId": "acd276c6-67b0-493d-a176-75857c5f01c7",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 34,
+      "providerRequestBytes": 22900,
+      "providerRequestDigest": "sha256:12a39be5a00a0882698ab643cd1c5aa108a3daf1bd95d6bc740b692a2ede9067",
+      "rawResponseDigest": "sha256:fa2b899f68bc50f0a48370f950dd4f153cd2a773bad63e69af862914e99dd013",
+      "requestTokenUpperBound": 23028,
+      "selectedRiskClass": "observation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_010"
+      ],
+      "status": "completed",
+      "targetTool": "cap_010",
+      "toolCallCount": 1,
+      "treatment": "B",
+      "unsafeOrBlockedSelection": false,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 512,
+        "prompt_cache_miss_tokens": 4943,
+        "prompt_tokens": 5455,
+        "prompt_tokens_details": {
+          "cached_tokens": 512
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 5476
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "reconcile-loss",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_041",
+      "firstToolCorrect": true,
+      "latencyMs": 1789.95,
+      "modelCallId": "10ecaec8-774e-4d53-8738-48b8a9b57e55",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 35,
+      "providerRequestBytes": 16786,
+      "providerRequestDigest": "sha256:20d57cb9d36a7e2dc7eb4f8b032f7370d6e1314f3856b44ef63bcb019c4bed0d",
+      "rawResponseDigest": "sha256:ed40cf178da88686b8c137b66882d46375e53e2ab38ac1eecc1ce525a50a511f",
+      "requestTokenUpperBound": 16914,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_041"
+      ],
+      "status": "completed",
+      "targetTool": "cap_041",
+      "toolCallCount": 1,
+      "treatment": "A",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 640,
+        "prompt_cache_miss_tokens": 3164,
+        "prompt_tokens": 3804,
+        "prompt_tokens_details": {
+          "cached_tokens": 640
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 3825
+      },
+      "visibleToolCount": 64
+    },
+    {
+      "candidateCount": 8,
+      "caseId": "reconcile-loss",
+      "conclusionStatus": null,
+      "finishReason": "tool_calls",
+      "firstTool": "cap_041",
+      "firstToolCorrect": true,
+      "latencyMs": 3724.581,
+      "modelCallId": "4dc10fb9-fde2-4941-a5d8-b6bb0e1896d4",
+      "modelId": "deepseek-v4-flash",
+      "noToolOrConclusion": false,
+      "ordinal": 36,
+      "providerRequestBytes": 23498,
+      "providerRequestDigest": "sha256:7cb4be9ccb5fba285bba4216d0191dcb5e753585bbeba026baede01a71da0295",
+      "rawResponseDigest": "sha256:59d742abb292faf5bd4425befc14b3fc840c84f8282a4b1d1f8585bf9079c222",
+      "requestTokenUpperBound": 23626,
+      "selectedRiskClass": "mutation",
+      "selectedStanding": "AVAILABLE",
+      "selectedTools": [
+        "cap_041"
+      ],
+      "status": "completed",
+      "targetTool": "cap_041",
+      "toolCallCount": 1,
+      "treatment": "C",
+      "unsafeOrBlockedSelection": true,
+      "usage": {
+        "completion_tokens": 21,
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 6415,
+        "prompt_tokens": 6415,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "providerModel": "deepseek-v4-flash",
+        "providerRequestMode": "non-thinking",
+        "systemFingerprint": "a26a7955944dc5c60445bff77fac9c8e",
+        "total_tokens": 6436
+      },
+      "visibleToolCount": 3
+    }
+  ],
+  "validation": {
+    "caseCount": 12,
+    "cases": [
+      {
+        "cVisibleToolCount": 4,
+        "cVisibleToolNames": [
+          "cap_018",
+          "cap_021",
+          "cap_039",
+          "cap_061"
+        ],
+        "candidateCount": 8,
+        "caseId": "prior-research",
+        "targetTool": "cap_039"
+      },
+      {
+        "cVisibleToolCount": 3,
+        "cVisibleToolNames": [
+          "cap_001",
+          "cap_030",
+          "cap_042"
+        ],
+        "candidateCount": 8,
+        "caseId": "network-matrix",
+        "targetTool": "cap_042"
+      },
+      {
+        "cVisibleToolCount": 4,
+        "cVisibleToolNames": [
+          "cap_000",
+          "cap_011",
+          "cap_021",
+          "cap_050"
+        ],
+        "candidateCount": 8,
+        "caseId": "security-range",
+        "targetTool": "cap_050"
+      },
+      {
+        "cVisibleToolCount": 4,
+        "cVisibleToolNames": [
+          "cap_015",
+          "cap_021",
+          "cap_037",
+          "cap_039"
+        ],
+        "candidateCount": 8,
+        "caseId": "repo-read",
+        "targetTool": "cap_039"
+      },
+      {
+        "cVisibleToolCount": 4,
+        "cVisibleToolNames": [
+          "cap_010",
+          "cap_023",
+          "cap_029",
+          "cap_043"
+        ],
+        "candidateCount": 8,
+        "caseId": "run-check",
+        "targetTool": "cap_010"
+      },
+      {
+        "cVisibleToolCount": 3,
+        "cVisibleToolNames": [
+          "cap_029",
+          "cap_048",
+          "cap_056"
+        ],
+        "candidateCount": 8,
+        "caseId": "inspect-candidate",
+        "targetTool": "cap_056"
+      },
+      {
+        "cVisibleToolCount": 3,
+        "cVisibleToolNames": [
+          "cap_006",
+          "cap_020",
+          "cap_057"
+        ],
+        "candidateCount": 8,
+        "caseId": "current-state",
+        "targetTool": "cap_006"
+      },
+      {
+        "cVisibleToolCount": 3,
+        "cVisibleToolNames": [
+          "cap_006",
+          "cap_041",
+          "cap_057"
+        ],
+        "candidateCount": 8,
+        "caseId": "reconcile-loss",
+        "targetTool": "cap_041"
+      },
+      {
+        "cVisibleToolCount": 5,
+        "cVisibleToolNames": [
+          "cap_003",
+          "cap_021",
+          "cap_032",
+          "cap_058",
+          "cap_061"
+        ],
+        "candidateCount": 8,
+        "caseId": "workspace-search",
+        "targetTool": "cap_032"
+      },
+      {
+        "cVisibleToolCount": 3,
+        "cVisibleToolNames": [
+          "cap_000",
+          "cap_004",
+          "cap_041"
+        ],
+        "candidateCount": 8,
+        "caseId": "software-affordance",
+        "targetTool": "cap_000"
+      },
+      {
+        "cVisibleToolCount": 2,
+        "cVisibleToolNames": [
+          "cap_014",
+          "cap_029"
+        ],
+        "candidateCount": 8,
+        "caseId": "evidence-currentness",
+        "targetTool": "cap_029"
+      },
+      {
+        "cVisibleToolCount": 2,
+        "cVisibleToolNames": [
+          "cap_012",
+          "cap_045"
+        ],
+        "candidateCount": 8,
+        "caseId": "source-fenced-read",
+        "targetTool": "cap_045"
+      }
+    ],
+    "status": "passed",
+    "trialCount": 36
+  }
+}
