@@ -152,6 +152,10 @@ class InteractionContextInput:
         names = [item.tool_name for item in self.affordances]
         if len(names) != len(set(names)):
             raise ValueError("interaction context affordance Tool names must be unique")
+        if self.capability_affordances is not None and self.affordances:
+            raise ValueError(
+                "capability interaction context must not duplicate legacy affordances"
+            )
         _texts(self.blockers, "interaction blocker")
         _texts(self.unknowns, "interaction unknown")
 
@@ -201,6 +205,7 @@ def compile_interaction_context(
     _text(logical_generation, "interaction logical generation", max_bytes=500)
 
     admitted_by_name = {tool.name: tool for tool in admitted_tools}
+    admitted_names = tuple(tool.name for tool in admitted_tools)
     referenced = {item.tool_name for item in context.affordances}
     missing = sorted(referenced - set(admitted_by_name))
     if missing:
@@ -209,10 +214,19 @@ def compile_interaction_context(
             f"{missing}"
         )
 
-    available = {
-        item.tool_name for item in context.affordances if item.standing == "AVAILABLE"
-    }
-    selected_names = tuple(tool.name for tool in admitted_tools if tool.name in available)
+    if context.capability_affordances is not None:
+        if context.capability_affordances.admitted_action_names != admitted_names:
+            raise ValueError(
+                "capability affordances differ from the exact admitted Tool surface"
+            )
+        selected_names = context.capability_affordances.selected_action_names
+    else:
+        available = {
+            item.tool_name for item in context.affordances if item.standing == "AVAILABLE"
+        }
+        selected_names = tuple(
+            tool.name for tool in admitted_tools if tool.name in available
+        )
     selected = select_turn_tool_working_set(admitted_tools, selected_names)
     if tuple(tool.name for tool in selected) != selected_names:
         raise RuntimeError("interaction Tool WorkingSet selection is not stable")
@@ -223,7 +237,6 @@ def compile_interaction_context(
         "truthRole": "compiled-presentation-not-owner-truth",
         "intent": context.intent,
         "sources": [item.to_dict() for item in context.sources],
-        "affordances": [item.to_dict() for item in context.affordances],
         "rawEscape": {
             "available": context.raw_escape_available,
             "mode": "caller-may-expand-from-already-admitted-catalog",
@@ -234,8 +247,10 @@ def compile_interaction_context(
             "toolAuthorityExpanded": False,
         },
     }
+    if context.affordances:
+        payload["affordances"] = [item.to_dict() for item in context.affordances]
     if context.capability_affordances is not None:
-        payload["capabilityAffordances"] = context.capability_affordances.to_dict()
+        payload["capabilityAffordances"] = context.capability_affordances.to_model_dict()
     if context.action_slice is not None:
         payload["action"] = context.action_slice.to_dict()
     if context.blockers:
@@ -299,26 +314,11 @@ def compile_capability_interaction_context(
         standings,
         admitted_action_names=admitted_names,
     )
-    descriptor_by_id = {item.capability_id: item for item in descriptors}
-    legacy_affordances: list[InteractionAffordance] = []
-    for item in capability_affordances.affordances:
-        descriptor = descriptor_by_id[item.candidate.capability_id]
-        if descriptor.action_kind != "tool" or not item.action_admitted:
-            continue
-        legacy_affordances.append(
-            InteractionAffordance(
-                tool_name=descriptor.action_name,
-                owner=descriptor.owner,
-                standing=item.standing.standing,
-                effect_class=descriptor.effect_class,
-                requires=item.standing.reasons,
-            )
-        )
     return compile_interaction_context(
         InteractionContextInput(
             intent=intent,
             sources=sources,
-            affordances=tuple(legacy_affordances),
+            affordances=(),
             capability_affordances=capability_affordances,
             action_slice=action_slice,
             blockers=blockers,

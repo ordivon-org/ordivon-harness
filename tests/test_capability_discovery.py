@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from anc_canonical import canonical_bytes
+
 from ordivon_harness.capability_discovery import (
     CapabilityDescriptor,
     CapabilityDiscoveryQuery,
@@ -12,8 +14,10 @@ from ordivon_harness.capability_discovery import (
     inspect_capability,
 )
 from ordivon_harness.interaction_context import (
+    InteractionContextInput,
     InteractionSourceRef,
     compile_capability_interaction_context,
+    compile_interaction_context,
 )
 from ordivon_harness.ordivon.model import AgentToolDefinition
 
@@ -312,6 +316,94 @@ class CapabilityDiscoveryTests(unittest.TestCase):
                 )
                 self.assertEqual(result.candidates[0].capability_id, expected)
 
+    def test_model_affordance_projection_elides_exact_audit_payload(self) -> None:
+        item = descriptor(
+            "workstation.egress.observe",
+            "ordivon-workstation",
+            "workstation_egress_observe",
+            summary=(
+                "Observe current scoped egress health with an intentionally long semantic "
+                "description that belongs in exact inspection rather than every model turn."
+            ),
+            tags=("egress", "health"),
+        )
+        candidates = discover_capabilities(
+            (item,),
+            CapabilityDiscoveryQuery("egress health", terms=("egress",)),
+        )
+        compiled = compile_capability_affordances(
+            candidates,
+            (item,),
+            (
+                CapabilityStanding(
+                    item.capability_id,
+                    "BLOCKED",
+                    evidence_refs=("workstation://egress/evidence/very-long-reference",),
+                    reasons=(
+                        "environment mutation authority absent from the exact current owner cut",
+                    ),
+                ),
+            ),
+            admitted_action_names=("workstation_egress_observe",),
+        )
+        full = compiled.to_dict()
+        model = compiled.to_model_dict()
+        self.assertEqual(
+            model["kind"],
+            "ordivon.harness-current-capability-affordances-compact",
+        )
+        self.assertLess(len(canonical_bytes(model)), len(canonical_bytes(full)))
+        model_text = canonical_bytes(model).decode("utf-8")
+        full_text = canonical_bytes(full).decode("utf-8")
+        self.assertNotIn("intentionally long semantic description", model_text)
+        self.assertNotIn("environment mutation authority absent", model_text)
+        self.assertNotIn("standingEvidenceRefs", model_text)
+        self.assertNotIn("descriptorDigest", model_text)
+        self.assertIn("intentionally long semantic description", full_text)
+        self.assertIn("environment mutation authority absent", full_text)
+        self.assertIn('"standing":"BLOCKED"', model_text)
+        self.assertIn('"admitted":true', model_text)
+        self.assertIn('"canInvokeNow":false', model_text)
+
+    def test_capability_context_fails_closed_if_admission_changes_after_compilation(self) -> None:
+        item = descriptor(
+            "workstation.egress.observe",
+            "ordivon-workstation",
+            "workstation_egress_observe",
+            summary="Observe current egress health.",
+            tags=("egress", "health"),
+        )
+        candidates = discover_capabilities(
+            (item,), CapabilityDiscoveryQuery("egress health", terms=("egress",))
+        )
+        compiled = compile_capability_affordances(
+            candidates,
+            (item,),
+            (CapabilityStanding(item.capability_id, "AVAILABLE"),),
+            admitted_action_names=("workstation_egress_observe",),
+        )
+        with self.assertRaisesRegex(
+            ValueError, "differ from the exact admitted Tool surface"
+        ):
+            compile_interaction_context(
+                InteractionContextInput(
+                    intent="observe egress",
+                    sources=(
+                        InteractionSourceRef(
+                            "ordivon-workstation",
+                            "workstation://egress/state",
+                            "profile:8",
+                            "CURRENT",
+                        ),
+                    ),
+                    affordances=(),
+                    capability_affordances=compiled,
+                ),
+                (tool("different_tool"),),
+                logical_ref="interaction://workstation/stale-admission/r1",
+                logical_generation="profile:8",
+            )
+
     def test_discovery_to_first_interface_selects_only_current_admitted_tool(self) -> None:
         observe = descriptor(
             "workstation.egress.observe",
@@ -364,7 +456,14 @@ class CapabilityDiscoveryTests(unittest.TestCase):
         )
         text = str(materialized.source.messages[0]["content"])
         self.assertIn("capabilityAffordances", text)
-        self.assertIn("mutation authority absent", text)
+        self.assertIn(
+            "ordivon.harness-current-capability-affordances-compact", text
+        )
+        self.assertNotIn("mutation authority absent", text)
+        self.assertNotIn("standingEvidenceRefs", text)
+        self.assertNotIn("descriptorDigest", text)
+        self.assertNotIn('"affordances":', text)
+        self.assertIn("exactEvidenceElided", text)
         self.assertIn("authorityExpanded", text)
 
 

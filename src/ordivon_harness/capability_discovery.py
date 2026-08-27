@@ -398,6 +398,47 @@ class CapabilityAffordanceSet:
         validate_json_value(value)
         return value
 
+    def to_model_dict(self) -> dict[str, JsonValue]:
+        """Project only load-bearing actionability facts for model consumption.
+
+        ``to_dict()`` remains the exact audit/debug carrier with summaries, evidence
+        references, reasons and descriptor digests. The model projection deliberately
+        does not replay those bytes on every turn: Tool definitions already carry
+        callable semantics, while this projection adds only the standing/admission
+        information that Tool schemas cannot establish. Exact inspection remains an
+        on-demand operation rather than implicit context.
+        """
+
+        value: dict[str, JsonValue] = {
+            "schemaVersion": 1,
+            "kind": "ordivon.harness-current-capability-affordances-compact",
+            "truthRole": "compiled-model-navigation-not-owner-truth",
+            "candidateSetDigest": self.candidate_set_digest,
+            "candidates": [
+                {
+                    "capabilityId": item.candidate.capability_id,
+                    "owner": item.candidate.owner,
+                    "action": {
+                        "kind": item.candidate.action_kind,
+                        "name": item.candidate.action_name,
+                    },
+                    "standing": item.standing.standing,
+                    "admitted": item.action_admitted,
+                    "canInvokeNow": item.can_invoke_now,
+                }
+                for item in self.affordances
+            ],
+            "claims": {
+                "ownerTruthMinted": False,
+                "currentnessMinted": False,
+                "authorityExpanded": False,
+                "candidateImpliesAvailability": False,
+                "exactEvidenceElided": True,
+            },
+        }
+        validate_json_value(value)
+        return value
+
 
 def compile_capability_affordances(
     candidate_set: CapabilityCandidateSet,
