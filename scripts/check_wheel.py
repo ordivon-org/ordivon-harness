@@ -189,8 +189,13 @@ def validate_archive(wheel: Path) -> str:
     if metadata.get("Name") != project["name"] or metadata.get("Version") != project["version"]:
         fail("wheel name/version differs from pyproject")
     requirements = tuple(metadata.get_all("Requires-Dist", []))
-    if len(requirements) != 2:
-        fail(f"wheel must contain only jsonschema plus Protocol dependencies: {requirements}")
+    if len(requirements) != 3:
+        fail(
+            "wheel must contain only pinned HTTPX, bounded jsonschema, "
+            f"and exact Protocol dependencies: {requirements}"
+        )
+    if "httpx==0.28.1" not in requirements:
+        fail(f"wheel lacks the pinned HTTPX dependency: {requirements}")
     if "jsonschema<5,>=4.26" not in requirements:
         fail(f"wheel lacks the bounded jsonschema dependency: {requirements}")
     protocol_requirements = [item for item in requirements if "ordivon-protocol" in item]

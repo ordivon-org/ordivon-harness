@@ -29,7 +29,7 @@ related:
 
 ## Dependency graph
 
-The current Harness runtime dependency graph is intentionally small and Host-free: the package depends on the exact Ordivon Protocol revision plus `jsonschema` for opt-in local structured-result conformance verification, with the exact third-party transitive graph pinned by `uv.lock` and mirrored in `requirements-audit.txt`. There is no Host dependency, optional Host extra, or Host development group.
+The current Harness runtime dependency graph is intentionally small and Host-free: the package depends on the exact Ordivon Protocol revision, pinned `httpx==0.28.1` for cancellable DeepSeek HTTP/TLS transport, and `jsonschema` for opt-in local structured-result conformance verification. The exact third-party transitive graph is pinned by `uv.lock` and mirrored in `requirements-audit.txt`. There is no Host dependency, optional Host extra, or Host development group.
 
 Python support is `>=3.12,<3.13`. Runtime integration is structural through the caller-supplied `HarnessRuntimeClient`; a Runtime server/version is not a Python package dependency.
 

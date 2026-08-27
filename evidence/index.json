@@ -549,7 +549,7 @@
       "implementationRevision": "e983c79f5582160b37ac56c1898efa80e486880d",
       "revisionBinding": "index-creation-lineage",
       "status": "historical",
-      "scope": "Historical portable acceptance for the reconciled Harness source graph: structured-result carrier plus authority-fenced observation recovery, with owner truth boundaries preserved and 530-test release regression passing."
+      "scope": "Historical portable acceptance for the reconciled Harness source graph at e983c79: structured-result carrier plus authority-fenced observation recovery. The later DeepSeek HTTPX transport/dependency change at 917087e modified verified implementation paths (pyproject.toml, deepseek.py, uv.lock), so this immutable receipt no longer certifies whole-current source."
     },
     {
       "claimId": "harness.execution.capability-environment-v1",
@@ -557,15 +557,15 @@
       "implementationRevision": "830dd160b1025928521204f4713cbe0e1bbbf589",
       "revisionBinding": "index-creation-lineage",
       "status": "historical",
-      "scope": "Historical portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; retained unchanged after compact current-affordance model projection changed current Harness implementation paths."
+      "scope": "Historical portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; retained unchanged after compact current-affordance projection and the independently developed HTTPX transport line advanced current Harness implementation paths."
     },
     {
       "claimId": "harness.execution.current-affordance-compact-v2",
       "file": "harness-current-affordance-compact-v2.json",
       "implementationRevision": "17e8943edb16c0f586d5a8d022c63590755a7d6b",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current portable acceptance for compact model-facing capability affordances: exact audit evidence remains on-demand, supplied current standing is intersected with existing admission, admission drift fails closed, and 546-test/wheel release acceptance passes at 17e8943; bounded V2 fresh-Agent evidence supports currentness-dependent carrier selection without claiming semantic retrieval superiority."
+      "status": "historical",
+      "scope": "Historical portable acceptance for compact model-facing capability affordances at 17e8943. Its currentness-dependent carrier result remains exact for that implementation line, but the independently developed DeepSeek HTTPX transport/dependency line changes verified implementation paths and therefore requires fresh integrated-source acceptance before whole-current certification."
     }
   ]
 }

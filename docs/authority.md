@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-19
+updated: 2026-08-27
 summary: Decision identifying the documents and machine sources allowed to define current Harness behavior, compatibility, evidence and operation.
 evidence_status: not_applicable
 readiness: READY
@@ -50,6 +50,8 @@ Harness contains current architecture, extraction history, OH/H/P/R closeouts, P
 | independent Harness Journal/CAS, Run and recovery authority | [`ARCHITECTURE.md`](../ARCHITECTURE.md) |
 | dependency, Host API, durable object and upgrade compatibility | [`COMPATIBILITY.md`](COMPATIBILITY.md) |
 | evidence classes and claim interpretation | [`VERIFICATION.md`](VERIFICATION.md) |
+| current research semantics and recovery root | [`../research/README.md`](../research/README.md) and its linked current closeouts |
+| machine publication of owner-native research currentness | `../research/authority/CURRENT.json` → immutable digest-bound publication; projection only, never stronger than the research/source/evidence authorities it cites |
 | operation, cancellation, recovery, Doctor and escalation | [`OPERATIONS.md`](OPERATIONS.md) |
 | sensitive data, Provider disclosure, retention and deletion | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) |
 | versions, release gates and deprecation | [`RELEASES.md`](RELEASES.md) |
@@ -65,6 +67,7 @@ Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv
 - evidence/file correspondence and revision/currentness binding are validated by `scripts/check_evidence.py`;
 - new current claims must identify current tests or evidence bound to the current graph;
 - immutable research evidence may use the explicit index/Git-lineage binding defined by [`VERIFICATION.md`](VERIFICATION.md) instead of rewriting frozen payload bytes to mimic a legacy receipt schema;
+- the Atlas-compatible research publication is generated only after owner-side semantic adjudication; its digest/current pointer does not make Atlas, Git recency, or repository existence an alternate research authority;
 - a new canonical document must declare which responsibility it owns and update this decision.
 
 ## Status

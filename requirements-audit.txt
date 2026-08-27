@@ -1,6 +1,12 @@
 # Exact third-party PyPI runtime packages locked for Harness.
 # This file must match every registry-sourced package in uv.lock.
+anyio==4.14.2
 attrs==26.1.0
+certifi==2026.7.22
+h11==0.16.0
+httpcore==1.0.9
+httpx==0.28.1
+idna==3.19
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 referencing==0.37.0

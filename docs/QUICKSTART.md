@@ -43,7 +43,7 @@ uv build --wheel --out-dir dist
 python scripts/check_wheel.py "$(find dist -maxdepth 1 -type f -name '*.whl' -print -quit)"
 ```
 
-The wheel keeps a small Host-free runtime dependency graph: the exact Ordivon Protocol pin plus `jsonschema` for opt-in local structured-result conformance verification. It does not install Host or expose a Host extra.
+The wheel keeps a small Host-free runtime dependency graph: the exact Ordivon Protocol pin, pinned `httpx==0.28.1` for cancellable DeepSeek HTTP/TLS transport, and `jsonschema` for opt-in local structured-result conformance verification. It does not install Host or expose a Host extra.
 
 ## Initialize independent state
 

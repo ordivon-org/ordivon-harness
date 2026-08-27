@@ -21,36 +21,57 @@
 - HaF0–HaF61 frozen; HaF62 UNKNOWN / NOT SELECTED / NOT ADMITTED.
 - Evidence Index Typed Ingestion & Currentness Repair v1 completed with `EVIDENCE_INDEX_TYPED_INGESTION_CURRENTNESS_REPAIR_ACCEPTED`.
 - Current evidence contract preserves legacy embedded receipt binding and adds explicit `index-creation-lineage` binding for immutable research projections without rewriting frozen evidence bytes.
-- Evidence index currently classifies 70 entries as historical and 1 as verified; historical implementation status does not erase bounded research standing owned by research closeouts.
+- Evidence index currently classifies 77 entries as historical and 0 as verified; historical implementation status does not erase bounded research standing owned by research closeouts, and no replacement verified receipt is minted merely to preserve a nonzero count.
 - Wheel Public API Contract Currentness Repair v1 completed with `WHEEL_PUBLIC_API_CURRENTNESS_REPAIR_ACCEPTED`; the isolated wheel gate now agrees with the already-authorized 73-member public API, base wheel remains Host-free, and no production source changed.
 - Tournament 152 closed with **NO NEXT BRANCH SELECTED**: current release/currentness gates are green and every remaining semantic frontier is relation-, consumer-, owner-transition-, or implementation-diversity-blocked.
+- External Computing PF3 later satisfied one Tournament 152 reopen condition: a concrete current transport consumer with destructive localhost and CONNECT/TLS discriminators. Revalidation 153 admitted pinned async HTTPX only into the DeepSeek physical transport and selected no new semantic campaign or foundation.
+- Integrated transport compression is bounded to roughly 11–15% of the measured production block; the larger prototype compression and phase-transition interpretation were rejected.
 - **SelectedHarnessEngineeringBranch:** UNKNOWN / NONE SELECTED.
 - **NextHarnessResearchCampaign:** UNKNOWN.
 - **NextHarnessFoundationRoute:** UNKNOWN.
 
+## Owner research authority publication
+
+This file is the current recovery root for **Harness research semantics**. Exact product behavior remains owned by the product/source authorities named in [`../docs/authority.md`](../docs/authority.md); exact evidence/currentness remains owned by the evidence contract and bound receipts.
+
+`research/authority/CURRENT.json` may publish a digest-bound immutable machine projection of the research state rooted here for Atlas and other read-only consumers. That publication is a **carrier of owner-native research authority**, not a second research corpus and not permission for Atlas to infer, repair, or upgrade Harness standing. A publication may source-fence this corpus at an exact Git revision even when later implementation-only changes advance repository HEAD; a new publication is required when the owner judges the represented research standing/recovery boundary to have materially changed.
+
+The owner identity used by that publication is `research-owner:harness`. Repository identity, product ownership, Run authority, and research-owner identity remain related but non-identical facts.
+
 ## Recovery path
 
-1. [152 POST-WHEEL-REPAIR TYPED FRONTIER TOURNAMENT](152-POST-WHEEL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
-2. [151 WHEEL PUBLIC API CONTRACT CURRENTNESS REPAIR RESULT](151-WHEEL-PUBLIC-API-CONTRACT-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
-3. [150 WHEEL PUBLIC API CONTRACT CURRENTNESS REPAIR CONTRACT](150-WHEEL-PUBLIC-API-CONTRACT-CURRENTNESS-REPAIR-V1-CONTRACT.md)
-4. [149 POST-EVIDENCE-REPAIR TYPED FRONTIER TOURNAMENT](149-POST-EVIDENCE-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
-5. [148 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR RESULT](148-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
-6. [147 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR CONTRACT](147-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-CONTRACT.md)
-7. [146 POST-NO-TOOL-REPAIR TYPED FRONTIER TOURNAMENT](146-POST-NO-TOOL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
-8. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
-9. [144 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR CONTRACT](144-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-CONTRACT.md)
-10. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
-11. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-12. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
-13. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
-14. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-15. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
-16. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
-17. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
-18. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
-19. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
-20. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+1. [155 POST-HTTPX EVIDENCE CURRENTNESS REPAIR RESULT](155-POST-HTTPX-EVIDENCE-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+2. [154 POST-HTTPX EVIDENCE CURRENTNESS REPAIR CONTRACT](154-POST-HTTPX-EVIDENCE-CURRENTNESS-REPAIR-V1-CONTRACT.md)
+3. [153 PROVIDER-FIRST HTTPX TRANSPORT CURRENT REVALIDATION](153-PROVIDER-FIRST-HTTPX-TRANSPORT-CURRENT-REVALIDATION-V1-RESULT-AND-CLOSEOUT.md)
+4. [152 POST-WHEEL-REPAIR TYPED FRONTIER TOURNAMENT](152-POST-WHEEL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
+5. [151 WHEEL PUBLIC API CONTRACT CURRENTNESS REPAIR RESULT](151-WHEEL-PUBLIC-API-CONTRACT-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+6. [150 WHEEL PUBLIC API CONTRACT CURRENTNESS REPAIR CONTRACT](150-WHEEL-PUBLIC-API-CONTRACT-CURRENTNESS-REPAIR-V1-CONTRACT.md)
+7. [149 POST-EVIDENCE-REPAIR TYPED FRONTIER TOURNAMENT](149-POST-EVIDENCE-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
+8. [148 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR RESULT](148-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+9. [147 EVIDENCE INDEX TYPED INGESTION & CURRENTNESS REPAIR CONTRACT](147-EVIDENCE-INDEX-TYPED-INGESTION-CURRENTNESS-REPAIR-V1-CONTRACT.md)
+10. [146 POST-NO-TOOL-REPAIR TYPED FRONTIER TOURNAMENT](146-POST-NO-TOOL-REPAIR-TYPED-FRONTIER-TOURNAMENT-V1.md)
+11. [145 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR RESULT](145-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-RESULT-AND-CLOSEOUT.md)
+12. [144 CURRENT NO-TOOL CONCLUSION-CONTROL REGRESSION REPAIR CONTRACT](144-CURRENT-NO-TOOL-CONCLUSION-CONTROL-REGRESSION-REPAIR-V1-CONTRACT.md)
+13. [143 POST-PROVIDER-ROUTE TYPED FRONTIER TOURNAMENT](143-POST-PROVIDER-ROUTE-TYPED-FRONTIER-TOURNAMENT-V1.md)
+14. [142 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD RESULT](142-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+15. [141 CAMPAIGN-5 PROVIDER-ROUTE PRESERVATION DIRECT DOGFOOD CONTRACT](141-CAMPAIGN5-PROVIDER-ROUTE-PRESERVATION-DIRECT-DOGFOOD-V1-CONTRACT.md)
+16. [140 POST-RICH-EFFECT TYPED FRONTIER TOURNAMENT](140-POST-RICH-EFFECT-TYPED-FRONTIER-TOURNAMENT-V1.md)
+17. [139 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD RESULT](139-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+18. [138 CAMPAIGN-3 REAL RICH-EFFECT OWNER DOGFOOD CONTRACT](138-CAMPAIGN3-REAL-RICH-EFFECT-OWNER-DOGFOOD-V1-CONTRACT.md)
+19. [137 TYPED FRONTIER TOURNAMENT v2](137-TYPED-FRONTIER-TOURNAMENT-V2.md)
+20. [136 CAMPAIGN-4 REBUTTAL DIRECT DOGFOOD RESULT](136-CAMPAIGN4-COUNTEREVIDENCE-REBUTTAL-DIRECT-DOGFOOD-V1-RESULT-AND-CLOSEOUT.md)
+21. [133 CLAIM STANDING MATERIALIZATION + E5-v2 CLOSEOUT](133-CLAIM-STANDING-MINIMAL-MATERIALIZATION-V1-E5V2-RESULT-AND-CLOSEOUT.md)
+22. [104 CAMPAIGN-3 HISTORICAL CLOSEOUT](104-CAMPAIGN3-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
+23. [116 CAMPAIGN-5 HISTORICAL CLOSEOUT](116-CAMPAIGN5-ROUND3-BOUNDARY-AUDIT-AND-CLOSEOUT.md)
 
+
+## Provider-first HTTPX transport current revalidation
+
+External Computing PF3 was recovered as a qualified historical claimant, not assumed current. Its async candidate was replayed against current Harness, its formerly missing loopback CONNECT/TLS boundary was tested directly, and the candidate was then consumed by the production DeepSeek transport.
+
+Harness still owns exact request identity/bytes, proxy admission, response bounds, status/failure mapping, retry authority and cancellation outcome. HTTPX owns the low-level HTTP/TLS stream mechanism under pinned configuration. Permanent wire tests cover raw representation, one-request error behavior, redirects, timeouts, both cancellation phases, environment isolation and fail-before-dispatch URL/proxy rejection.
+
+Two full-gate failures exposed stale two-dependency assumptions in independent repository and wheel projections. Both were repaired. The resulting PPD conclusion is deliberately narrower than the prototype: mechanism ownership improved and hand-owned code shrank modestly, while total dependency/test surface increased. No live-provider or intelligence-level phase transition is claimed.
 
 ## Current no-Tool conclusion/control currentness update
 
@@ -73,7 +94,7 @@ Currentness law exposed: **Historical Task Completed != Current Product Property
 
 Tournament 146 rejected a second generic semantic-law/test-retention registry and selected repair of the existing evidence/file correspondence + revision-binding contract. Repair 147/148 is now complete: TS11 was demoted from stale `verified` to `historical`, four newer immutable evidence objects were ingested, and `index-creation-lineage` provides explicit Git-lineage/currentness binding without rewriting frozen evidence bytes.
 
-Legacy self-identifying receipts retain embedded revision binding and strict verified-currentness invalidation. The current evidence contract is green at 70 historical / 1 verified. The independently exposed wheel API drift was subsequently repaired by 150/151; the isolated wheel now passes with the same 73-member public API already owned by source/tests/docs, while remaining Host-free.
+Legacy self-identifying receipts retain embedded revision binding and strict verified-currentness invalidation. Post-HTTPX currentness repair 154/155 demotes the previously verified source-reconciliation receipt after 917087e changed its verified implementation paths; immutable receipt bytes and bounded research standing remain intact. The current evidence contract is green at 77 historical / 0 verified, and no replacement verified receipt is invented. The independently exposed wheel API drift was repaired by 150/151; the isolated wheel remains Host-free.
 
 ## Campaign-3 currentness update
 

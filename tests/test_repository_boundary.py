@@ -15,7 +15,8 @@ class RepositoryBoundaryTests(unittest.TestCase):
     def test_harness_has_no_host_dependency_or_compatibility_package(self) -> None:
         project = tomllib.loads((ROOT / "pyproject.toml").read_text())
         requirements = project["project"]["dependencies"]
-        self.assertEqual(len(requirements), 2)
+        self.assertEqual(len(requirements), 3)
+        self.assertIn("httpx==0.28.1", requirements)
         self.assertIn("jsonschema>=4.26,<5", requirements)
         self.assertEqual(
             sum(requirement.startswith("ordivon-protocol @ ") for requirement in requirements),
