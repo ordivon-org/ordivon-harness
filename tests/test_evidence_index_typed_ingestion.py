@@ -74,7 +74,7 @@ EXPECTED = {
     ),
     "harness.execution.source-reconciliation-structured-observation-v1": (
         "harness-source-reconciliation-structured-observation-v1.json",
-        "verified",
+        "historical",
         "e983c79f5582160b37ac56c1898efa80e486880d",
         "db9d22a113a1e7b5f4f4ea882d71e6aec91da2a6e61c16f5dc0abd8e821b28ea",
     ),
@@ -164,8 +164,8 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         current, invalidating = check_evidence._verified_revision_is_current(
             "e983c79f5582160b37ac56c1898efa80e486880d"
         )
-        self.assertTrue(current)
-        self.assertEqual(invalidating, [])
+        self.assertFalse(current)
+        self.assertEqual(invalidating, ["pyproject.toml", "uv.lock"])
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
