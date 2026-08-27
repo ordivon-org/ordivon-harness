@@ -39,9 +39,9 @@ Executable tests require both morphologies to preserve the same granted Tool sur
 
 Model-call count, latency, tokens and decision quality remain evaluation outputs rather than safety invariants.
 
-## E5 — World replacement preflight
+## E5 — World outstanding-relation preflight
 
-World separately owns `inspect_replacement_readiness()`. Harness does not import it or become a World truth owner. A controller may consume the revision-fenced read-only projection before changing morphology; a clear projection grants no retry, reconciliation, dispatch or external-currentness authority.
+World owns the revision-fenced `WorldTaskInspector.inspect_task()` projection of its retained Provider/Resource/Message/Entity commitments, including bounded `nextOwnerOperation` recovery standing. Harness does not import World implementation or become a World truth owner. Replacement readiness is a Harness/controller policy judgment over that owner-native projection: an outstanding exact reconciliation obligation must be inherited by the successor rather than converted into redispatch, while the absence of such a World obligation grants no retry, dispatch or external-currentness authority.
 
 ## E6 — Consumer dogfood
 
