@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-capability-environment-v1",
+  "classification": "CURRENT_CAPABILITY_ENVIRONMENT_AND_PORTABLE_RELEASE_ACCEPTED",
+  "implementationSourceRevision": "830dd160b1025928521204f4713cbe0e1bbbf589",
+  "implementationLineage": {
+    "capabilityDiscoveryCommit": "718a28e7e80825fe28a7e47a8e6181938582dd2f",
+    "currentnessTestRepairCommit": "830dd160b1025928521204f4713cbe0e1bbbf589",
+    "boundary": "Capability discovery is a read-side navigation/compilation layer over already-published descriptors and existing admission semantics; it is not a registry, owner-currentness service, or authority store."
+  },
+  "portableAcceptance": {
+    "runtimeJobId": "job-01a043f6-f943-7823-8a78-2617d739577a",
+    "terminalEvidenceArtifactDigest": "sha256:fbdefdba9c28c3b934ecbb16066db092ca82dbe124b57a3779259f013886b0a1",
+    "implementationUnderTest": "830dd160b1025928521204f4713cbe0e1bbbf589",
+    "workingTreeCleanAtAdmission": true,
+    "testsDiscovered": 544,
+    "testsSkipped": 3,
+    "failures": 0,
+    "unittest": "passed",
+    "ruff": "passed",
+    "dependencyContract": "passed",
+    "documentationContract": "passed",
+    "evidenceContractBeforeNewReceipt": "valid historical_receipts=77 verified_receipts=0",
+    "deterministicDemo": "passed",
+    "scaleSmoke": {
+      "runs": 8,
+      "eventsPerRun": 12,
+      "batchSize": 11,
+      "inspectSamples": 4,
+      "status": "passed"
+    },
+    "wheel": {
+      "filename": "ordivon_harness-0.6.0-py3-none-any.whl",
+      "installedVersion": "0.6.0",
+      "cliCommandsVerified": 14,
+      "hostFreeCoreVerified": true,
+      "status": "passed"
+    },
+    "overall": "passed"
+  },
+  "capabilityEnvironment": {
+    "pipeline": [
+      "published descriptor",
+      "task-conditioned candidate",
+      "exact inspection",
+      "owner/caller standing",
+      "existing Run/turn admission",
+      "current affordance",
+      "First Interface",
+      "existing execution plane"
+    ],
+    "stageDistinctions": {
+      "candidateIsAuthority": false,
+      "candidateProvesCurrentness": false,
+      "inspectionGrantsAuthority": false,
+      "missingStanding": "UNKNOWN",
+      "currentInvokableRequires": [
+        "standing=AVAILABLE",
+        "action already admitted by existing turn surface"
+      ],
+      "toolSurfaceMayExpandFromDiscovery": false
+    },
+    "cliProgressiveDisclosure": {
+      "fullCatalogBytes": 28424,
+      "queryBytes": 5391,
+      "queryToFullRatio": 0.189664,
+      "inspectBytes": 1889,
+      "inspectToFullRatio": 0.066458,
+      "fullCatalogDigest": "sha256:3f151dfc8ae846ea00252be661b5dad055774b1a75cc78f47ef675411f0b9e58",
+      "queryDigest": "sha256:551f964808be295a45cfdb4db37d790a3fb408e2413b6ac93191d3e4211e005b",
+      "inspectDigest": "sha256:3d5a99ccb4d26b0e3a4fec6a99b99ce1d846a566b0a5636d664ace2e5c57f93e"
+    },
+    "syntheticScale": {
+      "corpusCount": 1000,
+      "fullDescriptorBytes": 411240,
+      "matched": 3,
+      "returned": 3,
+      "candidateBytes": 2151,
+      "candidateToFullRatio": 0.005231,
+      "resultDigest": "sha256:fcd9f46b3c255d8e2c448ebd6a0f17e3ca12d61c19eda4d947292ec4052c4962"
+    },
+    "ownerDogfood": {
+      "fixtureTruthRole": "bounded-source-fenced-dogfood-capture-not-owner-truth",
+      "observedDate": "2026-08-27",
+      "sourceCount": 4,
+      "descriptorCount": 8,
+      "queryCount": 4,
+      "status": "passed",
+      "resultDigest": "sha256:8eab9a59b23c172a1f84ab48455774a4841a0410c23e278af8cf92db69615b83",
+      "controls": {
+        "absentExplicitQueryReturnsZero": true,
+        "missingOwnerStandingRemainsUnknown": true,
+        "retrievedReferenceNeverBecomesExecutionAuthority": true
+      },
+      "owners": [
+        "ordivon-atlas",
+        "ordivon-security",
+        "workstation-lab",
+        "ordivon-computing"
+      ]
+    },
+    "dogfoodDiscoveredDefect": {
+      "problem": "Generic intent token `capability` could admit candidates even when an explicit query term was absent from every descriptor.",
+      "repair": "Explicit terms now gate text-based candidate admission; intent tokens contribute additional matching/ranking but cannot override a failed explicit constraint.",
+      "regressionTest": "test_explicit_terms_gate_text_admission_against_generic_intent_tokens"
+    }
+  },
+  "evidenceLifecycle": {
+    "priorWholeCurrentClaim": "harness.execution.source-reconciliation-structured-observation-v1",
+    "priorDisposition": "historical",
+    "priorReceiptBytesRewritten": false,
+    "currentnessRestoredBy": "new exact clean implementation acceptance rather than relaxing stale-evidence validation"
+  },
+  "acceptedLaws": {
+    "discoverabilityIsNotAdmission": true,
+    "inspectionIsNotAuthority": true,
+    "availabilityRequiresOwnerOrCallerStanding": true,
+    "unknownStandingDoesNotBecomeAvailability": true,
+    "retrievalCannotExpandExactTurnAuthority": true,
+    "progressiveDisclosureMayReduceContextWithoutOwningSemanticRanking": true,
+    "immutableHistoricalEvidenceIsNotCurrentStanding": true
+  },
+  "explicitNonClaims": [
+    "This does not prove semantic ranking quality across open-ended capability corpora.",
+    "This does not prove fresh-Agent task success improvement or cross-model behavioral gain.",
+    "This does not establish a global capability registry, Skill store, semantic Memory system, or owner-currentness service inside Harness.",
+    "This does not transfer Atlas, Security, Workstation, Computing, Host, Runtime, or domain truth authority into Harness.",
+    "The frozen owner dogfood captures exact observed source cuts and does not prove those external owners remain current after the capture date.",
+    "Runtime execution success and local acceptance do not assert domain semantic completion."
+  ]
+}

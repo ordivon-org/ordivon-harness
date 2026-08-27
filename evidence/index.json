@@ -550,6 +550,14 @@
       "revisionBinding": "index-creation-lineage",
       "status": "historical",
       "scope": "Historical portable acceptance for the reconciled Harness source graph: structured-result carrier plus authority-fenced observation recovery, with owner truth boundaries preserved and 530-test release regression passing."
+    },
+    {
+      "claimId": "harness.execution.capability-environment-v1",
+      "file": "harness-capability-environment-v1.json",
+      "implementationRevision": "830dd160b1025928521204f4713cbe0e1bbbf589",
+      "revisionBinding": "index-creation-lineage",
+      "status": "verified",
+      "scope": "Current portable acceptance for bounded capability discovery, exact inspection, supplied-standing/current-admission affordance compilation, First Interface projection and package/wheel regression at 830dd16; semantic ranking and fresh-Agent behavioral gain remain explicitly unproven."
     }
   ]
 }

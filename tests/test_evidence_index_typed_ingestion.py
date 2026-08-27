@@ -78,6 +78,12 @@ EXPECTED = {
         "e983c79f5582160b37ac56c1898efa80e486880d",
         "db9d22a113a1e7b5f4f4ea882d71e6aec91da2a6e61c16f5dc0abd8e821b28ea",
     ),
+    "harness.execution.capability-environment-v1": (
+        "harness-capability-environment-v1.json",
+        "verified",
+        "830dd160b1025928521204f4713cbe0e1bbbf589",
+        "aa7d2c696268b218fd32ea09edaa27699d444da2632943b9824cd828a137209e",
+    ),
 }
 
 
