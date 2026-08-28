@@ -25,7 +25,6 @@ class HarnessRunStatus(StrEnum):
     STOPPED = "stopped"
     COMPLETED = "completed"
     FAILED = "failed"
-    ABANDONED = "abandoned"
 
     @property
     def terminal(self) -> bool:
@@ -33,7 +32,6 @@ class HarnessRunStatus(StrEnum):
             HarnessRunStatus.STOPPED,
             HarnessRunStatus.COMPLETED,
             HarnessRunStatus.FAILED,
-            HarnessRunStatus.ABANDONED,
         }
 
 
@@ -79,7 +77,6 @@ HARNESS_STORE_EVENT_KINDS = frozenset(
         "harness.completion-proposed",
         "harness.run-failed",
         "harness.run-completed",
-        "harness.run-abandoned",
     }
 )
 

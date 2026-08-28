@@ -187,7 +187,6 @@ def dispatch(args, *, clock_ms) -> dict[str, object]:
             HarnessRunStatus.STOPPED.value,
             HarnessRunStatus.COMPLETED.value,
             HarnessRunStatus.FAILED.value,
-            HarnessRunStatus.ABANDONED.value,
         }:
             with SQLiteHarnessStore(root) as store:
                 return _inspect(store, contract.harness_run_id, root=root, clock_ms=clock_ms)

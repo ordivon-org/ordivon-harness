@@ -1255,8 +1255,6 @@ class SQLiteHarnessStore:
             return HarnessRunStatus.COMPLETED
         if event_kind == "harness.run-failed":
             return HarnessRunStatus.FAILED
-        if event_kind == "harness.run-abandoned":
-            return HarnessRunStatus.ABANDONED
         if event_kind in {"harness.trace-recorded", "harness.run-recovery-recorded"}:
             if current_status is None:
                 raise ValueError("status-preserving Harness Event requires current status")

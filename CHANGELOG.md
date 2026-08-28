@@ -60,6 +60,7 @@ All user-visible changes to Ordivon Harness are recorded here. Release and compa
 
 ### Removed
 
+- retire the unreachable Host-era abandonment/disposition residue from the independent line: `NativeRunAbandonment`, the unused `NativeRunDisposition` module, `HarnessRunStatus.ABANDONED`, and `harness.run-abandoned`; 284 readable retained/live Harness stores (402 Runs / 4,016 Events) contained zero abandoned Runs/events and current source had no writer or external production consumer. Recovery Assessment and UNKNOWN reconciliation remain current; the schema-v1 physical SQLite CHECK is left as a harmless historical superset rather than silently redefining schema-v1 DDL;
 - `HarnessHost`, Host-backed `HarnessRunner`, `HostHarnessRunStore`, TaskContract/Assignment/native-Run compatibility objects, `_host_compat`, Host history/handoff/recovery controllers, cutover state, and Host-backed CLI/configuration paths;
 - Host-coupled Codex App and Hermes ACP drivers and their old live/stress acceptance scripts; future Provider integrations must bind directly to independent Harness Run authority;
 - frozen pre-migration persistence inventory/checks whose object/event set described the deleted Host-backed writer;

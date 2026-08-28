@@ -97,7 +97,6 @@ _PROVIDER_CLEAR_EVENT_KINDS = frozenset(
         "harness.run-stopped",
         "harness.run-completed",
         "harness.run-failed",
-        "harness.run-abandoned",
     }
 )
 _TOOL_EVENT_KINDS = frozenset(

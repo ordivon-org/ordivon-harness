@@ -122,7 +122,7 @@ from .observation_tool_surface import (
     HarnessObservationToolGrant,
     build_observation_tool_surface,
 )
-from .recovery import NativeRunAbandonment, NativeRunRecoveryAssessment
+from .recovery import NativeRunRecoveryAssessment
 from .runtime_port import (
     HarnessRuntimeClient,
     HarnessRuntimeClientError,
@@ -264,7 +264,6 @@ __all__ = [
     "IndependentCompletionProposal",
     "IndependentHarnessRunReceipt",
     "IndependentRunRecorder",
-    "NativeRunAbandonment",
     "NativeRunRecoveryAssessment",
     "OperationalClaimEvidenceRole",
     "OperationalClaimRef",

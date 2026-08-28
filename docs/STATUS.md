@@ -102,7 +102,7 @@ The exact P/R/H/X experiment chronology remains evidence, not a prerequisite for
 
 ## Removed
 
-The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibility package/dependency/extra, Host CLI namespace, cutover/rollback machinery and Host-coupled execution drivers are not supported current paths and have no compatibility aliases.
+The old Host-backed Runner, TaskContract/Assignment persistence, Host compatibility package/dependency/extra, Host CLI namespace, cutover/rollback machinery and Host-coupled execution drivers are not supported current paths and have no compatibility aliases. The unreachable Host-era abandonment/disposition layer is also retired: current independent recovery persists `NativeRunRecoveryAssessment` and derives whether retry/resume is safe, but does not create a separate `NativeRunAbandonment`, `ABANDONED` Run state, or `harness.run-abandoned` event.
 
 ## Known limits
 

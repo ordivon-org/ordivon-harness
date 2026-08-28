@@ -416,7 +416,6 @@ class OrdivonHarnessExternalExecutorAdapter:
             HarnessRunStatus.STOPPED: HarnessExternalStatus.UNKNOWN,
             HarnessRunStatus.COMPLETED: HarnessExternalStatus.COMPLETED,
             HarnessRunStatus.FAILED: HarnessExternalStatus.FAILED,
-            HarnessRunStatus.ABANDONED: HarnessExternalStatus.CANCELLED,
         }[status]
 
 
