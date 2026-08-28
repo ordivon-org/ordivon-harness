@@ -566,6 +566,14 @@
       "revisionBinding": "index-creation-lineage",
       "status": "historical",
       "scope": "Historical portable acceptance for compact model-facing capability affordances at 17e8943. Its currentness-dependent carrier result remains exact for that implementation line, but the independently developed DeepSeek HTTPX transport/dependency line changes verified implementation paths and therefore requires fresh integrated-source acceptance before whole-current certification."
+    },
+    {
+      "claimId": "harness.recovery.unreachable-abandonment-retirement-v1",
+      "file": "harness-unreachable-abandonment-retirement-v1.json",
+      "implementationRevision": "46030ae7d5725cffcad4686707d391ba29fd7f01",
+      "revisionBinding": "index-creation-lineage",
+      "status": "verified",
+      "scope": "Current deletion proof for 46030ae: unreachable Host-era Abandonment/Disposition application semantics retired after zero current writers/consumers and zero abandoned state across 284 readable retained/live Harness stores; current RecoveryAssessment/UNKNOWN reconciliation survives focused, 558-test owner, portable/wheel and scale gates. No obsolete abandonment writer was recreated merely to fabricate a live journey."
     }
   ]
 }

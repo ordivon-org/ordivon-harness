@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "ordivon.harness-unreachable-abandonment-retirement-v1",
+  "classification": "CURRENT_UNREACHABLE_ABANDONMENT_RETIREMENT_VERIFIED",
+  "implementationSourceRevision": "46030ae7d5725cffcad4686707d391ba29fd7f01",
+  "boundary": {
+    "retired": [
+      "NativeRunAbandonment",
+      "NativeRunDisposition",
+      "HarnessRunStatus.ABANDONED",
+      "harness.run-abandoned"
+    ],
+    "retained": [
+      "NativeRunRecoveryAssessment",
+      "harness.run-recovery-recorded",
+      "Provider/Tool UNKNOWN reconciliation",
+      "retry/resume/reconcile-external-state"
+    ],
+    "physicalSchemaV1AbandonedLiteralRetained": true,
+    "physicalSchemaLiteralIsSupportedApplicationSemantics": false,
+    "reason": "Avoid silently creating two incompatible schema-v1 SQLite DDLs while retiring application-level semantics that current writers cannot emit."
+  },
+  "deletionProof": {
+    "currentSource": {
+      "literalRunAbandonedWriterFiles": 0,
+      "externalProductionConsumers": 0,
+      "dispositionModuleCurrentImports": 0,
+      "nativeRunAbandonmentProductionConstructorsOrReaders": 0
+    },
+    "retainedStateCensus": {
+      "truthRole": "read-only-live-retained-state-census-not-universal-history-proof",
+      "runtimeJobId": "job-01a044ac-ca6d-71b2-8c21-6b553c98a2c4",
+      "terminalEvidenceArtifactDigest": "sha256:55cc7627555223e40fd077f00d5399b05ea318dea79d77dbf21e7c50069e2a3a",
+      "readableDatabases": 284,
+      "runs": 402,
+      "events": 4016,
+      "abandonedRuns": 0,
+      "runAbandonedEvents": 0,
+      "productionDatabase": {
+        "path": "/var/lib/ordivon/harness/harness.sqlite3",
+        "runs": 86,
+        "events": 524,
+        "abandonedRuns": 0,
+        "runAbandonedEvents": 0
+      }
+    },
+    "sourceReduction": {
+      "filesChanged": 12,
+      "insertions": 15,
+      "deletions": 359,
+      "dispositionModuleDeleted": true
+    }
+  },
+  "survivorVerification": {
+    "focusedRegression": {
+      "runtimeJobId": "job-01a0467f-9a49-7672-beb9-6052581430e6",
+      "terminalEvidenceArtifactDigest": "sha256:5dc6e97061cb58ff997bd2ed9565db05daf11172609674a232b596df9f9a4452",
+      "repositoryBoundary": "passed",
+      "standaloneRunner": "passed",
+      "hostExternalAdapter": "passed",
+      "publicApi": "passed",
+      "wheelPublicApiContract": "passed",
+      "recoveryAssessmentAuthoritativeAndStatusPreserving": "passed",
+      "documentationContract": "passed",
+      "evidenceContractBeforeReceipt": "valid historical_receipts=79 verified_receipts=0"
+    },
+    "ownerGate": {
+      "runtimeJobId": "job-01a0467f-d282-7902-b03e-e49be2cbfcc2",
+      "terminalEvidenceArtifactDigest": "sha256:44cb79c443c63b61cf667a004146682c34b213678a4fd552a780f98c6bb29695",
+      "tests": 558,
+      "skipped": 3,
+      "failures": 0,
+      "status": "passed"
+    },
+    "portableAcceptance": {
+      "runtimeJobId": "job-01a04681-9fa4-7cb3-adfb-c3a5a6547652",
+      "terminalEvidenceArtifactDigest": "sha256:73b2363d874035755504d475ae8b4482dfdf795decea5c3b2eb134b7776e3eff",
+      "status": "passed",
+      "deterministicDemo": {
+        "status": "passed",
+        "modelCalls": 2,
+        "toolCalls": 1,
+        "stopCode": "candidate_completed",
+        "traceDigest": "sha256:82872975988d2d244835b9db510aa6ec8fccd63306c5d93442930f191d4312c9"
+      },
+      "wheel": {
+        "filename": "ordivon_harness-0.6.0-py3-none-any.whl",
+        "installedVersion": "0.6.0",
+        "cliCommandsVerified": 14,
+        "hostFreeCoreVerified": true,
+        "status": "passed"
+      },
+      "scaleSmoke": "passed"
+    }
+  },
+  "acceptedLaws": {
+    "recoveryAssessmentIsNotAbandonmentCommit": true,
+    "safeToAbandonIsNotASecondDurableLifecycleRequirement": true,
+    "physicalRepresentabilityIsNotSupportedApplicationSemantics": true,
+    "historicalEvidenceDoesNotRequireCurrentExecutableBytes": true,
+    "unreachablePathDeletionShouldNotRecreateThePathForLiveTesting": true,
+    "negativeReachabilityRequiresMultipleIndependentWitnesses": true
+  },
+  "explicitNonClaims": [
+    "This receipt does not claim that no Harness abandonment event existed outside the 284 readable retained/live stores observed by the census.",
+    "This receipt does not execute a Provider or Runtime effect through the retired abandonment path because current source had no such writer before deletion.",
+    "This receipt does not change Provider Call, Tool-step, Runtime Workspace, or external-effect reconciliation semantics.",
+    "This receipt does not reinterpret historical OH5 evidence; those receipts remain exact for their original Host-backed implementation revisions.",
+    "This receipt does not claim the unused SQLite schema-v1 abandoned literal is a supported current Run status.",
+    "Portable acceptance proves the bound Harness release mechanics and survivor invariants; it does not assert caller/domain semantic completion."
+  ]
+}

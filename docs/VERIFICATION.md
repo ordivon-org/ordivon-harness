@@ -100,6 +100,8 @@ A current release-changing Provider, Runtime, recovery or completion path should
 
 The canonical command is `scripts/local-acceptance run` on an owner-trusted acceptance environment.
 
+A deletion-only recovery change needs evidence for the capability that actually remains. If the retired path has no current writer/consumer and retained-state census finds no instances, do not recreate the obsolete writer merely to manufacture a "live" trajectory. Bind the exact pre-evidence implementation revision, prove writer/consumer and retained-state absence with bounded read-only evidence, regress the surviving Recovery/UNKNOWN path, and run the normal portable gate. Such a deletion receipt proves the scoped retirement; it does not generalize absence beyond the observed authorities.
+
 ## Claim discipline
 
 Use these terms consistently:
