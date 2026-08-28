@@ -90,6 +90,12 @@ EXPECTED = {
         "17e8943edb16c0f586d5a8d022c63590755a7d6b",
         "e3a24628400842fcb9563969101b2ab7335326c2bb90128b14c51a2bf41c3598",
     ),
+    "harness.recovery.unreachable-abandonment-retirement-v1": (
+        "harness-unreachable-abandonment-retirement-v1.json",
+        "historical",
+        "46030ae7d5725cffcad4686707d391ba29fd7f01",
+        "f0f415fe6677b2d1a8089510ac83c8a5b7a3f5a51a064aaf65e21ef0ffd3d6b1",
+    ),
 }
 
 
@@ -197,6 +203,19 @@ class EvidenceIndexTypedIngestionTests(unittest.TestCase):
         self.assertIn("pyproject.toml", invalidating)
         self.assertIn("uv.lock", invalidating)
         self.assertIn("src/ordivon_harness/ordivon/deepseek.py", invalidating)
+        current, invalidating = check_evidence._verified_revision_is_current(
+            "46030ae7d5725cffcad4686707d391ba29fd7f01"
+        )
+        self.assertFalse(current)
+        self.assertEqual(
+            invalidating,
+            [
+                "src/ordivon_harness/ordivon/loop.py",
+                "src/ordivon_harness/ordivon/run_recovery.py",
+                "src/ordivon_harness/ordivon/runtime_lowering.py",
+                "src/ordivon_harness/ordivon/sqlite_runtime_bridge.py",
+            ],
+        )
 
     def test_index_creation_lineage_binding_accepts_exact_and_rejects_nonancestor(self) -> None:
         validator = check_evidence._validate_index_creation_lineage_binding
