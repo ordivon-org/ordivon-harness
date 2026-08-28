@@ -649,8 +649,8 @@ class OrdivonAgentLoop:
                 continue
             call = retained_calls.get(observation.tool_call_id)
             if observation.tool_name == "search_workspace" and call is not None:
-                search_key, matches = _search_evidence(call, observation)
-                search_evidence.setdefault(search_key, set()).update(matches)
+                for search_key, matches in _search_evidence(call, observation):
+                    search_evidence.setdefault(search_key, set()).update(matches)
             else:
                 evidence_signatures.add(
                     _observation_evidence_signature(observation)
@@ -1207,23 +1207,23 @@ class OrdivonAgentLoop:
                     continue
                 call = calls_by_id.get(observation.tool_call_id)
                 if observation.tool_name == "search_workspace" and call is not None:
-                    search_key, matches = _search_evidence(call, observation)
-                    query, relative_path = search_key
-                    subsuming = [
-                        retained_matches
-                        for (
-                            retained_query,
-                            retained_path,
-                        ), retained_matches in search_evidence.items()
-                        if retained_query == query
-                        and _path_subsumes(retained_path, relative_path)
-                    ]
-                    if not subsuming or not any(
-                        matches.issubset(retained_matches)
-                        for retained_matches in subsuming
-                    ):
-                        new_evidence = True
-                    search_evidence.setdefault(search_key, set()).update(matches)
+                    for search_key, matches in _search_evidence(call, observation):
+                        query, relative_path = search_key
+                        subsuming = [
+                            retained_matches
+                            for (
+                                retained_query,
+                                retained_path,
+                            ), retained_matches in search_evidence.items()
+                            if retained_query == query
+                            and _path_subsumes(retained_path, relative_path)
+                        ]
+                        if not subsuming or not any(
+                            matches.issubset(retained_matches)
+                            for retained_matches in subsuming
+                        ):
+                            new_evidence = True
+                        search_evidence.setdefault(search_key, set()).update(matches)
                     continue
                 signature = _observation_evidence_signature(observation)
                 if signature not in evidence_signatures:
@@ -1408,6 +1408,9 @@ class OrdivonAgentLoop:
                 None,
             )
             reconciler = getattr(self.tool_bridge, "reconcile_current_tool_step", None)
+            exact_call_reconciler = getattr(
+                self.tool_bridge, "reconcile_current_tool_step_with_call", None
+            )
             if not callable(intent_loader) or not callable(reconciler):
                 return stop(
                     RunStopCode.RUNTIME_UNKNOWN,
@@ -1457,11 +1460,11 @@ class OrdivonAgentLoop:
                     retained_observation.tool_name == "search_workspace"
                     and retained_call is not None
                 ):
-                    search_key, matches = _search_evidence(
+                    for search_key, matches in _search_evidence(
                         retained_call,
                         retained_observation,
-                    )
-                    search_evidence.setdefault(search_key, set()).update(matches)
+                    ):
+                        search_evidence.setdefault(search_key, set()).update(matches)
                 else:
                     evidence_signatures.add(
                         _observation_evidence_signature(retained_observation)
@@ -1473,7 +1476,11 @@ class OrdivonAgentLoop:
                     detail="effective Run deadline expired before Tool reconciliation",
                 )
             try:
-                observation = reconciler(control=control)
+                observation = (
+                    exact_call_reconciler(recovered.active_call, control=control)
+                    if callable(exact_call_reconciler)
+                    else reconciler(control=control)
+                )
             except ToolBridgeError as error:
                 if error.kind is ToolBridgeErrorKind.CONTROL_STOPPED:
                     return stop(

@@ -34,13 +34,21 @@ from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 SEARCH_WORKSPACE_DEFINITION = AgentToolDefinition(
     name="search_workspace",
     description=(
-        "Search UTF-8 workspace text with bounded ripgrep JSON output. "
+        "Search UTF-8 workspace text with bounded ripgrep JSON output. Submit one scalar "
+        "query for the existing deep-search path, or 1..8 independent queries to share one "
+        "physical observation Job while retaining per-query result/evidence identity. "
         "This operation is observation-only."
     ),
     input_schema={
         "type": "object",
         "properties": {
             "query": {"type": "string", "minLength": 1},
+            "queries": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+                "minItems": 1,
+                "maxItems": 8,
+            },
             "relativePath": {"type": "string", "default": "."},
             "maxMatches": {
                 "type": "integer",
@@ -48,8 +56,23 @@ SEARCH_WORKSPACE_DEFINITION = AgentToolDefinition(
                 "maximum": 200,
                 "default": 50,
             },
+            "maxMatchesPerQuery": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 25,
+                "default": 25,
+            },
         },
-        "required": ["query"],
+        "oneOf": [
+            {
+                "required": ["query"],
+                "not": {"required": ["queries"]},
+            },
+            {
+                "required": ["queries"],
+                "not": {"required": ["query"]},
+            },
+        ],
         "additionalProperties": False,
     },
 )
@@ -313,6 +336,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 tool_name=current.intent.tool_name,
                 client_request_id=current.intent.client_request_id,
                 query=None,
+                queries=None,
                 relative_path=None,
                 control=control,
             )
@@ -329,6 +353,76 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 relative_path=None,
                 reconciled=True,
             )
+        return self._record_observation(
+            current.intent,
+            observation,
+            previous_receipt=current.receipt,
+        )
+
+    def reconcile_current_tool_step_with_call(
+        self,
+        call: AgentToolCall,
+        *,
+        control: ExecutionControl,
+    ) -> HarnessToolObservation:
+        """Reconcile an active durable Tool Step with its exact recovered Tool Call.
+
+        The Run loop reconstructs this Call from retained assistant messages and already
+        verifies it against the durable Intent. Passing it here restores logical search
+        metadata without widening Runtime identity or persisting a second arguments copy.
+        """
+        current = self.run_store.load_current_tool_step()
+        if (
+            call.tool_call_id != current.intent.tool_call_id
+            or call.name != current.intent.tool_name
+            or call.digest != current.intent.tool_call_digest
+        ):
+            raise ToolBridgeError(
+                "recovered Tool Call differs from active durable Intent",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
+        if current.receipt is not None and current.receipt.terminal:
+            if current.observation is None:
+                raise ToolBridgeError(
+                    "terminal Tool Observation content was not retained by the Privacy policy; "
+                    "caller-authorized Tool content rehydration is required",
+                    kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+                )
+            return HarnessToolObservation.from_dict(current.observation)
+        if control.stop_requested:
+            raise ToolBridgeError(
+                "execution control stopped before Tool reconciliation",
+                kind=ToolBridgeErrorKind.CONTROL_STOPPED,
+            )
+        if current.intent.runtime_operation != "workspace.exec":
+            return self.reconcile_current_tool_step(control=control)
+
+        query = call.arguments.get("query") if call.name == "search_workspace" else None
+        raw_queries = call.arguments.get("queries") if call.name == "search_workspace" else None
+        queries = (
+            tuple(raw_queries)
+            if isinstance(raw_queries, list) and all(isinstance(item, str) for item in raw_queries)
+            else None
+        )
+        relative_path = call.arguments.get("relativePath", ".")
+        if (
+            not isinstance(relative_path, str)
+            or (query is not None and not isinstance(query, str))
+            or (raw_queries is not None and queries is None)
+        ):
+            raise ToolBridgeError(
+                "recovered Tool Call arguments are invalid",
+                kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
+            )
+        observation = self._reconcile_by_client_request(
+            tool_call_id=current.intent.tool_call_id,
+            tool_name=current.intent.tool_name,
+            client_request_id=current.intent.client_request_id,
+            query=query,
+            queries=queries,
+            relative_path=relative_path,
+            control=control,
+        )
         return self._record_observation(
             current.intent,
             observation,
@@ -437,8 +531,18 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             else request
         )
         query = call.arguments.get("query") if call.name == "search_workspace" else None
+        raw_queries = call.arguments.get("queries") if call.name == "search_workspace" else None
+        queries = (
+            tuple(raw_queries)
+            if isinstance(raw_queries, list) and all(isinstance(item, str) for item in raw_queries)
+            else None
+        )
         relative_path = call.arguments.get("relativePath", ".")
-        if not isinstance(relative_path, str) or (query is not None and not isinstance(query, str)):
+        if (
+            not isinstance(relative_path, str)
+            or (query is not None and not isinstance(query, str))
+            or (raw_queries is not None and queries is None)
+        ):
             raise ToolBridgeError(
                 f"{call.name} arguments differ from the lowered request",
                 kind=ToolBridgeErrorKind.PROTOCOL_INVALID,
@@ -464,6 +568,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     tool_name=call.name,
                     payload=payload,
                     query=query,
+                    queries=queries,
                     relative_path=relative_path,
                     reconciled=False,
                     control=control,
@@ -515,6 +620,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     tool_name=call.name,
                     client_request_id=client_request_id,
                     query=query,
+                    queries=queries,
                     relative_path=relative_path,
                     control=control,
                 )
@@ -535,6 +641,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     tool_name=call.name,
                     client_request_id=client_request_id,
                     query=query,
+                    queries=queries,
                     relative_path=relative_path,
                     control=control,
                 )
@@ -560,6 +667,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         relative_path: str | None,
         reconciled: bool,
         control: ExecutionControl | None,
+        queries: tuple[str, ...] | None = None,
     ) -> HarnessToolObservation:
         current = dict(payload)
         for _ in range(20):
@@ -581,14 +689,51 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                     ),
                 )
             if delivery_state == "terminal":
-                return self._observation_from_payload(
-                    tool_call_id=tool_call_id,
-                    tool_name=tool_name,
-                    payload=current,
-                    query=query,
-                    relative_path=relative_path,
-                    reconciled=reconciled,
-                )
+                if queries is not None and current.get("stdoutTruncated") is True:
+                    return self._unknown_observation(
+                        tool_call_id,
+                        tool_name,
+                        reason="batch search stdout was truncated before complete framing",
+                        client_request_id=None,
+                        query=None,
+                        relative_path=relative_path,
+                        reconciled=reconciled,
+                        runtime_job_ref=(
+                            current.get("jobId")
+                            if isinstance(current.get("jobId"), str)
+                            else None
+                        ),
+                    )
+                try:
+                    return self._observation_from_payload(
+                        tool_call_id=tool_call_id,
+                        tool_name=tool_name,
+                        payload=(
+                            {**current, "_harnessSearchQueries": list(queries)}
+                            if queries is not None
+                            else current
+                        ),
+                        query=query,
+                        relative_path=relative_path,
+                        reconciled=reconciled,
+                    )
+                except HarnessRuntimeClientError as error:
+                    if queries is None:
+                        raise
+                    return self._unknown_observation(
+                        tool_call_id,
+                        tool_name,
+                        reason=f"batch search observation framing is invalid: {error}",
+                        client_request_id=None,
+                        query=None,
+                        relative_path=relative_path,
+                        reconciled=reconciled,
+                        runtime_job_ref=(
+                            current.get("jobId")
+                            if isinstance(current.get("jobId"), str)
+                            else None
+                        ),
+                    )
             if delivery_state == "unknown":
                 return self._unknown_observation(
                     tool_call_id,
@@ -672,6 +817,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         query: str | None,
         relative_path: str | None,
         control: ExecutionControl | None,
+        queries: tuple[str, ...] | None = None,
     ) -> HarnessToolObservation:
         try:
             matches = find_runtime_jobs_by_client_request(
@@ -742,6 +888,7 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
             tool_name=tool_name,
             payload=payload,
             query=query,
+            queries=queries,
             relative_path=relative_path,
             reconciled=True,
             control=control,
@@ -852,12 +999,20 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         status_value = payload.get("status")
         observation_status = "cancelled" if status_value == "cancelled" else "observed"
         structured = dict(payload)
+        raw_queries = structured.pop("_harnessSearchQueries", None)
+        queries = (
+            tuple(raw_queries)
+            if isinstance(raw_queries, list) and all(isinstance(item, str) for item in raw_queries)
+            else None
+        )
         if query is not None:
             structured["query"] = query
+        if queries is not None:
+            structured["queries"] = list(queries)
         if relative_path is not None:
             structured["relativePath"] = relative_path
         if tool_name == "search_workspace":
-            cls._normalize_search(structured)
+            cls._normalize_search(structured, queries=queries)
         job_id = payload.get("jobId")
         return HarnessToolObservation(
             tool_call_id=tool_call_id,
@@ -925,11 +1080,14 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
         return tuple(retained[key] for key in sorted(retained))
 
     @staticmethod
-    def _normalize_search(structured: dict[str, JsonValue]) -> None:
+    def _normalize_search(
+        structured: dict[str, JsonValue], *, queries: tuple[str, ...] | None = None
+    ) -> None:
         stdout = structured.get("stdoutTail")
-        matches: list[dict[str, JsonValue]] = []
-        if isinstance(stdout, str):
-            for raw_line in stdout.splitlines():
+
+        def normalized_matches(lines: list[str], limit: int) -> list[dict[str, JsonValue]]:
+            matches: list[dict[str, JsonValue]] = []
+            for raw_line in lines:
                 try:
                     event = json.loads(raw_line)
                 except json.JSONDecodeError:
@@ -940,12 +1098,12 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 if not isinstance(data, dict):
                     continue
                 path = data.get("path")
-                lines = data.get("lines")
+                line_value = data.get("lines")
                 line_number = data.get("line_number")
                 absolute_offset = data.get("absolute_offset")
                 submatches = data.get("submatches")
                 path_text = path.get("text") if isinstance(path, dict) else None
-                line_text = lines.get("text") if isinstance(lines, dict) else None
+                line_text = line_value.get("text") if isinstance(line_value, dict) else None
                 if (
                     not isinstance(path_text, str)
                     or type(line_number) is not int
@@ -956,29 +1114,104 @@ class SQLiteHarnessRuntimeBridge(SQLiteHarnessAgentBridge):
                 for submatch in submatches:
                     if not isinstance(submatch, dict):
                         continue
-                    start = submatch.get("start")
-                    end = submatch.get("end")
-                    if type(start) is not int or type(end) is not int:
+                    match_start = submatch.get("start")
+                    match_end = submatch.get("end")
+                    if type(match_start) is not int or type(match_end) is not int:
                         continue
                     matches.append(
                         {
                             "relativePath": path_text,
                             "lineNumber": line_number,
-                            "column": start + 1,
-                            "byteOffset": absolute_offset + start,
-                            "matchBytes": end - start,
+                            "column": match_start + 1,
+                            "byteOffset": absolute_offset + match_start,
+                            "matchBytes": match_end - match_start,
                             "lineText": (
-                                None if not isinstance(line_text, str) else line_text[:2_048]
+                                None
+                                if not isinstance(line_text, str)
+                                else line_text[:2_048]
                             ),
                         }
                     )
-                    if len(matches) >= 200:
-                        break
-                if len(matches) >= 200:
-                    break
-        structured["matches"] = matches
-        structured["matchCount"] = len(matches)
+                    if len(matches) >= limit:
+                        return matches
+            return matches
+
+        if queries is None:
+            lines = stdout.splitlines() if isinstance(stdout, str) else []
+            matches = normalized_matches(lines, 200)
+            structured["matches"] = matches
+            structured["matchCount"] = len(matches)
+            structured["locationSemantics"] = (
+                "Use match.byteOffset as a read slice offset; lineNumber and column "
+                "are one-based display locations."
+            )
+            return
+
+        if not isinstance(stdout, str):
+            raise HarnessRuntimeClientError("batch search Runtime result omitted stdoutTail")
+        prefix_marker = "@@ORDIVON_SEARCH_BATCH:"
+        frames: list[list[str]] = [[] for _ in queries]
+        result_codes: list[int | None] = [None for _ in queries]
+        active: int | None = None
+        expected_begin = 0
+        for line in stdout.splitlines():
+            if line.startswith(prefix_marker + "BEGIN\t"):
+                try:
+                    index = int(line.split("\t", 1)[1])
+                except (ValueError, IndexError) as error:
+                    raise HarnessRuntimeClientError("batch search begin marker is invalid") from error
+                if active is not None or index != expected_begin or index >= len(queries):
+                    raise HarnessRuntimeClientError("batch search begin sequence differs")
+                active = index
+                continue
+            if line.startswith(prefix_marker + "END\t"):
+                parts = line.split("\t")
+                if len(parts) != 3:
+                    raise HarnessRuntimeClientError("batch search end marker is invalid")
+                try:
+                    index = int(parts[1])
+                    result_code = int(parts[2])
+                except ValueError as error:
+                    raise HarnessRuntimeClientError("batch search end marker is invalid") from error
+                if active != index or index != expected_begin or result_code < 0:
+                    raise HarnessRuntimeClientError("batch search end sequence differs")
+                result_codes[index] = result_code
+                active = None
+                expected_begin += 1
+                continue
+            if active is not None:
+                frames[active].append(line)
+        if active is not None or expected_begin != len(queries) or any(code is None for code in result_codes):
+            raise HarnessRuntimeClientError("batch search framing is incomplete")
+
+        query_results: list[dict[str, JsonValue]] = []
+        flattened: list[dict[str, JsonValue]] = []
+        stderr = structured.get("stderrTail")
+        error_summary = stderr[:2_048] if isinstance(stderr, str) and stderr else None
+        for index, query_value in enumerate(queries):
+            code = result_codes[index]
+            assert code is not None
+            matches = normalized_matches(frames[index], 25)
+            status = "matched" if code == 0 else "no_hits" if code == 1 else "error"
+            result: dict[str, JsonValue] = {
+                "query": query_value,
+                "queryIndex": index,
+                "status": status,
+                "exitCode": code,
+                "matches": matches,
+                "matchCount": len(matches),
+            }
+            if status == "error" and error_summary is not None:
+                result["errorSummary"] = error_summary
+            query_results.append(result)
+            for match in matches:
+                flattened.append({**match, "query": query_value, "queryIndex": index})
+        structured["queryResults"] = query_results
+        structured["matches"] = flattened
+        structured["matchCount"] = len(flattened)
+        structured["batchSearch"] = True
         structured["locationSemantics"] = (
-            "Use match.byteOffset as a read slice offset; lineNumber and column "
-            "are one-based display locations."
+            "Use each queryResult match.byteOffset as a read slice offset; lineNumber and "
+            "column are one-based display locations. queryResults preserve independent "
+            "query evidence while one Runtime Job carries the physical observation."
         )

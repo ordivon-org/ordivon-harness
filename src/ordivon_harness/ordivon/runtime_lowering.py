@@ -74,19 +74,22 @@ def lower_runtime_tool(
             None,
         )
     if call.name == "search_workspace":
-        _only(arguments, {"query", "relativePath", "maxMatches"}, call.name)
-        query = _required_string(arguments, "query", call.name)
-        relative_path = _optional_string(arguments, "relativePath", ".")
-        if len(query.encode("utf-8")) > 2_048:
+        _only(
+            arguments,
+            {"query", "queries", "relativePath", "maxMatches", "maxMatchesPerQuery"},
+            call.name,
+        )
+        raw_query = arguments.get("query")
+        raw_queries = arguments.get("queries")
+        if (raw_query is None) == (raw_queries is None):
             raise ToolBridgeError(
-                "search_workspace query exceeds 2048 UTF-8 bytes",
+                "search_workspace requires exactly one of query or queries",
                 kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
             )
+        relative_path = _optional_string(arguments, "relativePath", ".")
         if tool_grant is not None:
             try:
-                allowed_path = tool_grant.allows_path(
-                    call.name, relative_path
-                )
+                allowed_path = tool_grant.allows_path(call.name, relative_path)
             except ValueError as error:
                 raise ToolBridgeError(str(error)) from error
             if not allowed_path:
@@ -97,41 +100,111 @@ def lower_runtime_tool(
                     ),
                     kind=ToolBridgeErrorKind.AUTHORITY_DENIED,
                 )
-        max_matches = _optional_int(
-            arguments,
-            "maxMatches",
-            50,
-            positive=True,
-        )
-        if max_matches > 200:
-            raise ToolBridgeError(
-                "search_workspace maxMatches must not exceed 200",
-                kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+
+        if raw_query is not None:
+            if "maxMatchesPerQuery" in arguments:
+                raise ToolBridgeError(
+                    "scalar search_workspace does not accept maxMatchesPerQuery",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            query = _required_string(arguments, "query", call.name)
+            if len(query.encode("utf-8")) > 2_048:
+                raise ToolBridgeError(
+                    "search_workspace query exceeds 2048 UTF-8 bytes",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            max_matches = _optional_int(
+                arguments, "maxMatches", 50, positive=True
             )
+            if max_matches > 200:
+                raise ToolBridgeError(
+                    "search_workspace maxMatches must not exceed 200",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            executable = "/usr/bin/rg"
+            execution_args = (
+                "--json",
+                "--fixed-strings",
+                "--line-number",
+                "--column",
+                "--no-heading",
+                "--color=never",
+                "--max-count",
+                str(max_matches),
+                "--",
+                query,
+                relative_path,
+            )
+            stdout_limit_bytes = 65_536
+            stderr_limit_bytes = 8_192
+        else:
+            if "maxMatches" in arguments:
+                raise ToolBridgeError(
+                    "batch search_workspace does not accept maxMatches",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            if (
+                not isinstance(raw_queries, list)
+                or not 1 <= len(raw_queries) <= 8
+                or any(
+                    not isinstance(item, str) or not item or item != item.strip()
+                    for item in raw_queries
+                )
+            ):
+                raise ToolBridgeError(
+                    "search_workspace queries must contain 1..8 non-empty trimmed strings",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            queries = tuple(raw_queries)
+            if any(len(item.encode("utf-8")) > 2_048 for item in queries):
+                raise ToolBridgeError(
+                    "search_workspace query exceeds 2048 UTF-8 bytes",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            max_matches = _optional_int(
+                arguments, "maxMatchesPerQuery", 25, positive=True
+            )
+            if max_matches > 25:
+                raise ToolBridgeError(
+                    "search_workspace maxMatchesPerQuery must not exceed 25",
+                    kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
+                )
+            executable = "/bin/bash"
+            script = (
+                'path="$1"; max="$2"; shift 2; idx=0; hard=0; '
+                'for q in "$@"; do '
+                'printf "@@ORDIVON_SEARCH_BATCH:BEGIN\\t%s\\n" "$idx"; '
+                '/usr/bin/rg --json --fixed-strings --line-number --column --no-heading '
+                '--color=never -- "$q" "$path" | '
+                "/usr/bin/awk -v limit=\"$max\" 'index($0,\"\\\"type\\\":\\\"match\\\"\"){if(count<limit) print; count++}'; "
+                'pipe_status=("${PIPESTATUS[@]}"); rc="${pipe_status[0]}"; '
+                'printf "@@ORDIVON_SEARCH_BATCH:END\\t%s\\t%s\\n" "$idx" "$rc"; '
+                'if [ "$rc" -gt 1 ]; then hard=1; fi; idx=$((idx+1)); done; '
+                'if [ "$hard" -ne 0 ]; then exit 2; fi; exit 0'
+            )
+            execution_args = (
+                "-c",
+                script,
+                "ordivon-search-batch",
+                relative_path,
+                str(max_matches),
+                *queries,
+            )
+            stdout_limit_bytes = 65_536
+            stderr_limit_bytes = 16_384
+
         try:
             request = build_harness_workspace_exec_request_from_binding(
                 execution_binding,
                 step_id=step_id,
-                executable="/usr/bin/rg",
-                args=(
-                    "--json",
-                    "--fixed-strings",
-                    "--line-number",
-                    "--column",
-                    "--no-heading",
-                    "--color=never",
-                    "--max-count",
-                    str(max_matches),
-                    "--",
-                    query,
-                    relative_path,
-                ),
+                executable=executable,
+                args=execution_args,
                 timeout_ms=30_000,
-                stdout_limit_bytes=65_536,
-                stderr_limit_bytes=8_192,
+                stdout_limit_bytes=stdout_limit_bytes,
+                stderr_limit_bytes=stderr_limit_bytes,
                 wait_ms=0,
                 stdout_tail_bytes=65_536,
-                stderr_tail_bytes=8_192,
+                stderr_tail_bytes=stderr_limit_bytes,
             )
         except ValueError as error:
             raise ToolBridgeError(

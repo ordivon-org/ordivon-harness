@@ -154,24 +154,61 @@ def _recover_tool_batch(
 def _search_evidence(
     call: AgentToolCall,
     observation: ToolObservation,
-) -> tuple[tuple[str, str], set[str]]:
+) -> tuple[tuple[tuple[str, str], set[str]], ...]:
     query = call.arguments.get("query")
+    raw_queries = call.arguments.get("queries")
     relative_path = call.arguments.get("relativePath", ".")
-    if not isinstance(query, str) or not isinstance(relative_path, str):
-        return (call.digest, "."), {
-            _observation_evidence_signature(observation)
-        }
-    raw_matches = observation.structured_content.get("matches")
-    matches = (
-        {
-            canonical_digest(match)
-            for match in raw_matches
-            if isinstance(match, dict)
-        }
-        if isinstance(raw_matches, list)
-        else {_observation_evidence_signature(observation)}
-    )
-    return (query, relative_path), matches
+    if not isinstance(relative_path, str):
+        return (((call.digest, "."), {_observation_evidence_signature(observation)}),)
+    if isinstance(query, str) and raw_queries is None:
+        raw_matches = observation.structured_content.get("matches")
+        matches = (
+            {
+                canonical_digest(match)
+                for match in raw_matches
+                if isinstance(match, dict)
+            }
+            if isinstance(raw_matches, list)
+            else {_observation_evidence_signature(observation)}
+        )
+        return (((query, relative_path), matches),)
+    if (
+        isinstance(raw_queries, list)
+        and raw_queries
+        and all(isinstance(item, str) for item in raw_queries)
+    ):
+        raw_results = observation.structured_content.get("queryResults")
+        if isinstance(raw_results, list) and len(raw_results) == len(raw_queries):
+            units: list[tuple[tuple[str, str], set[str]]] = []
+            for expected_query, result in zip(raw_queries, raw_results):
+                if not isinstance(result, dict) or result.get("query") != expected_query:
+                    break
+                raw_matches = result.get("matches")
+                matches = (
+                    {
+                        canonical_digest(match)
+                        for match in raw_matches
+                        if isinstance(match, dict)
+                    }
+                    if isinstance(raw_matches, list)
+                    else {_observation_evidence_signature(observation)}
+                )
+                # Query status/exit code is evidence even when there are zero matches.
+                if not matches:
+                    matches = {
+                        canonical_digest(
+                            {
+                                "query": expected_query,
+                                "relativePath": relative_path,
+                                "status": result.get("status"),
+                                "exitCode": result.get("exitCode"),
+                            }
+                        )
+                    }
+                units.append(((expected_query, relative_path), matches))
+            if len(units) == len(raw_queries):
+                return tuple(units)
+    return (((call.digest, relative_path), {_observation_evidence_signature(observation)}),)
 
 def _path_subsumes(parent: str, child: str) -> bool:
     normalized_parent = parent.rstrip("/")
