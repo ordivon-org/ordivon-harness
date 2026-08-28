@@ -14,7 +14,7 @@ audience:
   - builder
   - operator
   - agent
-updated: 2026-08-27
+updated: 2026-08-29
 summary: Decision identifying the documents and machine sources allowed to define current Harness behavior, compatibility, evidence and operation.
 evidence_status: not_applicable
 readiness: READY
@@ -57,6 +57,14 @@ Harness contains current architecture, extraction history, OH/H/P/R closeouts, P
 | versions, release gates and deprecation | [`RELEASES.md`](RELEASES.md) |
 
 Source code, owner-local codecs, deterministic tests, exact dependency pins, `uv.lock`, Runtime catalog discovery, current Host Journal/CAS inspection, independent Harness Journal/CAS Doctor checks, canonical Traces and digest-bound evidence remain stronger owners for exact fields, transitions and observed results.
+
+### Repository source-integration currentness
+
+For a present-tense claim about the **source-integrated Harness repository**, the owner source is the canonical repository named by `.ordivon/project.yaml`, on its default `main` branch, after remote freshness has been explicitly observed. In the current Git topology that is the fetched canonical repository `main` corresponding to `origin/main`; a local `refs/heads/main`, worktree `HEAD`, detached Runtime Workspace, or Workspace name may be an exact source fence but does not by itself prove source-integration currentness.
+
+Exact historical or experiment work may intentionally bind any exact Git commit. Such work should say `current-to-this-source` (or equivalent bounded scope) unless it has separately resolved the owner-operation current source. A local/remote ref mismatch is therefore an attention signal, not automatic semantic staleness: if the load-bearing owner carrier is unchanged, a source-bound result can remain valid without being relabelled as current repository source.
+
+This source-integration relation is independent of other Harness currentness relations. `research/authority/CURRENT.json` selects the current owner-research publication and may intentionally source-fence an older Git revision when later implementation-only changes do not alter research standing. A Git tag/release receipt owns release provenance. Runtime/Host/store receipts own their respective deployed or operational state. None of those identities silently substitutes for another.
 
 `evidence/index.json` classifies repository evidence and binds it to implementation/currentness provenance; it does not own the domain/research semantics asserted by that evidence. Historical stage reports and closeouts preserve provenance but do not override current contracts. `CHANGELOG.md` records change and does not redefine current behavior.
 

@@ -96,6 +96,16 @@ class ResearchOwnerPublicationTests(unittest.TestCase):
         self.assertIn("projection only", authority)
         self.assertIn("does not make Atlas", authority)
 
+    def test_repository_source_integration_currentness_is_operation_relative(self) -> None:
+        authority = (ROOT / "docs" / "authority.md").read_text(encoding="utf-8")
+        self.assertIn("Repository source-integration currentness", authority)
+        self.assertIn("canonical repository named by `.ordivon/project.yaml`", authority)
+        self.assertIn("after remote freshness has been explicitly observed", authority)
+        self.assertIn("`origin/main`", authority)
+        self.assertIn("does not by itself prove source-integration currentness", authority)
+        self.assertIn("`research/authority/CURRENT.json` selects the current owner-research publication", authority)
+        self.assertIn("None of those identities silently substitutes for another", authority)
+
 
 if __name__ == "__main__":
     unittest.main()
