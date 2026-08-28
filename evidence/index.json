@@ -572,8 +572,8 @@
       "file": "harness-unreachable-abandonment-retirement-v1.json",
       "implementationRevision": "46030ae7d5725cffcad4686707d391ba29fd7f01",
       "revisionBinding": "index-creation-lineage",
-      "status": "verified",
-      "scope": "Current deletion proof for 46030ae: unreachable Host-era Abandonment/Disposition application semantics retired after zero current writers/consumers and zero abandoned state across 284 readable retained/live Harness stores; current RecoveryAssessment/UNKNOWN reconciliation survives focused, 558-test owner, portable/wheel and scale gates. No obsolete abandonment writer was recreated merely to fabricate a live journey."
+      "status": "historical",
+      "scope": "Historical deletion proof for 46030ae: unreachable Host-era Abandonment/Disposition application semantics were retired after the bounded source/store/survivor evidence recorded by the immutable receipt. Later canonical batch-search composition 51b942c modified the verified implementation paths loop.py, run_recovery.py, runtime_lowering.py, and sqlite_runtime_bridge.py, so the immutable receipt remains exact evidence for its tested revision but no longer certifies whole-current Harness source."
     }
   ]
 }
