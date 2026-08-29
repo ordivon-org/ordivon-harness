@@ -74,6 +74,14 @@ class CapabilityCatalogTests(unittest.TestCase):
                 self.assertEqual(surface["stage"], "installed")
                 self.assertIn("source", surface)
                 self.assertNotEqual(surface["authorityRole"], "authority-granted")
+        self.assertEqual(
+            surfaces["harness.execution.runtime-search.v1"]["requirements"]["runtimeExecutables"],
+            {
+                "bash": "/bin/bash",
+                "awk": "/usr/bin/awk",
+                "ripgrep": "/usr/bin/rg",
+            },
+        )
 
     def test_cognition_catalog_tracks_current_structural_fields(self) -> None:
         catalog = effective_capability_catalog()

@@ -172,6 +172,7 @@ If a new shared mechanism cannot survive deletion against Agent-owned choice, ca
 - Python 3.12;
 - the exact Ordivon Protocol revision pinned by `pyproject.toml` and `uv.lock`;
 - `uv` for repository workflows;
+- the `harness.execution.runtime-search.v1` physical profile requires `/bin/bash`, `/usr/bin/awk`, and `/usr/bin/rg` on the Runtime execution target; these are target executables, not Python dependencies or authority grants;
 - Provider credentials only for the Provider profile actually used.
 
 Repository checks use isolated Ruff rather than assuming it is installed inside the project environment:

@@ -14,6 +14,7 @@ from anc_canonical import JsonValue, canonical_digest, validate_json_value
 from .core_contracts import HarnessRunContract
 from .execution_binding import HarnessExecutionBinding
 from .ordivon.model import AgentTurnRequest
+from .ordivon.runtime_lowering import RUNTIME_SEARCH_EXECUTABLES
 from .ordivon.sqlite_agent_bridge import (
     NO_TOOL_AGENT_GRANT,
     NO_TOOL_AGENT_GRANT_DIGEST,
@@ -59,6 +60,7 @@ def _surface(
     runtime_required: bool,
     supported: bool,
     visibility: str,
+    runtime_executables: dict[str, str] | None = None,
 ) -> dict[str, JsonValue]:
     requirements: dict[str, JsonValue] = {
         "adapter": "required-and-contract-matching",
@@ -70,6 +72,8 @@ def _surface(
         ),
         "providerUsePolicy": "required-only-if-contract-binds-policy",
     }
+    if runtime_executables is not None:
+        requirements["runtimeExecutables"] = dict(runtime_executables)
     if not supported:
         requirements["explicitRunToolSurface"] = "required"
     return {
@@ -136,6 +140,7 @@ def _execution_surfaces() -> list[dict[str, JsonValue]]:
             runtime_required=True,
             supported=True,
             visibility="recommended-api",
+            runtime_executables=RUNTIME_SEARCH_EXECUTABLES,
         ),
         _surface(
             surface_id="harness.execution.repository-repair.v1",

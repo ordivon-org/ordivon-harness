@@ -123,6 +123,8 @@ class HarnessExecutionBindingTests(unittest.TestCase):
         )
         execution = request["execution"]
         self.assertEqual(execution["executable"], "/usr/bin/rg")
+        lowering = (Path(__file__).resolve().parents[1] / "src" / "ordivon_harness" / "ordivon" / "runtime_lowering.py").read_text()
+        self.assertIn('RUNTIME_SEARCH_EXECUTABLES["ripgrep"]', lowering)
         self.assertEqual(execution["workspaceId"], binding().workspace_ref)
         self.assertEqual(
             {item["namespace"] for item in execution["foreignReferences"]},

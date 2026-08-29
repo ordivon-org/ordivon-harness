@@ -30,6 +30,7 @@ case "$mode" in
       scripts/check_evidence.py \
       scripts/check_wheel.py \
       scripts/check_core_without_host.py \
+      scripts/check_runtime_search_profile.py \
       scripts/harness_p0_scale_acceptance.py \
       scripts/owner-environment; do
       test -f "$repo/$path"
@@ -46,6 +47,7 @@ case "$mode" in
     python_bin="$env_dir/bin/python"
     cd "$repo"
     "$python_bin" -m compileall -q src tests scripts evals
+    "$python_bin" scripts/check_runtime_search_profile.py
     "$python_bin" -m ruff check src tests scripts
     "$python_bin" -W error::ResourceWarning -m unittest discover -s tests -v
     "$python_bin" scripts/check_dependencies.py
