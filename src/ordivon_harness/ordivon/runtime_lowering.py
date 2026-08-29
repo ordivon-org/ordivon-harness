@@ -13,6 +13,13 @@ from .model import AgentToolCall
 from .tool_errors import ToolBridgeError, ToolBridgeErrorKind
 
 
+RUNTIME_SEARCH_EXECUTABLES: dict[str, str] = {
+    "bash": "/bin/bash",
+    "awk": "/usr/bin/awk",
+    "ripgrep": "/usr/bin/rg",
+}
+
+
 class RuntimeExecutionCheckView(Protocol):
     executable: str
     args: tuple[str, ...]
@@ -121,7 +128,7 @@ def lower_runtime_tool(
                     "search_workspace maxMatches must not exceed 200",
                     kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
                 )
-            executable = "/usr/bin/rg"
+            executable = RUNTIME_SEARCH_EXECUTABLES["ripgrep"]
             execution_args = (
                 "--json",
                 "--fixed-strings",
@@ -169,18 +176,23 @@ def lower_runtime_tool(
                     "search_workspace maxMatchesPerQuery must not exceed 25",
                     kind=ToolBridgeErrorKind.MODEL_CORRECTABLE,
                 )
-            executable = "/bin/bash"
-            script = (
-                'path="$1"; max="$2"; shift 2; idx=0; hard=0; '
-                'for q in "$@"; do '
-                'printf "@@ORDIVON_SEARCH_BATCH:BEGIN\\t%s\\n" "$idx"; '
-                '/usr/bin/rg --json --fixed-strings --line-number --column --no-heading '
-                '--color=never -- "$q" "$path" | '
-                "/usr/bin/awk -v limit=\"$max\" 'index($0,\"\\\"type\\\":\\\"match\\\"\"){if(count<limit) print; count++}'; "
-                'pipe_status=("${PIPESTATUS[@]}"); rc="${pipe_status[0]}"; '
-                'printf "@@ORDIVON_SEARCH_BATCH:END\\t%s\\t%s\\n" "$idx" "$rc"; '
-                'if [ "$rc" -gt 1 ]; then hard=1; fi; idx=$((idx+1)); done; '
-                'if [ "$hard" -ne 0 ]; then exit 2; fi; exit 0'
+            executable = RUNTIME_SEARCH_EXECUTABLES["bash"]
+            rg_executable = RUNTIME_SEARCH_EXECUTABLES["ripgrep"]
+            awk_executable = RUNTIME_SEARCH_EXECUTABLES["awk"]
+            script = "".join(
+                (
+                    'path="$1"; max="$2"; shift 2; idx=0; hard=0; ',
+                    'for q in "$@"; do ',
+                    'printf "@@ORDIVON_SEARCH_BATCH:BEGIN\\t%s\\n" "$idx"; ',
+                    f'{rg_executable} --json --fixed-strings --line-number --column --no-heading ',
+                    '--color=never -- "$q" "$path" | ',
+                    awk_executable
+                    + " -v limit=\"$max\" 'index($0,\"\\\"type\\\":\\\"match\\\"\"){if(count<limit) print; count++}'; ",
+                    'pipe_status=("${PIPESTATUS[@]}"); rc="${pipe_status[0]}"; ',
+                    'printf "@@ORDIVON_SEARCH_BATCH:END\\t%s\\t%s\\n" "$idx" "$rc"; ',
+                    'if [ "$rc" -gt 1 ]; then hard=1; fi; idx=$((idx+1)); done; ',
+                    'if [ "$hard" -ne 0 ]; then exit 2; fi; exit 0',
+                )
             )
             execution_args = (
                 "-c",

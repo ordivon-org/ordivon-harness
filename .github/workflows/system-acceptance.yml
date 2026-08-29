@@ -21,6 +21,7 @@ jobs:
         with:
           enable-cache: false
       - run: uv sync --locked
+      - run: uv run python scripts/check_runtime_search_profile.py
       - name: Run real Host to Harness to Runtime acceptance
         shell: bash
         run: |
