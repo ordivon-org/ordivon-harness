@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff==0.15.17"]
+dev = ["ruff==0.16.5"]
 
 [project.scripts]
 ordivon-harness = "ordivon_harness.cli:entrypoint"
